@@ -152,7 +152,11 @@ export default function Corporate() {
   const timeline: any[] = data.timeline || []
   const cultureExp: any[] = data.cultureExplanation || []
   const valuesExp: any[] = data.valuesExplanation || []
-  const strategies: StrategyItem[] = data.strategicObjectives || []
+  // strategicObjectives 是按年份分组的对象 {2024: [...], 2025: [...]}，拍平成带 year 的数组
+  const strategies: StrategyItem[] = Object.entries(data.strategicObjectives || {})
+    .flatMap(([year, list]: [string, any]) =>
+      (Array.isArray(list) ? list : []).map((item: any) => ({ ...item, year: Number(year) }))
+    )
   const orgRoot: OrgNode | null = data.organizationStructure || null
 
   const selectStrategy = (idx: number) => {
