@@ -1,0 +1,101 @@
+<div class="container">
+        <!-- 页面标题 -->
+        <div class="header">
+            <h1 id="page-title">员工排班管理系统 - J1</h1>
+            <div class="restaurant-selector">
+                <button class="selector-button" onclick="toggleRestaurantSelector()">
+                    <span id="current-restaurant">J1</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="selector-dropdown" id="restaurant-dropdown">
+                    <div class="dropdown-item active" data-restaurant="J1" onclick="switchRestaurant('J1')">J1</div>
+                    <div class="dropdown-item" data-restaurant="J2" onclick="switchRestaurant('J2')">J2</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="card">
+            <div class="card-body">
+                <div class="schedule-controls">
+                    <div class="controls-left">
+                        <!-- 年月选择器 -->
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label class="form-label" style="margin: 0; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-calendar" style="color: #ff5c00;"></i>
+                                选择年份和月份
+                            </label>
+                            <div class="enhanced-date-picker" id="schedule-date-picker">
+                                <div class="date-part" data-type="year" onclick="showScheduleDateDropdown('year')">
+                                    <span id="schedule-year-display">2024</span>
+                                </div>
+                                <span class="date-separator">年</span>
+                                <div class="date-part" data-type="month" onclick="showScheduleDateDropdown('month')">
+                                    <span id="schedule-month-display">01</span>
+                                </div>
+                                <span class="date-separator">月</span>
+            
+                                <div class="date-dropdown" id="schedule-dropdown"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- 复制到下月按钮 -->
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label class="form-label" style="margin: 0; visibility: hidden;">占位</label>
+                            <button class="btn-control btn-copy" onclick="copyToNextMonth()" title="将当前月的排班复制到下一个月">
+                                <i class="fas fa-copy"></i> 复制到下月
+                            </button>
+                        </div>
+                    </div>
+                    <div class="controls-right">
+                        <button id="saveAllBtn" class="btn-control" onclick="saveAllChanges()" style="background: #3b82f6; color: white; border-color: #3b82f6;">
+                            <i class="fas fa-save"></i> 保存所有更改
+                        </button>
+                        <button class="btn-generate" onclick="showManagementPanel('shifts')">
+                            <i class="fas fa-clock"></i> 班次管理
+                        </button>
+                        <button class="btn-generate" onclick="showManagementPanel('employees')">
+                            <i class="fas fa-users"></i> 员工管理
+                        </button>
+                        <button class="btn-generate" onclick="showManagementPanel('legend')">
+                            <i class="fas fa-info-circle"></i> 图例说明
+                        </button>
+                        <button class="btn-control" onclick="downloadPDFDirect()">
+                            <i class="fas fa-file-pdf"></i> 下载PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 排班表 -->
+        <div class="table-container">
+            <div class="table-wrapper">
+                <div id="scheduleContainer">
+                    <div style="text-align: center; padding: 40px; color: #6b7280;">
+                        <div class="loading" style="margin: 0 auto 10px;"></div>
+                        <div>正在加载排班表...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 打印图例（仅在打印时显示） -->
+        <div class="print-legend">
+            <h3 style="text-align: center; margin-bottom: 15px; font-size: 16px; font-weight: bold; color: #000; border-top: 2px solid #000; padding-top: 20px;">班次与假期图例</h3>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 900px; margin: 0 auto;">
+                <div>
+                    <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px;">班次 (Shifts)</h4>
+                    <div id="printShiftLegend"></div>
+                </div>
+                <div>
+                    <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px;">请假 (Leave)</h4>
+                    <div id="printLeaveLegend"></div>
+                </div>
+                <div>
+                    <h4 style="font-size: 14px; font-weight: bold; margin-bottom: 10px; color: #333; border-bottom: 2px solid #ddd; padding-bottom: 5px;">假期 (Holiday)</h4>
+                    <div id="printHolidayLegend"></div>
+                </div>
+            </div>
+        </div>
+    </div>

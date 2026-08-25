@@ -1,0 +1,3065 @@
+/* ===========================================
+   JoinUs 页面专用 CSS - 现代化响应式版本
+   =========================================== */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: "Segoe UI", sans-serif;
+    overflow: hidden;
+    /* 禁止默认滚动，交给 Swiper 控制 */
+}
+
+body {
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+}
+
+body::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.swiper {
+    width: 100%;
+    height: 100vh;
+}
+
+.swiper-slide {
+    background-color: #2F2F2F;
+    display: flex;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+    height: 100vh;
+    overflow-y: auto;
+    /* 允许每页内容内部滚动 */
+    padding-top: 0;
+    /* 给 navbar 留空间 */
+    overflow: hidden;
+}
+
+.hidden {
+    display: none;
+}
+
+.animate-on-scroll {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease-out;
+    pointer-events: none;
+}
+
+.animate-on-scroll.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* 加入我们 */
+.joinus-section {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* 上半部分 60% */
+.joinus-banner {
+    padding: clamp(60px, 4.17vw, 80px) 0 0 80px;
+    flex: 0 0 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    position: relative;
+}
+
+.joinus-banner .background-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+}
+
+.joinus-content {
+    position: relative;
+    z-index: 1;
+    margin-top: 76px;
+    margin-left: 40px;
+    width: 402px;
+    height: 140px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* 水平居中 */
+    justify-content: center;
+    text-align: center;
+    transform: translateY(-60px);
+    /* 👈 内容整体往上移 60px 可调整 */
+}
+
+.joinus-content h1 {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: clamp(3rem, 4.48vw, 5.375rem);
+    font-weight: bold;
+    line-height: 1;
+    letter-spacing: 1.4px;
+    margin: 0 100px 0 0;
+    padding: 0;
+    white-space: nowrap;
+    text-shadow:
+        3px 3px 6px rgba(139, 69, 19, 0.3),
+        4px 4px 6px rgba(111, 58, 18, 0.3),
+        5px 5px 6px rgba(85, 44, 16, 0.3),
+        6px 6px 6px rgba(59, 30, 12, 0.3),
+        7px 7px 10px rgba(0, 0, 0, 0.3);
+    z-index: 10;
+}
+
+.joinus-content p {
+    font-size: clamp(1rem, 1.04vw, 1.25rem);
+    font-weight: normal;
+    line-height: 1.2;
+    letter-spacing: 0.5%;
+    margin: 20px 120px 0 20px;
+    padding: 0;
+    white-space: nowrap;
+    text-shadow:
+        0.5px 0.5px 2px rgba(111, 58, 18, 0.3),
+        1px 1px 2px rgba(85, 44, 16, 0.3),
+        1.5px 1.5px 2px rgba(59, 30, 12, 0.3),
+        2px 2px 10px rgba(0, 0, 0, 0.3);
+    filter: drop-shadow(2px 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+.benefits-wrapper {
+    background: url('/images/背景3.webp') no-repeat center center/cover;
+    padding: clamp(0px, 1.8vw, 40px) 20px;
+    text-align: center;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    flex-direction: column;
+}
+
+.benefits-wrapper h2 {
+    font-size: clamp(1.88rem, 2.08vw, 2.5rem);
+    margin-top: 8px;
+    color: #333;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+    font-weight: bold;
+}
+
+.benefits-wrapper .benefits-grid {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: clamp(10px, 1.04vw, 20px);
+    max-width: 1500px;
+    margin: clamp(10px, 1.04vw, 20px) auto 40px;
+}
+
+.benefits-wrapper .benefit-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: clamp(150px, 10.4vw, 200px);
+}
+
+.benefits-wrapper .benefit-item img {
+    width: clamp(50px, 5.2vw, 100px);
+    width: clamp(50px, 5.2vw, 100px);
+    margin-bottom: clamp(4px, 0.63vw, 12px);
+}
+
+.benefits-wrapper .benefit-item p {
+    font-size: clamp(0.7500rem, 0.8929vw + 0.1786rem, 1.2500rem);
+    font-weight: bold;
+    color: black;
+    margin-bottom: 50px;
+}
+
+.comphoto-section {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    padding-top: 80px;
+    box-sizing: border-box;
+
+    /* 无缝循环的橙色渐变背景 */
+    background: linear-gradient(45deg,
+            #ff6b35,
+            #ff8c42,
+            #ffb347,
+            #ffa726,
+            #ff9800,
+            #ff7043,
+            #ff5722,
+            #ff6b35,
+            #ff8c42,
+            #ffb347,
+            #ffa726,
+            #ff9800);
+    background-size: 600% 600%;
+    animation: comphoto-gradient-shift 20s linear infinite;
+    overflow: hidden;
+}
+
+/* 添加温暖光晕效果层 */
+.comphoto-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background:
+        radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 40% 40%, rgba(255, 165, 0, 0.4) 0%, transparent 50%);
+    z-index: 1;
+    pointer-events: none;
+    animation: glow-pulse 10s ease-in-out infinite;
+}
+
+/* 添加动态粒子效果层 */
+.comphoto-section::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.8) 4px, transparent 4px),
+        radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.6) 3px, transparent 3px),
+        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.5) 3.5px, transparent 3.5px),
+        radial-gradient(circle at 10% 60%, rgba(255, 165, 0, 0.4) 2.5px, transparent 2.5px),
+        radial-gradient(circle at 90% 40%, rgba(255, 165, 0, 0.3) 2px, transparent 2px);
+    background-size: 200px 200px, 250px 250px, 150px 150px, 180px 180px, 220px 220px;
+    z-index: 2;
+    pointer-events: none;
+    animation: particles-float 25s linear infinite;
+    opacity: 0.7;
+}
+
+/* 完美无缝循环的渐变动画 */
+@keyframes comphoto-gradient-shift {
+    0% {
+        background-position: 0% 0%;
+    }
+
+    25% {
+        background-position: 100% 0%;
+    }
+
+    50% {
+        background-position: 100% 100%;
+    }
+
+    75% {
+        background-position: 0% 100%;
+    }
+
+    100% {
+        background-position: 0% 0%;
+    }
+}
+
+/* 光晕脉冲动画 - 无缝循环 */
+@keyframes glow-pulse {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.9;
+        transform: scale(1.05);
+    }
+
+    100% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+}
+
+/* 粒子浮动动画 - 无缝循环 */
+@keyframes particles-float {
+    0% {
+        transform: translateY(0px) translateX(0px);
+    }
+
+    25% {
+        transform: translateY(-20px) translateX(10px);
+    }
+
+    50% {
+        transform: translateY(-40px) translateX(-5px);
+    }
+
+    75% {
+        transform: translateY(-20px) translateX(-10px);
+    }
+
+    100% {
+        transform: translateY(0px) translateX(0px);
+    }
+}
+
+.comphoto-title {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) perspective(500px) rotateX(15deg);
+    font-size: clamp(5rem, 7vw, 9rem);
+    font-weight: 900;
+    color: #ffffff;
+    text-shadow:
+        1px 1px 0px #cc5500,
+        2px 2px 0px #b8440a,
+        3px 3px 0px #a43315,
+        4px 4px 0px #902220,
+        5px 5px 10px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(255, 165, 0, 0.5);
+    /* 添加橙色光晕 */
+    z-index: 40;
+    letter-spacing: 0.4em;
+    text-align: center;
+    animation: comphoto-title-3d 3s ease-in-out infinite alternate;
+    user-select: none;
+    pointer-events: none;
+}
+
+@keyframes comphoto-title-3d {
+    0% {
+        transform: translate(-50%, -50%) perspective(500px) rotateX(15deg);
+        text-shadow:
+            1px 1px 0px #cc5500,
+            2px 2px 0px #b8440a,
+            3px 3px 0px #a43315,
+            4px 4px 0px #902220,
+            5px 5px 10px rgba(0, 0, 0, 0.4),
+            0 0 30px rgba(255, 165, 0, 0.5);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) perspective(500px) rotateX(12deg) scale(1.08);
+        text-shadow:
+            1px 1px 0px #cc5500,
+            2px 2px 0px #b8440a,
+            3px 3px 0px #a43315,
+            4px 4px 0px #902220,
+            5px 5px 0px #7a1f2a,
+            6px 6px 15px rgba(0, 0, 0, 0.5),
+            0 0 40px rgba(255, 165, 0, 0.7),
+            /* 增强橙色光晕 */
+            0 0 80px rgba(255, 255, 255, 0.3);
+    }
+}
+
+.comphoto {
+    position: absolute;
+    width: clamp(100px, 13vw, 200px);
+    height: clamp(67px, 8.67vw, 133px);
+    border-radius: clamp(4px, 0.67vw, 8px);
+    box-shadow:
+        0 4px 15px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(255, 165, 0, 0.3);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    object-fit: cover;
+    z-index: 20;
+}
+
+.comphoto:hover {
+    transform: scale(1.1);
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.4),
+        0 0 30px rgba(255, 165, 0, 0.6),
+        0 0 50px rgba(255, 255, 255, 0.3);
+    z-index: 30;
+}
+
+.comphoto-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.comphoto-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0);
+    backdrop-filter: blur(0px);
+    transition: background-color 0.4s ease, backdrop-filter 0.4s ease;
+}
+
+.comphoto-modal.show {
+    background-color: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(10px);
+}
+
+.comphoto-modal-content {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.comphoto-modal-content img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.comphoto-close {
+    position: absolute;
+    top: 100px;
+    right: 30px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1001;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    transition: all 0.3s ease;
+    opacity: 0;
+    background: rgba(0, 0, 0, 0.5);
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.comphoto-modal.show .comphoto-close {
+    opacity: 1;
+}
+
+.comphoto-close:hover {
+    color: #ff9800;
+    /* 改为橙色 */
+    background: rgba(255, 152, 0, 0.2);
+    /* 橙色背景 */
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255, 152, 0, 0.5);
+    /* 橙色光晕 */
+}
+
+.comphoto-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+.job-section {
+    padding: clamp(3.75rem, 8vw, 6.25rem) clamp(1rem, 3vw, 2rem);
+    background: url('/images/背景3.webp') no-repeat center center/cover;
+    backdrop-filter: blur(clamp(1.25rem, 2vw, 1.25rem));
+    box-shadow: 0 clamp(1.25rem, 2vw, 1.25rem) clamp(3.75rem, 6vw, 3.75rem) rgba(0, 0, 0, 0.1);
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin: 0;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.job-table-container {
+    width: min(100%, 920px);
+    margin: 0 auto clamp(0.75rem, 2vw, 1.5rem);
+    padding: 0 clamp(0.5rem, 2vw, 1rem);
+    box-sizing: border-box;
+}
+
+.job-table-title {
+    text-align: center;
+    font-size: clamp(2.2500rem, 3.7946vw - 0.1786rem, 4.3750rem);
+    font-weight: 700;
+    margin: clamp(0rem, 2vw, 2.5rem) auto clamp(0.5rem, 2vw, 2.5rem);
+    background: linear-gradient(135deg, #ff5c00 0%, #ff8a3d 55%, #ff5c00 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.18));
+    letter-spacing: 0.02em;
+}
+
+@keyframes gradientShift {
+
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+/* 职位容器样式 */
+
+.jobs-wrapper {
+    transform-origin: top center;
+    transform: scale(var(--scale, 1));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+.jobs-container {
+    display: flex;
+    flex-wrap: nowrap;
+    /* 强制不换行 */
+    justify-content: center;
+    align-items: stretch;
+    /* 让所有容器等高 */
+    gap: clamp(1rem, 1.5vw, 2rem);
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 clamp(1rem, 2vw, 2rem);
+}
+
+
+.company-job-container {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: clamp(0.75rem, 1.2vw, 1rem);
+    width: clamp(16.0000rem, 10.7143vw + 9.1429rem, 22.0000rem);
+    box-shadow:
+        0 10px 28px rgba(255, 92, 0, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(255, 92, 0, 0.22);
+    transition: all 0.3s ease;
+    flex: 1;
+}
+
+.company-job-container:hover {
+    transform: translateY(-6px);
+    box-shadow:
+        0 18px 40px rgba(255, 92, 0, 0.16),
+        0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.company-title {
+    text-align: center;
+    font-size: clamp(1.2000rem, 0.5357vw + 0.8571rem, 1.5000rem);
+    font-weight: 700;
+    color: #FF5C00;
+    margin: 0 0 clamp(0.5rem, 1vw, 0.75rem) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.company-jobs-list {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.25rem, 0.5vw, 0.5rem);
+    width: 100%;
+    flex: 1;
+    /* 让职位列表占据剩余空间 */
+    justify-content: flex-start;
+}
+
+.job-item {
+    background: linear-gradient(135deg, #FF5C00 0%, #ff7a33 100%);
+    color: white;
+    border-radius: clamp(0.45rem, 0.7vw, 0.75rem);
+    padding: clamp(0.55rem, 0.8vw, 0.75rem) clamp(0.65rem, 1vw, 0.9rem);
+    font-size: clamp(0.8rem, 1vw, 1rem);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(255, 92, 0, 0.28);
+    text-align: center;
+    margin-bottom: clamp(0.25rem, 0.35vw, 0.4rem);
+    white-space: normal;
+    line-height: 1.35;
+    overflow: hidden;
+}
+
+.job-item:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 6px 20px rgba(255, 92, 0, 0.4);
+    background: linear-gradient(135deg, #ff7a33 0%, #FF5C00 100%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.job-item-title {
+    font-size: clamp(14px, 1vw, 19.2px);
+    font-weight: 600;
+    margin: 0 0 2px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.job-item-department {
+    font-size: clamp(12px, 1.4vw, 14px);
+    font-weight: 500;
+    margin: 0;
+    opacity: 0.95;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    text-transform: capitalize;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.job-item-salary {
+    font-size: clamp(12px, 1.4vw, 14px);
+    font-weight: 500;
+    margin: 8px 0 0 0;
+    opacity: 0.95;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 6px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    text-transform: capitalize;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.department-section {
+    margin-bottom: 6px;
+}
+
+.department-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #FF5C00;
+    margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem);
+    padding: clamp(0.25rem, 0.5vw, 0.5rem) clamp(0.5rem, 0.8vw, 0.75rem);
+    background: rgba(255, 92, 0, 0.15);
+    border-radius: clamp(0.25rem, 0.5vw, 0.5rem);
+    border-left: clamp(0.125rem, 0.25vw, 0.25rem) solid #FF5C00;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    box-shadow: 0 1px 3px rgba(255, 92, 0, 0.2);
+    text-align: center;
+}
+
+.department-jobs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 3px;
+}
+
+/* 当只有一个职位时，让它占据整行 */
+.department-jobs.single-job {
+    grid-template-columns: 1fr;
+}
+
+/* 当只有一个职位时，让它占据整行 */
+.department-jobs:has(.job-item:only-child) {
+    grid-template-columns: 1fr;
+}
+
+/* 最后一个奇数职位占据全宽 */
+.job-item.last-odd-job {
+    grid-column: 1 / -1;
+}
+
+.no-jobs-company {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+    border: 2px dashed #ccc;
+}
+
+/* 保留原有的job-card样式以防其他地方使用 */
+
+.job-header {
+    display: flex;
+    justify-content: center;
+    /* 改为居中，因为不需要space-between了 */
+    align-items: flex-start;
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.job-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: clamp(12px, 0.8vw, 16px);
+    font-weight: normal;
+}
+
+.job-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px clamp(10px, 0.8vw, 16px);
+    background: rgba(255, 255, 255, 1);
+    border-radius: 25px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 0.3s ease;
+}
+
+.job-meta-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateX(5px);
+}
+
+.job-meta-label {
+    font-weight: 600;
+    min-width: 50px;
+    color: #ff5c00;
+    text-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.job-details {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: linear-gradient(145deg, #ff5c00 0%, #ff8000 100%);
+    backdrop-filter: blur(25px);
+    border-radius: 20px;
+    padding: clamp(8px, 1.3vw, 25px) clamp(13px, 1.53vw, 30px);
+    margin-top: 15px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.job-details::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 30px;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(145deg, #f1752e 50%, #f7b95c 80%);
+    border: inherit;
+    border-bottom: none;
+    border-right: none;
+    transform: rotate(45deg);
+    backdrop-filter: blur(25px);
+}
+
+.job-details.show {
+    display: block;
+    animation: slideDownBounce 0.6s cubic-bezier(0.68, -0.35, 0.265, 1.35);
+}
+
+.no-jobs {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    font-size: 1.2em;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    border: 2px dashed rgba(255, 92, 0, 0.3);
+}
+
+@keyframes slideDownBounce {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+    }
+
+    60% {
+        opacity: 1;
+        transform: translateY(5px) scale(1.02);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.detail-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 25px;
+}
+
+.job-description {
+    text-align: start;
+    font-size: clamp(10px, 0.73vw, 14px);
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.apply-btn {
+    display: inline-flex;
+    /* 改为 flex 布局 */
+    justify-content: center;
+    /* 水平居中 */
+    align-items: center;
+    padding: clamp(6px, 0.52vw, 10px) clamp(20px, 1.25vw, 24px);
+    background: white;
+    color: #FF5C00;
+    border: none;
+    border-radius: 50px;
+    font-size: clamp(8px, 0.625vw, 12px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    white-space: nowrap;
+    box-shadow: 0 3px 2px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+
+.apply-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+}
+
+.apply-btn:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow:
+        0 12px 35px rgba(255, 107, 107, 0.4),
+        0 0 30px rgba(255, 107, 107, 0.2);
+}
+
+.apply-btn:hover::before {
+    left: 100%;
+}
+
+.apply-btn:active {
+    transform: translateY(0) scale(1.02);
+}
+
+/* 移除媒体查询，改用现代响应式技术 */
+
+.job-description {
+    text-align: start;
+    font-size: clamp(10px, 0.73vw, 14px);
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.apply-btn {
+    display: inline-flex;
+    /* 改为 flex 布局 */
+    justify-content: center;
+    /* 水平居中 */
+    align-items: center;
+    padding: clamp(6px, 0.52vw, 10px) clamp(20px, 1.25vw, 24px);
+    background: white;
+    color: #FF5C00;
+    border: none;
+    border-radius: 50px;
+    font-size: clamp(8px, 0.625vw, 12px);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    white-space: nowrap;
+    text-decoration: none;
+    box-shadow: 0 4px 15px rgba(255, 92, 0, 0.3);
+}
+
+.apply-btn:hover {
+    background: #ff5c00;
+    color: white;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 8px 25px rgba(255, 92, 0, 0.4);
+}
+
+/* 职位详情弹窗样式 */
+.job-detail-modal {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(20px);
+    height: clamp(33.0000rem, 5.3571vw + 29.5714rem, 36.0000rem);
+    margin-top: 40px;
+    /* 移除margin，让flex居中处理 */
+    padding: clamp(1rem, 2vw, 1.5rem);
+    border-radius: clamp(1rem, 1.5vw, 1rem);
+    width: 35rem;
+    font-family: 'Inter', sans-serif;
+    box-shadow:
+        0 clamp(1.5625rem, 3vw, 3.75rem) clamp(3.75rem, 6vw, 3.75rem) rgba(0, 0, 0, 0.2),
+        0 0 0 clamp(0.0625rem, 0.1vw, 0.0625rem) rgba(255, 255, 255, 0.1);
+    border: clamp(0.0625rem, 0.1vw, 0.0625rem) solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow-y: auto;
+    /* 内容过多时允许滚动 */
+    overflow-x: hidden;
+    /* 防止横向溢出 */
+    box-sizing: border-box;
+    /* 确保padding计入宽高 */
+}
+
+.job-detail-content h2 {
+    color: #ff5c00;
+    font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+    font-weight: 700;
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: center;
+    background: linear-gradient(135deg, #ff5c00, #ff8000);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.job-detail-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: clamp(0.5rem, 1vw, 0.75rem);
+    margin-bottom: clamp(1rem, 2vw, 1.25rem);
+}
+
+.job-detail-item {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.5rem, 0.8vw, 0.5rem);
+    padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.5rem, 1.2vw, 0.5rem);
+    background: rgba(255, 92, 0, 0.1);
+    border-radius: clamp(0.5rem, 1vw, 0.5rem);
+    border: clamp(0.0625rem, 0.1vw, 0.0625rem) solid rgba(255, 92, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.job-detail-item:hover {
+    background: rgba(255, 92, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.job-detail-label {
+    font-weight: 600;
+    color: #ff5c00;
+    font-size: clamp(0.875rem, 1.2vw, 0.875rem);
+}
+
+.job-detail-item span:last-child {
+    color: #333;
+    font-weight: 600;
+    font-size: clamp(0.875rem, 1.2vw, 0.875rem);
+}
+
+.job-detail-description {
+    margin-bottom: clamp(1rem, 2vw, 1.25rem);
+}
+
+.job-detail-description h3 {
+    color: #ff5c00;
+    font-size: clamp(1rem, 1.5vw, 1rem);
+    font-weight: 600;
+    margin-bottom: clamp(0.5rem, 0.8vw, 0.5rem);
+}
+
+.job-detail-description p {
+    color: #555;
+    line-height: 1.6;
+    font-size: clamp(0.875rem, 1.2vw, 0.875rem);
+    background: rgba(255, 92, 0, 0.05);
+    padding: clamp(0.75rem, 1.2vw, 0.75rem);
+    border-radius: clamp(0.5rem, 0.8vw, 0.5rem);
+    border-left: clamp(0.25rem, 0.4vw, 0.25rem) solid #ff5c00;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.job-detail-address {
+    margin-bottom: clamp(1rem, 2vw, 1.25rem);
+}
+
+.job-detail-address h3 {
+    color: #ff5c00;
+    font-size: clamp(1rem, 1.5vw, 1rem);
+    font-weight: 600;
+    margin-bottom: clamp(0.5rem, 0.8vw, 0.5rem);
+}
+
+.job-detail-address p {
+    color: #555;
+    line-height: 1.6;
+    font-size: clamp(0.875rem, 1.2vw, 0.875rem);
+    background: rgba(255, 92, 0, 0.05);
+    padding: clamp(0.75rem, 1.2vw, 0.75rem);
+    border-radius: clamp(0.5rem, 0.8vw, 0.5rem);
+    border-left: clamp(0.25rem, 0.4vw, 0.25rem) solid #ff5c00;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.apply-btn-container {
+    display: flex;
+    justify-content: center;
+    margin-top: clamp(1.25rem, 2vw, 1.25rem);
+}
+
+.apply-btn {
+    background: linear-gradient(135deg, #ff5c00, #ff8000);
+    color: white;
+    border: none;
+    padding: clamp(0.75rem, 1.2vw, 0.75rem) clamp(1.875rem, 3vw, 1.875rem);
+    border-radius: clamp(1.5625rem, 2.5vw, 1.5625rem);
+    font-size: clamp(1rem, 1.5vw, 1rem);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 clamp(0.25rem, 0.4vw, 0.25rem) clamp(0.9375rem, 1.5vw, 0.9375rem) rgba(255, 92, 0, 0.3);
+}
+
+.apply-btn:hover {
+    background: linear-gradient(135deg, #e54a00, #ff6b00);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 92, 0, 0.4);
+}
+
+/* 保留原有的job-card样式以防其他地方使用 */
+.job-card {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(20px);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.1),
+        0 0 0 1px rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.job-card:hover {
+    transform: translateY(-8px);
+    box-shadow:
+        0 15px 40px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.4);
+}
+
+.job-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #ff5c00, #ff8c00, #ff5c00);
+    border-radius: 15px 15px 0 0;
+}
+
+.job-apply-btn {
+    width: 100%;
+    padding: 10px;
+    background: linear-gradient(135deg, #ff5c00, #ff8c00);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 92, 0, 0.3);
+}
+
+.job-apply-btn:hover {
+    background: linear-gradient(135deg, #ff8c00, #ff5c00);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 92, 0, 0.4);
+}
+
+/* 弹窗样式美化 */
+#formModal,
+#jobDetailModal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.job-modal-content {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(20px);
+    max-height: 90vh;
+    /* 最大高度不超过视口的90% */
+    height: auto;
+    /* 自动高度，根据内容调整 */
+    margin-top: 3rem;
+    /* 移除margin，让flex居中处理 */
+    padding: clamp(1.5rem, 3vw, 1.5rem) clamp(1.5rem, 3vw, 1.5rem);
+    border-radius: clamp(0.9375rem, 1.5vw, 0.9375rem);
+    width: clamp(18.75rem, 90vw, 31.25rem);
+    max-width: 90vw;
+    font-family: 'Inter', sans-serif;
+    box-shadow:
+        0 clamp(1.5625rem, 3vw, 3.75rem) clamp(3.75rem, 6vw, 3.75rem) rgba(0, 0, 0, 0.2),
+        inset 0 clamp(0.0625rem, 0.1vw, 0.0625rem) 0 rgba(255, 255, 255, 0.8);
+    position: relative;
+    border: clamp(0.0625rem, 0.1vw, 0.0625rem) solid rgba(255, 255, 255, 0.3);
+    animation: modalSlideIn 0.4s cubic-bezier(0.68, -0.35, 0.265, 1.35);
+    overflow-y: auto;
+    /* 内容过多时允许滚动 */
+    overflow-x: hidden;
+    /* 防止横向溢出 */
+    box-sizing: border-box;
+    /* 确保padding计入宽高 */
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.job-close-btn {
+    color: #666;
+    font-size: 24px;
+    font-weight: bold;
+    position: absolute;
+    right: 15px;
+    top: 12px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.job-close-btn:hover {
+    color: #FF6B6B;
+    background: rgba(255, 107, 107, 0.1);
+    transform: rotate(90deg);
+}
+
+.job-form h2 {
+    color: #333;
+    margin-top: 0rem;
+    margin-bottom: clamp(0.0000rem, 1.6741vw - 1.0714rem, 0.9375rem);
+    font-size: clamp(16px, 1.15vw, 22px);
+    text-align: center;
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.job-form {
+    display: flex;
+    flex-direction: column;
+}
+
+.job-form label {
+    margin-top: 8px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #444;
+    font-size: clamp(10px, 0.8vw, 16px);
+}
+
+.job-form input[type="text"],
+.job-form input[type="email"],
+.job-form input[type="tel"],
+.job-form input[type="file"],
+.job-form select {
+    width: 100%;
+    height: clamp(2.2500rem, 1.3393vw + 1.3929rem, 3.0000rem);
+    padding: clamp(8px, 1vw, 12px) clamp(10px, 1.2vw, 15px);
+    border: 2px solid rgba(15, 13, 13, 0.2);
+    border-radius: clamp(8px, 1.5vw, 12px);
+    font-size: clamp(0.6250rem, 0.4464vw + 0.3393rem, 0.8750rem);
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.job-form input:focus,
+.job-form select:focus {
+    outline: none;
+    border-color: #fab259;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+.job-form-row {
+    display: flex;
+    gap: clamp(10px, 1.5vw, 15px);
+    margin-bottom: clamp(5px, 0.8vw, 10px);
+}
+
+.job-half-width {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.job-half-width label {
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.job-half-width input,
+.job-half-width select {
+    width: 100%;
+}
+
+.job-phone-group {
+    display: flex;
+    flex-wrap: nowwrap;
+    gap: clamp(8px, 1.5vw, 15px);
+}
+
+.job-phone-group select {
+    flex: 0 0 clamp(100px, 25vw, 150px);
+    min-width: clamp(100px, 25vw, 150px);
+}
+
+.job-phone-group input {
+    flex: 1 1 auto;
+    min-width: clamp(150px, 45vw, 250px);
+}
+
+.job-submit-btn {
+    width: 100%;
+    padding: clamp(0.3750rem, 0.6696vw - 0.0536rem, 0.7500rem);
+    margin-top: 1.25rem;
+    background: linear-gradient(145deg, #ff5c00 0%, #ff8000 100%);
+    color: white;
+    font-size: clamp(14px, 1.2vw, 16px);
+    font-weight: 600;
+    border: none;
+    border-radius: clamp(8px, 1.5vw, 12px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(255, 92, 0, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.job-submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+}
+
+/* ===========================================
+   意见表单专用样式（独立样式，避免与申请职务表单冲突）
+   =========================================== */
+
+/* 意见表单模态框 */
+.modal-content {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    backdrop-filter: blur(20px);
+    max-height: 90vh;
+    height: auto;
+    margin: 0;
+    padding: clamp(1.5rem, 3vw, 1.5rem) clamp(1.5rem, 3vw, 1.5rem);
+    border-radius: clamp(0.9375rem, 1.5vw, 0.9375rem);
+    width: clamp(18.75rem, 90vw, 31.25rem);
+    max-width: 90vw;
+    font-family: 'Inter', sans-serif;
+    box-shadow:
+        0 clamp(1.5625rem, 3vw, 3.75rem) clamp(3.75rem, 6vw, 3.75rem) rgba(0, 0, 0, 0.2),
+        inset 0 clamp(0.0625rem, 0.1vw, 0.0625rem) 0 rgba(255, 255, 255, 0.8);
+    position: relative;
+    border: clamp(0.0625rem, 0.1vw, 0.0625rem) solid rgba(255, 255, 255, 0.3);
+    animation: modalSlideIn 0.4s cubic-bezier(0.68, -0.35, 0.265, 1.35);
+    overflow-y: auto;
+    overflow-x: hidden;
+    box-sizing: border-box;
+}
+
+/* 意见表单关闭按钮 */
+.close-btn {
+    color: #666;
+    font-size: 24px;
+    font-weight: bold;
+    position: absolute;
+    right: 15px;
+    top: 12px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    color: #FF6B6B;
+    background: rgba(255, 107, 107, 0.1);
+    transform: rotate(90deg);
+}
+
+/* 意见表单样式 */
+form h2 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: clamp(16px, 1.15vw, 22px);
+    text-align: center;
+    background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+form label {
+    margin-top: 8px;
+    margin-bottom: 4px;
+    font-weight: 600;
+    color: #444;
+    font-size: clamp(10px, 0.8vw, 16px);
+}
+
+form input[type="text"],
+form input[type="email"],
+form input[type="tel"],
+form input[type="file"],
+form select {
+    width: 100%;
+    height: clamp(35px, 2.34vw, 45px);
+    padding: clamp(8px, 1vw, 12px) clamp(10px, 1.2vw, 15px);
+    border: 2px solid rgba(15, 13, 13, 0.2);
+    border-radius: clamp(8px, 1.5vw, 12px);
+    font-size: clamp(10px, 0.83vw, 16px);
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+form input:focus,
+form select:focus {
+    outline: none;
+    border-color: #fab259;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* 意见表单电话输入组 */
+.phone-group {
+    display: flex;
+    flex-wrap: nowwrap;
+    gap: clamp(8px, 1.5vw, 15px);
+}
+
+.phone-group select {
+    flex: 0 0 clamp(100px, 25vw, 150px);
+    min-width: clamp(100px, 25vw, 150px);
+}
+
+.phone-group input {
+    flex: 1 1 auto;
+    min-width: clamp(150px, 45vw, 250px);
+}
+
+/* ===========================================
+   加入我们表单区
+   =========================================== */
+.form-wrapper {
+    width: 100%;
+    min-height: 100vh;
+    padding: clamp(1.5rem, 5vh, 3rem) clamp(0.5rem, 2vw, 1rem) clamp(0.5rem, 1vh, 1rem);
+    background: url('/images/背景4.webp') no-repeat center center/cover;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+
+.main-title {
+    color: white;
+    text-align: center;
+    font-size: clamp(24px, 2.34vw, 45px);
+    text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+    margin: clamp(55px, 5.21vw, 100px) auto 0;
+    font-weight: 700;
+    line-height: 1;
+    font-family: 'Inter', sans-serif;
+    padding: 0 clamp(15px, 1.56vw, 30px);
+}
+
+.join-us-form {
+    box-sizing: border-box;
+    width: clamp(380px, 31.25vw, 600px);
+    height: auto;
+    margin: clamp(15px, 1.56vw, 30px) auto clamp(15px, 2vw, 30px);
+    padding: clamp(18px, 1.82vw, 35px);
+    background: #f5f5f5;
+    border-radius: clamp(12px, 2.5vw, 18px);
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    overflow-wrap: break-word;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+}
+
+/* 表单一般行 */
+.form-group {
+    margin-bottom: clamp(-2px, 0.5vw, 3px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* 表单两列（中文姓名+性别） */
+.form-group-row {
+    display: flex;
+    gap: clamp(6px, 0.63vw, 12px);
+}
+
+/* 左右半格 */
+.half-width {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(5px, 0.52vw, 10px);
+}
+
+/* label通用 */
+.form-group label,
+.form-group-row label {
+    margin-top: clamp(8px, 0.78vw, 15px);
+    margin-bottom: clamp(3px, 0.4vw, 6px);
+    font-weight: 600;
+    font-size: clamp(10px, 0.9vw, 14px);
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+}
+
+/* input、select、textarea统一 */
+.form-group input,
+.form-group select,
+.form-group textarea,
+.form-group-row input,
+.form-group-row select,
+.form-group-row textarea {
+    padding: clamp(8px, 1.2vw, 12px) clamp(10px, 1.5vw, 15px);
+    font-size: clamp(11px, 1vw, 14px);
+    border: 2px solid rgba(255, 107, 107, 0.2);
+    border-radius: clamp(6px, 1.2vw, 10px);
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    color: #374151;
+    line-height: 1.4;
+    min-height: clamp(30px, 3.5vw, 40px);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.form-group-row input:focus,
+.form-group-row select:focus,
+.form-group-row textarea:focus {
+    outline: none;
+    border-color: #FF6B6B;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+}
+
+.form-group-row textarea {
+    height: 100%;
+    resize: vertical;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+}
+
+.form-group textarea {
+    height: clamp(40px, 5vw, 80px);
+    font-family: 'Inter', sans-serif;
+    resize: vertical;
+}
+
+/* 确保 .half-width 下的 input 和 textarea 都正常布局 */
+.half-width input,
+.half-width textarea {
+    width: 100%;
+}
+
+/* 手机输入区 */
+.phone-input {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: clamp(6px, 1vw, 12px);
+}
+
+.phone-input select {
+    flex: 0 0 clamp(60px, 15vw, 90px);
+    min-width: clamp(60px, 15vw, 90px);
+    font-size: clamp(8px, 0.57vw, 11px);
+    padding: clamp(5px, 0.42vw, 8px);
+    border: 2px solid rgba(255, 107, 107, 0.2);
+    border-radius: clamp(6px, 1.2vw, 10px);
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    color: #374151;
+    transition: all 0.3s ease;
+    line-height: 1.3;
+    height: clamp(35px, 2.34vw, 45px);
+}
+
+.phone-input input {
+    flex: 1 1 auto;
+    min-width: clamp(80px, 25vw, 150px);
+    font-size: clamp(8px, 0.8vw, 11px);
+    padding: clamp(5px, 0.7vw, 8px);
+    border: 2px solid rgba(255, 107, 107, 0.2);
+    border-radius: clamp(6px, 1.2vw, 10px);
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    color: #374151;
+    transition: all 0.3s ease;
+    line-height: 1.3;
+    height: clamp(30px, 3.5vw, 40px);
+}
+
+.phone-input select:focus,
+.phone-input input:focus {
+    outline: none;
+    border-color: #FF6B6B;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.2);
+    background: rgba(255, 255, 255, 0.95);
+    transform: translateY(-1px);
+}
+
+/* 性别选项（radio） */
+.gender-options {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1.5vw, 15px);
+    margin-top: clamp(-15px, -1.5vw, -3px);
+    flex-wrap: wrap;
+}
+
+.gender-options label {
+    font-size: clamp(10px, 0.9vw, 14px);
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.8vw, 6px);
+    cursor: pointer;
+    color: #444;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    line-height: 1.3;
+}
+
+.gender-options input[type="radio"] {
+    width: clamp(14px, 0.94vw, 18px);
+    height: clamp(14px, 0.94vw, 18px);
+    accent-color: #0062ff;
+    cursor: pointer;
+}
+
+/* 提交按钮 */
+.submit-btn {
+    width: 20%;
+    padding: clamp(5px, 1.5vw, 10px);
+    background: linear-gradient(145deg, #ff5c00 0%, #ff8000 100%);
+    color: white;
+    font-size: clamp(11px, 1vw, 14px);
+    font-weight: 600;
+    border: none;
+    border-radius: clamp(6px, 1.2vw, 10px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: clamp(8px, 1.5vw, 15px);
+    margin-bottom: clamp(8px, 1.5vw, 15px);
+    box-shadow: 0 3px 12px rgba(255, 107, 107, 0.3);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+}
+
+/* 小屏幕优化 - 使用纯 clamp() 方案确保表单不被遮挡 */
+
+.submit-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(255, 107, 107, 0.4);
+}
+
+/* ===========================================
+   联系我们 + 意见表格 合并区域
+   =========================================== */
+.contact-form-section {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: url('/images/背景4.webp') no-repeat center center/cover;
+    padding: clamp(90px, 6.5vw, 110px) clamp(16px, 1.5vw, 28px) clamp(16px, 1.5vw, 28px);
+}
+
+.contact-form-container {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: row;
+    gap: clamp(14px, 1.2vw, 24px);
+    width: 100%;
+    max-width: 1600px;
+    height: clamp(65vh, 70vh, 75vh);
+    max-height: 75vh;
+    box-sizing: border-box;
+    align-items: stretch;
+}
+
+/* --- 左侧：地图 + 联系信息卡片 --- */
+.contact-card {
+    flex: 0 0 67%;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: clamp(14px, 1.2vw, 20px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+    padding: 0;
+}
+
+.contact-card-header {
+    margin-bottom: clamp(10px, 1vw, 18px);
+}
+
+.contact-subtitle {
+    font-size: clamp(10px, 0.7vw, 13px);
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    color: #ff5c00;
+    text-transform: uppercase;
+}
+
+.contact-title {
+    font-family: 'Source Sans Pro', sans-serif;
+    /* font-size: clamp(24px, 2vw, 38px); */
+    font-size: clamp(0.95rem, 3.2vw, 1.15rem);
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: clamp(4px, 0.4vw, 8px) 0 0 0;
+    line-height: 1.2;
+}
+
+.contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 0.7vw, 13px);
+    margin-bottom: clamp(8px, 0.8vw, 14px);
+}
+
+.contact-detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(10px, 0.8vw, 14px);
+}
+
+.contact-icon {
+    flex-shrink: 0;
+    width: clamp(30px, 2.2vw, 38px);
+    height: clamp(30px, 2.2vw, 38px);
+    background: rgba(255, 92, 0, 0.08);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.contact-icon svg {
+    width: clamp(14px, 1vw, 18px);
+    height: clamp(14px, 1vw, 18px);
+}
+
+.contact-detail-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.contact-label {
+    font-size: clamp(9px, 0.6vw, 11px);
+    font-weight: 600;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.contact-detail-text span:not(.contact-label),
+.contact-detail-text a {
+    font-size: clamp(12px, 0.85vw, 15px);
+    color: #333;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+.contact-link {
+    text-decoration: none;
+    color: #333 !important;
+    transition: color 0.3s ease;
+}
+
+.contact-link:hover {
+    color: #ff5c00 !important;
+}
+
+/* 地图嵌入（占左卡上部，填满宽度） */
+.contact-map-embed {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #eee;
+}
+
+.contact-map-embed iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: block;
+}
+
+/* 地图下方的联系信息区域 */
+.contact-info-bottom {
+    flex: 0 0 auto;
+    padding: clamp(12px, 1vw, 18px) clamp(20px, 1.6vw, 28px);
+    border-top: 1px solid #f0f0f0;
+    background: rgba(255, 255, 255, 0.98);
+}
+
+/* 地图下方：标题行更紧凑 */
+.contact-info-bottom .contact-card-header {
+    margin-bottom: clamp(4px, 0.4vw, 8px);
+}
+
+.contact-info-bottom .contact-subtitle {
+    font-size: clamp(10px, 0.65vw, 12px);
+    letter-spacing: 2px;
+}
+
+.contact-info-bottom .contact-title {
+    font-size: clamp(20px, 1.6vw, 28px);
+    margin-top: 2px;
+}
+
+/* 地图下方：联系详情横排（整齐一行） */
+.contact-info-bottom .contact-details {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0;
+    margin-bottom: 0;
+    align-items: stretch;
+}
+
+.contact-info-bottom .contact-detail-item {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: clamp(6px, 0.5vw, 10px) clamp(14px, 1.1vw, 20px);
+    border-right: 1px solid #eee;
+    border-bottom: none;
+    align-items: center;
+    gap: clamp(6px, 0.5vw, 10px);
+}
+
+/* 地址列 - 文字最长，给更大比例 */
+.contact-info-bottom .contact-detail-item:nth-child(1) {
+    flex: 1.8 1 0;
+    padding-left: 0;
+}
+
+/* 电话列 */
+.contact-info-bottom .contact-detail-item:nth-child(2) {
+    flex: 1 1 0;
+}
+
+/* 邮箱列 - 稍宽 */
+.contact-info-bottom .contact-detail-item:nth-child(3) {
+    flex: 1.5 1 0;
+}
+
+/* 营业时间列 */
+.contact-info-bottom .contact-detail-item:nth-child(4) {
+    flex: 1.2 1 0;
+    border-right: none;
+}
+
+.contact-info-bottom .contact-icon {
+    width: clamp(24px, 1.8vw, 32px);
+    height: clamp(24px, 1.8vw, 32px);
+    flex-shrink: 0;
+}
+
+.contact-info-bottom .contact-icon svg {
+    width: clamp(12px, 0.85vw, 16px);
+    height: clamp(12px, 0.85vw, 16px);
+}
+
+.contact-info-bottom .contact-label {
+    font-size: clamp(9px, 0.6vw, 11px);
+}
+
+.contact-info-bottom .contact-detail-text {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.contact-info-bottom .contact-detail-text span:not(.contact-label),
+.contact-info-bottom .contact-detail-text a {
+    font-size: clamp(11px, 0.75vw, 13px);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.contact-company-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(245, 245, 245, 1);
+    border: 1px solid #e0e0e0;
+    border-radius: 50px;
+    padding: clamp(6px, 0.5vw, 10px) clamp(12px, 1vw, 18px);
+    font-size: clamp(11px, 0.75vw, 14px);
+    font-weight: 600;
+    color: #333;
+    margin-bottom: clamp(10px, 1vw, 16px);
+    width: fit-content;
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ff5c00;
+    display: inline-block;
+}
+
+
+
+/* --- 右侧意见表单卡片 --- */
+.feedback-card {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: clamp(14px, 1.2vw, 20px);
+    padding: clamp(20px, 1.8vw, 30px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.feedback-title {
+    font-family: 'Source Sans Pro', sans-serif;
+    font-size: clamp(.95rem, 3.2vw, 1.15rem);
+    font-weight: 800;
+    color: #1a1a1a;
+    margin: clamp(4px, .4vw, 8px) 0 0;
+    line-height: 1.2;
+}
+
+.feedback-subtitle {
+    font-size: clamp(10px, 0.65vw, 12px);
+    color: #ff5c00;
+    margin: 0 0 clamp(4px, 0.5vw, 8px) 0;
+    font-weight: 500;
+}
+
+/* 表单字段 */
+.fb-field {
+    margin-bottom: clamp(3px, 0.4vw, 7px);
+}
+
+.fb-field label {
+    display: block;
+    font-size: clamp(10px, 0.7vw, 12px);
+    font-weight: 600;
+    color: #444;
+    margin-bottom: clamp(3px, 0.25vw, 5px);
+}
+
+.fb-field input[type="text"],
+.fb-field input[type="email"],
+.fb-field input[type="tel"],
+.fb-field select,
+.fb-field textarea {
+    width: 100%;
+    padding: clamp(6px, 0.55vw, 10px) clamp(9px, 0.7vw, 13px);
+    font-size: clamp(11px, 0.75vw, 13px);
+    border: 1.5px solid #e0e0e0;
+    border-radius: clamp(7px, 0.5vw, 9px);
+    box-sizing: border-box;
+    background: #fff;
+    color: #333;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    outline: none;
+}
+
+.fb-field input:focus,
+.fb-field select:focus,
+.fb-field textarea:focus {
+    border-color: #ff5c00;
+    box-shadow: 0 0 0 3px rgba(255, 92, 0, 0.1);
+}
+
+.fb-field input::placeholder,
+.fb-field textarea::placeholder {
+    color: #bbb;
+}
+
+.fb-field textarea {
+    resize: none;
+    min-height: clamp(55px, 5vh, 85px);
+    line-height: 1.4;
+}
+
+/* 两列行 */
+.fb-form-row {
+    display: flex;
+    gap: clamp(8px, 0.8vw, 14px);
+    margin-bottom: clamp(4px, 0.4vw, 7px);
+}
+
+.fb-field-wide {
+    flex: 2;
+}
+
+.fb-field-narrow {
+    flex: 1;
+}
+
+.fb-form-row .fb-field {
+    margin-bottom: 0;
+}
+
+/* 性别选项 */
+.fb-gender-options {
+    display: flex;
+    align-items: center;
+    gap: clamp(10px, 0.8vw, 16px);
+    height: clamp(30px, 2.2vw, 38px);
+}
+
+.fb-gender-options label {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    font-size: clamp(12px, 0.8vw, 14px);
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+    margin-bottom: 0 !important;
+}
+
+.fb-gender-options input[type="radio"] {
+    width: clamp(14px, 1vw, 18px);
+    height: clamp(14px, 1vw, 18px);
+    accent-color: #ff5c00;
+    cursor: pointer;
+}
+
+/* 手机号码行 */
+.fb-field .fb-phone-row {
+    display: flex;
+    align-items: stretch;
+    gap: clamp(8px, 0.6vw, 12px);
+    width: 100%;
+}
+
+.fb-field .fb-phone-row select {
+    flex: 0 0 76px;
+    width: 76px !important;
+    max-width: 76px;
+    min-width: 0;
+    padding: clamp(6px, 0.5vw, 8px) 22px clamp(6px, 0.5vw, 8px) clamp(8px, 0.6vw, 10px);
+    font-size: clamp(11px, 0.7vw, 13px);
+    line-height: 1.2;
+    min-height: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    background-size: 10px;
+}
+
+.fb-field .fb-phone-row input[type="tel"] {
+    flex: 1 1 0;
+    min-width: 0;
+    width: auto !important;
+    padding: clamp(6px, 0.5vw, 8px) clamp(9px, 0.7vw, 13px);
+    line-height: 1.2;
+}
+
+/* 提交按钮 */
+.fb-submit-btn {
+    width: 100%;
+    padding: clamp(9px, 0.9vw, 14px);
+    margin-top: clamp(8px, 0.8vw, 14px);
+    background: linear-gradient(135deg, #ff5c00 0%, #ff8c00 50%, #ff5c00 100%);
+    background-size: 200% 100%;
+    color: white;
+    font-size: clamp(13px, 0.9vw, 16px);
+    font-weight: 700;
+    border: none;
+    border-radius: clamp(7px, 0.55vw, 11px);
+    cursor: pointer;
+    transition: all 0.4s ease;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(255, 92, 0, 0.35);
+}
+
+.fb-submit-btn:hover {
+    background-position: 100% 0;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255, 92, 0, 0.45);
+}
+
+/* ===========================================
+   动画样式 - 从 joinusanimation.css 原封不动复制
+   =========================================== */
+
+/* 确保所有动画元素初始状态都是隐藏的 */
+.animate-on-scroll {
+    opacity: 0;
+}
+
+/* 渐显向上动画 */
+.fade-in-up {
+    opacity: 0;
+    transform: translateY(30px);
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* 动画延迟 - 保持原设置 */
+.delay-1 {
+    animation-delay: 0.1s;
+}
+
+.delay-2 {
+    animation-delay: 0.3s;
+}
+
+.delay-3 {
+    animation-delay: 0.5s;
+}
+
+.delay-4 {
+    animation-delay: 0.7s;
+}
+
+.delay-5 {
+    animation-delay: 0.9s;
+}
+
+.delay-6 {
+    animation-delay: 1.1s;
+}
+
+.delay-7 {
+    animation-delay: 1.3s;
+}
+
+.delay-8 {
+    animation-delay: 1.5s;
+}
+
+/* 向上淡入关键帧 */
+@keyframes fadeInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 初始隐藏状态 - 修复：排除所有特定动画类，避免冲突 */
+.animate-on-scroll:not(.scale-fade-in):not(.slide-in-left):not(.slide-in-right):not(.fade-in-down):not(.rotate-3d):not(.flip-3d):not(.spin-3d):not(.card-tilt-in-left):not(.text-zoom-in-right):not(.rotate-3d-full) {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.8s ease-out;
+}
+
+.animate-on-scroll.visible:not(.scale-fade-in):not(.slide-in-left):not(.slide-in-right):not(.fade-in-down):not(.rotate-3d):not(.flip-3d):not(.spin-3d):not(.card-tilt-in-left):not(.text-zoom-in-right):not(.rotate-3d-full) {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 向左滑入动画 - 修改为更慢的动画 */
+.slide-in-left {
+    opacity: 0 !important;
+    transform: translateX(-300px) !important;
+    transition: all 0.8s ease-out;
+    animation: none !important;
+    /* 确保没有其他动画干扰 */
+}
+
+.slide-in-left.visible {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    transition-delay: 0.6s !important;
+}
+
+/* 为slide-in-left添加延迟类支持 */
+.slide-in-left.delay-1 {
+    transition-delay: 0.4s;
+}
+
+.slide-in-left.delay-2 {
+    transition-delay: 0.6s;
+}
+
+.slide-in-left.delay-3 {
+    transition-delay: 1.0s;
+}
+
+.slide-in-left.delay-4 {
+    transition-delay: 0.8s;
+}
+
+.slide-in-left.delay-5 {
+    transition-delay: 1.0s;
+}
+
+/* 重置延迟 - 当不可见时移除延迟 */
+.slide-in-left:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+/* 向右滑入动画 - 保持原速度 */
+.slide-in-right {
+    opacity: 0 !important;
+    transform: translateX(300px) !important;
+    transition: all 0.8s ease-out;
+    animation: none !important;
+}
+
+.slide-in-right.visible {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    transition-delay: 0.6s !important;
+}
+
+.slide-in-right:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+/* 修复:给 scale-fade-in 元素单独设置,避免继承 translateY */
+.scale-fade-in {
+    opacity: 0;
+    transform: scale(0.8);
+    animation: scaleFadeIn 1.6s ease forwards;
+    animation-play-state: paused;
+}
+
+/* 当父容器可见时,启动动画 */
+.animate-on-scroll.visible .scale-fade-in {
+    animation-play-state: running;
+}
+
+/* 当父容器不可见时,重置动画 */
+.animate-on-scroll:not(.visible) .scale-fade-in {
+    animation-play-state: paused;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+@keyframes scaleFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 首页所有元素统一,延迟0.3秒后开始1.6s动画 */
+.home-content .scale-fade-in {
+    animation-delay: 0.15s;
+}
+
+/* 装饰线条也使用相同的0.3秒延迟 */
+.home-content .decor-line.scale-fade-in {
+    animation-delay: 0.15s;
+}
+
+/* 装饰线条使用相同的从中间放大效果 */
+.decor-line.scale-fade-in {
+    opacity: 0;
+    transform: scale(0.8);
+    animation: scaleFadeIn 1.6s ease forwards;
+    animation-play-state: paused;
+}
+
+.animate-on-scroll.visible .decor-line.scale-fade-in {
+    animation-play-state: running;
+}
+
+.animate-on-scroll:not(.visible) .decor-line.scale-fade-in {
+    animation-play-state: paused;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+/* 向下滑入动画 */
+.fade-in-down {
+    opacity: 0 !important;
+    transform: translateY(-40px) !important;
+    transition: all 0.8s ease-out;
+    animation: none !important;
+}
+
+.fade-in-down.visible {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}
+
+.fade-in-down:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+.scale-out {
+    opacity: 0 !important;
+    transform: scale(0.3) !important;
+    transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: none !important;
+}
+
+.scale-out.visible {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+.scale-out:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+/* ========== 图片专用 3D 旋转特效 ========== */
+/* 图片3D旋转容器 */
+img.image-3d-rotate,
+.image-3d-rotate img {
+    opacity: 0 !important;
+    transform: perspective(1000px) rotateY(-90deg) scale(1.4) !important;
+    transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transition-delay: 0.3s;
+    transform-origin: center;
+    border-radius: 8px;
+    animation: none !important;
+}
+
+/* 图片3D旋转显示状态 */
+img.image-3d-rotate.visible,
+.image-3d-rotate.visible img {
+    opacity: 1 !important;
+    transform: perspective(1000px) rotateY(0deg) scale(1) !important;
+}
+
+/* 重置图片3D旋转延迟 */
+img.image-3d-rotate:not(.visible),
+.image-3d-rotate:not(.visible) img {
+    transition-delay: 0s !important;
+}
+
+/* 图片悬浮3D效果 */
+img.image-3d-rotate:hover,
+.image-3d-rotate img:hover {
+    transform: perspective(1000px) rotateY(5deg) rotateX(5deg) scale(1.05) !important;
+    transition-delay: 0s !important;
+}
+
+/* ========== values 特效（新增） ========== */
+/* 左卡片组整体进入：带倾斜翻转 + 缩放 */
+.card-tilt-in-left {
+    opacity: 0 !important;
+    transform: perspective(1000px) translateX(-120px) rotateY(25deg) scale(0.9) !important;
+    transform-origin: left center;
+    transition: all 1.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.card-tilt-in-left.visible {
+    opacity: 1 !important;
+    transform: perspective(1000px) translateX(0) rotateY(0deg) scale(1) !important;
+}
+
+/* 卡片单独延迟进入 */
+.values-card {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.8s ease-out;
+}
+
+.card-tilt-in-left.visible .values-card:nth-child(1) {
+    transition-delay: 0.6s;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.card-tilt-in-left.visible .values-card:nth-child(2) {
+    transition-delay: 0.8s;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.card-tilt-in-left.visible .values-card:nth-child(3) {
+    transition-delay: 1.0s;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.card-tilt-in-left.visible .values-card:nth-child(4) {
+    transition-delay: 1.2s;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 右侧文字缩放滑入 */
+.text-zoom-in-right {
+    opacity: 0 !important;
+    transform: translateX(100px) translateY(30px) scale(0.8) !important;
+    transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.text-zoom-in-right.visible {
+    opacity: 1 !important;
+    transform: translateX(0) translateY(0) scale(1) !important;
+}
+
+.text-zoom-in-right.delay-1 {
+    transition-delay: 0.3s;
+}
+
+.text-zoom-in-right.delay-2 {
+    transition-delay: 0.6s;
+}
+
+.text-zoom-in-right.delay-3 {
+    transition-delay: 0.9s;
+}
+
+/* ========== values 内容缩放渐显特效（类似 home 的 scale-fade-in） ========== */
+.values-scale-fade {
+    opacity: 0 !important;
+    transform: scale(0.8) !important;
+    transition: all 1.6s ease;
+    animation: none !important;
+}
+
+.values-scale-fade.visible {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+    transition: all 1.0s ease !important;
+}
+
+.values-scale-fade:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+/* 为 values 标题和描述添加渐进延迟 - 精确控制 */
+.values-scale-fade.delay-1.visible {
+    transition-delay: 0.1s !important;
+}
+
+.values-scale-fade.delay-2.visible {
+    transition-delay: 0.2s !important;
+}
+
+.values-scale-fade.delay-3.visible {
+    transition-delay: 0.3s !important;
+}
+
+.values-scale-fade.delay-4.visible {
+    transition-delay: 0.4s !important;
+}
+
+.values-scale-fade.delay-5.visible {
+    transition-delay: 0.5s !important;
+}
+
+.values-scale-fade.delay-6.visible {
+    transition-delay: 0.6s !important;
+}
+
+.values-scale-fade.delay-7.visible {
+    transition-delay: 0.7s !important;
+}
+
+.values-scale-fade.delay-8.visible {
+    transition-delay: 0.8s !important;
+}
+
+.values-scale-fade.delay-9.visible {
+    transition-delay: 0.9s !important;
+}
+
+.values-scale-fade.delay-10.visible {
+    transition-delay: 1.0s !important;
+}
+
+/* 360度3D旋转进场 */
+.rotate-3d-full {
+    opacity: 0 !important;
+    transform: perspective(1000px) rotateY(360deg) scale(0.6) !important;
+    transition: all 1s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform-origin: center;
+    transform-style: preserve-3d;
+}
+
+.rotate-3d-full.visible {
+    opacity: 1 !important;
+    transform: perspective(1000px) rotateY(0deg) scale(1) !important;
+}
+
+.rotate-3d-full:not(.visible) {
+    transition-delay: 0s !important;
+}
+
+.rotate-3d-full.delay-1 {
+    transition-delay: 0.2s;
+}
+
+.rotate-3d-full.delay-2 {
+    transition-delay: 0.4s;
+}
+
+.rotate-3d-full.delay-3 {
+    transition-delay: 0.6s;
+}
+
+/* ========== Navbar 延迟淡入特效 - 等待加载完成后触发 ========== */
+.navbar {
+    opacity: 0;
+    transform: translateY(-20px);
+    /* 移除自动动画，等待JavaScript触发 */
+}
+
+/* 只有当添加了 navbar-loaded 类后才开始动画 */
+.navbar.navbar-loaded {
+    animation: navbarFadeIn 1.2s ease-out forwards;
+    animation-delay: 0.3s;
+    /* 延迟0.3秒开始 */
+}
+
+@keyframes navbarFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 为navbar子元素添加渐进淡入效果 - 同样等待触发 */
+.navbar .logo-section {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .logo-section {
+    animation: fadeInElement 0.8s ease-out forwards;
+    animation-delay: 0.6s;
+    /* logo先出现 */
+}
+
+.navbar .nav-links {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .nav-links {
+    animation: fadeInElement 0.8s ease-out forwards;
+    animation-delay: 0.8s;
+    /* 导航菜单稍后出现 */
+}
+
+.navbar .right-section {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .right-section {
+    animation: fadeInElement 0.8s ease-out forwards;
+    animation-delay: 1.0s;
+    /* 右侧区域最后出现 */
+}
+
+@keyframes fadeInElement {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 导航项目逐个淡入效果 */
+.nav-links .nav-item {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .nav-links .nav-item {
+    animation: fadeInElement 0.6s ease-out forwards;
+}
+
+.navbar.navbar-loaded .nav-links .nav-item:nth-child(1) {
+    animation-delay: 0.9s;
+}
+
+.navbar.navbar-loaded .nav-links .nav-item:nth-child(2) {
+    animation-delay: 1.0s;
+}
+
+.navbar.navbar-loaded .nav-links .nav-item:nth-child(3) {
+    animation-delay: 1.1s;
+}
+
+.navbar.navbar-loaded .nav-links .nav-item:nth-child(4) {
+    animation-delay: 1.2s;
+}
+
+/* 右侧元素逐个淡入 */
+.right-section .login-btn {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .right-section .login-btn {
+    animation: fadeInElement 0.6s ease-out forwards;
+    animation-delay: 1.1s;
+}
+
+.right-section .language-switch {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .right-section .language-switch {
+    animation: fadeInElement 0.6s ease-out forwards;
+    animation-delay: 1.2s;
+}
+
+.right-section .hamburger {
+    opacity: 0;
+}
+
+.navbar.navbar-loaded .right-section .hamburger {
+    animation: fadeInElement 0.6s ease-out forwards;
+    animation-delay: 1.2s;
+}
+
+/* 社交侧边栏动画已删除 */
+
+/* 加载完成后显示 */
+.header-page-indicator.indicator-loaded {
+    opacity: 1;
+}
+
+/* 可选：添加每个点的依次出现效果 */
+.header-page-indicator.indicator-loaded .header-page-dot {
+    animation: fadeInUp 0.5s ease both;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.header-page-indicator.indicator-loaded .header-page-dot:nth-child(6) {
+    animation-delay: 0.6s;
+}
+
+/* 加入我们 Banner 背景 */
+.joinus-banner {
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 从小变大（带缓冲）动画 */
+@keyframes scaleIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+
+    60% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 初始状态：透明且缩小 */
+.joinus-content h1,
+.joinus-content p {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+/* 标题动画 */
+.joinus-banner.joinus-loaded .joinus-content h1 {
+    animation: scaleIn 2.3s forwards;
+    animation-delay: 0.3s;
+}
+
+/* 段落动画 */
+.joinus-banner.joinus-loaded .joinus-content p {
+    animation: scaleIn 2.3s forwards;
+    animation-delay: 0.5s;
+}
+
+/* ========== 公司福利特效 - 从中心向两边展开 ========== */
+/* 福利包装器初始状态 */
+/* scaleIn 动画已定义过，不用重新定义 */
+
+.benefits-wrapper {
+    opacity: 1;
+}
+
+/* 福利标题初始状态 */
+.benefits-wrapper h2 {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+.benefits-wrapper.benefits-loaded h2 {
+    animation: scaleIn 2.5s cubic-bezier(0.33, 0, 0.2, 1) forwards;
+    animation-delay: 0.5s;
+}
+
+/* 福利项目初始状态 */
+.benefits-wrapper .benefit-item {
+    opacity: 0;
+    transform: scale(0.5);
+}
+
+/* 福利项目显示动画 - 使用 scaleIn 动画 */
+.benefits-wrapper.benefits-loaded .benefit-item {
+    animation: scaleIn 2s cubic-bezier(0.33, 0, 0.2, 1) forwards;
+}
+
+/* 对称延迟：中间开始，向两边展开 */
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(3),
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(4) {
+    animation-delay: 0.9s;
+}
+
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(2),
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(5) {
+    animation-delay: 1.1s;
+}
+
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(1),
+.benefits-wrapper.benefits-loaded .benefit-item:nth-child(6) {
+    animation-delay: 1.3s;
+}
+
+/* 悬浮效果保持 */
+.benefits-wrapper .benefit-item:hover {
+    transform: scale(1.05) translateY(-5px) !important;
+    transition: all 0.3s ease !important;
+    transition-delay: 0s !important;
+}
+
+.benefits-wrapper .benefit-item:hover img {
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+}
+
+.benefits-wrapper .benefit-item:hover p {
+    color: #ff5c00;
+    transition: all 0.3s ease;
+}
+
+/* 不可见时立即重置 */
+.benefits-wrapper:not(.benefits-loaded) .benefit-item {
+    opacity: 0 !important;
+    transform: scale(0.5) !important;
+    animation: none !important;
+}
+
+.benefits-wrapper:not(.benefits-loaded) h2 {
+    opacity: 0 !important;
+    transform: scale(0.5) !important;
+    transition: none !important;
+    animation: none !important;
+}
+
+/* ========== 我们的足迹标题特效 - 透明到清晰 ========== */
+/* 初始状态：完全透明但保持3D变换 */
+#footprint-container .footprint-title {
+    opacity: 0;
+    transition: opacity 2s ease-out;
+}
+
+/* 当容器添加 footprint-loaded 类时显示 */
+#footprint-container.footprint-loaded .footprint-title {
+    opacity: 1;
+    transition-delay: 0.6s;
+}
+
+/* 当容器移除 footprint-loaded 类时快速重置 - 避免残影 */
+#footprint-container:not(.footprint-loaded) .footprint-title {
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    transition-delay: 0s;
+}
+
+/* 轮播线进入动画 */
+.line-top,
+.line-bottom {
+    opacity: 0;
+    transition: opacity 1.5s ease-out;
+}
+
+#footprint-container.footprint-loaded .line-top {
+    opacity: 1;
+    transition-delay: 0.8s;
+}
+
+#footprint-container.footprint-loaded .line-bottom {
+    opacity: 1;
+    transition-delay: 1s;
+}
+
+#footprint-container:not(.footprint-loaded) .line-top,
+#footprint-container:not(.footprint-loaded) .line-bottom {
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    transition-delay: 0s;
+}
+
+/* ========== 招聘职位标题特效 - 从下往上滑入 ========== */
+/* 初始状态：在下方且透明 */
+.job-table-title {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: all 1.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 当父容器添加 job-table-loaded 类时显示 */
+.job-table-container.job-table-loaded .job-table-title {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0.3s;
+}
+
+/* 重置状态 - 当不可见时快速重置 */
+.job-table-container:not(.job-table-loaded) .job-table-title {
+    opacity: 0;
+    transform: translateY(50px);
+    transition: all 0.3s ease-out;
+    transition-delay: 0s;
+}
+
+/* ========== 职位卡片从下往上显示特效 ========== */
+/* 初始状态：在下方且透明 */
+.job-card {
+    pointer-events: none;
+    /* 初始不能点击 */
+    opacity: 0;
+    transform: translateY(60px);
+    transition: opacity 2s cubic-bezier(0.25, 0.8, 0.25, 1), transform 2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* 动画结束后允许点击 */
+.job-card.interactive {
+    pointer-events: auto;
+}
+
+/* hover 效果照常写 */
+.job-card.interactive:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* 当jobs-grid添加 jobs-loaded 类时显示 */
+.jobs-grid.jobs-loaded .job-card {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 逐个延迟显示 - 创建瀑布式效果 */
+.jobs-grid.jobs-loaded .job-card:nth-child(1) {
+    transition-delay: 0.6s;
+}
+
+.jobs-grid.jobs-loaded .job-card:nth-child(2) {
+    transition-delay: 0.6s;
+}
+
+.jobs-grid.jobs-loaded .job-card:nth-child(3) {
+    transition-delay: 0.6s;
+}
+
+.jobs-grid.jobs-loaded .job-card:nth-child(4) {
+    transition-delay: 1.2s;
+}
+
+.jobs-grid.jobs-loaded .job-card:nth-child(5) {
+    transition-delay: 1.4s;
+}
+
+.jobs-grid.jobs-loaded .job-card:nth-child(6) {
+    transition-delay: 1.6s;
+}
+
+/* 重置状态 - 当不可见时快速重置 */
+.jobs-grid:not(.jobs-loaded) .job-card {
+    opacity: 0;
+    transform: translateY(60px);
+    transition: all 0.3s ease-out;
+    transition-delay: 0s;
+}
+
+/* 保持卡片原有的悬浮效果 */
+.job-card:hover {
+    transform: translateY(-8px) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.3s ease !important;
+    transition-delay: 0s !important;
+}
+
+/* 联系我们部分 */
+.contact-section-wrapper {
+    width: 100%;
+    height: 100vh;
+    background: url('/images/背景3.webp') no-repeat center center/cover;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: clamp(1.5rem, 3vh, 2.5rem) clamp(0.5rem, 2vw, 1rem);
+    box-sizing: border-box;
+}
+
+.contact-container {
+    display: flex;
+    flex-direction: row;
+    width: clamp(920px, 75vw, 1440px);
+    height: clamp(30rem, 65vh, 50rem);
+    margin: 0 auto;
+    padding: clamp(1rem, 1.67vw, 2rem);
+    background: transparent;
+    gap: clamp(10px, 1.67vw, 32px);
+    box-sizing: border-box;
+}
+
+.contact-info {
+    flex: 0 0 clamp(350px, 26.04vw, 500px);
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: clamp(1.5rem, 2.5vw, 2.5rem);
+    box-sizing: border-box;
+}
+
+.contact-info h2 {
+    font-size: clamp(40px, 2.6vw, 50px);
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: bold;
+    line-height: 1.4;
+    margin: 0 0 24px 0;
+    text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.contact-info p {
+    font-size: clamp(12px, 1.04vw, 20px);
+    margin: 0;
+    padding: 8px 0;
+    font-family: 'Source Sans Pro', sans-serif;
+    color: #000000;
+    line-height: 2;
+}
+
+.map-container {
+    flex: 1 1 auto;
+    height: auto;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.map-container iframe {
+    width: clamp(480px, 39.06vw, 750px);
+    height: clamp(280px, 23.44vw, 450px);
+    border: none;
+    border-radius: clamp(0.8rem, 1.5vw, 1.5rem);
+    box-shadow: 0 clamp(0.8rem, 1.5vw, 1.5rem) clamp(1.5rem, 3vw, 3rem) rgba(0, 0, 0, 0.4);
+}
+
+.no-style-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* 添加文字和地图的进入动画 */
+.contact-info,
+.map-container {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease-out;
+}
+
+/* 当 contact-loaded 类加到 wrapper 上时，让内部内容显示 */
+.contact-section-wrapper.contact-loaded .contact-info,
+.contact-section-wrapper.contact-loaded .map-container {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s;
+}
+
+/* 非加载状态下的复位 */
+.contact-section-wrapper:not(.contact-loaded) .contact-info,
+.contact-section-wrapper:not(.contact-loaded) .map-container {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.3s ease-out;
+    transition-delay: 0s;
+}
+
+/* 手机端联系/表单屏：取消桌面固定高度，卡片随内容 */
+@media (max-width: 768px) {
+    .join-slide-card-center.contact-form-section {
+        display: block !important;
+        width: min(100%, 440px) !important;
+        max-width: 440px !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        background: transparent !important;
+        margin-inline: auto !important;
+    }
+
+    .join-slide-card-center .contact-form-container,
+    .join-slide-card-center .contact-form-container--contact-only,
+    .join-slide-card-center .contact-form-container--feedback-only {
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        flex-direction: column !important;
+        flex-basis: auto !important;
+    }
+
+    .join-slide-card-center .contact-card,
+    .join-slide-card-center .contact-card--mobile,
+    .join-slide-card-center .feedback-card {
+        flex: none !important;
+        flex-basis: auto !important;
+        height: auto !important;
+    }
+}

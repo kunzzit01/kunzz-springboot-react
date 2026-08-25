@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StaffMapper">
+
+    <!-- ================= 职员 users ================= -->
+    <sql id="userCols">
+        id, username, username_cn, nickname, email, password, account_type, position, phone_number,
+        branch, ic_number, bank_name, bank_account, home_address, current_address, city, state, postcode,
+        date_of_birth, gender, nationality, race, emergency_contact_name, emergency_phone_number,
+        bank_account_holder_en, registration_code, is_first_login, created_at
+    </sql>
+
+    <select id="listUsers" resultType="com.kunzz.inventory.entity.User">
+        SELECT <include refid="userCols"/>
+        FROM users
+        <where>
+            <if test="keyword != null and keyword != ''">
+                (username LIKE CONCAT('%', #{keyword}, '%')
+                 OR email LIKE CONCAT('%', #{keyword}, '%')
+                 OR position LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <select id="findUserById" resultType="com.kunzz.inventory.entity.User">
+        SELECT <include refid="userCols"/> FROM users WHERE id = #{id}
+    </select>
+
+    <select id="findUserByUsername" resultType="com.kunzz.inventory.entity.User">
+        SELECT <include refid="userCols"/> FROM users WHERE username = #{username} LIMIT 1
+    </select>
+
+    <select id="findUserByEmail" resultType="com.kunzz.inventory.entity.User">
+        SELECT <include refid="userCols"/> FROM users WHERE email = #{email} LIMIT 1
+    </select>
+
+    <insert id="insertUser" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO users (username, username_cn, nickname, email, password, account_type, position, phone_number,
+            branch, ic_number, bank_name, bank_account, home_address, current_address, city, state, postcode,
+            date_of_birth, gender, nationality, race, emergency_contact_name, emergency_phone_number,
+            bank_account_holder_en, registration_code, is_first_login)
+        VALUES (#{username}, #{usernameCn}, #{nickname}, #{email}, #{password}, #{accountType}, #{position}, #{phoneNumber},
+            #{branch}, #{icNumber}, #{bankName}, #{bankAccount}, #{homeAddress}, #{currentAddress}, #{city}, #{state}, #{postcode},
+            #{dateOfBirth}, #{gender}, #{nationality}, #{race}, #{emergencyContactName}, #{emergencyPhoneNumber},
+            #{bankAccountHolderEn}, #{registrationCode}, #{isFirstLogin})
+    </insert>
+
+    <update id="updateUser">
+        UPDATE users
+        <set>
+            <if test="username != null">username = #{username},</if>
+            <if test="usernameCn != null">username_cn = #{usernameCn},</if>
+            <if test="nickname != null">nickname = #{nickname},</if>
+            <if test="email != null">email = #{email},</if>
+            <if test="password != null">password = #{password},</if>
+            <if test="accountType != null">account_type = #{accountType},</if>
+            <if test="position != null">position = #{position},</if>
+            <if test="phoneNumber != null">phone_number = #{phoneNumber},</if>
+            <if test="branch != null">branch = #{branch},</if>
+            <if test="icNumber != null">ic_number = #{icNumber},</if>
+            <if test="bankName != null">bank_name = #{bankName},</if>
+            <if test="bankAccount != null">bank_account = #{bankAccount},</if>
+            <if test="homeAddress != null">home_address = #{homeAddress},</if>
+            <if test="currentAddress != null">current_address = #{currentAddress},</if>
+            <if test="city != null">city = #{city},</if>
+            <if test="state != null">state = #{state},</if>
+            <if test="postcode != null">postcode = #{postcode},</if>
+            <if test="dateOfBirth != null">date_of_birth = #{dateOfBirth},</if>
+            <if test="gender != null">gender = #{gender},</if>
+            <if test="nationality != null">nationality = #{nationality},</if>
+            <if test="race != null">race = #{race},</if>
+            <if test="emergencyContactName != null">emergency_contact_name = #{emergencyContactName},</if>
+            <if test="emergencyPhoneNumber != null">emergency_phone_number = #{emergencyPhoneNumber},</if>
+            <if test="bankAccountHolderEn != null">bank_account_holder_en = #{bankAccountHolderEn},</if>
+            <if test="registrationCode != null">registration_code = #{registrationCode},</if>
+            <if test="isFirstLogin != null">is_first_login = #{isFirstLogin},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="clearGender">
+        UPDATE users SET gender = NULL WHERE id = #{id}
+    </update>
+
+    <delete id="deleteUser">
+        DELETE FROM users WHERE id = #{id}
+    </delete>
+
+    <!-- ================= 注册码 application_codes ================= -->
+    <select id="listCodes" resultType="com.kunzz.inventory.entity.ApplicationCode">
+        SELECT id, code, account_type, used, created_at FROM application_codes ORDER BY id DESC
+    </select>
+
+    <insert id="insertCode" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO application_codes (code, account_type, used)
+        VALUES (#{code}, #{accountType}, #{used})
+    </insert>
+
+    <delete id="deleteCode">
+        DELETE FROM application_codes WHERE id = #{id}
+    </delete>
+
+    <!-- ================= 侧边栏权限 user_sidebar_permissions ================= -->
+    <select id="findSidebarPerm" resultType="com.kunzz.inventory.entity.UserSidebarPermission">
+        SELECT user_id, permissions_json, page_permissions_json, submenu_permissions_json,
+               brand_permissions_json, report_permissions_json, restaurant_permissions_json
+        FROM user_sidebar_permissions WHERE user_id = #{userId} LIMIT 1
+    </select>
+
+    <insert id="upsertSidebarPerm">
+        INSERT INTO user_sidebar_permissions (user_id, permissions_json, page_permissions_json, submenu_permissions_json,
+            brand_permissions_json, report_permissions_json, restaurant_permissions_json)
+        VALUES (#{userId}, #{permissionsJson}, #{pagePermissionsJson}, #{submenuPermissionsJson},
+            #{brandPermissionsJson}, #{reportPermissionsJson}, #{restaurantPermissionsJson})
+        ON DUPLICATE KEY UPDATE permissions_json = VALUES(permissions_json),
+            page_permissions_json = VALUES(page_permissions_json),
+            submenu_permissions_json = VALUES(submenu_permissions_json),
+            brand_permissions_json = VALUES(brand_permissions_json),
+            report_permissions_json = VALUES(report_permissions_json),
+            restaurant_permissions_json = VALUES(restaurant_permissions_json)
+    </insert>
+
+    <!-- ================= 页面权限 user_page_permissions ================= -->
+    <select id="listPagePerms" resultType="com.kunzz.inventory.entity.UserPagePermission">
+        SELECT user_id, page_key, permissions_json FROM user_page_permissions WHERE user_id = #{userId}
+    </select>
+
+    <delete id="deletePagePerms">
+        DELETE FROM user_page_permissions WHERE user_id = #{userId}
+    </delete>
+
+    <insert id="insertPagePerm">
+        INSERT INTO user_page_permissions (user_id, page_key, permissions_json)
+        VALUES (#{userId}, #{pageKey}, #{permissionsJson})
+        ON DUPLICATE KEY UPDATE permissions_json = VALUES(permissions_json)
+    </insert>
+</mapper>

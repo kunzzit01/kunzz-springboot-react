@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.ScheduleMapper">
+
+    <!-- ================= 排班员工 ================= -->
+    <select id="listEmployees" resultType="com.kunzz.inventory.entity.ScheduleEmployee">
+        SELECT id, name, phone, position, work_area, restaurant, is_active
+        FROM schedule_employees
+        <where>
+            <if test="restaurant != null and restaurant != '' and restaurant != 'ALL'">
+                restaurant = #{restaurant}
+            </if>
+            <if test="workArea != null and workArea != ''">
+                AND work_area = #{workArea}
+            </if>
+        </where>
+        ORDER BY name
+    </select>
+
+    <select id="findEmployeeById" resultType="com.kunzz.inventory.entity.ScheduleEmployee">
+        SELECT id, name, phone, position, work_area, restaurant, is_active
+        FROM schedule_employees WHERE id = #{id}
+    </select>
+
+    <insert id="insertEmployee" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO schedule_employees (name, phone, position, work_area, restaurant, is_active)
+        VALUES (#{name}, #{phone}, #{position}, #{workArea}, #{restaurant}, 1)
+    </insert>
+
+    <update id="updateEmployee">
+        UPDATE schedule_employees SET name=#{name}, phone=#{phone}, position=#{position}, work_area=#{workArea}
+        WHERE id=#{id}
+    </update>
+
+    <delete id="deleteEmployee">
+        DELETE FROM schedule_employees WHERE id=#{id}
+    </delete>
+
+    <!-- ================= 班次 ================= -->
+    <select id="listShifts" resultType="com.kunzz.inventory.entity.ScheduleShift">
+        SELECT id, shift_code, restaurant, start_time, end_time
+        FROM schedule_shifts
+        <where>
+            <if test="restaurant != null and restaurant != ''">
+                restaurant = #{restaurant}
+            </if>
+        </where>
+        ORDER BY shift_code
+    </select>
+
+    <insert id="insertShift" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO schedule_shifts (shift_code, restaurant, start_time, end_time)
+        VALUES (#{shiftCode}, #{restaurant}, #{startTime}, #{endTime})
+    </insert>
+
+    <delete id="deleteShift">
+        DELETE FROM schedule_shifts WHERE id=#{id}
+    </delete>
+
+    <!-- ================= 假期类型 ================= -->
+    <select id="listLeaveTypes" resultType="com.kunzz.inventory.entity.ScheduleLeaveType">
+        SELECT id, code, name, color, type, description, is_active
+        FROM schedule_leave_types
+        ORDER BY code
+    </select>
+
+    <!-- ================= 排班记录 ================= -->
+    <select id="listRecordsBetween" resultType="com.kunzz.inventory.entity.ScheduleRecord">
+        SELECT id, employee_id, schedule_date, value_type, value_code, notes, created_by
+        FROM schedule_records
+        WHERE schedule_date BETWEEN #{from} AND #{to}
+        ORDER BY schedule_date
+    </select>
+
+    <select id="findRecord" resultType="com.kunzz.inventory.entity.ScheduleRecord">
+        SELECT id, employee_id, schedule_date, value_type, value_code, notes, created_by
+        FROM schedule_records
+        WHERE employee_id = #{employeeId} AND schedule_date = #{date}
+    </select>
+
+    <!-- 单条 upsert：存在则更新，不存在则插入 -->
+    <update id="upsertRecord">
+        INSERT INTO schedule_records (employee_id, schedule_date, value_type, value_code, notes)
+        VALUES (#{employeeId}, #{scheduleDate}, #{valueType}, #{valueCode}, #{notes})
+        ON DUPLICATE KEY UPDATE value_type = VALUES(value_type), value_code = VALUES(value_code), notes = VALUES(notes)
+    </update>
+
+    <delete id="deleteRecordByEmpDate">
+        DELETE FROM schedule_records WHERE employee_id = #{employeeId} AND schedule_date = #{date}
+    </delete>
+
+    <delete id="deleteRecordsBetween">
+        DELETE FROM schedule_records WHERE schedule_date BETWEEN #{from} AND #{to}
+    </delete>
+
+    <insert id="insertRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO schedule_records (employee_id, schedule_date, value_type, value_code, notes)
+        VALUES (#{employeeId}, #{scheduleDate}, #{valueType}, #{valueCode}, #{notes})
+    </insert>
+
+    <!-- ================= 手机记录 ================= -->
+    <select id="listPhoneRecordsByDate" resultType="com.kunzz.inventory.entity.PhoneRecord">
+        SELECT id, employee_id, record_date, get_checked, start_time, end_time, return_checked, restaurant
+        FROM phone_records
+        WHERE record_date = #{date}
+        ORDER BY employee_id
+    </select>
+
+    <select id="findPhoneRecord" resultType="com.kunzz.inventory.entity.PhoneRecord">
+        SELECT id, employee_id, record_date, get_checked, start_time, end_time, return_checked, restaurant
+        FROM phone_records
+        WHERE employee_id = #{employeeId} AND record_date = #{date}
+    </select>
+
+    <update id="upsertPhoneRecord">
+        INSERT INTO phone_records (employee_id, record_date, get_checked, start_time, end_time, return_checked, restaurant)
+        VALUES (#{employeeId}, #{recordDate}, #{getChecked}, #{startTime}, #{endTime}, #{returnChecked}, #{restaurant})
+        ON DUPLICATE KEY UPDATE get_checked = VALUES(get_checked), start_time = VALUES(start_time),
+            end_time = VALUES(end_time), return_checked = VALUES(return_checked)
+    </update>
+
+</mapper>

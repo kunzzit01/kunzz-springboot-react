@@ -1,0 +1,4147 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.dw-root{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #faf7f2;
+    color: #111827;
+    overflow-y: auto;
+}
+
+.dw-root .container{
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: clamp(16px, 1.25vw, 24px) 24px;
+    height: 100vh;
+    /* Keep original height */
+    overflow-y: auto;
+    /* Allow container to scroll vertically */
+}
+
+.dw-root .header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(18px, 1.67vw, 32px);
+}
+
+.dw-root .header h1{
+    font-size: clamp(20px, 2.6vw, 50px);
+    font-weight: bold;
+    color: #000000ff;
+}
+
+.dw-root #page-title .break-title-ym{
+    font-size: 0.92em;
+    font-weight: 700;
+}
+
+.dw-root .header .controls{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 页面选择器样式 */
+.dw-root .view-selector{
+    position: relative;
+}
+
+.dw-root .selector-button{
+    background-color: #f99e00;
+    color: white;
+    font-weight: 500;
+    padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(10px, 0.73vw, 14px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    width: clamp(80px, 6.77vw, 130px);
+    justify-content: space-between;
+}
+
+.dw-root .selector-button:hover{
+    background-color: #f98500ff;
+    border-radius: 8px;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}
+
+.dw-root .selector-dropdown{
+    position: absolute;
+    top: 96%;
+    right: 0;
+    background: white;
+    border: 2px solid #000000ff;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+    width: 100%;
+    z-index: 1000;
+    display: none;
+    margin-top: 4px;
+}
+
+.dw-root .selector-dropdown.show{
+    display: block;
+}
+
+.dw-root .dropdown-item{
+    padding: clamp(6px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px);
+    cursor: pointer;
+    border-bottom: 1px solid #e5e7eb;
+    transition: all 0.2s;
+    color: #000000ff;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 500;
+}
+
+.dw-root .dropdown-item:last-child{
+    border-bottom: none;
+}
+
+.dw-root .dropdown-item:hover{
+    background-color: #f8f5eb;
+    border-radius: 8px;
+}
+
+.dw-root .dropdown-item.active{
+    background-color: #f99e00;
+    color: white;
+    border-radius: 4px;
+}
+
+.dw-root .back-button{
+    background-color: #6b7280;
+    color: white;
+    font-weight: 500;
+    padding: 13px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+    margin-left: 16px;
+}
+
+.dw-root .back-button:hover{
+    background-color: #4b5563;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(107, 114, 128, 0.2);
+}
+
+/* 通知容器 */
+.dw-root .toast-container{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}
+
+/* 通知基础样式 */
+.dw-root .toast{
+    width: clamp(100px, 15.63vw, 300px);
+    padding: clamp(2px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: clamp(6px, 0.42vw, 8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: clamp(8px, 0.74vw, 14px);
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.dw-root .toast.show{
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.dw-root .toast.hide{
+    transform: translateX(100%);
+    opacity: 0;
+}
+
+/* 通知类型样式 */
+.dw-root .toast-success{
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+    color: white;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.dw-root .toast-error{
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+    color: white;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.dw-root .toast-info{
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+    color: white;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dw-root .toast-warning{
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9));
+    color: white;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* 通知图标 */
+.dw-root .toast-icon{
+    font-size: clamp(14px, 0.94vw, 18px);
+    flex-shrink: 0;
+}
+
+/* 通知内容 */
+.dw-root .toast-content{
+    flex: 1;
+    font-weight: 500;
+    line-height: 1.4;
+}
+
+/* 关闭按钮 */
+.dw-root .toast-close{
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}
+
+.dw-root .toast-close:hover{
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 进度条 */
+.dw-root .toast-progress{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 8px 8px;
+    transform-origin: left;
+    animation: toastProgress 0.7s linear forwards;
+}
+
+@keyframes toastProgress {
+.dw-root 0%{
+        transform: scaleX(1);
+    }
+
+.dw-root 100%{
+        transform: scaleX(0);
+    }
+}
+
+/* 搜索和过滤区域 */
+.dw-root .filter-section{
+    background: white;
+    border-radius: 12px;
+    padding: 24px 40px;
+    margin-bottom: 24px;
+    border: 2px solid #583e04;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+}
+
+.dw-root .filter-grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 50px;
+    margin-bottom: 16px;
+}
+
+.dw-root .filter-group{
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dw-root .filter-group label{
+    font-size: 14px;
+    font-weight: 600;
+    color: #583e04;
+}
+
+.filter-input,
+.dw-root .filter-select{
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    color: #583e04;
+}
+
+.filter-input:focus,
+.dw-root .filter-select:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+
+.dw-root .filter-actions{
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.dw-root .btn{
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: none;
+    cursor: pointer;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+}
+
+.dw-root .btn-primary{
+    background-color: #f99300;
+    color: white;
+}
+
+.dw-root .btn-primary:hover{
+    background-color: #f98500ff;
+    transform: translateY(-1px);
+}
+
+/* 套装显示样式 - 共享单元格 */
+.dw-root .set-shared-cell{
+    border-top: none !important;
+    border-bottom: none !important;
+    vertical-align: middle !important;
+}
+
+/* 套装行样式 */
+.dw-root tr[data-type="set"]{
+    border-top: 1px solid #e5e7eb;
+}
+
+.dw-root tr[data-type="set"]:not(:first-child){
+    border-top: none;
+}
+
+/* 套装管理样式 */
+.dw-root .set-item-row{
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background-color: #f9fafb;
+}
+
+.dw-root .dishware-select{
+    flex: 2;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.dw-root .quantity-input{
+    flex: 1;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: clamp(8px, 0.74vw, 14px);
+    /* 使用响应式字体大小 */
+    text-align: center;
+}
+
+/* 隐藏 number 输入框的上下箭头（总库存页面） */
+.quantity-input::-webkit-outer-spin-button,
+.dw-root .quantity-input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.dw-root .quantity-input{
+    -moz-appearance: textfield;
+    /* Firefox */
+}
+
+.dw-root .btn-remove{
+    padding: 8px 12px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.dw-root .btn-remove:hover{
+    background-color: #dc2626;
+}
+
+.dw-root .btn-add-item{
+    padding: 10px 20px;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.dw-root .btn-add-item:hover{
+    background-color: #059669;
+}
+
+.dw-root .set-expand-btn{
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 16px;
+    padding: 4px;
+}
+
+.dw-root .set-expand-btn:hover{
+    color: #374151;
+}
+
+.dw-root .set-items-detail{
+    background-color: #f9fafb;
+    border-left: 3px solid #f99300;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 4px;
+}
+
+.dw-root .set-item-detail{
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.dw-root .set-item-detail:last-child{
+    border-bottom: none;
+}
+
+/* 套装模态框特殊样式 - 与总库存弹窗保持一致 */
+.dw-root #setModal .modal-content{
+    max-width: 800px;
+    width: 90%;
+}
+
+.dw-root #setModal .modal-form{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.dw-root #setModal .form-group{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dw-root #setModal .form-group[style*="grid-column: 1 / -1"]{
+    grid-column: 1 / -1;
+}
+
+.dw-root #setModal .form-group label{
+    font-size: 14px;
+    font-weight: 600;
+    color: #583e04;
+}
+
+#setModal .form-group input,
+#setModal .form-group textarea,
+.dw-root #setModal .form-group select{
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#setModal .form-group input:focus,
+#setModal .form-group textarea:focus,
+.dw-root #setModal .form-group select:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+.dw-root #setModal .form-group textarea{
+    resize: vertical;
+    min-height: 60px;
+}
+
+.dw-root #setModal .modal-actions{
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 2px solid #e5e7eb;
+}
+
+/* 套装项目容器样式 - 与总库存弹窗保持一致 */
+.dw-root #set-items-container{
+    background-color: #f9fafb;
+    border-radius: 6px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 12px;
+}
+
+/* 套装项目行样式 - 与总库存弹窗保持一致 */
+.dw-root #setModal .set-item-row{
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background-color: white;
+}
+
+.dw-root #setModal .dishware-select{
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.dw-root #setModal .dishware-select:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+.dw-root #setModal .btn-remove{
+    padding: 8px 12px;
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background-color 0.2s ease;
+}
+
+.dw-root #setModal .btn-remove:hover{
+    background-color: #dc2626;
+}
+
+.dw-root #setModal .btn-add-item{
+    padding: 8px 16px;
+    background-color: #10b981;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.dw-root #setModal .btn-add-item:hover{
+    background-color: #059669;
+}
+
+/* 管理餐厅店面按钮样式 */
+.dw-root #manage-restaurants-btn{
+    color: white !important;
+}
+
+#manage-restaurants-btn i,
+.dw-root #manage-restaurants-btn .fas{
+    color: white !important;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+.dw-root #setModal .modal-content{
+        width: 98%;
+        margin: 10px;
+    }
+
+.dw-root #setModal .modal-form{
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+.dw-root #setModal .set-item-row{
+        flex-direction: column;
+        gap: 12px;
+    }
+
+.dw-root #setModal .dishware-select{
+        width: 100%;
+    }
+
+.dw-root #setModal .btn-remove{
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.dw-root .btn-success{
+    background-color: #10b981;
+    color: white;
+}
+
+.dw-root .btn-success:hover{
+    background-color: #059669;
+    transform: translateY(-1px);
+}
+
+.dw-root .btn-secondary{
+    background-color: #6b7280;
+    color: white;
+}
+
+.dw-root .btn-secondary:hover{
+    background-color: #4b5563;
+    transform: translateY(-1px);
+}
+
+.dw-root .btn-warning{
+    background-color: #f59e0b;
+    color: white;
+}
+
+.dw-root .btn-warning:hover{
+    background-color: #d97706;
+    transform: translateY(-1px);
+}
+
+.dw-root .btn:disabled{
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* 总库存卡片 */
+.dw-root .summary-card{
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    border: 2px solid #583e04;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    transition: transform 0.2s ease;
+    margin-bottom: 24px;
+}
+
+.dw-root .summary-card:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+}
+
+.dw-root .summary-card h3{
+    color: #583e04;
+    font-size: 32px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dw-root .summary-currency-display{
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.dw-root .summary-currency-display .currency-symbol{
+    font-size: 32px;
+    font-weight: bold;
+    color: #583e04;
+}
+
+.dw-root .summary-currency-display .value{
+    font-size: 32px;
+    font-weight: 700;
+    color: #583e04;
+}
+
+/* 库存表格 */
+.dw-root .stock-table{
+    table-layout: fixed;
+    width: 100%;
+    min-width: 1200px;
+    /* 减少最小宽度 */
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.dw-root .stock-table thead{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #636363;
+}
+
+.dw-root .stock-table th{
+    background: #636363;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    text-align: center;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    border: 1px solid #d1d5db;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    white-space: nowrap;
+    min-width: 80px;
+}
+
+.dw-root .stock-table td{
+    padding: clamp(2px, 0.31vw, 6px) clamp(6px, 0.63vw, 12px);
+    font-size: clamp(8px, 0.74vw, 14px);
+    border: 1px solid #d1d5db;
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* 确保加载状态的单元格完全居中 */
+.dw-root .stock-table td[colspan]{
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+.dw-root .stock-table tr:nth-child(even){
+    background-color: white;
+}
+
+.dw-root .stock-table tr:hover{
+    background-color: #e5ebf8ff;
+}
+
+/* JavaScript控制的套装行hover效果 - 只对同一个套装的行生效 */
+.dw-root .stock-table tr.set-hover-active{
+    background-color: #e5ebf8ff !important;
+}
+
+.dw-root .stock-table tr.set-hover-active td{
+    background-color: #e5ebf8ff !important;
+}
+
+.dw-root .stock-table tr.set-hover-active .set-shared-cell{
+    background-color: #e5ebf8ff !important;
+}
+
+/* 固定表格列宽 - 库存管理页面 */
+.stock-table th:nth-child(1),
+.dw-root .stock-table td:nth-child(1){
+    width: 50px;
+}
+
+/* No. */
+.stock-table th:nth-child(2),
+.dw-root .stock-table td:nth-child(2){
+    width: 70px;
+    text-align: center;
+    /* 确保照片列居中 */
+}
+
+/* Photo */
+.stock-table th:nth-child(3),
+.dw-root .stock-table td:nth-child(3){
+    width: 180px;
+}
+
+/* Product Name */
+.stock-table th:nth-child(4),
+.dw-root .stock-table td:nth-child(4){
+    width: 100px;
+}
+
+/* Code */
+.stock-table th:nth-child(5),
+.dw-root .stock-table td:nth-child(5){
+    width: 80px;
+}
+
+/* Category */
+.stock-table th:nth-child(6),
+.dw-root .stock-table td:nth-child(6){
+    width: 120px;
+}
+
+/* Size */
+.stock-table th:nth-child(7),
+.dw-root .stock-table td:nth-child(7){
+    width: 90px;
+}
+
+/* Price */
+.stock-table th:nth-child(8),
+.dw-root .stock-table td:nth-child(8){
+    width: 80px;
+}
+
+/* 文化楼 */
+.stock-table th:nth-child(9),
+.dw-root .stock-table td:nth-child(9){
+    width: 80px;
+}
+
+/* 中央 */
+.stock-table th:nth-child(10),
+.dw-root .stock-table td:nth-child(10){
+    width: 60px;
+}
+
+/* J1 */
+.stock-table th:nth-child(11),
+.dw-root .stock-table td:nth-child(11){
+    width: 60px;
+}
+
+/* J2 */
+.stock-table th:nth-child(12),
+.dw-root .stock-table td:nth-child(12){
+    width: 60px;
+}
+
+/* J3 */
+.stock-table th:nth-child(13),
+.dw-root .stock-table td:nth-child(13){
+    width: 80px;
+}
+
+/* Total */
+.stock-table th:nth-child(14),
+.dw-root .stock-table td:nth-child(14){
+    width: 100px;
+}
+
+/* Actions */
+
+/* 套装表格列宽（使用百分比） */
+.dw-root #sets-table{
+    table-layout: fixed;
+    width: 100%;
+}
+
+/* 基础列（固定位置） */
+#sets-table th:nth-child(1),
+.dw-root #sets-table td:nth-child(1){
+    width: 4%;
+}
+
+/* 序号 */
+#sets-table th:nth-child(2),
+.dw-root #sets-table td:nth-child(2){
+    width: 5%;
+}
+
+/* 套装名称 */
+#sets-table th:nth-child(3),
+.dw-root #sets-table td:nth-child(3){
+    width: 6%;
+}
+
+/* 套装编号 */
+#sets-table th:nth-child(4),
+.dw-root #sets-table td:nth-child(4){
+    width: 30%;
+}
+
+/* 包含项目 */
+#sets-table th:nth-child(5),
+.dw-root #sets-table td:nth-child(5){
+    width: 6%;
+}
+
+/* 单价 (RM) */
+
+/* 餐厅列（动态，每个餐厅列）- 使用属性选择器 */
+#sets-table th[data-restaurant-header],
+.dw-root #sets-table td[data-restaurant-id]{
+    width: 4.5%;
+}
+
+/* 最后两列（总库存和操作） */
+#sets-table th:nth-last-child(2),
+.dw-root #sets-table td:nth-last-child(2){
+    width: 6%;
+}
+
+/* 总库存 */
+#sets-table th:last-child,
+.dw-root #sets-table td:last-child{
+    width: 6%;
+}
+
+/* 操作 */
+
+/* 破损记录表格列宽 */
+#j1-table th:nth-child(1),
+.dw-root #j1-table td:nth-child(1){
+    width: 100px;
+}
+
+/* Date */
+#j1-table th:nth-child(2),
+.dw-root #j1-table td:nth-child(2){
+    width: 50px;
+}
+
+/* No. */
+#j1-table th:nth-child(3),
+.dw-root #j1-table td:nth-child(3){
+    width: 180px;
+}
+
+/* Product Name */
+#j1-table th:nth-child(4),
+.dw-root #j1-table td:nth-child(4){
+    width: 100px;
+}
+
+/* Code */
+#j1-table th:nth-child(5),
+.dw-root #j1-table td:nth-child(5){
+    width: 80px;
+}
+
+/* Category */
+#j1-table th:nth-child(6),
+.dw-root #j1-table td:nth-child(6){
+    width: 120px;
+}
+
+/* Size */
+#j1-table th:nth-child(7),
+.dw-root #j1-table td:nth-child(7){
+    width: 100px;
+}
+
+/* Current Stock */
+#j1-table th:nth-child(8),
+.dw-root #j1-table td:nth-child(8){
+    width: 100px;
+}
+
+/* Break Quantity */
+#j1-table th:nth-child(9),
+.dw-root #j1-table td:nth-child(9){
+    width: 90px;
+}
+
+/* Unit Price */
+#j1-table th:nth-child(10),
+.dw-root #j1-table td:nth-child(10){
+    width: 90px;
+}
+
+/* Total Price */
+#j1-table th:nth-child(11),
+.dw-root #j1-table td:nth-child(11){
+    width: 100px;
+}
+
+/* Actions */
+
+#j2-table th:nth-child(1),
+.dw-root #j2-table td:nth-child(1){
+    width: 100px;
+}
+
+/* Date */
+#j2-table th:nth-child(2),
+.dw-root #j2-table td:nth-child(2){
+    width: 50px;
+}
+
+/* No. */
+#j2-table th:nth-child(3),
+.dw-root #j2-table td:nth-child(3){
+    width: 180px;
+}
+
+/* Product Name */
+#j2-table th:nth-child(4),
+.dw-root #j2-table td:nth-child(4){
+    width: 100px;
+}
+
+/* Code */
+#j2-table th:nth-child(5),
+.dw-root #j2-table td:nth-child(5){
+    width: 80px;
+}
+
+/* Category */
+#j2-table th:nth-child(6),
+.dw-root #j2-table td:nth-child(6){
+    width: 120px;
+}
+
+/* Size */
+#j2-table th:nth-child(7),
+.dw-root #j2-table td:nth-child(7){
+    width: 100px;
+}
+
+/* Current Stock */
+#j2-table th:nth-child(8),
+.dw-root #j2-table td:nth-child(8){
+    width: 100px;
+}
+
+/* Break Quantity */
+#j2-table th:nth-child(9),
+.dw-root #j2-table td:nth-child(9){
+    width: 90px;
+}
+
+/* Unit Price */
+#j2-table th:nth-child(10),
+.dw-root #j2-table td:nth-child(10){
+    width: 90px;
+}
+
+/* Total Price */
+#j2-table th:nth-child(11),
+.dw-root #j2-table td:nth-child(11){
+    width: 100px;
+}
+
+/* Actions */
+
+#j3-table th:nth-child(1),
+.dw-root #j3-table td:nth-child(1){
+    width: 100px;
+}
+
+/* Date */
+#j3-table th:nth-child(2),
+.dw-root #j3-table td:nth-child(2){
+    width: 50px;
+}
+
+/* No. */
+#j3-table th:nth-child(3),
+.dw-root #j3-table td:nth-child(3){
+    width: 180px;
+}
+
+/* Product Name */
+#j3-table th:nth-child(4),
+.dw-root #j3-table td:nth-child(4){
+    width: 100px;
+}
+
+/* Code */
+#j3-table th:nth-child(5),
+.dw-root #j3-table td:nth-child(5){
+    width: 80px;
+}
+
+/* Category */
+#j3-table th:nth-child(6),
+.dw-root #j3-table td:nth-child(6){
+    width: 120px;
+}
+
+/* Size */
+#j3-table th:nth-child(7),
+.dw-root #j3-table td:nth-child(7){
+    width: 100px;
+}
+
+/* Current Stock */
+#j3-table th:nth-child(8),
+.dw-root #j3-table td:nth-child(8){
+    width: 100px;
+}
+
+/* Break Quantity */
+#j3-table th:nth-child(9),
+.dw-root #j3-table td:nth-child(9){
+    width: 90px;
+}
+
+/* Unit Price */
+#j3-table th:nth-child(10),
+.dw-root #j3-table td:nth-child(10){
+    width: 90px;
+}
+
+/* Total Price */
+#j3-table th:nth-child(11),
+.dw-root #j3-table td:nth-child(11){
+    width: 100px;
+}
+
+/* Actions */
+
+/* 响应式列宽调整 */
+@media (max-width: 1200px) {
+
+    .stock-table th:nth-child(1),
+.dw-root .stock-table td:nth-child(1){
+        width: 40px;
+    }
+
+    /* No. */
+    .stock-table th:nth-child(2),
+.dw-root .stock-table td:nth-child(2){
+        width: 60px;
+    }
+
+    /* Photo */
+    .stock-table th:nth-child(3),
+.dw-root .stock-table td:nth-child(3){
+        width: 150px;
+    }
+
+    /* Product Name */
+    .stock-table th:nth-child(4),
+.dw-root .stock-table td:nth-child(4){
+        width: 80px;
+    }
+
+    /* Code */
+    .stock-table th:nth-child(5),
+.dw-root .stock-table td:nth-child(5){
+        width: 60px;
+    }
+
+    /* Category */
+    .stock-table th:nth-child(6),
+.dw-root .stock-table td:nth-child(6){
+        width: 100px;
+    }
+
+    /* Size */
+    .stock-table th:nth-child(7),
+.dw-root .stock-table td:nth-child(7){
+        width: 80px;
+    }
+
+    /* Price */
+    .stock-table th:nth-child(8),
+.dw-root .stock-table td:nth-child(8){
+        width: 70px;
+    }
+
+    /* 文化楼 */
+    .stock-table th:nth-child(9),
+.dw-root .stock-table td:nth-child(9){
+        width: 70px;
+    }
+
+    /* 中央 */
+    .stock-table th:nth-child(10),
+.dw-root .stock-table td:nth-child(10){
+        width: 50px;
+    }
+
+    /* J1 */
+    .stock-table th:nth-child(11),
+.dw-root .stock-table td:nth-child(11){
+        width: 50px;
+    }
+
+    /* J2 */
+    .stock-table th:nth-child(12),
+.dw-root .stock-table td:nth-child(12){
+        width: 50px;
+    }
+
+    /* J3 */
+    .stock-table th:nth-child(13),
+.dw-root .stock-table td:nth-child(13){
+        width: 70px;
+    }
+
+    /* Total */
+    .stock-table th:nth-child(14),
+.dw-root .stock-table td:nth-child(14){
+        width: 80px;
+    }
+
+    /* Actions */
+}
+
+.dw-root .table-container{
+    position: relative;
+    overflow-y: auto;
+    max-height: calc(100vh - 300px);
+    /* 根据实际页面高度调整 */
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+    border: 2px solid #000000ff;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    max-height: 68vh;
+    min-height: 400px;
+    /* 确保最小高度，避免跳动 */
+    position: relative;
+    /* 为加载覆盖层提供定位上下文 */
+}
+
+.dw-root .table-scroll-container{
+    overflow-x: auto;
+    /* 允许水平滚动 */
+    overflow-y: auto;
+    flex: 1;
+    position: relative;
+    transition: opacity 0.2s ease;
+    /* 添加平滑过渡效果 */
+    /* 确保 sticky 定位在滚动容器内工作 */
+    height: 100%;
+}
+
+/* 自定义滚动条样式 */
+.dw-root .table-scroll-container::-webkit-scrollbar{
+    height: 8px;
+    width: 8px;
+}
+
+.dw-root .table-scroll-container::-webkit-scrollbar-track{
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.dw-root .table-scroll-container::-webkit-scrollbar-thumb{
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.dw-root .table-scroll-container::-webkit-scrollbar-thumb:hover{
+    background: #a8a8a8;
+}
+
+/* 操作按钮 */
+.dw-root .action-buttons{
+    padding: 14px 24px;
+    background: #f8f5eb;
+    border-top: 2px solid #583e04;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 统计信息 */
+.dw-root .stats-info{
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    font-size: 14px;
+    color: #6b7280;
+    flex-wrap: wrap;
+    margin-right: -50px;
+}
+
+.dw-root .stat-item{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 150px;
+}
+
+.dw-root .stat-value{
+    font-size: clamp(10px, 0.84vw, 16px);
+    font-weight: bold;
+    color: #583e04;
+}
+
+.dw-root .text-right{
+    text-align: right;
+}
+
+.dw-root .text-center{
+    text-align: center;
+}
+
+.dw-root .font-mono{
+    font-family: 'Courier New', monospace;
+}
+
+.dw-root .positive-value{
+    color: rgb(255, 255, 255);
+    font-weight: 700;
+}
+
+.dw-root .zero-value{
+    color: #6b7280;
+}
+
+.dw-root .no-data{
+    text-align: center;
+    padding: 40px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.dw-root .no-data i{
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+}
+
+.dw-root .loading{
+    display: inline-block;
+    width: clamp(16px, 1.25vw, 20px);
+    height: clamp(16px, 1.25vw, 20px);
+    border: clamp(2px, 0.21vw, 3px) solid #f3f3f3;
+    border-top: clamp(2px, 0.21vw, 3px) solid #583e04;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+.dw-root 0%{
+        transform: rotate(0deg);
+    }
+
+.dw-root 100%{
+        transform: rotate(360deg);
+    }
+}
+
+.dw-root .total-row{
+    background: #f8f5eb !important;
+    border-top: 2px solid #000000ff;
+    font-weight: 600;
+    color: #000000ff;
+}
+
+/* 照片样式 */
+.dw-root .product-photo{
+    width: clamp(120px, 3.13vw, 150px);
+    height: clamp(120px, 3.13vw, 150px);
+    object-fit: cover;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: 1px solid #e5e7eb;
+    display: block;
+    margin: 0 auto;
+    /* 确保照片在单元格中居中 */
+}
+
+.dw-root .no-photo{
+    width: clamp(30px, 3.13vw, 60px);
+    height: clamp(30px, 3.13vw, 60px);
+    background: #f3f4f6;
+    border: 1px dashed #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9ca3af;
+    font-size: clamp(10px, 1.04vw, 20px);
+    margin: 0 auto;
+    /* 确保在单元格中居中 */
+}
+
+/* 照片悬停 tooltip：约 0.15s 后显示，比原生 title 快 */
+.dw-root .photo-tooltip-wrap{
+    position: relative;
+    display: inline-block;
+}
+
+.dw-root .photo-tooltip-wrap::after{
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%) translateY(calc(-100% + 50px));
+    padding: 6px 10px;
+    background: #1f2937;
+    color: #fff;
+    font-size: 13px;
+    white-space: nowrap;
+    border-radius: 6px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    transition-delay: 0.12s;
+    z-index: 9999;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dw-root .photo-tooltip-wrap:hover::after{
+    opacity: 1;
+    transition-delay: 0s;
+}
+
+/* 确保照片单元格内容居中；overflow:visible 以便悬停 tooltip 可见 */
+.dw-root .stock-table td:nth-child(2){
+    text-align: center !important;
+    vertical-align: middle !important;
+    overflow: visible;
+}
+
+/* 数量输入框 */
+.dw-root .quantity-input{
+    width: 80px;
+    padding: clamp(2px, 0.31vw, 4px) clamp(4px, 0.42vw, 8px);
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    text-align: center;
+    font-size: clamp(8px, 0.74vw, 12px);
+    /* 使用响应式字体大小 */
+}
+
+/* 隐藏 number 输入框的上下箭头 */
+.quantity-input::-webkit-outer-spin-button,
+.dw-root .quantity-input::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.dw-root .quantity-input{
+    -moz-appearance: textfield;
+    /* Firefox */
+}
+
+.dw-root .quantity-input:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+/* 货币显示 */
+.dw-root .currency-display{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    box-sizing: border-box;
+    font-size: 14px;
+    width: 100%;
+}
+
+.dw-root .currency-symbol{
+    color: #6b7280;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 500;
+    text-align: left;
+    flex-shrink: 0;
+}
+
+.dw-root .currency-amount{
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 500;
+    color: #000000ff;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* 模态框样式 */
+.dw-root .modal{
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.dw-root .modal-content{
+    background-color: white;
+    margin: 2% auto;
+    padding: clamp(12px, 1.25vw, 24px);
+    border-radius: clamp(6px, 0.63vw, 12px);
+    width: 90%;
+    max-width: 600px;
+    border: 2px solid #583e04;
+}
+
+/* 编辑模态框响应式样式 */
+.dw-root #editModal .modal-content{
+    max-width: clamp(600px, 52vw, 920px);
+    max-height: 92vh;
+    padding: 0;
+    border-radius: clamp(8px, 0.83vw, 16px);
+    overflow: hidden;
+    border: none;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+}
+
+.dw-root #editModal form{
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+.dw-root #editModal .modal-header{
+    margin: 0;
+    padding: clamp(14px, 1.25vw, 22px) clamp(18px, 1.5vw, 28px);
+    border-bottom: 1px solid #e5e7eb;
+    background: linear-gradient(135deg, #583e04 0%, #8b6914 100%);
+    border-radius: 0;
+    flex-shrink: 0;
+}
+
+.dw-root #editModal .modal-title{
+    color: #fff;
+    font-size: clamp(15px, 1.1vw, 20px);
+}
+
+/* 深色 header 上关闭按钮用白色（对齐旧 .close 设计） */
+.dw-root #editModal .modal-close{
+    color: rgba(255, 255, 255, 0.8);
+    font-size: clamp(22px, 1.5vw, 30px);
+}
+
+.dw-root #editModal .modal-close:hover{
+    color: #fff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* 编辑弹窗主体：左右两栏 */
+/* 弹窗 body 参与 flex 收缩，防止套装区展开后底部按钮被遮挡 */
+.dw-root #editModal .modal-body{
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.dw-root .edit-modal-body{
+    display: flex;
+    gap: 0;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 左侧照片面板 */
+.dw-root .edit-modal-photo-panel{
+    width: clamp(180px, 14.5vw, 260px);
+    min-width: clamp(180px, 14.5vw, 260px);
+    background: #f8f6f1;
+    padding: clamp(14px, 1.25vw, 24px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-right: 1px solid #e5e7eb;
+}
+
+.dw-root .edit-modal-photo-panel .photo-upload-area{
+    width: 100%;
+    aspect-ratio: 1;
+    min-height: unset;
+    max-height: unset;
+    border-radius: clamp(8px, 0.63vw, 12px);
+    border: 2px dashed #ccc;
+    background: #fff;
+    padding: clamp(8px, 0.83vw, 16px);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.dw-root .edit-modal-photo-panel .photo-upload-area:hover{
+    border-color: #f99e00;
+    background: #fef9ef;
+}
+
+.dw-root .edit-modal-photo-panel .photo-upload-icon{
+    font-size: clamp(24px, 2vw, 36px);
+    color: #c4a35a;
+    margin-bottom: clamp(6px, 0.5vw, 10px);
+}
+
+.dw-root .edit-modal-photo-panel .photo-upload-text{
+    font-size: clamp(11px, 0.68vw, 13px);
+    color: #8b7355;
+    margin-bottom: 4px;
+}
+
+.dw-root .edit-modal-photo-panel .photo-upload-hint{
+    font-size: clamp(9px, 0.52vw, 11px);
+    color: #b0a08a;
+}
+
+/* 右侧表单面板 - 可滚动 */
+.dw-root .edit-modal-form-panel{
+    flex: 1;
+    padding: clamp(16px, 1.25vw, 24px);
+    overflow-y: auto;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* 编辑区块 */
+.dw-root .edit-section{
+    margin-bottom: clamp(16px, 1.25vw, 22px);
+}
+
+.dw-root .edit-section:last-child{
+    margin-bottom: 0;
+}
+
+.dw-root .edit-section-title{
+    font-size: clamp(12px, 0.78vw, 15px);
+    font-weight: 700;
+    color: #583e04;
+    margin-bottom: clamp(10px, 0.83vw, 14px);
+    padding-bottom: clamp(6px, 0.42vw, 8px);
+    border-bottom: 2px solid #f0e6d2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.dw-root .edit-section-title i{
+    color: #c4a35a;
+    font-size: clamp(12px, 0.73vw, 14px);
+}
+
+/* 表单字段网格 */
+.dw-root .edit-fields-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(10px, 0.83vw, 14px);
+}
+
+.dw-root .edit-field-full{
+    grid-column: 1 / -1;
+}
+
+.dw-root .edit-fields-grid .form-group{
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3px, 0.26vw, 5px);
+}
+
+.dw-root .edit-fields-grid .form-group label{
+    font-size: clamp(11px, 0.68vw, 13px);
+    font-weight: 600;
+    color: #6b5a3e;
+}
+
+.edit-fields-grid .form-group input,
+.dw-root .edit-fields-grid .form-group select{
+    padding: clamp(7px, 0.52vw, 10px) clamp(10px, 0.73vw, 14px);
+    border: 1px solid #d9d0c4;
+    border-radius: clamp(5px, 0.36vw, 7px);
+    font-size: clamp(12px, 0.73vw, 14px);
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.edit-fields-grid .form-group input:focus,
+.dw-root .edit-fields-grid .form-group select:focus{
+    outline: none;
+    border-color: #f99e00;
+    box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.12);
+}
+
+/* 库存数量区的量-行覆盖 */
+.dw-root .edit-section .quantity-row{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(clamp(80px, 6.8vw, 120px), 1fr));
+    gap: clamp(8px, 0.63vw, 12px);
+}
+
+.dw-root .edit-section .quantity-field{
+    background: #fff;
+    border: 1px solid #e5e0d5;
+    border-radius: clamp(6px, 0.42vw, 8px);
+    padding: clamp(8px, 0.63vw, 12px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(3px, 0.26vw, 5px);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dw-root .edit-section .quantity-field:hover{
+    border-color: #f99e00;
+}
+
+.dw-root .edit-section .quantity-field:focus-within{
+    border-color: #f99e00;
+    box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.1);
+}
+
+.dw-root .edit-section .quantity-field label{
+    font-size: clamp(10px, 0.57vw, 11px) !important;
+    font-weight: 600 !important;
+    color: #8b7355 !important;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dw-root .edit-section .quantity-field input{
+    padding: clamp(5px, 0.36vw, 8px);
+    border: none;
+    background: transparent;
+    font-size: clamp(14px, 0.94vw, 18px);
+    font-weight: 700;
+    color: #583e04;
+    text-align: center;
+}
+
+.dw-root .edit-section .quantity-field input:focus{
+    outline: none;
+    box-shadow: none;
+}
+
+/* 编辑弹窗底部按钮 */
+.dw-root #editModal .modal-actions{
+    margin: 0;
+    padding: clamp(12px, 1vw, 18px) clamp(18px, 1.5vw, 28px);
+    border-top: 1px solid #e5e7eb;
+    background: #faf8f5;
+}
+
+/* 照片面板标签 */
+.dw-root .photo-panel-label{
+    font-size: clamp(11px, 0.68vw, 13px);
+    font-weight: 700;
+    color: #8b7355;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: clamp(10px, 0.83vw, 14px);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}
+
+.dw-root .photo-panel-label i{
+    color: #c4a35a;
+}
+
+/* 照片面板下方的快捷信息 */
+.dw-root .photo-panel-info{
+    width: 100%;
+    margin-top: clamp(12px, 1vw, 18px);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(6px, 0.42vw, 8px);
+}
+
+.dw-root .photo-info-item{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: clamp(6px, 0.42vw, 8px) clamp(8px, 0.63vw, 12px);
+    background: #fff;
+    border-radius: clamp(4px, 0.31vw, 6px);
+    border: 1px solid #e5e0d5;
+}
+
+.dw-root .photo-info-label{
+    font-size: clamp(10px, 0.57vw, 11px);
+    font-weight: 600;
+    color: #8b7355;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dw-root .photo-info-value{
+    font-size: clamp(12px, 0.73vw, 14px);
+    font-weight: 700;
+    color: #583e04;
+}
+
+/* 库存总计徽章 */
+.dw-root .edit-stock-total-badge{
+    margin-left: auto;
+    font-size: clamp(11px, 0.68vw, 13px);
+    font-weight: 500;
+    color: #fff;
+    background: linear-gradient(135deg, #f99e00, #e68a00);
+    padding: clamp(2px, 0.21vw, 4px) clamp(10px, 0.73vw, 14px);
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.dw-root .edit-stock-total-badge strong{
+    font-weight: 800;
+    font-size: clamp(12px, 0.78vw, 15px);
+}
+
+/* 可折叠区块 */
+.dw-root .edit-section-collapsible .edit-section-title{
+    cursor: pointer;
+    user-select: none;
+    justify-content: space-between;
+}
+
+.dw-root .edit-section-collapsible .edit-section-title:hover{
+    color: #f99e00;
+}
+
+.dw-root .edit-section-arrow{
+    font-size: clamp(10px, 0.63vw, 12px);
+    color: #b0a08a;
+    transition: transform 0.3s ease;
+}
+
+.dw-root .edit-section-arrow.expanded{
+    transform: rotate(180deg);
+}
+
+.dw-root .edit-section-body{
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    margin-top: clamp(8px, 0.63vw, 12px);
+}
+
+/* 编辑弹窗底部按钮改进 */
+.dw-root .edit-modal-actions{
+    display: flex;
+    gap: clamp(10px, 0.83vw, 14px);
+    justify-content: flex-end;
+    margin: 0 !important;
+    padding: clamp(14px, 1.1vw, 20px) clamp(18px, 1.5vw, 28px) !important;
+    border-top: 1px solid #e5e7eb !important;
+    background: #faf8f5 !important;
+    flex-shrink: 0;
+}
+
+.dw-root .edit-btn-cancel{
+    background: #fff !important;
+    color: #6b7280 !important;
+    border: 1.5px solid #d1d5db !important;
+    padding: clamp(8px, 0.63vw, 12px) clamp(18px, 1.25vw, 24px) !important;
+    border-radius: clamp(6px, 0.42vw, 8px) !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+}
+
+.dw-root .edit-btn-cancel:hover{
+    background: #f3f4f6 !important;
+    border-color: #9ca3af !important;
+    color: #374151 !important;
+}
+
+.dw-root .edit-btn-save{
+    background: linear-gradient(135deg, #f99e00, #e68a00) !important;
+    color: #fff !important;
+    border: none !important;
+    padding: clamp(8px, 0.63vw, 12px) clamp(22px, 1.56vw, 30px) !important;
+    border-radius: clamp(6px, 0.42vw, 8px) !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(249, 158, 0, 0.3) !important;
+    transition: all 0.2s !important;
+}
+
+.dw-root .edit-btn-save:hover{
+    background: linear-gradient(135deg, #e68a00, #cc7a00) !important;
+    box-shadow: 0 4px 14px rgba(249, 158, 0, 0.4) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 弹窗打开动画 */
+.dw-root #editModal .modal-content{
+    animation: editModalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes editModalSlideIn {
+from{
+        opacity: 0;
+        transform: translateY(-30px) scale(0.96);
+    }
+to{
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* 库存数量变化高亮 */
+.dw-root .edit-section .quantity-field.qty-changed{
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.dw-root .edit-section .quantity-field.qty-changed label{
+    color: #dc2626 !important;
+}
+
+.dw-root .edit-section .quantity-field.qty-increased{
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.dw-root .edit-section .quantity-field.qty-increased label{
+    color: #059669 !important;
+}
+
+/* 响应式：窄屏时改为单列 */
+@media (max-width: 680px) {
+.dw-root .edit-modal-body{
+        flex-direction: column;
+    }
+
+.dw-root .edit-modal-photo-panel{
+        width: 100%;
+        min-width: unset;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 16px;
+    }
+
+.dw-root .edit-modal-photo-panel .photo-upload-area{
+        aspect-ratio: 16/9;
+        max-height: 180px;
+    }
+
+.dw-root .photo-panel-info{
+        flex-direction: row;
+    }
+
+.dw-root .photo-info-item{
+        flex: 1;
+    }
+
+.dw-root .edit-fields-grid{
+        grid-template-columns: 1fr;
+    }
+}
+
+/* 套装设置区域响应式样式 */
+.dw-root #set-settings-container{
+    border: 1px solid #ddd !important;
+    border-radius: clamp(4px, 0.42vw, 8px) !important;
+    padding: clamp(8px, 0.83vw, 16px) !important;
+    background: #f9fafb !important;
+}
+
+.dw-root #set-settings-container>div{
+    margin-bottom: clamp(6px, 0.63vw, 12px) !important;
+}
+
+.dw-root #set-settings-container>div>div{
+    gap: clamp(4px, 0.42vw, 8px) !important;
+    margin-bottom: clamp(4px, 0.42vw, 8px) !important;
+}
+
+#set-settings-container span,
+.dw-root #set-settings-container label{
+    font-size: clamp(12px, 0.73vw, 14px) !important;
+}
+
+.dw-root #set-member-select{
+    padding: clamp(6px, 0.42vw, 8px) !important;
+    border-radius: clamp(3px, 0.21vw, 4px) !important;
+    font-size: clamp(12px, 0.73vw, 14px) !important;
+}
+
+.dw-root #set-settings-container button{
+    padding: clamp(6px, 0.42vw, 8px) clamp(12px, 0.83vw, 16px) !important;
+    font-size: clamp(12px, 0.73vw, 14px) !important;
+}
+
+.dw-root #selected-set-members{
+    margin-top: clamp(6px, 0.63vw, 12px) !important;
+}
+
+.dw-root #selected-set-members span{
+    padding: clamp(3px, 0.21vw, 4px) clamp(6px, 0.42vw, 8px) !important;
+    border-radius: clamp(3px, 0.21vw, 4px) !important;
+    font-size: clamp(10px, 0.63vw, 12px) !important;
+}
+
+.dw-root #set-settings-container>div:last-child{
+    margin-top: clamp(6px, 0.63vw, 12px) !important;
+    padding-top: clamp(6px, 0.63vw, 12px) !important;
+}
+
+/* 餐厅店面管理模态框特殊样式 */
+.dw-root #restaurantModal .modal-content{
+    max-width: 95vw;
+    width: auto;
+    min-width: 500px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+}
+
+.dw-root #restaurantModal .modal-body{
+    flex: 1;
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+}
+
+.dw-root #restaurantModal .table-container{
+    overflow: visible;
+    display: block;
+    width: 100%;
+    min-width: 0;
+}
+
+.dw-root #restaurantModal .table-scroll-container{
+    overflow: visible;
+    width: 100%;
+    max-height: 60vh;
+    overflow-y: auto;
+    overflow-x: visible;
+}
+
+.dw-root #restaurantModal .stock-table{
+    width: auto;
+    min-width: 100%;
+    table-layout: auto;
+    border-collapse: collapse;
+}
+
+#restaurantModal .stock-table th,
+.dw-root #restaurantModal .stock-table td{
+    padding: 8px 8px;
+    box-sizing: border-box;
+    white-space: nowrap;
+}
+
+/* 序号列 - 固定宽度 */
+#restaurantModal .stock-table th:nth-child(1),
+.dw-root #restaurantModal .stock-table td:nth-child(1){
+    text-align: center;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+}
+
+/* 餐厅店面名称列 - 自适应 */
+#restaurantModal .stock-table th:nth-child(2),
+.dw-root #restaurantModal .stock-table td:nth-child(2){
+    min-width: 150px;
+    white-space: normal;
+}
+
+/* 操作列 - 固定宽度 */
+#restaurantModal .stock-table th:nth-child(3),
+.dw-root #restaurantModal .stock-table td:nth-child(3){
+    text-align: center;
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
+    white-space: nowrap;
+}
+
+.dw-root #restaurantModal .stock-table .action-btn{
+    margin: 0 2px;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+/* 响应式调整 - 小屏幕时保持所有列可见 */
+@media (max-width: 768px) {
+.dw-root #restaurantModal .modal-content{
+        width: 98vw;
+        min-width: 450px;
+        padding: 12px;
+    }
+
+    #restaurantModal .stock-table th,
+.dw-root #restaurantModal .stock-table td{
+        padding: 6px 4px;
+        font-size: 12px;
+    }
+
+    #restaurantModal .stock-table th:nth-child(1),
+.dw-root #restaurantModal .stock-table td:nth-child(1){
+        width: 50px;
+        min-width: 50px;
+        max-width: 50px;
+    }
+
+    #restaurantModal .stock-table th:nth-child(2),
+.dw-root #restaurantModal .stock-table td:nth-child(2){
+        min-width: 120px;
+    }
+
+    #restaurantModal .stock-table th:nth-child(3),
+.dw-root #restaurantModal .stock-table td:nth-child(3){
+        width: 110px;
+        min-width: 110px;
+        max-width: 110px;
+    }
+}
+
+.dw-root .modal-header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(12px, 1.25vw, 24px);
+    padding-bottom: clamp(8px, 0.83vw, 16px);
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.dw-root .modal-title{
+    font-size: clamp(14px, 1.04vw, 20px);
+    font-weight: 600;
+    color: #583e04;
+}
+
+.dw-root .close{
+    color: #6b7280;
+    font-size: clamp(20px, 1.46vw, 28px);
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.dw-root .close:hover{
+    color: #583e04;
+}
+
+.dw-root .modal-form{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(clamp(150px, 10.42vw, 200px), 1fr));
+    gap: clamp(8px, 0.83vw, 16px);
+}
+
+.dw-root .modal-form .form-group{
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 0.42vw, 8px);
+}
+
+.dw-root .modal-form label{
+    font-size: clamp(12px, 0.73vw, 14px);
+    font-weight: 600;
+    color: #583e04;
+}
+
+/* 数量行样式 */
+.dw-root .quantity-row{
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: clamp(6px, 0.63vw, 12px);
+    row-gap: clamp(8px, 0.83vw, 16px);
+}
+
+.dw-root .quantity-field{
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2px, 0.21vw, 4px);
+}
+
+/* 第二行的J4、J5、J6排列在文华楼、中央、J1下面 */
+.dw-root .quantity-field:nth-child(6){
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.dw-root .quantity-field:nth-child(7){
+    grid-column: 2;
+    grid-row: 2;
+}
+
+.dw-root .quantity-field:nth-child(8){
+    grid-column: 3;
+    grid-row: 2;
+}
+
+/* 如果还有更多餐厅，继续排列 */
+.dw-root .quantity-field:nth-child(9){
+    grid-column: 4;
+    grid-row: 2;
+}
+
+.dw-root .quantity-field:nth-child(10){
+    grid-column: 5;
+    grid-row: 2;
+}
+
+.dw-root .quantity-field:nth-child(11){
+    grid-column: 1;
+    grid-row: 3;
+}
+
+.dw-root .quantity-field:nth-child(12){
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.dw-root .quantity-field label{
+    font-size: clamp(10px, 0.63vw, 12px);
+    font-weight: 500;
+    color: #6b7280;
+}
+
+.dw-root .quantity-field input{
+    padding: clamp(4px, 0.31vw, 6px) clamp(6px, 0.42vw, 8px);
+    border: 1px solid #d1d5db;
+    border-radius: clamp(3px, 0.21vw, 4px);
+    font-size: clamp(11px, 0.68vw, 13px);
+    text-align: center;
+}
+
+.dw-root .quantity-field input:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+
+.dw-root .modal-form input{
+    padding: clamp(6px, 0.42vw, 8px) clamp(8px, 0.63vw, 12px);
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.31vw, 6px);
+    font-size: clamp(12px, 0.73vw, 14px);
+}
+
+.dw-root .modal-form input:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+.dw-root .modal-form label.required::after{
+    content: " *";
+    color: #dc2626;
+}
+
+.dw-root .modal-form select{
+    padding: clamp(6px, 0.42vw, 8px) clamp(8px, 0.63vw, 12px);
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.31vw, 6px);
+    font-size: clamp(12px, 0.73vw, 14px);
+}
+
+.dw-root .modal-form select:focus{
+    outline: none;
+    border-color: #583e04;
+    box-shadow: 0 0 0 2px rgba(88, 62, 4, 0.1);
+}
+
+/* 照片上传区域 */
+.dw-root .photo-upload-area{
+    border: 2px dashed #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    padding: clamp(12px, 1.25vw, 24px);
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.2s;
+    cursor: pointer;
+    margin-top: clamp(4px, 0.42vw, 8px);
+    position: relative;
+    min-height: clamp(120px, 12.5vw, 240px);
+    max-height: clamp(150px, 15.63vw, 300px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dw-root .photo-upload-area:hover{
+    border-color: #583e04;
+    background: #f3f4f6;
+}
+
+.dw-root .photo-upload-area.dragover{
+    border-color: #583e04;
+    background: #fef3c7;
+}
+
+.dw-root .photo-upload-icon{
+    font-size: clamp(20px, 1.67vw, 32px);
+    color: #9ca3af;
+    margin-bottom: clamp(6px, 0.63vw, 12px);
+}
+
+.dw-root .photo-upload-text{
+    font-size: clamp(12px, 0.73vw, 14px);
+    color: #6b7280;
+    margin-bottom: clamp(3px, 0.31vw, 6px);
+}
+
+.dw-root .photo-upload-hint{
+    font-size: clamp(10px, 0.63vw, 12px);
+    color: #9ca3af;
+}
+
+.dw-root .photo-preview{
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    z-index: 1;
+}
+
+/* 当有照片预览时，隐藏上传提示 */
+.photo-upload-area:has(.photo-preview[style*="display: block"]) .photo-upload-icon,
+.photo-upload-area:has(.photo-preview[style*="display: block"]) .photo-upload-text,
+.dw-root .photo-upload-area:has(.photo-preview[style*="display: block"]) .photo-upload-hint{
+    display: none;
+}
+
+.dw-root .file-input{
+    display: none;
+}
+
+.dw-root .modal-actions{
+    display: flex;
+    gap: clamp(6px, 0.63vw, 12px);
+    justify-content: flex-end;
+    margin-top: clamp(12px, 1.25vw, 24px);
+    padding-top: clamp(8px, 0.83vw, 16px);
+    border-top: 2px solid #e5e7eb;
+}
+
+@media (max-width: 768px) {
+.dw-root .header{
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+.dw-root .header h1{
+        font-size: 32px;
+    }
+
+.dw-root .filter-grid{
+        grid-template-columns: 1fr;
+    }
+
+.dw-root .filter-actions{
+        flex-direction: column;
+        width: 100%;
+    }
+
+.dw-root .action-buttons{
+        flex-direction: column;
+        gap: 12px;
+    }
+
+.dw-root .stats-info{
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+.dw-root .stat-item{
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+
+/* 统一顶部行样式 */
+.dw-root .unified-header-row{
+    display: flex;
+    align-items: center;
+    gap: 0px;
+    padding: clamp(8px, 0.83vw, 16px) clamp(18px, 1.25vw, 24px);
+    background: white;
+    border-radius: 12px;
+    margin-bottom: clamp(14px, 1.25vw, 24px);
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.dw-root .header-summary{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 140px;
+    flex-shrink: 0;
+    margin-right: 0px;
+}
+
+.dw-root .summary-title{
+    font-size: clamp(14px, 1.5vw, 28px);
+    font-weight: 600;
+    color: #000000ff;
+    margin-bottom: 2px;
+    line-height: 1.2;
+}
+
+.dw-root .summary-amount{
+    display: flex;
+    align-items: baseline;
+    gap: clamp(0px, 0.31vw, 6px);
+}
+
+.dw-root .summary-amount .currency-symbol{
+    font-size: clamp(18px, 1.88vw, 36px);
+    font-weight: bold;
+    color: #000000ff;
+}
+
+.dw-root .summary-amount .value{
+    font-size: clamp(18px, 1.88vw, 36px);
+    margin-left: 6px;
+    font-weight: 700;
+    color: #000000ff;
+}
+
+.dw-root .header-center-section{
+    flex: 1;
+    min-width: 50px;
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 1.25vw, 24px);
+}
+
+/* 餐厅筛选（对齐旧系统 category-filter：标签在上、下拉在下） */
+.dw-root .restaurant-filter{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+/* 筛选标签（对齐旧系统内联样式：小号半粗纯黑） */
+.dw-root .filter-label{
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    color: #000000ff;
+    white-space: nowrap;
+}
+
+.dw-root .header-search{
+    display: flex;
+    align-items: center;
+    /* 水平对齐（之前是列方向） */
+    gap: 0;
+    flex-shrink: 0;
+}
+
+
+
+.dw-root .category-filter{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.dw-root .item-type-filter{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.dw-root .break-date-filter{
+    display: flex;
+    align-items: center;
+    gap: clamp(12px, 1.25vw, 24px);
+}
+
+.break-month-picker,
+.dw-root .break-quick-select{
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.break-month-picker>div,
+.dw-root .break-quick-select>div{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dw-root .break-month-picker-inner{
+    display: flex;
+    align-items: center;
+}
+
+.dw-root .break-month-picker-trigger{
+    display: inline-flex;
+    align-items: center;
+    padding: clamp(4px, 0.42vw, 8px) 10px;
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    font-size: clamp(8px, 0.74vw, 14px);
+    background: #fff;
+    cursor: pointer;
+    color: #111;
+    min-width: 160px;
+    justify-content: space-between;
+}
+
+.dw-root .break-month-picker-trigger:hover{
+    border-color: #9ca3af;
+}
+
+.dw-root .break-month-picker-trigger:focus{
+    outline: none;
+    border-color: #000000ff;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+}
+
+.dw-root .break-month-picker-popup{
+    position: absolute;
+    top: 100%;
+    left: 0;
+    margin-top: 6px;
+    min-width: 220px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    z-index: 1100;
+    padding: 12px 14px;
+}
+
+.dw-root .break-picker-year-row{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.dw-root .break-picker-year-btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #f9fafb;
+    color: #374151;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.dw-root .break-picker-year-btn:hover{
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.dw-root #break-picker-year-display{
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+    min-width: 48px;
+    text-align: center;
+}
+
+.dw-root .break-picker-month-grid{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.dw-root .break-picker-month-btn{
+    padding: 8px 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.dw-root .break-picker-month-btn:hover{
+    background: #f3f4f6;
+    border-color: #d1d5db;
+}
+
+.dw-root .break-picker-month-btn.selected{
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+}
+
+.dw-root .break-picker-footer{
+    text-align: center;
+    padding-top: 6px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.dw-root .break-picker-clear-btn{
+    padding: 4px 12px;
+    border: none;
+    background: none;
+    color: #6b7280;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.dw-root .break-picker-clear-btn:hover{
+    color: #111;
+    text-decoration: underline;
+}
+
+.dw-root .break-quick-select-dropdown.show{
+    display: block !important;
+}
+
+.dw-root .break-quick-select-dropdown .dropdown-item{
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.dw-root .break-quick-select-dropdown .dropdown-item:hover{
+    background: #f3f4f6;
+}
+
+.dw-root .header-stats{
+    margin-top: 0px;
+    display: flex;
+    gap: clamp(8px, 0.83vw, 16px);
+    font-size: clamp(6px, 0.63vw, 12px);
+    color: #6b7280;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.dw-root .header-right-section{
+    margin-top: clamp(18px, 1.83vw, 35px);
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 1.04vw, 20px);
+    margin-left: auto;
+}
+
+.dw-root .header-stats .stat-value{
+    font-weight: bold;
+    color: #000000ff;
+}
+
+.dw-root .unified-search-input{
+    padding: clamp(4px, 0.42vw, 8px) 8px;
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    font-size: clamp(8px, 0.74vw, 14px);
+    background-color: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.dw-root .unified-search-input:focus{
+    outline: none;
+    border-color: #000000ff;
+    box-shadow: 0 0 10px rgba(31, 14, 0, 0.8);
+}
+
+.dw-root .unified-search-input::placeholder{
+    color: #9ca3af;
+}
+
+.dw-root .btn-warning{
+    background-color: #f99e00;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    margin-top: 0px;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: none;
+    cursor: pointer;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.dw-root .btn-warning:hover{
+    background-color: #f98500ff;
+    transform: translateY(-1px);
+}
+
+/* 操作按钮样式 */
+.dw-root .action-btn{
+    width: clamp(22px, 1.46vw, 28px);
+    height: clamp(22px, 1.46vw, 28px);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(8px, 0.625vw, 12px);
+    color: white;
+    transition: all 0.2s;
+    margin: 0 2px;
+}
+
+.dw-root .action-btn:hover{
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dw-root .action-btn.edit-btn{
+    background: #f59e0b;
+}
+
+.dw-root .action-btn.edit-btn:hover{
+    background: #d97706;
+}
+
+.dw-root .action-btn.delete-btn{
+    background: #ef4444;
+}
+
+.dw-root .action-btn.delete-btn:hover{
+    background: #dc2626;
+}
+
+/* 编辑行样式 */
+.dw-root .editing-row{
+    background-color: #e0f2fe !important;
+}
+
+/* 加载覆盖层样式 */
+.dw-root #loading-overlay{
+    backdrop-filter: blur(2px);
+    border-radius: 4px;
+}
+
+/* 转置表格：表头在左侧，内容向右横向滚动（用于总库存表和分类表格） */
+#stock-table.transposed,
+.dw-root .stock-table.transposed{
+    table-layout: auto !important;
+    width: max-content !important;
+    min-width: 100% !important;
+}
+
+#stock-table.transposed thead,
+.dw-root .stock-table.transposed thead{
+    display: none;
+}
+
+/* 覆盖原本的固定列宽规则，避免 nth-child 影响转置表 */
+#stock-table.transposed th,
+#stock-table.transposed td,
+.stock-table.transposed th,
+.dw-root .stock-table.transposed td{
+    width: auto !important;
+    min-width: 140px;
+    /* Default min-width for content cells */
+    white-space: nowrap;
+}
+
+/* 左侧"表头列"固定 */
+#stock-table.transposed th.row-header,
+.dw-root .stock-table.transposed th.row-header{
+    position: sticky !important;
+    left: 0;
+    top: unset !important;
+    z-index: 300;
+    background: #636363;
+    color: #fff;
+    text-align: center;
+    min-width: 110px;
+    max-width: 110px;
+    width: 110px !important;
+    border: 1px solid #d1d5db;
+    box-sizing: border-box;
+}
+
+/* 内容单元格 */
+#stock-table.transposed td,
+.dw-root .stock-table.transposed td{
+    text-align: center;
+    border: 1px solid #d1d5db;
+    background: white;
+    min-width: 180px;
+    /* Minimum width for data columns */
+    max-width: none;
+    overflow: hidden;
+    word-wrap: break-word;
+    word-break: break-word;
+    box-sizing: border-box;
+}
+
+/* 数据列背景：套装暖金杏，单品淡薰衣草灰，舒适区分 */
+#stock-table.transposed tr td[data-col-bg="0"],
+.dw-root .stock-table.transposed tr td[data-col-bg="0"]{
+    background: #fff8e7;
+}
+
+#stock-table.transposed tr td[data-col-bg="1"],
+.dw-root .stock-table.transposed tr td[data-col-bg="1"]{
+    background: #f5f5fa;
+}
+
+/* 照片列 - 使用原始尺寸；overflow:visible 以便悬停 tooltip 不被裁切 */
+#stock-table.transposed tr[data-row="照片"] td,
+.dw-root .stock-table.transposed tr[data-row="照片"] td{
+    min-width: 180px;
+    padding: clamp(4px, 0.42vw, 8px);
+    overflow: visible;
+}
+
+/* 仅套装列在照片行的列线为虚线；套装之间的边界为实线 */
+#stock-table.transposed tr[data-row="照片"] td[data-col-bg="0"],
+.dw-root .stock-table.transposed tr[data-row="照片"] td[data-col-bg="0"]{
+    border-left: 1px dashed #d1d5db !important;
+    border-right: 1px dashed #d1d5db !important;
+}
+
+/* 套装最左、最右整列边界线加粗（全行），#636363 */
+#stock-table.transposed td[data-col-last-in-set="1"],
+.dw-root .stock-table.transposed td[data-col-last-in-set="1"]{
+    border-right: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed td[data-col-first-in-set="1"],
+.dw-root .stock-table.transposed td[data-col-first-in-set="1"]{
+    border-left: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed tr[data-row="照片"] td[data-col-last-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="照片"] td[data-col-last-in-set="1"]{
+    border-right: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed tr[data-row="照片"] td[data-col-first-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="照片"] td[data-col-first-in-set="1"]{
+    border-left: 2px solid #d1d5db !important;
+}
+
+/* 分类、尺寸、单价行：套装边界线加粗（显式覆盖，避免被覆盖） */
+#stock-table.transposed tr[data-row="分类"] td[data-col-first-in-set="1"],
+#stock-table.transposed tr[data-row="尺寸"] td[data-col-first-in-set="1"],
+#stock-table.transposed tr[data-row="单价"] td[data-col-first-in-set="1"],
+.stock-table.transposed tr[data-row="分类"] td[data-col-first-in-set="1"],
+.stock-table.transposed tr[data-row="尺寸"] td[data-col-first-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="单价"] td[data-col-first-in-set="1"]{
+    border-left: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed tr[data-row="分类"] td[data-col-last-in-set="1"],
+#stock-table.transposed tr[data-row="尺寸"] td[data-col-last-in-set="1"],
+#stock-table.transposed tr[data-row="单价"] td[data-col-last-in-set="1"],
+.stock-table.transposed tr[data-row="分类"] td[data-col-last-in-set="1"],
+.stock-table.transposed tr[data-row="尺寸"] td[data-col-last-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="单价"] td[data-col-last-in-set="1"]{
+    border-right: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed tr[data-row="照片"] td img.product-photo,
+.dw-root .stock-table.transposed tr[data-row="照片"] td img.product-photo{
+    width: clamp(100px, 7.8vw, 150px) !important;
+    height: clamp(100px, 7.8vw, 150px) !important;
+    object-fit: cover;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: 1px solid #e5e7eb;
+    display: block;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+#stock-table.transposed tr[data-row="照片"] td .no-photo,
+.dw-root .stock-table.transposed tr[data-row="照片"] td .no-photo{
+    width: clamp(100px, 7.8vw, 150px) !important;
+    height: clamp(100px, 7.8vw, 150px) !important;
+    display: flex;
+    margin: 0 auto;
+    max-width: 100%;
+}
+
+/* 产品名称列 - 隐藏（用户要求不显示餐品名字行） */
+#stock-table.transposed tr[data-row="产品名称"],
+.dw-root .stock-table.transposed tr[data-row="产品名称"]{
+    display: none !important;
+}
+
+#stock-table.transposed tr[data-row="产品名称"] td,
+.dw-root .stock-table.transposed tr[data-row="产品名称"] td{
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+    text-align: center !important;
+    padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+    min-width: 200px;
+}
+
+/* 其他列的最小宽度设置 */
+#stock-table.transposed tr[data-row="编号"] td,
+#stock-table.transposed tr[data-row="分类"] td,
+#stock-table.transposed tr[data-row="单价"] td,
+#stock-table.transposed tr[data-row="文化楼"] td,
+#stock-table.transposed tr[data-row="中央"] td,
+#stock-table.transposed tr[data-row="总数"] td,
+#stock-table.transposed tr[data-row="操作"] td,
+.stock-table.transposed tr[data-row="编号"] td,
+.stock-table.transposed tr[data-row="分类"] td,
+.stock-table.transposed tr[data-row="单价"] td,
+.stock-table.transposed tr[data-row="文化楼"] td,
+.stock-table.transposed tr[data-row="中央"] td,
+.stock-table.transposed tr[data-row="总数"] td,
+.dw-root .stock-table.transposed tr[data-row="操作"] td{
+    white-space: nowrap;
+}
+
+/* 单价行的货币显示居中 */
+#stock-table.transposed tr[data-row="单价"] td .currency-display,
+.dw-root .stock-table.transposed tr[data-row="单价"] td .currency-display{
+    justify-content: center;
+    width: auto;
+    margin: 0 auto;
+    gap: clamp(4px, 0.42vw, 8px);
+    /* RM和数字之间的间距 */
+}
+
+#stock-table.transposed tr[data-row="尺寸"] td,
+.dw-root .stock-table.transposed tr[data-row="尺寸"] td{
+    white-space: normal;
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+#stock-table.transposed tr[data-row="J1"] td,
+#stock-table.transposed tr[data-row="J2"] td,
+#stock-table.transposed tr[data-row="J3"] td,
+.stock-table.transposed tr[data-row="J1"] td,
+.stock-table.transposed tr[data-row="J2"] td,
+.dw-root .stock-table.transposed tr[data-row="J3"] td{
+    white-space: nowrap;
+}
+
+/* 操作列特殊宽度 */
+#stock-table.transposed tr[data-row="操作"] td,
+.dw-root .stock-table.transposed tr[data-row="操作"] td{
+    min-width: 110px;
+}
+
+/* 总库存表格：所有数据单元格加粗 */
+#stock-table.transposed td,
+.dw-root .stock-table.transposed td{
+    font-weight: 700 !important;
+}
+
+/* NO 行：浅灰 */
+#stock-table.transposed tr[data-row="NO"] th.row-header,
+#stock-table.transposed tr[data-row="NO"] td,
+.stock-table.transposed tr[data-row="NO"] th.row-header,
+.dw-root .stock-table.transposed tr[data-row="NO"] td{
+    background: #f3f4f6 !important;
+    color: #374151;
+}
+
+/* 照片、编号、分类、尺寸、单价：白色 */
+#stock-table.transposed tr[data-row="照片"] th.row-header,
+#stock-table.transposed tr[data-row="照片"] td,
+#stock-table.transposed tr[data-row="编号"] th.row-header,
+#stock-table.transposed tr[data-row="编号"] td,
+#stock-table.transposed tr[data-row="分类"] th.row-header,
+#stock-table.transposed tr[data-row="分类"] td,
+#stock-table.transposed tr[data-row="尺寸"] th.row-header,
+#stock-table.transposed tr[data-row="尺寸"] td,
+#stock-table.transposed tr[data-row="单价"] th.row-header,
+#stock-table.transposed tr[data-row="单价"] td,
+.stock-table.transposed tr[data-row="照片"] th.row-header,
+.stock-table.transposed tr[data-row="照片"] td,
+.stock-table.transposed tr[data-row="编号"] th.row-header,
+.stock-table.transposed tr[data-row="编号"] td,
+.stock-table.transposed tr[data-row="分类"] th.row-header,
+.stock-table.transposed tr[data-row="分类"] td,
+.stock-table.transposed tr[data-row="尺寸"] th.row-header,
+.stock-table.transposed tr[data-row="尺寸"] td,
+.stock-table.transposed tr[data-row="单价"] th.row-header,
+.dw-root .stock-table.transposed tr[data-row="单价"] td{
+    background: #fff !important;
+    color: #374151;
+}
+
+/* 餐厅行：浅灰、白、浅灰、白 交替 */
+#stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="0"] th.row-header,
+#stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="0"] td,
+.stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="0"] th.row-header,
+.dw-root .stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="0"] td{
+    background: #f3f4f6 !important;
+    color: #374151;
+}
+
+#stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="1"] th.row-header,
+#stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="1"] td,
+.stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="1"] th.row-header,
+.dw-root .stock-table.transposed tr[data-restaurant-row][data-restaurant-alt="1"] td{
+    background: #fff !important;
+    color: #374151;
+}
+
+/* 总数、操作行：深灰色 */
+#stock-table.transposed tr[data-row="总数"] th.row-header,
+#stock-table.transposed tr[data-row="总数"] td,
+#stock-table.transposed tr[data-row="操作"] th.row-header,
+#stock-table.transposed tr[data-row="操作"] td,
+.stock-table.transposed tr[data-row="总数"] th.row-header,
+.stock-table.transposed tr[data-row="总数"] td,
+.stock-table.transposed tr[data-row="操作"] th.row-header,
+.dw-root .stock-table.transposed tr[data-row="操作"] td{
+    background: #636363 !important;
+    color: #fff;
+}
+
+/* 总数、操作行：第二列起边框与上方一致，浅灰 #d1d5db */
+#stock-table.transposed tr[data-row="总数"] td,
+#stock-table.transposed tr[data-row="操作"] td,
+.stock-table.transposed tr[data-row="总数"] td,
+.dw-root .stock-table.transposed tr[data-row="操作"] td{
+    border: 1px solid #d1d5db !important;
+}
+
+/* 总数、操作行：套装最左最右列边界线加粗 #636363，覆盖上方 1px */
+#stock-table.transposed tr[data-row="总数"] td[data-col-first-in-set="1"],
+#stock-table.transposed tr[data-row="操作"] td[data-col-first-in-set="1"],
+.stock-table.transposed tr[data-row="总数"] td[data-col-first-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="操作"] td[data-col-first-in-set="1"]{
+    border-left: 2px solid #d1d5db !important;
+}
+
+#stock-table.transposed tr[data-row="总数"] td[data-col-last-in-set="1"],
+#stock-table.transposed tr[data-row="操作"] td[data-col-last-in-set="1"],
+.stock-table.transposed tr[data-row="总数"] td[data-col-last-in-set="1"],
+.dw-root .stock-table.transposed tr[data-row="操作"] td[data-col-last-in-set="1"]{
+    border-right: 2px solid #d1d5db !important;
+}
+
+/* 操作行（最后一行）底线加粗，浅灰与上方一致 */
+#stock-table.transposed tr[data-row="操作"] th.row-header,
+#stock-table.transposed tr[data-row="操作"] td,
+.stock-table.transposed tr[data-row="操作"] th.row-header,
+.dw-root .stock-table.transposed tr[data-row="操作"] td{
+    border-bottom: 2px solid #d1d5db !important;
+}
+
+/* 小屏幕时减小列宽 - 不影响默认页面大小 */
+@media (max-width: 1400px) {
+
+    /* 内容单元格 - 减小最小宽度 */
+    #stock-table.transposed td,
+.dw-root .stock-table.transposed td{
+        min-width: 120px;
+    }
+
+    /* 照片列 - 减小最小宽度 */
+    #stock-table.transposed tr[data-row="照片"] td,
+.dw-root .stock-table.transposed tr[data-row="照片"] td{
+        min-width: 120px;
+    }
+
+    /* 照片尺寸 - 减小最小值但保持最大值 */
+    #stock-table.transposed tr[data-row="照片"] td img.product-photo,
+.dw-root .stock-table.transposed tr[data-row="照片"] td img.product-photo{
+        width: clamp(90px, 7.8vw, 150px) !important;
+        height: clamp(90px, 7.8vw, 150px) !important;
+    }
+
+    #stock-table.transposed tr[data-row="照片"] td .no-photo,
+.dw-root .stock-table.transposed tr[data-row="照片"] td .no-photo{
+        width: clamp(90px, 7.8vw, 150px) !important;
+        height: clamp(90px, 7.8vw, 150px) !important;
+    }
+
+    /* 产品名称列 - 减小最小宽度 */
+    #stock-table.transposed tr[data-row="产品名称"] td,
+.dw-root .stock-table.transposed tr[data-row="产品名称"] td{
+        min-width: 130px;
+    }
+}
+
+/* 分类容器样式 - 用于全部分类显示 */
+.dw-root .categories-container{
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+    /* Removed overflow-y: auto; max-height: 68vh; min-height: 400px; */
+}
+
+/* 破损记录容器样式 - 左右排列 */
+.dw-root .break-records-container{
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+    /* 确保至少显示三个容器，每个容器最小宽度 */
+    min-width: calc(3 * 600px + 2 * 20px + 40px);
+    /* 3个容器 + 2个gap + padding */
+}
+
+.dw-root .break-record-section{
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 600px;
+    /* 固定宽度，不缩放 */
+    min-width: 600px;
+    max-width: 600px;
+}
+
+.dw-root .break-record-header{
+    background: #636363;
+    color: white;
+    padding: clamp(10px, 1.04vw, 20px) clamp(16px, 1.25vw, 24px);
+    font-size: clamp(14px, 1.04vw, 20px);
+    font-weight: 600;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dw-root .break-record-table-wrapper{
+    overflow-x: auto;
+    overflow-y: visible;
+    /* 对齐旧系统：内容不足时完整展示，超过 max-height 时滚动 */
+    flex: 1;
+    max-height: calc(100vh - 350px);
+    position: relative;
+    /* 为下拉菜单提供定位上下文 */
+}
+
+.dw-root .break-record-table{
+    width: 100%;
+    min-width: 500px;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+    /* 固定表格布局 */
+}
+
+.dw-root .break-record-table thead{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #636363;
+}
+
+.dw-root .break-record-table th{
+    background: #636363;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    text-align: center;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    border: 1px solid #d1d5db;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    white-space: nowrap;
+}
+
+/* 固定列宽（使用百分比）- 破损记录页面（6列） */
+#j1-page .break-record-table th:nth-child(1),
+#j1-page .break-record-table td:nth-child(1),
+#j2-page .break-record-table th:nth-child(1),
+#j2-page .break-record-table td:nth-child(1),
+#j3-page .break-record-table th:nth-child(1),
+.dw-root #j3-page .break-record-table td:nth-child(1){
+    width: 8%;
+    /* No. */
+}
+
+#j1-page .break-record-table th:nth-child(2),
+#j1-page .break-record-table td:nth-child(2),
+#j2-page .break-record-table th:nth-child(2),
+#j2-page .break-record-table td:nth-child(2),
+#j3-page .break-record-table th:nth-child(2),
+.dw-root #j3-page .break-record-table td:nth-child(2){
+    width: 25%;
+    /* 编号 */
+}
+
+#j1-page .break-record-table th:nth-child(3),
+#j1-page .break-record-table td:nth-child(3),
+#j2-page .break-record-table th:nth-child(3),
+#j2-page .break-record-table td:nth-child(3),
+#j3-page .break-record-table th:nth-child(3),
+.dw-root #j3-page .break-record-table td:nth-child(3){
+    width: 13%;
+    /* 破损数量 */
+}
+
+#j1-page .break-record-table th:nth-child(4),
+#j1-page .break-record-table td:nth-child(4),
+#j2-page .break-record-table th:nth-child(4),
+#j2-page .break-record-table td:nth-child(4),
+#j3-page .break-record-table th:nth-child(4),
+.dw-root #j3-page .break-record-table td:nth-child(4){
+    width: 18%;
+    /* 单价 */
+}
+
+#j1-page .break-record-table th:nth-child(5),
+#j1-page .break-record-table td:nth-child(5),
+#j2-page .break-record-table th:nth-child(5),
+#j2-page .break-record-table td:nth-child(5),
+#j3-page .break-record-table th:nth-child(5),
+.dw-root #j3-page .break-record-table td:nth-child(5){
+    width: 18%;
+    /* 总价 */
+}
+
+#j1-page .break-record-table th:nth-child(6),
+#j1-page .break-record-table td:nth-child(6),
+#j2-page .break-record-table th:nth-child(6),
+#j2-page .break-record-table td:nth-child(6),
+#j3-page .break-record-table th:nth-child(6),
+.dw-root #j3-page .break-record-table td:nth-child(6){
+    width: 18%;
+    /* 操作 */
+}
+
+.dw-root .break-record-table td{
+    padding: clamp(2px, 0.31vw, 6px) clamp(6px, 0.63vw, 12px);
+    font-size: clamp(8px, 0.74vw, 14px);
+    border: 1px solid #d1d5db;
+    text-align: center;
+    vertical-align: middle;
+    overflow: visible;
+    /* 改为 visible，允许下拉菜单显示 */
+    text-overflow: ellipsis;
+    position: relative;
+    /* 为下拉菜单提供定位上下文 */
+}
+
+.dw-root .break-record-table tr:nth-child(even){
+    background-color: #f9fafb;
+}
+
+.dw-root .break-record-table tr:hover{
+    background-color: #f3f4f6;
+}
+
+.dw-root .category-section{
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+
+}
+
+.dw-root .category-header{
+    background: #636363;
+    color: white;
+    padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.25vw, 24px);
+    font-size: clamp(14px, 1.04vw, 20px);
+    font-weight: 600;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    /* Removed position: sticky; top: 0; z-index: 200; */
+}
+
+.dw-root .category-header .category-title{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dw-root .category-header .category-count{
+    font-size: clamp(12px, 1.04vw, 16px);
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.dw-root .category-table-wrapper{
+    overflow-x: auto;
+    /* Keep horizontal scrolling */
+    overflow-y: visible;
+    /* Allow content to expand vertically */
+    /* Removed max-height: 500px; flex: 1; */
+}
+
+.dw-root .category-table-wrapper::-webkit-scrollbar{
+    height: 8px;
+    width: 8px;
+}
+
+.dw-root .category-table-wrapper::-webkit-scrollbar-track{
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.dw-root .category-table-wrapper::-webkit-scrollbar-thumb{
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.dw-root .category-table-wrapper::-webkit-scrollbar-thumb:hover{
+    background: #a8a8a8;
+}
+
+/* 隐藏默认表格容器当显示分类容器时 */
+.dw-root .table-container.hide-for-categories{
+    display: none;
+}
+
+/* 显示分类容器 */
+.dw-root #categories-container{
+    display: none;
+}
+
+.dw-root #categories-container.show{
+    display: block;
+}
+
+/* 破损记录容器样式 - 左右排列 */
+.dw-root .break-records-container{
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    padding: 20px 0px;
+    align-items: flex-start;
+    width: 100%;
+    /* 确保至少显示三个容器，每个容器最小宽度 */
+    min-width: calc(3 * 600px + 2 * 20px + 40px);
+    /* 3个容器 + 2个gap + padding */
+}
+
+/* 转卖页面选择单个餐厅时的样式 */
+.dw-root #transfer-records-container.single-restaurant{
+    justify-content: center;
+    min-width: auto;
+    width: 100%;
+}
+
+.dw-root #transfer-records-container.single-restaurant .break-record-section{
+    margin: 0 auto;
+}
+
+/* 破损记录页面选择单个餐厅时的样式 */
+.break-records-container.single-restaurant,
+#break-records-container.single-restaurant,
+#break-records-container-j2.single-restaurant,
+.dw-root #break-records-container-j3.single-restaurant{
+    justify-content: center;
+    min-width: auto;
+    width: 100%;
+}
+
+.break-records-container.single-restaurant .break-record-section,
+#break-records-container.single-restaurant .break-record-section,
+#break-records-container-j2.single-restaurant .break-record-section,
+.dw-root #break-records-container-j3.single-restaurant .break-record-section{
+    margin: 0 auto;
+}
+
+.dw-root .break-record-section{
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 600px;
+    /* 固定宽度，不缩放 */
+    min-width: 600px;
+    max-width: 600px;
+}
+
+.dw-root .break-record-header{
+    background: #636363;
+    color: white;
+    padding: clamp(10px, 1.04vw, 20px) clamp(16px, 1.25vw, 24px);
+    font-size: clamp(14px, 1.04vw, 20px);
+    font-weight: 600;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dw-root .break-record-table-wrapper{
+    overflow-x: auto;
+    overflow-y: visible;
+    /* 对齐旧系统：内容不足时完整展示，超过 max-height 时滚动 */
+    flex: 1;
+    max-height: calc(100vh - 350px);
+    position: relative;
+    /* 为下拉菜单提供定位上下文 */
+}
+
+.dw-root .break-record-table{
+    width: 100%;
+    min-width: 500px;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+    /* 固定表格布局 */
+}
+
+.dw-root .break-record-table thead{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #636363;
+}
+
+.dw-root .break-record-table th{
+    background: #636363;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    text-align: center;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    border: 1px solid #d1d5db;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    white-space: nowrap;
+}
+
+/* 固定列宽（使用百分比）- 转卖页面（7列） */
+#transfer-page .break-record-table th:nth-child(1),
+.dw-root #transfer-page .break-record-table td:nth-child(1){
+    width: 8%;
+    /* No. */
+}
+
+#transfer-page .break-record-table th:nth-child(2),
+.dw-root #transfer-page .break-record-table td:nth-child(2){
+    width: 12%;
+    /* 编号 */
+}
+
+#transfer-page .break-record-table th:nth-child(3),
+.dw-root #transfer-page .break-record-table td:nth-child(3){
+    width: 10%;
+    /* 数量 */
+}
+
+#transfer-page .break-record-table th:nth-child(4),
+.dw-root #transfer-page .break-record-table td:nth-child(4){
+    width: 8%;
+    /* 进出 */
+}
+
+#transfer-page .break-record-table th:nth-child(5),
+.dw-root #transfer-page .break-record-table td:nth-child(5){
+    width: 15%;
+    /* 单价 */
+}
+
+#transfer-page .break-record-table th:nth-child(6),
+.dw-root #transfer-page .break-record-table td:nth-child(6){
+    width: 15%;
+    /* 总价 */
+}
+
+#transfer-page .break-record-table th:nth-child(7),
+.dw-root #transfer-page .break-record-table td:nth-child(7){
+    width: 14%;
+    /* 操作 */
+}
+
+#transfer-page .break-record-table td{
+    padding: clamp(2px, 0.31vw, 6px) 0px;
+    font-size: clamp(8px, 0.74vw, 14px);
+    border: 1px solid #d1d5db;
+    text-align: center;
+    vertical-align: middle;
+    overflow: visible;
+    /* 改为 visible，允许下拉菜单显示 */
+    text-overflow: ellipsis;
+    position: relative;
+    /* 为下拉菜单提供定位上下文 */
+}
+
+.dw-root .break-record-table tr:nth-child(even){
+    background-color: #f9fafb;
+}
+
+.dw-root .break-record-table tr:hover{
+    background-color: #f3f4f6;
+}
+
+/* 转卖记录下拉列表样式 - 居中选项 */
+.transfer-to-select,
+.dw-root .transfer-to-select-edit{
+    text-align: center !important;
+    text-align-last: center !important;
+    /* 居中最后一行（选中的选项） */
+}
+
+.transfer-to-select option,
+.dw-root .transfer-to-select-edit option{
+    text-align: center !important;
+    padding: 4px 8px;
+}
+
+/* 新行样式 */
+.dw-root .break-record-table tr.new-row{
+    background-color: #e8f5e9;
+    position: static;
+    /* 改为 static，避免创建层叠上下文 */
+    z-index: auto;
+    /* 确保不会创建层叠上下文覆盖下拉列表 */
+}
+
+.dw-root .break-record-table tr.new-row:hover{
+    background-color: #c8e6c9;
+}
+
+.dw-root .break-record-table tr.new-row td{
+    padding: 8px;
+    font-size: clamp(8px, 0.74vw, 14px);
+    /* 使用响应式字体大小，与其他行一致 */
+    position: static;
+    /* 改为 static，避免创建层叠上下文 */
+    z-index: auto;
+    /* 确保不会创建层叠上下文覆盖下拉列表 */
+}
+
+.break-record-table tr.new-row input,
+.dw-root .break-record-table tr.new-row select{
+    width: 100%;
+    max-width: 100%;
+    padding: 4px 8px;
+    border: none;
+    background: transparent;
+    font-size: clamp(8px, 0.74vw, 14px);
+    /* 使用响应式字体大小，与其他行一致 */
+    box-sizing: border-box;
+    outline: none;
+    position: relative;
+    z-index: 1;
+    /* 低层级，确保下拉列表可以覆盖 */
+}
+
+/* 隐藏新行中 number 输入框的上下箭头 */
+.break-record-table tr.new-row input[type="number"]::-webkit-outer-spin-button,
+.dw-root .break-record-table tr.new-row input[type="number"]::-webkit-inner-spin-button{
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.dw-root .break-record-table tr.new-row input[type="number"]{
+    -moz-appearance: textfield;
+    /* Firefox */
+}
+
+.break-record-table tr.new-row input:focus,
+.dw-root .break-record-table tr.new-row select:focus{
+    background: #f0f0f0;
+    border-radius: 2px;
+}
+
+/* Combobox 样式 */
+.dw-root .combobox-container{
+    position: relative;
+    width: 100%;
+    z-index: 1;
+    /* 低层级，确保下拉列表可以覆盖 */
+}
+
+/* 只让下拉菜单显示在最上层，输入框保持正常层级 */
+.dw-root .break-record-table tr.new-row .combobox-container{
+    z-index: 1;
+    /* 低层级，确保下拉列表可以覆盖 */
+}
+
+.dw-root .break-record-table tr.new-row .combobox-dropdown{
+    z-index: 2147483647 !important;
+    /* 使用最大z-index值，确保显示在所有元素之上 */
+    position: fixed !important;
+    /* 使用 fixed 定位，脱离文档流 */
+}
+
+.dw-root .combobox-input{
+    width: 100%;
+    padding: 4px 24px 4px 8px;
+    border: none;
+    background: transparent;
+    font-size: clamp(8px, 0.74vw, 14px);
+    /* 使用响应式字体大小 */
+    outline: none;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+    /* 低层级，确保下拉列表可以覆盖 */
+}
+
+/* 确保输入框的占位符文本不会覆盖下拉列表 */
+.dw-root .combobox-input::placeholder{
+    z-index: 0;
+    position: relative;
+}
+
+.dw-root .combobox-input:focus{
+    background: #f0f0f0;
+    border-radius: 2px;
+}
+
+.dw-root .combobox-arrow{
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #999;
+    font-size: 12px;
+}
+
+.dw-root .combobox-dropdown{
+    position: fixed !important;
+    /* 使用 fixed 定位，脱离文档流，避免被其他元素覆盖 */
+    top: 100%;
+    left: 0;
+    background: white !important;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    /* 隐藏水平溢出 */
+    z-index: 2147483647 !important;
+    /* 使用最大z-index值，确保显示在所有元素之上 */
+    display: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    width: clamp(60px, 5.21vw, 100px);
+    /* 使用 clamp 设置宽度 */
+    pointer-events: auto !important;
+    /* 确保可以点击 */
+    /* 确保下拉列表在body下时也能正确显示 */
+    margin: 0;
+    padding: 0;
+}
+
+.dw-root .combobox-dropdown.show{
+    display: block;
+}
+
+.dw-root .combobox-option{
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: clamp(8px, 0.74vw, 14px);
+    /* 使用响应式字体大小 */
+    white-space: nowrap;
+    /* 防止文本换行 */
+    overflow: visible;
+    /* 允许文本完整显示 */
+}
+
+.dw-root .combobox-option:hover{
+    background: #f0f0f0;
+}
+
+.dw-root .combobox-option.selected{
+    background: #e3f2fd;
+}
+
+/* 弹窗样式 */
+.dw-root .modal-overlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.dw-root .modal-overlay.show{
+    opacity: 1;
+    visibility: visible;
+}
+
+.dw-root .modal-overlay .modal-content{
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.dw-root .modal-overlay.show .modal-content{
+    transform: scale(1);
+}
+
+/* 拖拽排序样式 */
+.dw-root .stock-table.transposed tr[data-restaurant-row]{
+    user-select: none;
+}
+
+.dw-root .stock-table.transposed tr[data-restaurant-row]:hover{
+    background-color: #f3f4f6;
+}
+
+.dw-root .stock-table.transposed tr[data-restaurant-row].dragging{
+    opacity: 0.5;
+    background-color: #e0f2fe;
+}
+
+.dw-root .stock-table.transposed tr[data-restaurant-row].drag-over{
+    border-top: 3px solid #f99e00;
+}
+
+/* 只有NO列的th可以拖动 */
+.dw-root .stock-table.transposed tr[data-restaurant-row] th.row-header:first-child{
+    position: relative;
+    cursor: move;
+}
+
+.dw-root .stock-table.transposed tr[data-restaurant-row] th.row-header:first-child::before{
+    content: '☰';
+    position: absolute;
+    left: 8px;
+    color: #9ca3af;
+    font-size: 16px;
+    cursor: move;
+    pointer-events: none;
+}
+
+.dw-root .stock-table.transposed tr[data-restaurant-row]:hover th.row-header:first-child::before{
+    color: #f99e00;
+}
+
+/* 其他列不可拖动 */
+.dw-root .stock-table.transposed tr[data-restaurant-row] td{
+    cursor: default;
+}
+
+/* 餐厅列头拖拽样式（用于普通表格，非转置表格） */
+.dw-root .stock-table thead th[data-restaurant-header]{
+    cursor: move;
+    user-select: none;
+    position: relative;
+}
+
+.dw-root .stock-table thead th[data-restaurant-header]::before{
+    content: '☰';
+    position: absolute;
+    left: 4px;
+    color: #9ca3af;
+    font-size: 14px;
+    cursor: move;
+    pointer-events: none;
+}
+
+.dw-root .stock-table thead th[data-restaurant-header]:hover::before{
+    color: #f99e00;
+}
+
+.dw-root .stock-table thead th[data-restaurant-header].dragging{
+    opacity: 0.5;
+    background-color: #e0f2fe;
+}
+
+.dw-root .stock-table thead th[data-restaurant-header].drag-over{
+    border-left: 3px solid #f99e00;
+}
+
+/* Remove number input spinners */
+input[type='number']::-webkit-outer-spin-button,
+.dw-root input[type='number']::-webkit-inner-spin-button{
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}
+
+.dw-root input[type='number']{
+    -moz-appearance: textfield !important;
+}
+
+.dw-root .header-search{
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 0.63vw, 12px);
+}
+
+.dw-root .header-search .smartSearchWrapper{
+    width: 40px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.dw-root .header-search .smartSearchWrapper.expanded{
+    width: 250px;
+}
+
+.dw-root .header-right-group{
+    display: flex;
+    align-items: flex-end;
+    gap: clamp(2px, 0.32vw, 8px);
+    margin-left: auto;
+}
+
+/* ============ smartSearch（公共组件） ============ */
+/* ==========================================================
+   smartSearch.css  —  Global Smart Search Wrapper Component
+
+   METHOD: Responsive Space Reclamation (The "i-Only" Trick) & Native Flex
+   ========================================================== */
+
+/* ── Anchor container ───────────────────────────────────── */
+.dw-root .smartSearchWrapper{
+    position: relative;
+    width: 40px;                     /* collapsed width */
+    height: 38px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s ease,
+                border-radius 0.25s ease,
+                box-shadow 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.dw-root .smartSearchWrapper:hover{
+    border-color: #ff7b00;
+}
+
+/* ── EXPANDED (Native width growth) ─────────────────────── */
+.dw-root .smartSearchWrapper.expanded{
+    width: 250px;                    /* Native expansion pushing elements smoothly */
+    border-color: #ff7b00;
+    border-radius: 6px;
+    cursor: default;
+    animation: smartSearch-expand-glow 0.25s ease forwards;
+    box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12),
+                0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ── Icon ───────────────────────────────────────────────── */
+.dw-root .smartSearch-icon{
+    width: 40px;
+    min-width: 40px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: color 0.25s ease;
+    line-height: 1;
+}
+
+.dw-root .smartSearchWrapper.expanded .smartSearch-icon{
+    color: #ff7b00;
+}
+
+/* ── Input — hidden until expanded ──────────────────────── */
+.dw-root .smartSearch-input{
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: clamp(11px, 0.74vw, 14px);
+    color: #111827;
+    padding: 0;
+    padding-right: 12px;
+    min-width: 0;
+    font-family: inherit;
+    line-height: 1.4;
+    height: 100%;
+    display: none;
+}
+
+.dw-root .smartSearchWrapper.expanded .smartSearch-input{
+    display: block;
+}
+
+.dw-root .smartSearch-input::placeholder{
+    color: #9ca3af;
+    font-size: clamp(11px, 0.74vw, 14px);
+}
+
+/* ── Clear button ───────────────────────────────────────── */
+.dw-root .smartSearch-clear{
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 12px;
+    padding: 0 10px 0 0;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+}
+
+.dw-root .smartSearch-clear:hover{
+    color: #ff7b00;
+}
+
+.dw-root .smartSearchWrapper.has-value .smartSearch-clear{
+    display: flex;
+    align-items: center;
+}
+
+/* ── Expand glow animation ──────────────────────────────── */
+@keyframes smartSearch-expand-glow {
+from{
+        box-shadow: 0 0 0 0 rgba(255, 123, 0, 0.25);
+    }
+to{
+        box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12),
+                    0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+}
+
+/* ── DYNAMIC BUTTON COMPRESSION (THE MAGIC TRICK) ─────────
+   When native search box expands (250px), compress nearby
+   buttons to icons (font-size: 0) to instantly free up
+   ~160px of true physical space. NO OVERLAPS. NO SQUISHING!
+   ========================================================= */
+
+.dw-root .header-right-section{
+    transition: gap 0.3s ease;
+}
+
+.dw-root .header-right-section:has(.smartSearchWrapper.expanded){
+    gap: clamp(4px, 0.5vw, 10px);           /* Squish gap to save even more space */
+}
+
+.dw-root .header-right-section:has(.smartSearchWrapper.expanded) .btn{
+    font-size: 0;                           /* Hide text */
+    padding: clamp(4px, 0.4vw, 8px) clamp(8px, 0.8vw, 12px); 
+    white-space: nowrap;
+}
+
+.dw-root .header-right-section:has(.smartSearchWrapper.expanded) .btn i{
+    font-size: 14px;                        /* Keep FA icon normal size */
+    margin: 0;                              /* Remove extra spacing next to text */
+}
+
+/* Graceful fallback for browsers */
+@media (max-width: 768px) {
+.dw-root .smartSearchWrapper.expanded{ width: 180px; }
+}
+
+
+/* ============ toast（公共组件） ============ */
+/* =============================================================
+   Global Toast Notification System
+   Position: bottom-right, white-background with colored left-border
+   Used across all backend pages via sidebar.php
+   ============================================================= */
+
+/* Container */
+.dw-root #global-toast-container{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    pointer-events: none;
+    max-width: clamp(260px, 22vw, 380px);
+    width: 100%;
+}
+
+/* Base toast */
+.dw-root .g-toast{
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+    font-size: clamp(12px, 0.85vw, 14px);
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    pointer-events: auto;
+    transform: translateX(calc(100% + 24px));
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    border-left: 4px solid transparent;
+    min-width: 0;
+}
+
+/* Shown state */
+.dw-root .g-toast.g-toast--visible{
+    transform: translateX(0);
+    opacity: 1;
+}
+
+/* Hiding animation */
+.dw-root .g-toast.g-toast--hiding{
+    transform: translateX(calc(100% + 24px));
+    opacity: 0;
+    transition: transform 0.28s ease-in, opacity 0.25s ease-in;
+}
+
+/* Type variants — colored left border + tinted icon */
+.dw-root .g-toast--success{
+    border-left-color: #10b981;
+}
+.dw-root .g-toast--error{
+    border-left-color: #ef4444;
+}
+.dw-root .g-toast--warning{
+    border-left-color: #f59e0b;
+}
+.dw-root .g-toast--info{
+    border-left-color: #3b82f6;
+}
+
+/* Icon */
+.dw-root .g-toast__icon{
+    flex-shrink: 0;
+    font-size: clamp(14px, 1.1vw, 18px);
+    margin-top: 1px;
+    line-height: 1;
+}
+.dw-root .g-toast--success .g-toast__icon{ color: #10b981; }
+.dw-root .g-toast--error   .g-toast__icon{ color: #ef4444; }
+.dw-root .g-toast--warning .g-toast__icon{ color: #f59e0b; }
+.dw-root .g-toast--info    .g-toast__icon{ color: #3b82f6; }
+
+/* Message */
+.dw-root .g-toast__body{
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dw-root .g-toast__message{
+    color: #1f2937;
+    font-weight: 500;
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+/* Close button */
+.dw-root .g-toast__close{
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: color 0.2s;
+    margin-top: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.dw-root .g-toast__close:hover{
+    color: #374151;
+}
+
+/* Progress bar */
+.dw-root .g-toast__progress{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    border-radius: 0 0 10px 10px;
+    background: transparent;
+    transform-origin: left center;
+}
+.dw-root .g-toast--success .g-toast__progress{ background: rgba(16, 185, 129, 0.35); }
+.dw-root .g-toast--error   .g-toast__progress{ background: rgba(239, 68, 68, 0.35); }
+.dw-root .g-toast--warning .g-toast__progress{ background: rgba(245, 158, 11, 0.35); }
+.dw-root .g-toast--info    .g-toast__progress{ background: rgba(59, 130, 246, 0.35); }
+
+@keyframes g-toast-progress {
+from{ transform: scaleX(1); }
+to{ transform: scaleX(0); }
+}
+
+.dw-root .g-toast--auto-dismiss .g-toast__progress{
+    animation: g-toast-progress var(--toast-duration, 4s) linear forwards;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+.dw-root #global-toast-container{
+        bottom: 12px;
+        right: 12px;
+        left: 12px;
+        max-width: 100%;
+    }
+.dw-root .g-toast{
+        font-size: 13px;
+    }
+}
+
+/* 新增碗碟后：定位到新列并闪烁高亮 */
+@keyframes dishwareColFlash {
+  0% { background-color: #d1fae5 !important; }
+  70% { background-color: #d1fae5 !important; }
+  100% { background-color: transparent !important; }
+}
+.dw-root .stock-table td.dishware-col-flash {
+  animation: dishwareColFlash 2.5s ease;
+}

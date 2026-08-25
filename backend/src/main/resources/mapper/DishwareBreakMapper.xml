@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.DishwareBreakMapper">
+
+    <!--
+        破损记录列表（对齐旧系统 damage_records 接口）：
+        - shop_type=j1 → 只返回该店的破损记录
+        - start_date/end_date 服务端日期过滤
+        - 联表返回 code_number / product_name
+        注意：Map 返回值不做驼峰转换，字段统一用 SQL 别名给出 camelCase
+    -->
+    <select id="listBreaks" resultType="java.util.LinkedHashMap">
+        SELECT b.id,
+               b.dishware_id         AS dishwareId,
+               b.shop_type           AS shopType,
+               b.break_quantity      AS breakQuantity,
+               b.chargeable_quantity AS chargeableQuantity,
+               b.unit_price          AS unitPrice,
+               b.total_price         AS totalPrice,
+               b.break_date          AS breakDate,
+               b.recorded_by         AS recordedBy,
+               i.code_number         AS codeNumber,
+               i.product_name        AS productName
+        FROM dishware_break_records b
+        LEFT JOIN dishware_info i ON i.id = b.dishware_id
+        WHERE 1 = 1
+        <if test="shopType != null and shopType != ''">
+            AND LOWER(b.shop_type) = LOWER(#{shopType})
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND b.break_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND b.break_date &lt;= #{endDate}
+        </if>
+        ORDER BY b.break_date DESC, b.id DESC
+    </select>
+
+</mapper>

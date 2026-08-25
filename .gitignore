@@ -1,0 +1,37 @@
+# ---------- Node / React ----------
+node_modules/
+dist/
+*.tsbuildinfo
+
+# ---------- Java / Maven ----------
+backend/target/
+*.class
+*.jar
+!backend/target/*.jar
+.mvn/wrapper/maven-wrapper.jar
+
+# ---------- IDE ----------
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# ---------- 运行时与本地环境 ----------
+runtime/
+jre*/
+mariadb/
+
+# ---------- 日志 ----------
+*.log
+
+# ---------- 数据库备份 ----------
+database/
+*.sql.bak
+
+# ---------- 用户上传数据 ----------
+backend/uploads/
+
+# ---------- 系统文件 ----------
+Thumbs.db
+.DS_Store
+desktop.ini

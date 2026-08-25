@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockMinimumMapper">
+
+    <!-- 某系统全部在库货品 + 最低库存设置（对齐线上 stockminimumapi.php?action=list）
+         8/24 调整：同一货品（同编码同名字）有多个单价批次（HIFO 出货）→ 按货品名合并为一行，
+         库存统一加总（不管价格），与最低库存检测口径一致：总库存 < 设置值 即通知 -->
+    <select id="productsWithMinimum" resultType="java.util.LinkedHashMap">
+        SELECT
+            ROW_NUMBER() OVER (
+                ORDER BY t.product_name ASC
+            ) AS no,
+            t.product_name AS product_name,
+            COALESCE(NULLIF(MAX(TRIM(t.code_number)), ''), '-') AS product_code,
+            COALESCE(NULLIF(MAX(TRIM(t.specification)), ''), '-') AS specification,
+            COALESCE(MAX(m.minimum_quantity), 0) AS minimum_quantity,
+            SUM(CASE WHEN t.in_quantity  &gt; 0 THEN t.in_quantity  ELSE 0 END) -
+            SUM(CASE WHEN t.out_quantity &gt; 0 THEN t.out_quantity ELSE 0 END) AS current_stock
+        FROM ${table} t
+        LEFT JOIN stock_minimum_settings m
+            ON m.product_name = t.product_name
+        WHERE t.product_name IS NOT NULL
+          AND t.product_name != ''
+          AND t.deleted_at IS NULL
+        GROUP BY t.product_name
+        HAVING current_stock != 0
+        ORDER BY t.product_name ASC
+    </select>
+
+    <!-- 按产品名汇总净库存（检测口径：名字不管价格；各系统独立，不跨系统加总） -->
+    <select id="totalStockByName" resultType="java.util.LinkedHashMap">
+        SELECT product_name,
+               SUM(CASE WHEN in_quantity  &gt; 0 THEN in_quantity  ELSE 0 END) -
+               SUM(CASE WHEN out_quantity &gt; 0 THEN out_quantity ELSE 0 END) AS total_stock
+        FROM ${table}
+        WHERE deleted_at IS NULL
+        <if test="excludeSot">
+            AND (target_system IS NULL OR target_system != 'SOT')
+        </if>
+        GROUP BY product_name
+    </select>
+
+    <!-- 按产品名 UPSERT（product_name 唯一键；最低库存全局，不按系统） -->
+    <insert id="upsert">
+        INSERT INTO stock_minimum_settings (product_name, minimum_quantity)
+        VALUES (#{productName}, #{quantity})
+        ON DUPLICATE KEY UPDATE
+            minimum_quantity = VALUES(minimum_quantity),
+            updated_at = CURRENT_TIMESTAMP
+    </insert>
+
+</mapper>

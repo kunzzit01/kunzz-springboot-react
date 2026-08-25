@@ -1,0 +1,1125 @@
+       * {
+           margin: 0;
+           padding: 0;
+           box-sizing: border-box;
+       }
+
+       body {
+           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background-color: #faf7f2;
+           color: #000000;
+           min-height: 100vh;
+           overflow-x: hidden;
+           overflow-y: auto;
+       }.cost-root .container{
+           max-width: 1800px;
+           margin: 0 auto;
+           padding: clamp(16px, 1.25vw, 24px) 24px;
+       }.cost-root /* 主内容区域样式 */
+       .main-content{
+           margin-left: 300px;
+           /* 默认为侧边栏宽度 */
+           transition: margin-left 0.3s ease;
+           min-height: 100vh;
+           position: relative;
+           overflow: visible;
+       }.cost-root /* 当侧边栏收起时，主内容区域扩展 */
+       .main-content.sidebar-collapsed{
+           margin-left: 60px;
+           /* 收起后的侧边栏宽度 */
+       }
+
+       html {
+           height: 100%;
+           overflow-x: hidden;
+           overflow-y: auto;
+       }.cost-root /* 自定义滚动条样式 */
+       ::-webkit-scrollbar{
+           width: 8px;
+       }
+
+       ::-webkit-scrollbar-track {
+           background: #f1f1f1;
+           border-radius: 4px;
+       }
+
+       ::-webkit-scrollbar-thumb {
+           background: #c1c1c1;
+           border-radius: 4px;
+       }
+
+       ::-webkit-scrollbar-thumb:hover {
+           background: #a8a8a8;
+       }.cost-root /* Firefox 滚动条样式 */
+       html{
+           scrollbar-width: thin;
+           scrollbar-color: #c1c1c1 #f1f1f1;
+       }.cost-root .header{
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: clamp(16px, 1.67vw, 32px);
+       }.cost-root .header h1{
+           font-size: clamp(20px, 2.6vw, 50px);
+           font-weight: bold;
+           color: #000000ff;
+       }.cost-root .header .controls{
+           display: flex;
+           align-items: center;
+           gap: 16px;
+       }.cost-root .btn{
+           padding: clamp(5px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px);
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: 14px;
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           text-decoration: none;
+       }.cost-root .btn-primary{
+           background-color: #3b82f6;
+           color: white;
+       }.cost-root .btn-primary:hover{
+           background-color: #2563eb;
+       }.cost-root .btn-success{
+           background-color: #10b981;
+           color: white;
+       }.cost-root .btn-success:hover{
+           background-color: #059669;
+       }.cost-root .btn-secondary{
+           background-color: #f99e00;
+           color: white;
+       }.cost-root .btn-secondary:hover{
+           background-color: #f98500ff;
+       }.cost-root .back-button{
+           background-color: #583e04;
+           color: white;
+           font-weight: 500;
+           padding: 10px 20px;
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: 14px;
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           text-decoration: none;
+       }.cost-root .back-button:hover{
+           background-color: #462d03;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+       }.cost-root .back-button:active{
+           transform: translateY(0);
+       }.cost-root /* 餐厅选择器样式 */
+       .restaurant-selector{
+           position: relative;
+           display: inline-block;
+       }.cost-root /* 报表类型选择器推到右边 */
+       .report-type-selector{
+           margin-left: auto;
+       }.cost-root /* 餐厅选择器紧跟在报表类型选择器后面 */
+       .report-type-selector+.restaurant-selector{
+           margin-left: clamp(-20px, -1vw, -10px);
+           /* 使用负边距抵消gap，让它紧挨着报表选择器 */
+       }.cost-root .restaurant-btn{
+           padding: clamp(6px, 0.52vw, 10px) clamp(14px, 1.04vw, 20px);
+           border-radius: 8px;
+           border: 2px solid #583e04 !important;
+           cursor: pointer;
+           font-weight: 600;
+           background: white;
+           color: #000000ff;
+           position: relative;
+           width: clamp(60px, 5.21vw, 100px);
+           display: flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.3s ease;
+           border-color: #000000ff !important;
+       }.cost-root .restaurant-btn:hover{
+           background: rgba(88, 62, 4, 0.1);
+       }.cost-root .restaurant-dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 100%;
+           right: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 12px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           width: clamp(240px, 25vw, 320px);
+           min-width: 200px;
+           padding: clamp(6px, 0.63vw, 12px) clamp(8px, 1vw, 16px);
+       }.cost-root .restaurant-dropdown-menu.show{
+           display: flex;
+           gap: 16px;
+           flex-direction: row;
+       }.cost-root .letter-selection,.cost-root .number-selection{
+           flex: 1;
+       }.cost-root .letter-selection{
+           flex: 1;
+           border-right: 1px solid #e5e7eb;
+           padding-right: 12px;
+           min-width: 110px;
+       }.cost-root .number-selection{
+           flex: 1;
+           padding-left: 0px;
+           min-width: 90px;
+           visibility: hidden;
+           opacity: 0;
+           transition: opacity 0.3s ease, visibility 0.3s ease;
+       }.cost-root .section-title{
+           font-size: clamp(10px, 0.9vw, 14px);
+           font-weight: 600;
+           color: #000000ff;
+           margin-bottom: clamp(4px, 0.6vw, 8px);
+           text-align: center;
+       }.cost-root .letter-grid,.cost-root .number-grid{
+           display: grid;
+           gap: 4px;
+       }.cost-root .letter-grid{
+           display: flex;
+           flex-direction: row;
+           gap: clamp(4px, 0.8vw, 8px);
+           align-items: center;
+           justify-content: center;
+       }.cost-root .letter-item,.cost-root .number-item,.cost-root .number-item.total-option{
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           width: clamp(12px, 1.25vw, 24px);
+           height: clamp(12px, 1.25vw, 24px);
+           border: 1px solid #e5e7eb;
+           background: white;
+           color: #000000ff;
+           cursor: pointer;
+           font-size: clamp(7px, 0.63vw, 12px);
+           font-weight: 500;
+           border-radius: 4px;
+           transition: all 0.15s ease;
+       }.cost-root .letter-item:hover,.cost-root .number-item:hover,.cost-root .number-item.total-option:hover{
+           background-color: #f3f4f6;
+           color: black;
+           border-color: #d1d5db;
+       }.cost-root .letter-item.selected,.cost-root .number-item.selected,.cost-root .number-item.total-option.selected{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+           font-weight: 600;
+       }.cost-root /* 数字选择区域显示状态 */
+       .number-selection.show{
+           visibility: visible;
+           opacity: 1;
+       }.cost-root .number-dropdown{
+           position: relative;
+           display: inline-block;
+       }.cost-root .number-btn{
+           padding: 10px 16px;
+           border-radius: 0 8px 8px 0;
+           border: none;
+           cursor: pointer;
+           font-size: 16px;
+           font-weight: 600;
+           transition: all 0.3s ease;
+           background: white;
+           color: #583e04;
+           min-width: 60px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 8px;
+       }.cost-root .number-btn:hover{
+           background: rgba(88, 62, 4, 0.1);
+       }.cost-root .number-dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 120%;
+           left: 0;
+           background: white;
+           border: 2px solid #583e04;
+           border-radius: 8px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           padding: 4px;
+           min-width: 120px;
+       }.cost-root .number-dropdown-menu.show{
+           display: block;
+       }.cost-root .number-grid{
+           margin-left: 10px;
+           display: grid;
+           grid-template-columns: repeat(4, 0.2fr);
+           gap: 2px;
+       }.cost-root .number-item:hover{
+           background-color: #f3f4f6;
+           color: black;
+           border-color: #d1d5db;
+       }.cost-root .number-item.selected{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+           font-weight: 600;
+       }.cost-root .restaurant-btn.active{
+           background: #583e04;
+           color: white;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.25);
+       }.cost-root .restaurant-btn:hover:not(.active){
+           background: rgba(88, 62, 4, 0.1);
+           transform: translateY(-1px);
+       }.cost-root .restaurant-btn::before{
+           content: '';
+           position: absolute;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           border-radius: 8px;
+           background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+           opacity: 0;
+           transition: opacity 0.3s ease;
+       }.cost-root .restaurant-btn.active::before{
+           opacity: 1;
+       }.cost-root /* 总计按钮特殊样式 - 未激活时透明 */
+       .restaurant-btn[data-restaurant="total"]{
+           font-weight: 700;
+       }.cost-root /* 总计按钮默认状态（未激活） - 透明背景 */
+       .restaurant-btn[data-restaurant="total"]:not(.active){
+           background: transparent !important;
+           color: #583e04 !important;
+           transform: none !important;
+           box-shadow: none !important;
+           text-shadow: none !important;
+       }.cost-root /* 总计按钮激活状态 */
+       .restaurant-btn[data-restaurant="total"].active{
+           background: linear-gradient(135deg, #583e04, #805906) !important;
+           color: white !important;
+           box-shadow: 0 4px 16px rgba(88, 62, 4, 0.4) !important;
+           transform: translateY(-2px) !important;
+           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+       }.cost-root /* 总计按钮悬停状态（仅在非激活时） */
+       .restaurant-btn[data-restaurant="total"]:not(.active):hover{
+           background: rgba(88, 62, 4, 0.1) !important;
+           color: #583e04 !important;
+           transform: translateY(-1px) !important;
+           box-shadow: none !important;
+           text-shadow: none !important;
+       }.cost-root /* 下拉菜单样式 */
+       .dropdown{
+           position: relative;
+           display: inline-block;
+       }.cost-root .dropdown-toggle{
+           display: flex;
+           align-items: center;
+           font-size: clamp(8px, 0.74vw, 14px);
+           gap: 8px;
+       }.cost-root .dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 100%;
+           left: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 8px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           width: 100%;
+           box-sizing: border-box;
+       }.cost-root .dropdown-menu.show{
+           display: block;
+       }.cost-root .dropdown-item{
+           display: block;
+           width: 100%;
+           padding: clamp(6px, 0.52vw, 10px) clamp(10px, 1.04vw, 20px);
+           border: none;
+           background: transparent;
+           color: #000000ff;
+           cursor: pointer;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 600;
+           text-align: left;
+           transition: background-color 0.2s;
+       }.cost-root .dropdown-item:hover{
+           background-color: rgba(88, 62, 4, 0.1);
+       }.cost-root .dropdown-item:first-child{
+           border-radius: 6px 6px 0 0;
+       }.cost-root .dropdown-item:last-child{
+           border-radius: 0 0 6px 6px;
+       }.cost-root .card{
+           background: rgba(255, 255, 255, 1);
+           border-radius: 8px;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+           border: 1px solid #e5e7eb;
+       }.cost-root .card-body{
+           padding: clamp(5.5px, 0.7vw, 13.5px) clamp(14px, 1.25vw, 24px);
+       }.cost-root .grid{
+           display: grid;
+           gap: 24px;
+       }.cost-root .grid-cols-2{
+           grid-template-columns: repeat(2, 1fr);
+       }.cost-root .grid-cols-3{
+           grid-template-columns: repeat(3, 1fr);
+       }.cost-root /* 成本指标网格 - 默认6列 */
+       .cost-grid{
+           display: grid;
+           grid-template-columns: repeat(6, 1fr);
+           gap: 16px;
+           margin-bottom: clamp(14px, 1.67vw, 32px);
+       }.cost-root /* J2和J3供应卡片默认隐藏 */
+       .supply-card{
+           display: none;
+       }.cost-root /* J1模式下显示供应卡片 */
+        body.restaurant-j1 .supply-card{
+            display: block;
+        }.cost-root /* 图表容器 - 改为全宽 */
+       .main-chart-container{
+           display: flex;
+           flex-direction: column;
+           margin-bottom: clamp(16px, 1.67vw, 32px);
+       }.cost-root /* 下方图表网格 */
+       .bottom-charts{
+           display: grid;
+           grid-template-columns: 1fr 1fr;
+           gap: 24px;
+       }.cost-root .cost-card{
+           display: flex;
+           align-items: center;
+           gap: 12px;
+       }.cost-root .cost-card .icon{
+           width: 40px;
+           height: 40px;
+           font-size: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           flex-shrink: 0;
+       }.cost-root .cost-card-vertical{
+           display: flex;
+           flex-direction: column;
+           align-items: left;
+           text-align: left;
+           gap: 0px;
+       }.cost-root .cost-card-vertical .icon{
+           width: 50px;
+           height: 50px;
+           font-size: clamp(20px, 1.5vw, 28px);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           flex-shrink: 0;
+           margin-bottom: clamp(0px, 0.21vw, 4px);
+       }.cost-root .cost-card-vertical .cost-label{
+           font-size: clamp(10px, 0.84vw, 16px);
+           color: #000000;
+           font-weight: bold;
+           margin-bottom: 0px;
+       }.cost-root .cost-card-vertical .cost-value{
+           font-size: clamp(16px, 1.25vw, 24px);
+           font-weight: bold;
+           color: #111827;
+       }.cost-root .cost-value{
+           font-size: 1.75rem;
+           font-weight: bold;
+           color: #111827;
+           margin-bottom: 2px;
+       }.cost-root .cost-label{
+           font-size: 15px;
+           color: #000000;
+           font-weight: bold;
+       }.cost-root .table{
+           width: 100%;
+           border-collapse: collapse;
+       }.cost-root .table th,.cost-root .table td{
+           font-size: clamp(8px, 0.74vw, 14px);
+           padding: 12px clamp(6px, 1vw, 24px);
+           text-align: left;
+           border-bottom: 1px solid #e5e7eb;
+       }.cost-root .table th{
+           background-color: rgba(255, 255, 255, 1);
+           font-weight: bold;
+           font-size: clamp(8px, 0.74vw, 14px);
+           color: #000000ff;
+           text-transform: uppercase;
+           letter-spacing: 0.8px;
+       }.cost-root .table tbody tr:hover{
+           background-color: #f9fafb;
+       }.cost-root .form-label{
+           display: block;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: bold;
+           color: #000000ff;
+           margin-bottom: 8px;
+       }.cost-root .form-input{
+           width: 100%;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           padding: 8px 12px;
+           font-size: 14px;
+           transition: all 0.2s;
+           font-family: "Segoe UI", sans-serif;
+       }.cost-root .form-input:focus{
+           outline: none;
+           border-color: #3b82f6;
+           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+       }.cost-root /* 改进的日期选择器样式 */
+       .enhanced-date-picker{
+           display: flex;
+           align-items: center;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           padding: clamp(2px, 0.31vw, 6px) clamp(0px, 0.21vw, 4px);
+           gap: 0px;
+           min-width: 100px;
+           transition: all 0.2s;
+           position: relative;
+       }.cost-root .enhanced-date-picker:focus-within{
+           border-color: #3b82f6;
+           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+       }.cost-root .enhanced-date-picker:hover{
+           border-color: #9ca3af;
+       }.cost-root /* 月份选择器的特殊样式 - 更小的宽度 */
+       .enhanced-date-picker.month-only{
+           min-width: clamp(80px, 6.77vw, 130px);
+       }.cost-root /* 日期选择部分 */
+       .date-part{
+           position: relative;
+           cursor: pointer;
+           padding: 0px clamp(2px, 0.42vw, 8px);
+           border-radius: 4px;
+           transition: all 0.2s;
+           text-align: center;
+           user-select: none;
+           background: transparent;
+           border: 1px solid transparent;
+           font-size: clamp(8px, 0.74vw, 14px);
+           color: #374151;
+       }.cost-root .date-part:hover{
+           background-color: #f3f4f6;
+           border-color: #d1d5db;
+       }.cost-root .date-part.active{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.cost-root .date-separator{
+           color: #9ca3af;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+           user-select: none;
+           margin: 0 2px;
+       }.cost-root /* 下拉选择面板 */
+       .date-dropdown{
+           position: absolute;
+           top: 120%;
+           left: 0;
+           right: 0;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+           z-index: 1000;
+           margin-top: 4px;
+           max-height: 220px;
+           overflow-y: auto;
+           display: none;
+       }.cost-root .date-dropdown.show{
+           display: block;
+           animation: dropdownFadeIn 0.2s ease-out;
+       }
+
+       @keyframes dropdownFadeIn {.cost-root from{
+               opacity: 0;
+               transform: translateY(-5px);
+           }.cost-root to{
+               opacity: 1;
+               transform: translateY(0);
+           }
+       }.cost-root /* 年份选择网格 */
+       .year-grid{
+           display: grid;
+           grid-template-columns: repeat(4, 1fr);
+           gap: clamp(0px, 0.21vw, 4px);
+           padding: clamp(2px, 0.36vw, 8px);
+       }.cost-root /* 月份选择网格 */
+       .month-grid{
+           display: grid;
+           grid-template-columns: repeat(4, 1fr);
+           gap: clamp(0px, 0.21vw, 4px);
+           padding: clamp(4px, 0.42vw, 8px);
+       }.cost-root /* 日期选择网格 */
+       .day-grid{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 0px;
+           padding: 2px;
+       }.cost-root /* 选择项通用样式 */
+       .date-option{
+           padding: clamp(1px, 0.1vw, 2px);
+           text-align: center;
+           cursor: pointer;
+           border-radius: clamp(4px, 0.31vw, 6px);
+           transition: all 0.2s;
+           font-size: clamp(6px, 0.63vw, 12px);
+           color: #374151;
+           background: transparent;
+           border: 1px solid transparent;
+       }.cost-root .date-option:hover{
+           background-color: #f3f4f6;
+           border-color: #d1d5db;
+       }.cost-root .date-option.selected{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.cost-root .date-option.today.selected{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.cost-root /* 日期网格的星期标题 */
+       .day-header{
+           padding: clamp(2px, 0.21vw, 4px);
+           text-align: center;
+           font-size: clamp(6px, 0.63vw, 12px);
+           color: #6b7280;
+           font-weight: 600;
+       }.cost-root /* 日期控制区域 */
+       .date-controls{
+           display: flex;
+           flex-wrap: wrap;
+           gap: clamp(10px, 1.5vw, 30px);
+           align-items: center;
+       }.cost-root /* 日期信息样式 */
+       .date-info{
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: bold;
+           color: #6b7280;
+           padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+           background: rgba(255, 255, 255, 1);
+           border-radius: 6px;
+       }.cost-root /* 分隔线 */
+       .divider{
+           width: 1px;
+           height: 24px;
+           background-color: #583e04 !important;
+       }
+
+       /* 响应式调整 */
+       @media (max-width: 768px) {.cost-root .enhanced-date-picker{
+               min-width: auto;
+               width: 100%;
+           }.cost-root .enhanced-date-picker.month-only{
+               min-width: auto;
+               width: 100%;
+           }.cost-root .date-controls{
+               flex-direction: column;
+               align-items: stretch;
+               gap: 12px;
+           }
+       }.cost-root .chart-container{
+           position: relative;
+           height: 300px;
+           width: 100%;
+       }.cost-root /* 渐变背景样式 */
+       .mountain-gradient{
+           background: linear-gradient(180deg,
+                   rgba(88, 62, 4, 0.3) 0%,
+                   rgba(88, 62, 4, 0.1) 50%,
+                   rgba(88, 62, 4, 0.05) 100%);
+       }.cost-root .text-green{
+           color: #000000ff;
+       }.cost-root .text-blue{
+           color: #583e04;
+       }.cost-root .text-purple{
+           color: #583e04;
+       }.cost-root .text-red{
+           color: #583e04;
+       }.cost-root .text-orange{
+           color: #583e04;
+       }.cost-root .loading{
+           display: inline-block;
+           width: 20px;
+           height: 20px;
+           border: 3px solid #f3f3f3;
+           border-top: 3px solid #3498db;
+           border-radius: 50%;
+           animation: spin 1s linear infinite;
+       }
+
+       @keyframes spin {.cost-root 0%{
+               transform: rotate(0deg);
+           }.cost-root 100%{
+               transform: rotate(360deg);
+           }
+       }.cost-root .alert{
+           padding: 12px 16px;
+           margin-bottom: 16px;
+           border-radius: 8px;
+           font-size: 14px;
+       }.cost-root .alert-success{
+           background-color: #d1fae5;
+           color: #065f46;
+           border: 1px solid #a7f3d0;
+       }.cost-root .alert-error{
+           background-color: #fee2e2;
+           color: #991b1b;
+           border: 1px solid #fca5a5;
+       }.cost-root /* 餐厅特定的颜色主题 */
+       .restaurant-j1{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.cost-root .restaurant-j2{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.cost-root .restaurant-j3{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.cost-root .restaurant-total{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.cost-root /* 动态应用颜色 */
+       .dynamic-color{
+           color: #000000 !important;
+       }.cost-root .dynamic-bg{
+           background-color: var(--primary-color) !important;
+       }.cost-root .dynamic-border{
+           border-color: var(--primary-color) !important;
+       }.cost-root .chart-back-button{
+           position: absolute;
+           top: -50px;
+           right: 250px;
+           background: #583e04;
+           color: white;
+           border: none;
+           padding: 8px 12px;
+           border-radius: 6px;
+           cursor: pointer;
+           font-size: 12px;
+           z-index: 10;
+           display: none;
+           align-items: center;
+           gap: 4px;
+           transition: all 0.2s ease;
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+       }.cost-root .chart-back-button:hover{
+           background: #6b4a05;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+       }.cost-root .chart-back-button i{
+           font-size: 10px;
+       }.cost-root .chart-container{
+           position: relative;
+       }.cost-root .date-range-display{
+           margin-top: 10px;
+           background: #f9fafb;
+           padding: 6px 12px;
+           border-radius: 6px;
+           border: 1px solid #e5e7eb;
+           white-space: nowrap;
+       }
+
+       @media (max-width: 768px) {.cost-root .chart-header{
+               flex-direction: column;
+               align-items: flex-start !important;
+               gap: 8px;
+           }.cost-root .date-range-display{
+               font-size: 12px;
+           }
+       }.cost-root /* 2. 添加按钮样式CSS */
+       .chart-data-buttons{
+           display: flex;
+           gap: 8px;
+           align-items: center;
+       }.cost-root .chart-data-btn{
+           padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+           border: 1px solid #d1d5db;
+           background: white;
+           color: #6b7280;
+           border-radius: 6px;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+           cursor: pointer;
+           transition: all 0.2s ease;
+           white-space: nowrap;
+       }.cost-root .chart-data-btn:hover{
+           background: #f9fafb;
+           border-color: #9ca3af;
+           color: #4b5563;
+       }.cost-root .chart-data-btn.active{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.cost-root .chart-data-btn.active:hover{
+           background: #f98500ff;
+           border-color: #f98500ff;
+       }.cost-root /* 报表类型选择器样式 - 与 stockeditall.php 一致 */
+       .report-type-selector{
+           position: relative;
+           display: inline-block;
+       }.cost-root .report-type-btn{
+           background-color: #ff9e00;
+           color: white;
+           font-weight: 500;
+           padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: clamp(10px, 0.73vw, 14px);
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           justify-content: space-between;
+           position: relative;
+       }.cost-root .report-type-btn:hover{
+           background-color: #f98500ff;
+           border-radius: 8px;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+       }.cost-root .report-dropdown-menu{
+           position: absolute;
+           top: 96%;
+           left: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 8px;
+           width: clamp(116px, 8.3vw, 160px);
+           box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+           z-index: 1000;
+           display: none;
+       }.cost-root .report-dropdown-menu.show{
+           display: block;
+       }.cost-root .report-dropdown-item{
+           padding: clamp(6px, 0.52vw, 10px) clamp(14px, 0.83vw, 16px);
+           color: #583e04;
+           text-decoration: none;
+           display: block;
+           font-size: clamp(10px, 0.73vw, 14px);
+           border-bottom: 1px solid #f3f4f6;
+           transition: background-color 0.2s;
+       }.cost-root .report-dropdown-item:hover{
+           background-color: #f0f9ff;
+           color: #ff9e00;
+       }.cost-root .report-dropdown-item:last-child{
+           border-bottom: none;
+       }.cost-root /* 日历选择器样式 */
+       .date-range-picker{
+           display: flex;
+           align-items: center;
+           gap: clamp(4px, 0.42vw, 8px);
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: clamp(4px, 0.42vw, 8px);
+           padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+           cursor: pointer;
+           transition: all 0.2s;
+           position: relative;
+           min-width: clamp(180px, 15.63vw, 300px);
+           z-index: 1;
+       }.cost-root .date-range-picker:hover{
+           border-color: #f99e00;
+           box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.1);
+       }.cost-root .date-range-picker i{
+           color: #f99e00;
+           font-size: clamp(8px, 0.74vw, 14px);
+           margin: 0 clamp(2px, 0.32vw, 6px);
+       }.cost-root .date-range-picker span{
+           color: #374151;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+       }.cost-root .calendar-popup{
+           position: fixed;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+           z-index: 99999;
+           padding: clamp(8px, 0.83vw, 16px);
+           min-width: clamp(180px, 15.63vw, 300px);
+           max-height: 350px;
+           overflow: visible;
+       }.cost-root .calendar-header{
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           margin-bottom: 10px;
+       }.cost-root .calendar-nav-btn{
+           background: transparent;
+           border: 0px solid #d1d5db;
+           border-radius: 4px;
+           width: clamp(20px, 1.25vw, 24px);
+           height: clamp(20px, 1.25vw, 24px);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           cursor: pointer;
+           transition: all 0.2s;
+       }.cost-root .calendar-nav-btn:hover{
+           background-color: #f3f4f6;
+           border-color: #f99e00;
+       }.cost-root .calendar-nav-btn i{
+           color: #374151;
+           font-size: clamp(7px, 0.57vw, 11px);
+       }.cost-root .calendar-month-year{
+           display: flex;
+           align-items: center;
+           gap: 4px;
+       }.cost-root .calendar-month-year select{
+           border: 1px solid #d1d5db;
+           border-radius: 4px;
+           padding: clamp(2px, 0.21vw, 4px) clamp(4px, 0.31vw, 6px);
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 600;
+           color: #000000ff;
+           background: white;
+           cursor: pointer;
+           transition: all 0.2s;
+       }.cost-root .calendar-month-year select:hover{
+           border-color: #f99e00;
+       }.cost-root .calendar-month-year select:focus{
+           outline: none;
+           border-color: #f99e00;
+           box-shadow: 0 0 0 2px rgba(249, 158, 0, 0.1);
+       }.cost-root .calendar-weekdays{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 2px;
+           margin-bottom: 4px;
+       }.cost-root .calendar-weekday{
+           text-align: center;
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 600;
+           color: #898989;
+           padding: clamp(2px, 0.21vw, 4px) 0;
+       }.cost-root .calendar-days{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 0px;
+       }.cost-root .calendar-day{
+           aspect-ratio: 1;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           border-radius: 6px;
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 500;
+           cursor: pointer;
+           transition: all 0.2s;
+           color: #000000ff;
+           background: transparent;
+           border: 1px solid transparent;
+           position: relative;
+           padding: 4px;
+       }.cost-root .calendar-day:hover{
+           background-color: #f3f4f6;
+       }.cost-root .calendar-day.today{
+           border-color: #f99e00;
+           font-weight: 600;
+       }.cost-root .calendar-day.selected{
+           background-color: #f99e00;
+           color: white;
+           font-weight: 600;
+       }.cost-root .calendar-day.in-range{
+           background-color: rgba(249, 158, 0, 0.2);
+           color: #374151;
+           border-radius: 0px;
+       }.cost-root .calendar-day.start-date{
+           background-color: #f99e00;
+           color: white;
+           border-radius: 6px 0 0 6px;
+       }.cost-root .calendar-day.end-date{
+           background-color: #f99e00;
+           color: white;
+           border-radius: 0 6px 6px 0;
+       }.cost-root .calendar-day.start-date.end-date{
+           border-radius: 6px;
+       }.cost-root .calendar-day.start-date.selecting{
+           border-radius: 6px;
+       }.cost-root .calendar-day.preview-range{
+           background-color: rgba(249, 158, 0, 0.15);
+           color: #374151;
+           border-radius: 0px;
+       }.cost-root .calendar-day.preview-end{
+           background-color: rgba(249, 158, 0, 0.4);
+           color: #374151;
+           font-weight: 600;
+           border: 1px dashed #f99e00;
+       }.cost-root .calendar-day.other-month{
+           color: #d1d5db;
+       }.cost-root .calendar-day.disabled{
+           color: #d1d5db;
+           cursor: not-allowed;
+       }.cost-root .calendar-day.disabled:hover{
+           background-color: transparent;
+       }.cost-root /* 外卖总成本按钮特殊样式 */
+        .chart-data-btn.delivery-btn{
+            background: #f97316 !important;
+            color: white !important;
+            border: none !important;
+            padding-right: clamp(30px, 3.125vw, 45px) !important;
+            position: relative;
+            transition: all 0.3s ease;
+        }.cost-root .chart-data-btn.delivery-btn:hover{
+            background: #ea580c !important;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }.cost-root .badge-new{
+            position: absolute;
+            top: 2px;
+            right: 8px;
+            background: #ef4444;
+            color: white;
+            font-size: 9px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+            line-height: 1;
+            text-transform: uppercase;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            animation: pulse-mini 2s infinite;
+        }
+
+        @keyframes pulse-mini {.cost-root 0%{ transform: scale(1); opacity: 1; }.cost-root 50%{ transform: scale(1.05); opacity: 0.9; }.cost-root 100%{ transform: scale(1); opacity: 1; }
+        }.cost-root .delivery-tables-container{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+            display: none;
+        }.cost-root .delivery-table-card{
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }.cost-root .delivery-table-header{
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }.cost-root .delivery-table-header h4{
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #111827;
+        }.cost-root .delivery-table-icon{
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+        }.cost-root .icon-grab{ background: #00b14f; }.cost-root .icon-foodpanda{ background: #d70f64; }.cost-root .icon-shopee{ background: #ee4d2d; }.cost-root .delivery-mini-table{
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }.cost-root .delivery-mini-table th,.cost-root .delivery-mini-table td{
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f3f4f6;
+        }.cost-root .delivery-mini-table th{
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        @media (max-width: 1024px) {.cost-root .delivery-tables-container{
+                grid-template-columns: 1fr;
+            }
+        }.cost-root /* ============================================
+           从 cost.php 内联样式提取 + cost.js 提取
+           ============================================ */
+
+        /* 主图表卡片固定高度 */
+        .main-chart-container > .card{
+            height: 400px;
+        }.cost-root /* 主图表 card-body 填满高度 */
+        .main-chart-container .card-body{
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }.cost-root /* 图表头部布局 */
+        .chart-header{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }.cost-root /* 主图表标题 */
+        #main-chart-title{
+            font-size: clamp(14px, 1.04vw, 20px);
+            font-weight: 600;
+            color: #111827;
+            margin: 0;
+        }.cost-root /* 图表内部容器填充可用空间 */
+        .chart-container.chart-fill{
+            flex: 1;
+        }.cost-root /* 图表右上角日期范围文字 */
+        #chart-date-range{
+            font-size: clamp(8px, 0.74vw, 14px);
+            color: #6b7280;
+            font-weight: 500;
+        }.cost-root /* 详细数据卡片：去掉底部 padding */
+        .detail-card > .card-body{
+            padding-bottom: 0;
+        }.cost-root /* 详细数据标题 */
+        .detail-card h3{
+            font-size: clamp(14px, 1.04vw, 20px);
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 24px;
+        }.cost-root /* 日期控件卡片底部间距 */
+        .date-controls-card{
+            margin-bottom: clamp(14px, 1.67vw, 32px);
+        }.cost-root /* date-info 边框和间距 */
+        .date-info{
+            margin-bottom: 16px;
+            border: 1px solid #e5e7eb;
+        }.cost-root /* 月份选择"无"选项：跨满所有列（替代 JS 内联 style.gridColumn） */
+        .date-option-span{
+            grid-column: 1 / -1;
+        }.cost-root /* 表格横向滚动容器 */
+        .table-scroll{
+            overflow-x: auto;
+        }.cost-root /* date-controls 内的列式布局块 */
+        .date-control-group{
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }.cost-root /* date-controls 内的 form-label 去除默认底部边距 */
+        .date-controls .form-label{
+            margin: 0;
+        }.cost-root /* date-controls 内的图标色 */
+        .date-controls .form-label i{
+            color: #000000ff;
+        }.cost-root /* 日历弹窗默认隐藏 */
+        .calendar-popup{
+            display: none;
+        }.cost-root .calendar-popup.open{
+            display: block;
+        }
+
+/* 本机适配：页面根容器（线上为 body 级样式） */
+.cost-root {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #faf7f2;
+    color: #000000;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+/* 本机适配：J1 模式供应卡显示（JSX 用 visible 类控制） */
+.cost-root .supply-card.visible {
+    display: block;
+}
+.cost-root .calendar-popup {
+    position: absolute;
+    z-index: 2000;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    padding: 14px;
+    width: 320px;
+}

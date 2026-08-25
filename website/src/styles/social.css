@@ -1,0 +1,245 @@
+/* ===========================================
+   社交侧边栏样式 - 独立组件
+   可在任何页面中通过 link 引入
+   =========================================== */
+
+/* 社交侧边栏容器 */
+.social-sidebar {
+    position: fixed;
+    right: clamp(14px, 1.04vw, 20px);
+    bottom: clamp(14px, 1.04vw, 20px);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    z-index: 1000;
+    animation: pulse 4s ease-in-out infinite;
+}
+
+/* 社交图标基础样式 */
+.social-icon {
+    width: clamp(31px, 2.24vw, 43px);
+    height: clamp(31px, 2.24vw, 43px);
+    border-radius: clamp(8px, 0.63vw, 12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    transform-style: preserve-3d;
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.3), 
+        rgba(0, 0, 0, 0.2));
+    box-shadow: 
+        0 6px 20px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* 悬停效果 - 光效 */
+.social-icon::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.3), transparent);
+    transition: left 0.6s ease;
+}
+
+.social-icon:hover::before {
+    left: 100%;
+}
+
+/* 悬停效果 - 波纹 */
+.social-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.2), transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: all 0.4s ease;
+}
+
+.social-icon:hover::after {
+    width: 20px;
+    height: 20px;
+}
+
+/* 悬停变换效果 */
+.social-icon:hover {
+    transform: translateY(-5px) translateX(-3px) rotateY(5deg) scale(1.1);
+    box-shadow: 
+        0 15px 30px rgba(0,0,0,0.4),
+        0 0 0 4px rgba(0, 0, 0, 0.1),
+        0 0 0 8px rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.3);
+}
+
+/* 点击效果 */
+.social-icon:active {
+    transform: translateY(-4px) scale(1.05);
+}
+
+/* 社交图标图片 */
+.social-icon img {
+    width: clamp(30px, 2.2vw, 42px);
+    height: clamp(30px, 2.2vw, 42px);
+    filter: grayscale(100%) brightness(0.7) drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+    transition: all 0.4s ease;
+    z-index: 2;
+    position: relative;
+    opacity: 0.5; /* 只对图片应用透明度 */
+}
+
+/* 悬停时图片效果 */
+.social-icon:hover img {
+    transform: scale(1.15) rotateZ(-3deg);
+    filter: grayscale(0%) brightness(1) drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+    opacity: 1; /* 悬停时完全不透明 */
+}
+
+/* Facebook 悬停效果 */
+.facebook:hover {
+    background: linear-gradient(135deg, 
+        rgba(24, 119, 242, 0.9), 
+        rgba(24, 119, 242, 0.7));
+    box-shadow: 
+        0 15px 30px rgba(24, 119, 242, 0.4),
+        0 0 0 4px rgba(24, 119, 242, 0.2),
+        0 0 0 8px rgba(24, 119, 242, 0.1),
+        0 0 20px rgba(24, 119, 242, 0.3);
+}
+
+/* Instagram 悬停效果 */
+.instagram:hover {
+    background: linear-gradient(135deg, 
+        rgba(253, 29, 29, 0.9), 
+        rgba(131, 58, 180, 0.9));
+    box-shadow: 
+        0 15px 30px rgba(253, 29, 29, 0.4),
+        0 0 0 4px rgba(253, 29, 29, 0.2),
+        0 0 0 8px rgba(131, 58, 180, 0.1),
+        0 0 20px rgba(131, 58, 180, 0.3);
+}
+
+/* WhatsApp 悬停效果 */
+.whatsapp:hover {
+    background: linear-gradient(135deg, 
+        rgba(37, 211, 102, 0.9), 
+        rgba(37, 211, 102, 0.7));
+    box-shadow: 
+        0 15px 30px rgba(37, 211, 102, 0.4),
+        0 0 0 4px rgba(37, 211, 102, 0.2),
+        0 0 0 8px rgba(37, 211, 102, 0.1),
+        0 0 20px rgba(37, 211, 102, 0.3);
+}
+
+/* 脉冲动画 */
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1);
+    }
+    50% { 
+        transform: scale(1.05);
+    }
+}
+
+/* 加载状态 */
+/* .social-sidebar.social-loaded {
+    opacity: 1;
+    visibility: visible;
+} */
+
+/* 可选：添加延迟效果，让每个图标依次出现 */
+/* .social-sidebar.social-loaded .social-icon:nth-child(1) {
+    animation: slideInLeft 0.6s ease 0.2s both;
+} */
+
+/* .social-sidebar.social-loaded .social-icon:nth-child(2) {
+    animation: slideInLeft 0.6s ease 0.4s both;
+} */
+
+/* .social-sidebar.social-loaded .social-icon:nth-child(3) {
+    animation: slideInLeft 0.6s ease 0.6s both;
+} */
+
+/* @keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+} */
+
+/* 额外的视觉效果 */
+.social-icon {
+    background-attachment: fixed;
+}
+
+.social-icon:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.social-icon:nth-child(2) {
+    animation-delay: 0.5s;
+}
+
+.social-icon:nth-child(3) {
+    animation-delay: 1s;
+}
+
+/* 悬浮粒子效果 */
+.social-icon:hover {
+    animation: none;
+}
+
+/* 特殊的磨砂玻璃效果 */
+.social-sidebar::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.1), transparent 50%);
+    border-radius: 30px;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.social-sidebar:hover::before {
+    opacity: 1;
+}
+
+/* 电话端缩小侧边图标，避免盖住内容与占位过重 */
+@media (max-width: 768px) {
+    .social-sidebar {
+        right: 10px;
+        left: auto;
+        bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+        gap: 8px;
+    }
+
+    .social-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
+    }
+
+    .social-icon img {
+        width: 28px;
+        height: 28px;
+    }
+}

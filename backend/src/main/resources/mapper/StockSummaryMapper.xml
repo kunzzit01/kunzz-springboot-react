@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockSummaryMapper">
+
+    <!-- 汇总：按 产品+编号+规格+单价(ROUND 2位) 分组（对齐线上 stocklistapi.php）
+         净库存 = SUM(in) - SUM(out)
+         总价 = SUM((in - out) × ROUND(price, 2))  ← 用显示价(2位小数)计算（对齐线上 8/23 修复：
+                显示价计算总价值，避免多位小数原始价造成总价偏差）
+         单价显示 = ROUND(price, 2)；type 仅展示（MAX，不参与分组）
+         price_raw / price_raw_max = 组内原始单价范围（用于前端悬浮提示差异） -->
+    <select id="summaryRows" resultType="java.util.LinkedHashMap">
+        SELECT product_name, code_number, specification,
+               ROUND(price, 2) AS price,
+               MIN(price) AS price_raw,
+               MAX(price) AS price_raw_max,
+               MAX(type) AS type,
+               SUM(in_quantity) - SUM(out_quantity) AS total_stock,
+               SUM((in_quantity - out_quantity) * ROUND(price, 2)) AS total_price
+        FROM ${table}
+        <where>
+            deleted_at IS NULL
+            <if test="targetSystem != null and targetSystem != ''">
+                AND target_system = #{targetSystem}
+            </if>
+        </where>
+        GROUP BY product_name, code_number, specification, ROUND(price, 2)
+        HAVING SUM(in_quantity) - SUM(out_quantity) &lt;&gt; 0
+        ORDER BY product_name, code_number
+    </select>
+
+    <!-- 供货总额：对齐线上 stocklistapi.php getSupplyTotal（本月入库额 SUM(in×price)，不含出库） -->
+    <select id="supplyValue" resultType="java.util.LinkedHashMap">
+        SELECT SUM(in_quantity * price) AS total_supply_value
+        FROM ${table}
+        WHERE in_quantity &gt; 0
+          AND deleted_at IS NULL
+          AND date BETWEEN #{start} AND #{end}
+    </select>
+
+</mapper>

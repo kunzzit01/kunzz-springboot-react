@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.KpiMapper">
+
+    <select id="listDailies" resultType="java.util.LinkedHashMap">
+        SELECT id, date, gross_sales, discounts, service_fee, tax, adj_amount, tender_amount,
+               diners, tables_used, returning_customers, new_customers
+        FROM ${table}
+        <where>
+            <if test="start != null and end != null">
+                date BETWEEN #{start} AND #{end}
+            </if>
+        </where>
+        ORDER BY date DESC
+    </select>
+
+    <select id="listCosts" resultType="java.util.LinkedHashMap">
+        SELECT id, date, day_name, c_beverage, c_kitchen, c_grab, c_foodpanda, c_shopee, c_total
+        FROM ${table}
+        <where>
+            <if test="start != null and end != null">
+                date BETWEEN #{start} AND #{end}
+            </if>
+        </where>
+        ORDER BY date DESC
+    </select>
+
+    <delete id="deleteDailyByDate">
+        DELETE FROM ${table} WHERE date = #{date}
+    </delete>
+
+    <insert id="insertDaily">
+        INSERT INTO ${table} (date, gross_sales, discounts, service_fee, tax, adj_amount, tender_amount,
+            diners, tables_used, returning_customers, new_customers)
+        VALUES (#{d.date}, #{d.gross_sales}, #{d.discounts}, #{d.service_fee}, #{d.tax}, #{d.adj_amount}, #{d.tender_amount},
+            #{d.diners}, #{d.tables_used}, #{d.returning_customers}, #{d.new_customers})
+    </insert>
+
+    <delete id="deleteCostByDate">
+        DELETE FROM ${table} WHERE date = #{date}
+    </delete>
+
+    <insert id="insertCost">
+        INSERT INTO ${table} (date, day_name, c_beverage, c_kitchen, c_grab, c_foodpanda, c_shopee)
+        VALUES (#{c.date}, #{c.day_name}, #{c.c_beverage}, #{c.c_kitchen}, #{c.c_grab}, #{c.c_foodpanda}, #{c.c_shopee})
+    </insert>
+
+    <select id="listSupplyBetween" resultType="map">
+        SELECT COALESCE(SUM(supply_to_j2), 0) AS supply_to_j2,
+               COALESCE(SUM(supply_to_j3), 0) AS supply_to_j3
+        FROM j1_supply
+        WHERE date BETWEEN #{startDate} AND #{endDate}
+    </select>
+
+    <select id="getMonthStock" resultType="map">
+        SELECT id, restaurant, `year_month`, current_stock
+        FROM cost_month_stock
+        WHERE restaurant = #{restaurant} AND `year_month` = #{yearMonth}
+        LIMIT 1
+    </select>
+
+    <insert id="upsertMonthStock">
+        INSERT INTO cost_month_stock (restaurant, `year_month`, current_stock)
+        VALUES (#{m.restaurant}, #{m.year_month}, #{m.current_stock})
+        ON DUPLICATE KEY UPDATE current_stock = VALUES(current_stock)
+    </insert>
+</mapper>

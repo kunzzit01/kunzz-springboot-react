@@ -1,0 +1,824 @@
+.ke-root *{
+    font-size: clamp(8px, 0.74vw, 14px);
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}.ke-root{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #faf7f2;
+    color: #111827;
+}.ke-root .container{
+    max-width: 1800px;
+    margin: 0 auto;
+    padding: clamp(16px, 1.25vw, 24px) 24px;
+}.ke-root .header{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(22px, 1.67vw, 32px);
+}.ke-root .header h1{
+    font-size: clamp(20px, 2.6vw, 50px);
+    font-weight: bold;
+    color: #000000ff;
+}.ke-root .header .controls{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}.ke-root /* 餐厅选择器样式 */
+.restaurant-selector{
+    background: white;
+    border-radius: clamp(6px, 0.63vw, 12px);
+    padding: 6px;
+    display: flex;
+    gap: 0;
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    align-items: center;
+}.ke-root .restaurant-prefix{
+    background: #f99e00;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: clamp(4px, 0.42vw, 8px) 0 0 clamp(4px, 0.42vw, 8px);
+    font-size: clamp(10px, 0.84vw, 16px);
+    font-weight: 700;
+    width: clamp(26px, 2.08vw, 40px);
+    text-align: center;
+}.ke-root .number-dropdown{
+    position: relative;
+    display: inline-block;
+}.ke-root .number-btn{
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: 0 8px 8px 0;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(10px, 0.84vw, 16px);
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: white;
+    color: #000000ff;
+    width: clamp(30px, 3.13vw, 60px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}.ke-root .number-btn:hover{
+    background: rgba(88, 62, 4, 0.1);
+}.ke-root .number-dropdown-menu{
+    display: none;
+    position: absolute;
+    top: clamp(29px, 2.29vw, 44px);
+    right: clamp(-24px, -1.25vw, -15px);
+    background: white;
+    border: 2px solid #000000ff;
+    border-radius: clamp(8px, 0.63vw, 12px);
+    box-shadow: 0 8px 24px rgba(88, 62, 4, 0.15);
+    z-index: 1000;
+    padding: clamp(6px, 0.42vw, 8px);
+    min-width: 90px;
+}.ke-root .number-dropdown-menu.show{
+    display: block;
+}.ke-root .number-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+}.ke-root .number-item{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: clamp(20px, 2.08vw, 40px);
+    height: clamp(20px, 2.08vw, 40px);
+    border: 2px solid #e5e7eb;
+    background: white;
+    color: #000000ff;
+    cursor: pointer;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    transition: all 0.2s ease;
+}.ke-root .number-item:hover{
+    background-color: #f3f4f6;
+    color: black;
+    border-color: #d1d5db;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}.ke-root .number-item.selected{
+    background: #f99e00;
+    color: white;
+    border-color: #f99e00;
+}.ke-root .restaurant-btn{
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: transparent;
+    color: #583e04;
+    position: relative;
+    min-width: 80px;
+}.ke-root .restaurant-btn.active{
+    background: #583e04;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.25);
+}.ke-root .restaurant-btn:hover:not(.active){
+    background: rgba(88, 62, 4, 0.1);
+    transform: translateY(-1px);
+}.ke-root /* 下拉菜单样式 */
+.dropdown{
+    position: relative;
+    display: inline-block;
+}.ke-root .dropdown-toggle{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}.ke-root .dropdown-menu{
+    display: none;
+    position: absolute;
+    top: 120%;
+    left: 2;
+    background: white;
+    border: 2px solid #583e04;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+    z-index: 1000;
+    min-width: 100%;
+}.ke-root .dropdown-menu.show{
+    display: block;
+}.ke-root .dropdown-item{
+    display: block;
+    width: 100%;
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: #583e04;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    transition: background-color 0.2s;
+}.ke-root .dropdown-item:hover{
+    background-color: rgba(88, 62, 4, 0.1);
+}.ke-root .dropdown-item:first-child{
+    border-radius: 6px 6px 0 0;
+}.ke-root .dropdown-item:last-child{
+    border-radius: 0 0 6px 6px;
+}.ke-root .back-button{
+    background-color: #583e04;
+    color: white;
+    font-weight: 500;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+}.ke-root .back-button:hover{
+    background-color: #462d03;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}.ke-root /* 月份选择器 */
+.month-selector{
+    background: white;
+    border-radius: 12px;
+    padding: clamp(8px, 0.83vw, 16px) clamp(16px, 1.25vw, 24px);
+    margin-bottom: clamp(16px, 1.25vw, 24px);
+    border: 2px solid #000000ff;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+}.ke-root .month-selector select{
+    padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    font-size: clamp(10px, 0.84vw, 16px);
+    font-weight: 500;
+    background: white;
+    color: #000000ff;
+    cursor: pointer;
+}.ke-root .month-selector select:focus{
+    outline: none;
+    border-color: #000000ff;
+    box-shadow: 0 0 0 3px rgba(20, 14, 0, 0.1);
+}.ke-root .month-selector label{
+    font-size: clamp(10px, 0.84vw, 16px);
+    font-weight: 600;
+    color: #000000ff;
+}.ke-root /* Excel样式表格 */
+.excel-container{
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+    overflow: hidden;
+    border: 2px solid #000000ff;
+    height: 70vh;
+    /* 设置固定高度，70%视窗高度 */
+    display: flex;
+    flex-direction: column;
+}.ke-root .table-scroll-container{
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+}.ke-root .excel-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+}.ke-root /* 确保表头固定 */
+.excel-table thead{
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}.ke-root .excel-table{
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    table-layout: fixed;
+}.ke-root .excel-table th{
+    font-size: clamp(8px, 0.74vw, 14px);
+    background: #636363;
+    color: white;
+    padding: clamp(4px, 0.42vw, 8px) 0;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid #d1d5db;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    /* 改成更高的值 */
+    white-space: nowrap;
+}.ke-root .excel-table thead{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: #583e04;
+    /* 确保背景色覆盖 */
+}.ke-root .excel-table thead tr{
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}.ke-root .excel-table td{
+    font-size: clamp(8px, 0.74vw, 14px);
+    padding: 0;
+    border: 1px solid #d1d5db;
+    text-align: center;
+    position: relative;
+    height: clamp(20px, 3.3vw, 40px);
+}.ke-root .excel-table tr:nth-child(even){
+    background-color: #f9fafb;
+}.ke-root .excel-table tbody tr:hover{
+    background-color: #fff9f1 !important;
+}.ke-root .excel-table tbody tr:hover td{
+    background-color: #fff9f1 !important;
+}.ke-root /* 确保hover效果覆盖所有单元格样式 */
+.excel-table tbody tr:hover .date-cell, .ke-root .excel-table tbody tr:hover .calculated-cell, .ke-root .excel-table tbody tr:hover .weekend, .ke-root .excel-table tbody tr:hover .excel-input.has-data, .ke-root .excel-table tbody tr:hover .excel-input.no-data, .ke-root .excel-table tbody tr:hover .input-container{
+    background-color: #fff9f1 !important;
+}.ke-root /* 编辑行不受hover影响 */
+.excel-table tbody tr.editing-row:hover td{
+    background-color: #fff9f1 !important;
+}.ke-root /* 日期列样式 */
+.date-cell{
+    background: #f8f5eb !important;
+    font-weight: 600;
+    color: #583e04;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    min-width: 100px;
+}.ke-root .weekend{
+    background: #fef2f2 !important;
+    color: #dc2626;
+}.ke-root /* 输入框容器样式 */
+.input-container{
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: clamp(20px, 3.3vw, 40px);
+}.ke-root .currency-prefix{
+    position: absolute;
+    left: clamp(2px, 0.42vw, 8px);
+    color: #6b7280;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 2;
+}.ke-root /* 输入框样式 */
+.excel-input{
+    width: 100%;
+    height: clamp(20px, 3.3vw, 40px);
+    border: none;
+    background: #fee2e2;
+    text-align: center;
+    font-size: clamp(8px, 0.74vw, 14px);
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    transition: all 0.2s;
+}.ke-root .excel-input.currency-input{
+    padding-left: clamp(16px, 1.67vw, 32px);
+    text-align: right;
+    padding-right: clamp(2px, 0.42vw, 8px);
+    background: #f0fdf4;
+}.ke-root .excel-input:focus{
+    background: #fff;
+    border: 2px solid #583e04;
+    outline: none;
+    z-index: 5;
+    position: relative;
+}.ke-root /* 计算列样式 */
+.calculated-cell{
+    background: #f0f9ff !important;
+    color: #0369a1;
+    font-weight: 600;
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    min-width: 100px;
+}.ke-root .action-buttons{
+    padding: clamp(12px, 1.25vw, 24px);
+    background: #ffffffff;
+    border-bottom: 2px solid #000000ff;
+    /* 改成 border-bottom */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: clamp(0px, 0.83vw, 16px);
+    flex-shrink: 0;
+    /* 防止按钮区域被压缩 */
+}.ke-root .btn{
+    padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: none;
+    cursor: pointer;
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    text-decoration: none;
+}.ke-root .btn-primary{
+    background-color: #f99e00;
+    color: white;
+    white-space: nowrap;
+}.ke-root .btn-primary:hover{
+    background-color: #f98500ff;
+    transform: translateY(-1px);
+}.ke-root .btn-success{
+    background-color: #10b981;
+    color: white;
+}.ke-root .btn-success:hover{
+    background-color: #059669;
+    transform: translateY(-1px);
+}.ke-root .btn-secondary{
+    background-color: #6b7280;
+    color: white;
+}.ke-root .btn-secondary:hover{
+    background-color: #4b5563;
+    transform: translateY(-1px);
+}.ke-root /* 统计信息 */
+.stats-info{
+    display: flex;
+    gap: clamp(0px, 1.25vw, 24px);
+    align-items: center;
+    font-size: 12px;
+    color: #6b7280;
+    flex-wrap: wrap;
+}.ke-root .stat-item{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}.ke-root .stat-value{
+    font-size: clamp(8px, 0.84vw, 16px);
+    font-weight: bold;
+    color: #000000ff;
+}/* 响应式设计 */
+@media (max-width: 768px){
+    .header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .header .controls {
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .month-selector {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .action-buttons {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .stats-info {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+    }
+
+    .stat-item {
+        min-width: auto;
+        width: 100%;
+    }
+}.ke-root /* 加载状态 */
+.loading{
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #583e04;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}@keyframes spin{.ke-root 0%{
+        transform: rotate(0deg);
+    }.ke-root 100%{
+        transform: rotate(360deg);
+    }
+}.ke-root /* 提示信息 */
+.alert{
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}.ke-root .alert-success{
+    background-color: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}.ke-root .alert-error{
+    background-color: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}.ke-root .alert-info{
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}.ke-root /* 隐藏类 */
+.hidden{
+    display: none;
+}.ke-root /* 删除单日数据按钮 */
+.delete-day-btn{
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: clamp(4px, 0.32vw, 6px);
+    width: clamp(18px, 1.67vw, 32px);
+    height: clamp(18px, 1.67vw, 32px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: clamp(6px, 0.63vw, 12px);
+    margin: clamp(1px, 0.31vw, 3px);
+}.ke-root .delete-day-btn:hover{
+    background: #dc2626;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}.ke-root .delete-day-btn i{
+    font-size: clamp(6px, 0.63vw, 12px);
+}.ke-root .delete-day-btn:disabled{
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}.ke-root .delete-day-btn:disabled:hover{
+    background: #9ca3af;
+    transform: none;
+    box-shadow: none;
+}.ke-root /* 编辑按钮样式 */
+.edit-btn{
+    background: #f59e0b;
+    color: white;
+    border: none;
+    border-radius: clamp(4px, 0.32vw, 6px);
+    width: clamp(18px, 1.67vw, 32px);
+    height: clamp(18px, 1.67vw, 32px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: clamp(6px, 0.63vw, 12px);
+    margin: clamp(1px, 0.21vw, 2px);
+}.ke-root .edit-btn:hover{
+    background: #d97706;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}.ke-root .edit-btn i{
+    font-size: clamp(6px, 0.63vw, 12px);
+}.ke-root .edit-btn:disabled{
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+}.ke-root .edit-btn.save-mode{
+    background: #10b981;
+}.ke-root .edit-btn.save-mode:hover{
+    background: #059669;
+}.ke-root /* 取消编辑按钮样式 */
+.cancel-edit-btn{
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: clamp(4px, 0.32vw, 6px);
+    width: clamp(18px, 1.67vw, 32px);
+    height: clamp(18px, 1.67vw, 32px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: clamp(6px, 0.63vw, 12px);
+    margin: clamp(1px, 0.21vw, 2px);
+}.ke-root .cancel-edit-btn:hover{
+    background: #4b5563;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(107, 114, 128, 0.3);
+}.ke-root .cancel-edit-btn i{
+    font-size: clamp(6px, 0.63vw, 12px);
+}.ke-root /* 只读输入框样式 */
+.excel-input.readonly{
+    background: #f9fafb !important;
+    pointer-events: none;
+    cursor: not-allowed;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}.ke-root .excel-input.currency-input.readonly{
+    background: #f9fafb;
+}.ke-root /* 操作列样式调整 */
+.action-cell{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(2px, 0.21vw, 4px);
+    padding: clamp(2px, 0.21vw, 4px);
+}.ke-root /* 编辑行样式 */
+.excel-table tr.editing-row{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root .excel-table tr.editing-row td{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root .excel-table tr.editing-row .date-cell{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root /* 编辑模式下计算列保持原来的蓝色 */
+.excel-table tr.editing-row .calculated-cell{
+    background-color: #f0f9ff !important;
+    /* 保持蓝色 */
+}.ke-root .excel-table tr.editing-row .weekend{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root /* 编辑模式下的输入框样式 */
+.excel-table tr.editing-row .excel-input{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root .excel-table tr.editing-row .excel-input.currency-input{
+    background-color: #d1fae5 !important;
+    /* 浅绿色 */
+}.ke-root /* 数据状态颜色 */
+.excel-input.has-data{
+    background: #dbeafe !important;
+    /* 浅蓝色 - 有数据 */
+}.ke-root .excel-input.no-data{
+    background: #fee2e2 !important;
+    /* 浅红色 - 无数据 */
+}.ke-root .excel-input:focus{
+    background: #fff !important;
+    border: 2px solid #583e04;
+    outline: none;
+    z-index: 5;
+    position: relative;
+}.ke-root /* 通知容器 */
+.toast-container{
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+}.ke-root /* 通知基础样式 */
+.toast{
+    width: clamp(100px, 15.63vw, 300px);
+    padding: clamp(2px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+    border-radius: clamp(6px, 0.42vw, 8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: clamp(8px, 0.74vw, 14px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    pointer-events: auto;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}.ke-root .toast.show{
+    transform: translateX(0);
+    opacity: 1;
+}.ke-root .toast.hide{
+    transform: translateX(100%);
+    opacity: 0;
+}.ke-root /* 通知类型样式 */
+.toast-success{
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9));
+    color: white;
+    border-color: rgba(16, 185, 129, 0.3);
+}.ke-root .toast-error{
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+    color: white;
+    border-color: rgba(239, 68, 68, 0.3);
+}.ke-root .toast-info{
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9));
+    color: white;
+    border-color: rgba(59, 130, 246, 0.3);
+}.ke-root .toast-warning{
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9));
+    color: white;
+    border-color: rgba(245, 158, 11, 0.3);
+}.ke-root /* 通知图标 */
+.toast-icon{
+    font-size: clamp(14px, 0.94vw, 18px);
+    flex-shrink: 0;
+}.ke-root /* 通知内容 */
+.toast-content{
+    flex: 1;
+    font-weight: 500;
+    line-height: 1.4;
+}.ke-root /* 关闭按钮 */
+.toast-close{
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    opacity: 0.8;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+}.ke-root .toast-close:hover{
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.1);
+}.ke-root /* 进度条 */
+.toast-progress{
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 8px 8px;
+    transform-origin: left;
+    animation: toastProgress 4s linear forwards;
+}@keyframes toastProgress{.ke-root 0%{
+        transform: scaleX(1);
+    }.ke-root 100%{
+        transform: scaleX(0);
+    }
+}/* 响应式调整 */
+@media (max-width: 480px){
+    .toast-container {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+    }
+
+    .toast {
+        min-width: auto;
+        max-width: none;
+    }
+}.ke-root /* 报表类型选择器样式 - 与 stockeditall.php 一致 */
+.report-type-selector{
+    position: relative;
+    display: inline-block;
+}.ke-root .report-type-btn{
+    background-color: #ff9e00;
+    color: white;
+    font-weight: 500;
+    padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(10px, 0.73vw, 14px);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    justify-content: space-between;
+    position: relative;
+}.ke-root .report-type-btn:hover{
+    background-color: #f98500ff;
+    border-radius: 8px;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}.ke-root .report-type-selector--disabled .report-type-btn{
+    cursor: default;
+}.ke-root .report-type-selector--disabled .report-type-btn:hover{
+    background-color: #ff9e00;
+    transform: none;
+    box-shadow: none;
+}.ke-root .report-dropdown-menu{
+    position: absolute;
+    top: 96%;
+    left: 0;
+    background: white;
+    border: 2px solid #000000ff;
+    border-radius: 8px;
+    width: clamp(116px, 8.3vw, 160px);
+    box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+    z-index: 1000;
+    display: none;
+}.ke-root .report-dropdown-menu.show{
+    display: block;
+}.ke-root .report-dropdown-item{
+    padding: clamp(6px, 0.52vw, 10px) clamp(14px, 0.83vw, 16px);
+    color: #583e04;
+    text-decoration: none;
+    display: block;
+    font-size: clamp(10px, 0.73vw, 14px);
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+}.ke-root .report-dropdown-item:hover{
+    background-color: #f0f9ff;
+    color: #ff9e00;
+}.ke-root .report-dropdown-item:last-child{
+    border-bottom: none;
+}.ke-root /* Remove number input spinners */
+input[type='number']::-webkit-outer-spin-button, .ke-root input[type='number']::-webkit-inner-spin-button{
+    -webkit-appearance: none !important;
+    margin: 0 !important;
+}.ke-root input[type='number']{
+    -moz-appearance: textfield !important;
+    appearance: textfield !important;
+}
+.ke-root .excel-table tbody tr:hover .excel-input.auto-filled{
+    background: #f0f9ff !important;
+    color: #0369a1;
+}.ke-root .input-container.auto-filled-container .currency-prefix{
+    color: #0369a1;
+}.ke-root .calculated-cell.negative{
+    color: #dc2626 !important;
+    background: #fee2e2 !important;
+}.ke-root .stock-input-container{
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.42vw, 8px);
+    background: white;
+    padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+    border-radius: clamp(4px, 0.42vw, 8px);
+    border: 2px solid #10b981;
+}.ke-root .stock-input-container label{
+    font-size: clamp(8px, 0.74vw, 14px);
+    font-weight: 600;
+    color: #059669;
+    white-space: nowrap;
+}.ke-root .stock-input-container input{
+    width: clamp(80px, 8.33vw, 160px);
+    padding: clamp(2px, 0.21vw, 4px) clamp(4px, 0.42vw, 8px);
+    border: 1px solid #d1d5db;
+    border-radius: clamp(4px, 0.42vw, 8px);
+    font-size: clamp(8px, 0.74vw, 14px);
+    text-align: right;
+}.ke-root .stock-input-container input:focus{
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}.ke-root .excel-input.auto-filled{
+    background: #f0f9ff !important;
+    color: #0369a1;
+    font-weight: 600;
+    cursor: not-allowed;
+    pointer-events: none;
+}.ke-root .excel-input.auto-filled:focus{
+    background: #f0f9ff !important;
+    color: #0369a1;
+    border: 1px solid #0369a1;
+    outline: none;
+}.ke-root .excel-table tr.editing-row .excel-input.auto-filled{
+    background: #f0f9ff !important;
+    color: #0369a1;
+}.ke-root .excel-input.auto-filled.has-data,
+.ke-root .excel-input.auto-filled.no-data{
+    background: #f0f9ff !important;
+    color: #0369a1;
+}.ke-root .excel-input.auto-filled:focus{
+    background: #f0f9ff !important;
+    color: #0369a1;
+    border: 1px solid #0369a1;
+}

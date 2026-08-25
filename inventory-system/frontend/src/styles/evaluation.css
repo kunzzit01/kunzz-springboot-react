@@ -1,0 +1,325 @@
+/* 考核表单管理：对齐线上 evaluation_form.css（类名前缀 ev-） */
+.ev-root * { margin: 0; padding: 0; box-sizing: border-box; }
+
+.ev-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Microsoft YaHei', sans-serif;
+  background-color: #faf7f2;
+  min-height: 100vh;
+}
+
+.ev-root .ev-container {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: clamp(16px, 1.25vw, 24px) 24px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.ev-root .ev-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(10px, 1.56vw, 30px);
+  position: relative;
+}
+
+.ev-root .ev-header .ev-controls { display: flex; align-items: center; gap: 0px; }
+
+.ev-root .ev-toggle-standards-selector { position: relative; }
+
+.ev-root .ev-selector-button {
+  background-color: #f99e00;
+  color: white;
+  font-weight: 500;
+  padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: clamp(10px, 0.73vw, 14px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  min-width: clamp(120px, 10vw, 150px);
+  justify-content: space-between;
+}
+
+.ev-root .ev-selector-button:hover {
+  background-color: #f98500;
+  border-radius: 8px;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}
+
+.ev-root .ev-selector-dropdown {
+  position: absolute;
+  top: 96%;
+  right: 0;
+  background: white;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+  min-width: 100%;
+  z-index: 1000;
+  display: none;
+  margin-top: 4px;
+}
+
+.ev-root .ev-selector-dropdown.show { display: block; }
+
+.ev-root .ev-dropdown-item {
+  padding: clamp(6px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px);
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  color: #000;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 500;
+}
+
+.ev-root .ev-dropdown-item:last-child { border-bottom: none; }
+.ev-root .ev-dropdown-item:hover { background-color: #f8f5eb; border-radius: 8px; }
+.ev-root .ev-dropdown-item.active { background-color: #f99e00; color: white; border-radius: 4px; }
+
+.ev-root .ev-header h1 {
+  color: #000;
+  font-size: clamp(20px, 2.6vw, 50px);
+  margin: 0;
+  text-align: left;
+  position: relative;
+  padding-bottom: 16px;
+  width: 100%;
+}
+
+.ev-root .ev-header h1::after {
+  content: "";
+  display: block;
+  height: 3px;
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(90deg, rgba(245, 190, 133, 0) 0%, rgba(0, 0, 0, 1) 25%, rgba(0, 0, 0, 1) 75%, rgba(245, 190, 133, 0) 100%);
+}
+
+.ev-root .ev-header .ev-controls { position: relative; z-index: 10; }
+
+.ev-root .ev-content-wrapper {
+  flex: 1;
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+}
+
+.ev-root .ev-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+/* 考核标准模式下隐藏左侧筛选区 */
+.ev-root .ev-sidebar.ev-standards-hidden { display: none; }
+
+.ev-root .ev-main-content {
+  flex: 1;
+  background: white;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+}
+
+.ev-root .ev-form-section { margin-bottom: 25px; }
+.ev-root .ev-form-section label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+.ev-root .ev-form-section input,
+.ev-root .ev-form-section select {
+  width: 100%;
+  padding: 10px 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+  background: #fff;
+  color: #333;
+}
+.ev-root .ev-form-section input:focus,
+.ev-root .ev-form-section select:focus { outline: none; border-color: #bf7f3b; }
+
+.ev-root .ev-btn-primary {
+  background-color: #bf7f3b;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+.ev-root .ev-btn-primary:hover { background-color: #e2a56b; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(245, 190, 133, 0.45); }
+
+.ev-root .ev-btn-secondary {
+  background-color: #6b7280;
+  color: white;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ev-root .ev-btn-secondary:hover { background-color: #4b5563; }
+
+.ev-root .ev-evaluation-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  background: white;
+  table-layout: fixed;
+  font-size: 15px;
+}
+.ev-root .ev-evaluation-table thead { background: #bf7f3b; color: white; }
+.ev-root .ev-evaluation-table th {
+  padding: 18px 12px;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid rgba(255, 255, 255, 0.2);
+  word-wrap: break-word;
+  font-size: 15px;
+}
+.ev-root .ev-evaluation-table th:first-child { min-width: 200px; width: 200px; text-align: left; padding-left: 18px; }
+.ev-root .ev-evaluation-table td {
+  padding: 15px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  border-right: 1px solid #e5e7eb;
+  text-align: center;
+  word-wrap: break-word;
+  font-size: 14px;
+}
+.ev-root .ev-evaluation-table td:first-child { text-align: left; padding-left: 18px; font-weight: 500; }
+.ev-root .ev-evaluation-table tbody tr:hover { background-color: #f9fafb; }
+.ev-root .ev-employee-name { font-weight: 500; color: #333; font-size: 15px; }
+
+.ev-root .ev-score-input {
+  width: 100%;
+  padding: 12px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 15px;
+  min-height: 40px;
+  box-sizing: border-box;
+  color: #333;
+  background: #fff;
+}
+.ev-root .ev-score-input:focus { outline: none; border-color: #bf7f3b; }
+
+.ev-root .ev-evaluation-table th small { display: block; font-size: 15px; margin-top: 5px; font-weight: 600; opacity: 1; }
+
+.ev-root .ev-form-header {
+  background: #bf7f3b;
+  color: white;
+  padding: 20px;
+  border-radius: 12px 12px 0 0;
+  margin: -30px -30px 30px -30px;
+}
+.ev-root .ev-form-header h2 { font-size: 24px; margin-bottom: 10px; }
+.ev-root .ev-form-info { display: flex; gap: 30px; font-size: 14px; opacity: 0.95; }
+
+.ev-root .ev-message { padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; display: none; }
+.ev-root .ev-message.success { background-color: #d1fae5; color: #065f46; border: 1px solid #10b981; }
+.ev-root .ev-message.error { background-color: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+
+.ev-root .ev-form-buttons { margin-top: 100px; display: flex; flex-direction: column; gap: 10px; }
+
+.ev-root .ev-save-form-btn {
+  width: 100%; padding: 12px; background-color: #3b82f6; color: white;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.ev-root .ev-save-form-btn:hover { background-color: #2563eb !important; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3); }
+
+.ev-root .ev-print-btn {
+  width: 100%; padding: 12px; background-color: #10b981; color: white;
+  border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: all 0.2s;
+}
+.ev-root .ev-print-btn:hover { background-color: #059669 !important; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3); }
+
+/* PDF 内容区域样式（隐藏，导出时使用） */
+.ev-root .ev-pdf-content {
+  display: none;
+  background: white;
+  padding: 40px 50px;
+  width: 1300px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+.ev-root .ev-pdf-content .ev-form-header { margin: 0 0 25px 0; border-radius: 0; padding: 25px; }
+.ev-root .ev-pdf-content .ev-form-header h2 { font-size: 44px; margin-bottom: 18px; font-weight: 700; }
+.ev-root .ev-pdf-content .ev-form-info { font-size: 18px; gap: 50px; font-weight: 500; }
+.ev-root .ev-pdf-content .ev-evaluation-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.ev-root .ev-pdf-content .ev-evaluation-table th {
+  border: 1px solid #000; padding: 18px 12px; text-align: center; font-weight: 600;
+  background: #bf7f3b; color: white; min-width: 140px; font-size: 16px;
+}
+.ev-root .ev-pdf-content .ev-evaluation-table th:first-child { min-width: 220px; text-align: left; padding-left: 18px; }
+.ev-root .ev-pdf-content .ev-evaluation-table td {
+  border: 1px solid #000; padding: 18px 12px; text-align: center; min-height: 50px;
+  min-width: 140px; font-size: 15px;
+}
+.ev-root .ev-pdf-content .ev-evaluation-table td.ev-employee-name {
+  text-align: left; padding-left: 18px; font-weight: 500; min-width: 220px; font-size: 16px;
+}
+.ev-root .ev-pdf-content .ev-evaluation-table thead { background: #bf7f3b; color: white; }
+.ev-root .ev-pdf-content .ev-evaluation-table tbody tr { height: 60px; }
+.ev-root .ev-pdf-content .ev-evaluation-table small { display: block; font-size: 16px; margin-top: 5px; font-weight: 600; opacity: 1; }
+
+/* 考核标准编辑区 */
+.ev-root .ev-standards-wrap { display: flex; flex-direction: column; gap: 16px; }
+.ev-root .ev-standards-toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.ev-root .ev-standards-toolbar .ev-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ev-root .ev-standards-tabs { display: flex; gap: 8px; align-items: center; }
+.ev-root .ev-standards-tab {
+  border: 1px solid #e5e7eb; background: #fff; padding: 8px 12px;
+  border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; color: #111;
+}
+.ev-root .ev-standards-tab.active { border-color: #111827; background: #111827; color: #fff; }
+.ev-root .ev-standards-page { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: #fff; }
+.ev-root .ev-standards-page-title {
+  background: #bf7f3b; color: #fff; padding: 18px 16px;
+  font-size: 32px; font-weight: 800; text-align: center; letter-spacing: 1px;
+}
+.ev-root .ev-standards-table { width: 100%; border-collapse: collapse; }
+.ev-root .ev-standards-table th,
+.ev-root .ev-standards-table td { border: 1px solid #111; padding: 14px; vertical-align: top; }
+.ev-root .ev-standards-score { width: 70px; text-align: center; font-weight: 800; font-size: 18px; }
+.ev-root .ev-standards-textarea {
+  width: 100%; min-height: 86px; border: none; outline: none; resize: vertical;
+  font-size: 14px; line-height: 1.5; font-family: inherit; color: #333;
+}
+
+/* 标准 PDF 容器（隐藏，仅用于导出） */
+.ev-root .ev-standards-pdf { display: none; width: 1300px; background: #fff; padding: 40px 50px; box-sizing: border-box; }
+.ev-root .ev-standards-pdf .ev-standards-page-title {
+  background: #bf7f3b; color: #fff; padding: 22px 16px;
+  font-size: 36px; font-weight: 800; text-align: center; letter-spacing: 1.5px; margin-bottom: 0;
+}
+.ev-root .ev-standards-pdf .ev-standards-table { width: 100%; border-collapse: collapse; font-size: 16px; }
+.ev-root .ev-standards-pdf .ev-standards-table th { background: #bf7f3b; color: #fff; padding: 16px; text-align: center; font-weight: 600; font-size: 18px; }
+.ev-root .ev-standards-pdf .ev-standards-table td { border: 1px solid #000; padding: 18px; vertical-align: top; font-size: 15px; line-height: 1.6; }
+.ev-root .ev-standards-pdf .ev-standards-score { width: 80px; text-align: center; font-weight: 800; font-size: 20px; }
+.ev-root .ev-standards-pdf-page { page-break-after: always; margin-bottom: 20px; }
+.ev-root .ev-standards-pdf-page:last-child { page-break-after: auto; }
+
+/* 空状态占位 */
+.ev-root .ev-placeholder { text-align: center; padding: 60px 20px; color: #6b7280; }
+.ev-root .ev-placeholder i { font-size: 64px; margin-bottom: 20px; opacity: 0.3; }

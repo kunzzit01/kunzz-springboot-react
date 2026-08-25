@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockProductMapper">
+
+    <!-- 货品种类列表：对齐旧系统 stockapi.php —— FIND_IN_SET 逗号精确匹配，未分配系统的记录只出现在总览 -->
+    <select id="listRows" resultType="java.util.LinkedHashMap">
+        SELECT id, date, time, product_code, product_name, specification, category,
+               supplier, applicant, approver, system_assign, freezer_category,
+               created_at, updated_at
+        FROM stock_data
+        <where>
+            <if test="systemAssign != null and systemAssign != ''">
+                AND (FIND_IN_SET(#{systemAssign}, system_assign) &gt; 0 OR system_assign = #{systemAssign})
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND product_name LIKE CONCAT('%', #{keyword}, '%')
+            </if>
+        </where>
+        ORDER BY id
+    </select>
+
+    <insert id="insertRow" parameterType="map">
+        INSERT INTO stock_data
+            (date, time, product_code, product_name, specification, category,
+             supplier, applicant, approver, system_assign, freezer_category)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.category},
+             #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory})
+    </insert>
+
+    <update id="updateRow" parameterType="map">
+        UPDATE stock_data
+        SET product_code = #{r.productCode},
+            product_name = #{r.productName},
+            specification = #{r.specification},
+            category = #{r.category},
+            supplier = #{r.supplier},
+            applicant = #{r.applicant},
+            approver = #{r.approver},
+            system_assign = #{r.systemAssign},
+            freezer_category = #{r.freezerCategory}
+        WHERE id = #{id}
+    </update>
+
+    <update id="approveRow">
+        UPDATE stock_data SET approver = #{approver} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteRow">
+        DELETE FROM stock_data WHERE id = #{id}
+    </delete>
+
+</mapper>

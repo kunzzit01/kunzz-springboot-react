@@ -1,0 +1,127 @@
+/* ================= KUNZZ 后台 · 线上视觉翻译（原生 CSS） ================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* 新增保存后：新行闪烁高亮（全系统共用） */
+@keyframes kzRowFlash {
+  0% { background-color: #d1fae5 !important; }
+  70% { background-color: #d1fae5 !important; }
+  100% { background-color: transparent !important; }
+}
+tr.highlight-flash td {
+  animation: kzRowFlash 2.5s ease;
+}
+tr.highlight-flash td.cell-name,
+tr.highlight-flash td.cell-no {
+  animation: kzRowFlash 2.5s ease;
+}
+
+html, body, #root { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* 线上旧系统 body 背景（米色），价格/批发商等页面对齐 */
+  background: #faf7f2;
+  color: #1f2937;
+}
+
+/* ---------- 登录页 ---------- */
+.login-section {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  background: url('/static/images/loginbg.jpg') no-repeat center center / cover;
+}
+.login-form {
+  width: 360px; background: rgba(255,255,255,.5); backdrop-filter: blur(6px);
+  border-radius: 20px; box-shadow: 0 8px 20px rgba(0,0,0,.2);
+  padding: 40px 36px; position: relative;
+}
+.login-form h2 { font-size: 22px; margin-bottom: 20px; text-align: center; }
+.login-form .input-label { display: block; margin: 14px 0 6px; font-size: 14px; color: #374151; }
+.login-form input[type='text'], .login-form input[type='password'] {
+  width: 100%; height: 44px; padding: 0 14px; border: 1px solid #ddd; border-radius: 10px; font-size: 14px;
+  background: rgba(255,255,255,.8); outline: none;
+}
+.login-form input:focus { border-color: #ff5c00; }
+.password-container { position: relative; }
+.password-container .eye-icon { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 22px; cursor: pointer; }
+.form-options { display: flex; justify-content: space-between; align-items: center; margin: 14px 0; font-size: 13px; }
+.form-options a { color: #ff5c00; text-decoration: none; }
+.login-form button[type='submit'] {
+  width: 100%; height: 44px; border: none; border-radius: 10px;
+  background: rgba(255,123,0,.85); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.login-form button[type='submit']:hover { background: #ff5c00; }
+.back-button { position: absolute; top: 16px; left: 16px; width: 40px; height: 40px; border: none; border-radius: 50%; background: transparent; cursor: pointer; color: #333; }
+.back-button:hover { background: rgba(0,0,0,.05); }
+.form-divider { border: none; border-top: 1px solid rgba(0,0,0,.1); margin: 22px 0 10px; }
+
+/* ---------- 内容区 ---------- */
+.kz-main { margin-left: clamp(140px, 13.02vw, 250px); min-height: 100vh; padding: 24px; }
+/* 企业蓝图/排班等整页移植页面：容器自带 padding，去掉外层 padding 对齐线上 */
+.kz-main:has(> .sch-root), .kz-main:has(> .cb-root), .kz-main:has(> .ph-root), .kz-main:has(> .stl-root), .kz-main:has(> .kpi-root), .kz-main:has(> .ke-root), .kz-main:has(> .cost-root), .kz-main:has(> .staff-root), .kz-main:has(> .add-root), .kz-main:has(> .qna-root), .kz-main:has(> .ev-root), .kz-main:has(> .hr-root), .kz-main:has(> .sio-root), .kz-main:has(> .sp-root), .kz-main:has(> .sos-root), .kz-main:has(> .dw-root) { padding: 0; }
+.kz-page-title {
+  font-size: 22px; font-weight: 700; color: #1f2937;
+  margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+}
+.kz-page-title .sub { font-size: 13px; color: #999; font-weight: 500; }
+.kz-card { background: #fff; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); padding: 20px; margin-bottom: 16px; }
+.kz-card-title { font-size: 16px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
+
+/* 按钮 */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; font-family: inherit; }
+.btn-primary { background: #ff5c00; color: #fff; }
+.btn-primary:hover { background: #e65300; }
+.btn-warning { background: #fff7e6; color: #d46b08; border-color: #ffd591; }
+.btn-info { background: #e6f4ff; color: #1677ff; border-color: #91caff; }
+.btn-info:hover { background: #d5edff; }
+.btn-default { background: #fff; border-color: #d9d9d9; color: #333; }
+.btn-default:hover { border-color: #ff5c00; color: #ff5c00; }
+.btn-danger { background: #fff1f0; color: #cf1322; border-color: #ffccc7; }
+
+/* 筛选栏 / 表格 */
+.kz-filter-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; align-items: center; }
+.kz-filter-bar input, .kz-filter-bar select { height: 34px; padding: 0 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; outline: none; background: #fff; font-family: inherit; }
+.kz-filter-bar input:focus, .kz-filter-bar select:focus { border-color: #ff5c00; }
+.kz-table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; }
+.kz-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid #eee; background: #fafafa; font-weight: 600; color: #555; white-space: nowrap; }
+.kz-table td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; }
+.kz-table tr:hover td { background: #fdf6ef; }
+.kz-table .num { text-align: right; }
+.kz-table tfoot td { font-weight: 700; background: #fafafa; }
+.low-row { background: #fff1f0 !important; }
+
+/* 统计卡片 / 快捷入口 */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 16px; }
+.stat-card { background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,.06); border-top: 3px solid #ff5c00; }
+.stat-card .stat-label { font-size: 13px; color: #888; margin-bottom: 6px; }
+.stat-card .stat-value { font-size: 24px; font-weight: 800; color: #1f2937; }
+.quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+.quick-item { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 22px 14px; background: #fff; border: 1px solid #f0f0f0; border-radius: 12px; text-decoration: none; color: #333; transition: all .2s; }
+.quick-item:hover { border-color: #ff5c00; box-shadow: 0 4px 12px rgba(255,92,0,.15); transform: translateY(-2px); }
+.quick-item .qi-icon { font-size: 26px; color: #ff5c00; }
+.quick-item .qi-label { font-weight: 600; font-size: 13.5px; }
+
+/* ================= 全站统一弹窗关闭按钮 ================= */
+/* 组件：src/components/ModalClose.tsx（类名 .modal-close） */
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  font-weight: bold;
+  line-height: 1;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: color .15s, background .15s;
+  flex-shrink: 0;
+  /* 非 flex 的 modal-header 兜底右对齐（flex 容器内自动忽略） */
+  float: right;
+}
+.modal-close:hover {
+  color: #583e04;
+  background: rgba(0, 0, 0, 0.05);
+}
+.modal-close:focus-visible {
+  outline: 2px solid #f99e00;
+  outline-offset: 2px;
+}

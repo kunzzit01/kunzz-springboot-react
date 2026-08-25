@@ -1,0 +1,594 @@
+/* 进出货管理（对齐线上 stockeditall.css 设计规范） */
+.sio-root * { margin: 0; padding: 0; box-sizing: border-box; }
+.sio-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #faf7f2; color: #111827;
+}
+.sio-root .container {
+  max-width: 1800px; margin: 0 auto;
+  padding: clamp(16px, 1.25vw, 24px) 24px;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.sio-root .header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: clamp(18px, 1.67vw, 32px);
+}
+.sio-root .header h1 { font-size: clamp(20px, 2.6vw, 50px); font-weight: bold; color: #000; line-height: 1.44; }
+.sio-root .header .controls { display: flex; align-items: center; gap: 0px; }
+.sio-root .selector-button {
+  background-color: #f99e00; color: white; font-weight: 500;
+  padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+  border-radius: 8px; border: none; cursor: pointer;
+  font-size: clamp(10px, 0.73vw, 14px);
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.2s ease;
+  width: clamp(90px, 6.77vw, 130px); justify-content: space-between; position: relative;
+}
+.sio-root .selector-button:hover { background-color: #f98500; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2); }
+.sio-root .selector-dropdown {
+  position: absolute; top: 110%; right: 0; background: white;
+  border: 2px solid #000; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2); width: 100%; z-index: 10000; display: none;
+}
+.sio-root .selector-dropdown.show { display: block; }
+.sio-root .selector-dropdown .dropdown-item {
+  padding: clamp(6px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px); cursor: pointer;
+  border-bottom: 1px solid #e5e7eb; transition: all 0.2s;
+  color: #000; font-size: clamp(8px, 0.74vw, 14px); font-weight: 500; display: block;
+}
+.sio-root .selector-dropdown .dropdown-item:last-child { border-bottom: none; }
+.sio-root .selector-dropdown .dropdown-item:hover { background-color: #f8f5eb; }
+.sio-root .selector-dropdown .dropdown-item.active { background-color: #f99e00 !important; color: white !important; }
+.sio-root .view-selector { position: relative; margin-right: 16px; }
+.sio-root .view-selector .selector-dropdown { width: 100%; }
+.sio-root .system-selector { position: relative; }
+
+/* 筛选栏 */
+.sio-root .filter-bar {
+  flex-shrink: 0; background: white; border-radius: 12px;
+  padding: clamp(12px, 1.04vw, 20px) clamp(18px, 1.25vw, 24px);
+  margin-bottom: clamp(14px, 1.25vw, 24px); border: 2px solid #583e04;
+  box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.sio-root .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sio-root .filter-group label {
+  font-size: clamp(10px, 0.84vw, 16px); font-weight: 600; color: #583e04; margin-right: 4px;
+}
+.sio-root .filter-input, .sio-root .filter-select {
+  padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+  font-size: clamp(10px, 0.84vw, 14px); background: white; color: #111827;
+}
+.sio-root .filter-input:focus, .sio-root .filter-select:focus {
+  outline: none; border-color: #583e04; box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+.sio-root .btn {
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  border-radius: clamp(4px, 0.42vw, 8px); border: none; cursor: pointer;
+  font-size: clamp(8px, 0.74vw, 14px); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+}
+.sio-root .btn-primary { background-color: #f99e00; color: white; }
+.sio-root .btn-primary:hover { background-color: #f98500; transform: translateY(-1px); }
+.sio-root .btn-success { background-color: #10b981; color: white; }
+.sio-root .btn-success:hover { background-color: #059669; transform: translateY(-1px); }
+.sio-root .btn-warning { background-color: #f99e00; color: white; }
+.sio-root .btn-warning:hover { background-color: #f98500; transform: translateY(-1px); }
+.sio-root .btn-default { background-color: #fff; border: 1px solid #d1d5db; color: #374151; }
+.sio-root .btn-default:hover { background-color: #f3f4f6; }
+.sio-root .btn-danger { background-color: #fee2e2; color: #dc2626; }
+.sio-root .btn-danger:hover { background-color: #fecaca; }
+.sio-root .stats-info { display: flex; gap: clamp(10px, 1.04vw, 20px); align-items: center; font-size: clamp(8px, 0.74vw, 14px); color: #6b7280; flex-wrap: wrap; }
+.sio-root .stat-item { display: flex; align-items: center; gap: 6px; }
+.sio-root .stat-value { font-weight: bold; color: #583e04; font-size: clamp(10px, 0.84vw, 16px); }
+
+/* 表格 */
+.sio-root .table-container {
+  background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+  border: 2px solid #000; display: flex; flex-direction: column;
+  flex: 1; min-height: 0; overflow: hidden;
+}
+.sio-root .table-scroll-container { overflow-x: auto; overflow-y: auto; flex: 1; position: relative; }
+.sio-root .stock-table { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: 14px; }
+.sio-root .stock-table th {
+  background: #636363; color: white;
+  padding: clamp(4px, 0.42vw, 8px) 0;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 600; line-height: 1.32;
+  border: 1px solid #d1d5db; position: sticky; top: 0; z-index: 100; white-space: nowrap; min-width: 0;
+}
+.sio-root .stock-table td {
+  font-size: clamp(8px, 0.74vw, 14px);
+  padding: 0;
+  border: 1px solid #d1d5db; text-align: center; position: relative;
+  /* 对齐旧系统：td 本身不强制 nowrap（否则 table-layout:fixed 下会撑宽单元格导致行高异常）
+     单行不换行由内部 span 控制 */
+  white-space: normal;
+}
+/* 仅货品列（第 3 列）允许长文本换行 */
+.sio-root .stock-table td:nth-child(3) {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+.sio-root .stock-table td:nth-child(3) span {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow: visible;
+  text-overflow: clip;
+}
+/* 货品名不粗体（对齐旧系统 span 400） */
+.sio-root .stock-table td:nth-child(3) b { font-weight: 400; }
+/* 日期列（对齐旧系统 .date-cell） */
+.sio-root .stock-table tbody td:nth-child(1) { background: #f8f5eb !important; font-weight: 600; color: #000; }
+/* 进货列不显示绿色/灰色（对齐旧系统普通黑字 400） */
+.sio-root .stock-table td:nth-child(4) span { color: #111827 !important; font-weight: 400 !important; }
+/* 固定列宽比例（对齐旧系统 stockeditall.css 实测列宽 [60,84,155,60,60,72,60,96,120,84,60,72,120,96,60,84]@1340px） */
+.sio-root .stock-table th:nth-child(1), .sio-root .stock-table td:nth-child(1) { width: 4.5%; }   /* 日期 60 */
+.sio-root .stock-table th:nth-child(2), .sio-root .stock-table td:nth-child(2) { width: 6.3%; }   /* 货品编号 84 */
+.sio-root .stock-table th:nth-child(3), .sio-root .stock-table td:nth-child(3) { width: 11.6%; }  /* 货品 155 */
+.sio-root .stock-table th:nth-child(4), .sio-root .stock-table td:nth-child(4) { width: 4.5%; }   /* 进货 60 */
+.sio-root .stock-table th:nth-child(5), .sio-root .stock-table td:nth-child(5) { width: 4.5%; }   /* 出货 60 */
+.sio-root .stock-table th:nth-child(6), .sio-root .stock-table td:nth-child(6) { width: 5.4%; }   /* 收货单位 72 */
+.sio-root .stock-table th:nth-child(7), .sio-root .stock-table td:nth-child(7) { width: 4.5%; }   /* 规格 60 */
+.sio-root .stock-table th:nth-child(8), .sio-root .stock-table td:nth-child(8) { width: 7.2%; }   /* 单价 96 */
+.sio-root .stock-table th:nth-child(9), .sio-root .stock-table td:nth-child(9) { width: 9.0%; }   /* 总价 120 */
+.sio-root .stock-table th:nth-child(10), .sio-root .stock-table td:nth-child(10) { width: 6.3%; }  /* 类型 84 */
+.sio-root .stock-table th:nth-child(11), .sio-root .stock-table td:nth-child(11) { width: 4.5%; }  /* 货品备注 60 */
+.sio-root .stock-table th:nth-child(12), .sio-root .stock-table td:nth-child(12) { width: 5.4%; }  /* 备注编号 72 */
+.sio-root .stock-table th:nth-child(13), .sio-root .stock-table td:nth-child(13) { width: 9.0%; }  /* 供应商/出货人 120 */
+.sio-root .stock-table th:nth-child(14), .sio-root .stock-table td:nth-child(14) { width: 7.2%; }  /* 备注 96 */
+.sio-root .stock-table th:nth-child(15), .sio-root .stock-table td:nth-child(15) { width: 4.5%; }  /* 创建人 60 */
+.sio-root .stock-table th:nth-child(16), .sio-root .stock-table td:nth-child(16) { width: 6.3%; }  /* 操作/选择 84 */
+.sio-root .stock-table td span {
+  display: inline-block; width: 100%;
+  line-height: clamp(14px, 1.25vw, 24px);
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  box-sizing: border-box; vertical-align: middle;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.sio-root .stock-table tr:nth-child(even) { background-color: #fff; }
+.sio-root .stock-table tr:nth-child(odd) { background-color: #f9fafb; }
+.sio-root .stock-table tr:hover { background-color: #e5ebf8; }
+.sio-root .stock-table tr.editing-row td { background-color: #fefce8 !important; }
+.sio-root .stock-table tr.new-row td { background-color: #f0fdf4 !important; }
+.sio-root .negative-value { color: #dc2626; font-weight: 600; }
+.sio-root .negative-parentheses .currency-amount::before { content: '('; }
+.sio-root .negative-parentheses .currency-amount::after { content: ')'; }
+/* 货币显示对齐旧系统：padding 0 6.72px、符号左、金额右 */
+.sio-root .currency-display { display: flex; align-items: center; width: 100%; padding: 0 clamp(4px, 0.42vw, 8px); gap: 2px; white-space: nowrap; box-sizing: border-box; }
+.sio-root .currency-symbol { color: #6b7280; font-weight: 500; flex: 0 0 auto; width: auto; text-align: left; font-size: clamp(8px, 0.74vw, 14px); }
+.sio-root .currency-amount { font-size: clamp(8px, 0.74vw, 14px); font-weight: 500; color: #000; flex: 1; width: auto; text-align: right; }
+.sio-root .stock-table td .currency-symbol { text-align: left; flex: 0 0 auto; width: auto; padding: 6.72px 0; }
+.sio-root .stock-table td .currency-amount { text-align: right; flex: 1; width: auto; padding: 6.72px 0; white-space: nowrap; overflow: visible; text-overflow: clip; }
+/* 货币容器内的输入框（编辑单价/总价）：右对齐、透明无边框（对齐旧系统 currency-input-edit） */
+.sio-root .currency-display input, .sio-root .currency-display select {
+  border: none; background: transparent; text-align: right; font-weight: 500;
+  font-size: clamp(8px, 0.74vw, 14px); padding: 2px; line-height: 24px; box-sizing: border-box; flex: 1 1 0; min-width: 0;
+}
+/* 总价列对齐旧系统 .calculated-cell：蓝底 + 高亮 */
+.sio-root .calculated-cell { background: #f0f9ff !important; color: #0369a1; font-weight: 600; }
+/* 负数时整行货币红色（对齐旧系统） */
+.sio-root .calculated-cell.negative-value .currency-symbol,
+.sio-root .calculated-cell.negative-value .currency-amount { color: #dc2626 !important; font-weight: 600; }
+.sio-root .table-input {
+  width: 100%; height: 40px; border: none; background: transparent;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); padding: 8px 4px;
+  transition: all 0.2s; box-sizing: border-box; vertical-align: middle; line-height: 24px;
+}
+.sio-root .table-input:focus { background: #fff; border: 2px solid #583e04; outline: none; z-index: 5; position: relative; }
+.sio-root .table-select {
+  width: 100%; height: 40px; border: none; background: transparent;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); padding: 8px 4px; cursor: pointer; appearance: none;
+  box-sizing: border-box; vertical-align: middle; line-height: 24px;
+}
+.sio-root .table-select:focus { background: #fff; border: 2px solid #583e04; outline: none; }
+/* 移除 number input 数值器（对齐旧系统：Remove number input spinners） */
+.sio-root input[type='number']::-webkit-outer-spin-button,
+.sio-root input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none !important; margin: 0; }
+.sio-root input[type='number'] { -moz-appearance: textfield !important; appearance: textfield !important; }
+.sio-root .action-btn {
+  border: none; border-radius: clamp(4px, 0.32vw, 6px);
+  width: clamp(18px, 1.67vw, 32px); height: clamp(18px, 1.67vw, 32px);
+  font-size: clamp(6px, 0.63vw, 12px); margin: 2px;
+  cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: all 0.2s;
+}
+.sio-root .action-btn:hover { transform: scale(1.1); box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3); }
+.sio-root .edit-btn { background: #f59e0b; color: white; }
+.sio-root .edit-btn:hover { background: #d97706; transform: scale(1.1); }
+.sio-root .save-btn { background: #10b981; color: white; }
+.sio-root .save-btn:hover { background: #059669; }
+.sio-root .delete-btn { background: #ef4444; color: white; }
+.sio-root .delete-btn:hover { background: #dc2626; transform: scale(1.1); }
+.sio-root .remark-checkbox { width: 16px; height: 16px; cursor: pointer; }
+.sio-root .created-user { font-size: clamp(8px, 0.74vw, 14px); color: #2c7be5; font-weight: 500; cursor: pointer; }
+.sio-root .batch-select-checkbox { width: 17px; height: 17px; cursor: pointer; vertical-align: middle; }
+.sio-root .type-cell { color: #583e04; font-weight: 600; }
+
+/* 新增记录区 */
+.sio-root .add-panel {
+  background: #fff9f0; border: 2px solid #f99e00; border-radius: 12px;
+  padding: clamp(12px, 1.04vw, 20px); margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.sio-root .add-panel-title { font-weight: 700; color: #583e04; font-size: 14px; }
+.sio-root .add-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+
+/* 分页 */
+.sio-root .pagination {
+  flex-shrink: 0; padding: clamp(10px, 0.83vw, 16px) clamp(14px, 1.25vw, 24px);
+  background: #f8f5eb; border-top: 2px solid #583e04;
+  display: flex; justify-content: flex-end; align-items: center; gap: 12px;
+}
+.sio-root .page-info { font-size: clamp(8px, 0.74vw, 14px); color: #6b7280; }
+
+/* smartSearch */
+.sio-root .smartSearchWrapper {
+  position: relative; width: 40px; height: 38px; flex-shrink: 0;
+  display: flex; align-items: center; background: #fff;
+  border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; cursor: pointer;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, border-radius 0.25s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.sio-root .smartSearchWrapper:hover { border-color: #ff7b00; }
+.sio-root .smartSearchWrapper.expanded { width: 260px; border-color: #ff7b00; border-radius: 6px; cursor: default; box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08); }
+.sio-root .smartSearch-icon {
+  width: 40px; min-width: 40px; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #9ca3af; flex-shrink: 0; pointer-events: none; transition: color 0.25s ease;
+}
+.sio-root .smartSearchWrapper.expanded .smartSearch-icon { color: #ff7b00; }
+.sio-root .smartSearch-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: clamp(11px, 0.74vw, 14px); color: #111827; padding: 0 12px 0 0;
+  min-width: 0; font-family: inherit; height: 100%; display: none;
+}
+.sio-root .smartSearchWrapper.expanded .smartSearch-input { display: block; }
+.sio-root .smartSearch-input::placeholder { color: #9ca3af; }
+
+/* toast */
+.sio-root .toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.sio-root .toast {
+  width: clamp(100px, 15.63vw, 300px); padding: clamp(2px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  border-radius: clamp(6px, 0.42vw, 8px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  font-size: clamp(8px, 0.74vw, 14px); display: flex; align-items: center; gap: 12px;
+  color: white; position: relative; overflow: hidden;
+}
+.sio-root .toast-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9)); }
+.sio-root .toast-error { background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9)); }
+.sio-root .toast-info { background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9)); }
+.sio-root .toast-content { flex: 1; font-weight: 500; line-height: 1.4; }
+.sio-root .toast-progress {
+  position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255, 255, 255, 0.3);
+  border-radius: 0 0 8px 8px; transform-origin: left; animation: toastProgress 3s linear forwards;
+}
+@keyframes toastProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* ─── 筛选区（对齐线上 filter-section + search-row） ───────────────────── */
+.sio-root .filter-section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  border: 2px solid #583e04;
+  box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+  flex-shrink: 0;
+}
+.sio-root .search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.sio-root .search-row .filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+.sio-root .search-row .filter-group label,
+.sio-root .search-group label {
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 600;
+  color: #583e04;
+  margin-bottom: 6px;
+}
+.sio-root .filter-input, .sio-root .filter-select {
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: clamp(10px, 0.84vw, 14px);
+  background: white;
+  color: #111827;
+}
+.sio-root .filter-input:focus, .sio-root .filter-select:focus {
+  outline: none;
+  border-color: #583e04;
+  box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+.sio-root .unified-search-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+}
+.sio-root .unified-search-input:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(0, 14, 37, 0.1);
+}
+.sio-root .unified-search-input::placeholder {
+  color: #9ca3af;
+}
+.sio-root .btn-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+.sio-root .btn-secondary:hover {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+}
+.sio-root .batch-select-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* 新增表单 label */
+.sio-root .f-label {
+  display: block;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 600;
+  color: #583e04;
+  margin-bottom: 4px;
+}
+/* created-user 悬停 */
+.sio-root .created-user {
+  color: #2c7be5;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* ─── 日期范围选择器 + 日历弹窗（对齐 stockeditall.php） ───────────────────── */
+.sio-root .date-controls { display: flex; flex-wrap: wrap; align-items: flex-end; flex: 1; gap: clamp(2px, 0.62vw, 12px); font-size: clamp(6px, 0.63vw, 12px); color: #6b7280; font-weight: 600; }
+.sio-root .date-label, .sio-root .date-label-with-icon {
+  display: block; font-size: clamp(8px, 0.74vw, 14px); font-weight: 600; color: #000; white-space: nowrap; margin: 0; line-height: 1.2;
+}
+.sio-root .date-label-with-icon { display: flex; align-items: center; gap: 4px; }
+.sio-root .date-range-picker {
+  display: flex; align-items: center; gap: clamp(4px, 0.42vw, 8px); cursor: pointer;
+  padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+  border: 1px solid #d1d5db; border-radius: clamp(4px, 0.42vw, 8px); background: #fff;
+  font-size: clamp(6px, 0.63vw, 12px); color: #111827; white-space: nowrap;
+  transition: all .2s; position: relative; min-width: clamp(180px, 15.63vw, 300px); z-index: 1;
+}
+.sio-root .date-range-picker:hover { border-color: #f99e00; }
+.sio-root .date-range-picker i { color: #f99e00; }
+.sio-root .calendar-popup {
+  position: fixed; z-index: 20000; background: #fff; border: 1px solid #e5e7eb;
+  border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 14px; width: 300px;
+}
+.sio-root .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.sio-root .calendar-nav-btn {
+  background: none; border: none; font-size: 15px; cursor: pointer; color: #374151;
+  padding: 6px 8px; border-radius: 6px;
+}
+.sio-root .calendar-nav-btn:hover { background: #f3f4f6; }
+.sio-root .calendar-month-year { display: flex; gap: 6px; }
+.sio-root .calendar-month-year select {
+  border: 1px solid #d1d5db; border-radius: 6px; padding: 4px 6px; font-size: 13px; background: #fff;
+}
+.sio-root .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.sio-root .calendar-weekday { text-align: center; font-size: 12px; font-weight: 600; color: #9ca3af; padding: 4px 0; }
+.sio-root .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.sio-root .calendar-day {
+  text-align: center; padding: 7px 0; border-radius: 6px; font-size: 13px; cursor: pointer; color: #111827;
+}
+.sio-root .calendar-day:hover { background: #f3f4f6; }
+.sio-root .calendar-day.other-month { color: #d1d5db; }
+.sio-root .calendar-day.today { font-weight: 700; color: #f99e00; }
+.sio-root .calendar-day.selected, .sio-root .calendar-day.start-date, .sio-root .calendar-day.end-date {
+  background: #f99e00; color: #fff; font-weight: 600;
+}
+.sio-root .calendar-day.in-range, .sio-root .calendar-day.preview-range { background: #fff7e6; }
+.sio-root .calendar-day.preview-end { background: #ffd591; border-radius: 6px; }
+
+/* 快速选择下拉 */
+.sio-root .dropdown { position: relative; }
+.sio-root .dropdown-menu {
+  position: absolute; top: 100%; right: 0; z-index: 20000; background: #fff;
+  border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  min-width: 120px; margin-top: 4px; overflow: hidden;
+}
+.sio-root .dropdown-menu .dropdown-item {
+  display: block; width: 100%; padding: 8px 14px; border: none; background: #fff;
+  cursor: pointer; font-size: 13px; text-align: left; color: #111827;
+}
+.sio-root .dropdown-menu .dropdown-item:hover { background: #f8f5eb; }
+
+/* 弹窗 */
+.sio-root .modal-overlay {
+  position: fixed; inset: 0; z-index: 15000; background: rgba(0,0,0,.5);
+  display: flex; align-items: center; justify-content: center;
+}
+.sio-root .modal-content {
+  background: #fff; border-radius: 12px; width: 460px; max-height: 80vh; overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+}
+.sio-root .modal-header {
+  background: linear-gradient(135deg,#f99300,#f98500); color: #fff;
+  padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+}
+.sio-root .modal-header h2 { font-size: 18px; margin: 0; }
+.sio-root .modal-close { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+.sio-root .modal-body { padding: 20px; }
+.sio-root .modal-footer { padding: 14px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+.sio-root .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.sio-root .form-group label { font-size: 14px; font-weight: 600; color: #583e04; }
+.sio-root .form-input, .sio-root .form-select {
+  padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: #fff; color: #583e04;
+}
+.sio-root .form-input:focus, .sio-root .form-select:focus {
+  outline: none; border-color: #583e04; box-shadow: 0 0 0 3px rgba(88,62,4,.1);
+}
+
+/* 回到顶部 */
+.sio-root .back-to-top {
+  position: fixed; bottom: 30px; right: 20px; width: 50px; height: 50px;
+  background: #583e04; color: #fff; border: none; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  box-shadow: 0 4px 12px rgba(88,62,4,.3); z-index: 1000;
+}
+.sio-root .back-to-top:hover { background: #462d03; }
+
+/* ─── unified-header-row（对齐线上 stockeditall.css 2190-2290 行） ─────────── */
+.sio-root .unified-header-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.5vw, 30px);
+  padding: clamp(10px, 1.15vw, 22px) clamp(10px, 1.25vw, 24px);
+  background: white;
+  border-radius: 12px;
+  margin-bottom: clamp(14px, 1.25vw, 24px);
+  border: 2px solid #000;
+  box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.sio-root .header-right-group {
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(2px, 0.32vw, 8px);
+  margin-left: auto;
+}
+.sio-root .header-search {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.63vw, 12px);
+}
+.sio-root .header-search .smartSearchWrapper {
+  width: 40px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.sio-root .header-search .smartSearchWrapper.expanded {
+  width: 250px;
+}
+.sio-root .header-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: clamp(6px, 0.63vw, 12px);
+  color: #6b7280;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-bottom: clamp(4px, 0.42vw, 8px);
+}
+.sio-root .header-stats .stat-value {
+  font-weight: bold;
+  color: #000;
+  font-size: 18px;
+}
+.sio-root .batch-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+
+/* 原始单价悬浮提示（8/23 线上修复）：价格下方虚线提示可悬浮，卡片 fixed 定位到 body（JS 控制） */
+.raw-price-hover {
+    position: relative;
+    display: inline-block;
+    cursor: default;
+    text-decoration: underline dotted rgba(249, 158, 0, 0.55);
+    text-underline-offset: 3px;
+}
+
+.raw-price-pop-fixed {
+    position: fixed;
+    z-index: 99999;
+    background: #241b0d;
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(249, 158, 0, 0.3);
+    white-space: nowrap;
+    pointer-events: none;
+    font-style: normal;
+    display: none;
+}
+
+/* 货品进出货统计弹窗（对齐 kunzztest product-summary-modal） */
+.product-summary-modal-content {
+    max-width: 480px;
+    width: 90vw;
+}
+
+.product-summary-search {
+    position: relative;
+}
+
+.product-summary-hint {
+    display: block;
+    margin-top: 6px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.product-summary-date-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.product-summary-date-row .form-group {
+    margin-bottom: 0;
+}
+
+.product-summary-results {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.product-summary-stat {
+    background: #f9fafb;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px 12px;
+    text-align: center;
+}
+
+.product-summary-stat-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #583e04;
+    margin-bottom: 8px;
+}
+
+.product-summary-stat-value {
+    display: block;
+    font-size: clamp(18px, 1.5vw, 24px);
+    font-weight: 700;
+    color: #111827;
+    word-break: break-word;
+}
+
+.product-summary-meta {
+    margin-top: 10px;
+    font-size: 12px;
+    color: #6b7280;
+    text-align: center;
+    min-height: 18px;
+}

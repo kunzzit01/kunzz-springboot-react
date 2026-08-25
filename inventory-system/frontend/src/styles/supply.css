@@ -1,0 +1,816 @@
+/* ============================================================
+   价格对比页面（对齐线上 price.php 设计）
+   所有规则限定在 .supply-root 内，避免污染其他页面
+   ============================================================ */
+.supply-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #faf7f2;
+  color: #111827;
+  /* 撑满视口（kz-main 上下 padding 各 24px），表格容器内部滚动 */
+  height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+}
+
+.supply-root .pr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(14px, 1.4vw, 24px);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.supply-root .pr-header h1 {
+  font-size: clamp(20px, 2.2vw, 40px);
+  font-weight: bold;
+  color: #000;
+  margin: 0;
+}
+
+.supply-root .pr-header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ---------- 选择器（模式 / 餐厅 / 批发商） ---------- */
+.supply-root .restaurant-selector {
+  position: relative;
+}
+
+.supply-root .selector-button {
+  background-color: #ff9e00;
+  color: white;
+  font-weight: 500;
+  padding: clamp(6px, 0.52vw, 10px) clamp(14px, 1vw, 18px);
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: clamp(10px, 0.75vw, 14px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  min-width: clamp(100px, 8vw, 150px);
+  justify-content: space-between;
+}
+
+.supply-root .selector-button:hover {
+  background-color: #f98500;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}
+
+.supply-root .selector-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: white;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+  min-width: 160px;
+  z-index: 10000;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.supply-root .selector-dropdown .dropdown-item {
+  padding: clamp(7px, 0.5vw, 9px) clamp(12px, 0.9vw, 16px);
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  color: #000;
+  font-size: clamp(9px, 0.75vw, 14px);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.supply-root .selector-dropdown .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.supply-root .selector-dropdown .dropdown-item:hover {
+  background-color: #f8f5eb;
+}
+
+.supply-root .selector-dropdown .dropdown-item.active {
+  background-color: #ff9e00;
+  color: white;
+}
+
+/* ---------- 筛选区 ---------- */
+.supply-root .filter-section {
+  background: white;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  border: 2px solid #583e04;
+  box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+  flex-shrink: 0;
+}
+
+.supply-root .filter-grid {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.supply-root .filter-left {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+.supply-root .filter-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.supply-root .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.supply-root .filter-group label {
+  font-size: clamp(9px, 0.75vw, 14px);
+  font-weight: 600;
+  color: #583e04;
+}
+
+.supply-root .filter-select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  background: white;
+  color: #583e04;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.supply-root .filter-select:focus {
+  outline: none;
+  border-color: #583e04;
+  box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+
+.supply-root .smart-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.supply-root .smart-search i {
+  position: absolute;
+  left: 10px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.supply-root .smart-search input {
+  padding: 8px 12px 8px 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  width: 200px;
+  text-transform: uppercase;
+}
+
+.supply-root .smart-search input:focus {
+  outline: none;
+  border-color: #583e04;
+  box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+
+/* ---------- 按钮 ---------- */
+.supply-root .btn {
+  padding: clamp(6px, 0.5vw, 9px) clamp(10px, 0.8vw, 14px);
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: clamp(9px, 0.75vw, 14px);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.supply-root .btn-primary { background-color: #1036b9; color: white; }
+.supply-root .btn-primary:hover { background-color: #082077; transform: translateY(-1px); }
+.supply-root .btn-success { background-color: #10b981; color: white; }
+.supply-root .btn-success:hover { background-color: #059669; transform: translateY(-1px); }
+.supply-root .btn-secondary { background-color: #6b7280; color: white; }
+.supply-root .btn-secondary:hover { background-color: #4b5563; transform: translateY(-1px); }
+.supply-root .btn-danger { background-color: #ef4444; color: white; }
+.supply-root .btn-danger:hover { background-color: #dc2626; transform: translateY(-1px); }
+.supply-root .btn:disabled { background: #9ca3af; opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ---------- 表格 ---------- */
+.supply-root .table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+  border: 2px solid #000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.supply-root .table-scroll-container {
+  overflow-x: auto;
+  overflow-y: auto;
+  flex: 1;
+  position: relative;
+}
+
+.supply-root .price-table {
+  width: 100%;
+  /* border-collapse: separate + spacing 0 是 sticky 列的必要条件（collapse 下 Chrome 列宽 bug） */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+  /* auto 布局：列宽按内容（批发商名称文字宽度）自适应 */
+  table-layout: auto;
+}
+
+.supply-root .price-table th {
+  background: #636363;
+  color: white;
+  padding: clamp(7px, 0.55vw, 10px) clamp(4px, 0.4vw, 8px);
+  text-align: center;
+  font-size: clamp(9px, 0.75vw, 14px);
+  font-weight: 600;
+  border: 1px solid #d1d5db;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  white-space: nowrap;
+}
+
+/* ============ 冻结序号 + 材料名称列（横向滚动时保持不动） ============ */
+/* 层级：表头(200) > 冻结表头(220) > 冻结单元格(120) > 普通单元格 */
+.supply-root .price-table th.col-no,
+.supply-root .price-table td.cell-no {
+  position: sticky;
+  left: 0;
+  z-index: 120;
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+  background: #636363;
+}
+
+.supply-root .price-table th.col-no {
+  z-index: 220;
+}
+
+.supply-root .price-table tbody td.cell-no {
+  background: #faf7f2;
+}
+
+.supply-root .price-table th.col-name,
+.supply-root .price-table td.cell-name {
+  position: sticky;
+  left: 60px;
+  z-index: 115;
+  width: 220px;
+  min-width: 220px;
+  background: #636363;
+  text-align: left;
+}
+
+.supply-root .price-table th.col-name {
+  z-index: 220;
+}
+
+.supply-root .price-table tbody td.cell-name {
+  background: #fff;
+}
+
+/* 冻结列文字：完整展示、可换行 */
+.supply-root .price-table td.cell-name .cell-text {
+  white-space: normal;
+  word-break: break-word;
+  text-align: left;
+}
+
+/* 名称列行高自适应，不裁切长名称 */
+.supply-root .price-table td.cell-name {
+  height: auto;
+  min-height: 40px;
+  overflow: visible;
+}
+
+/* hover / 编辑 / 新增行时冻结列同步高亮 */
+.supply-root .price-table tbody tr:hover td.cell-no,
+.supply-root .price-table tbody tr:hover td.cell-name {
+  background: #e5ebf8;
+}
+
+.supply-root .price-table tr.editing-row td.cell-no,
+.supply-root .price-table tr.editing-row td.cell-name,
+.supply-root .price-table tr.new-row td.cell-no,
+.supply-root .price-table tr.new-row td.cell-name {
+  background: #e0f2fe !important;
+}
+
+/* 其他列不换行、省略 */
+.supply-root .price-table td:not(.cell-name):not(.cell-no) .cell-text,
+.supply-root .price-table td:not(.cell-name):not(.cell-no) .currency-display {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.supply-root .price-table th.highlighted {
+  background: #ff9e00;
+  font-weight: 700;
+}
+
+.supply-root .price-table th.col-no { width: 60px; min-width: 60px; }
+.supply-root .price-table th.col-name { width: 220px; min-width: 220px; }
+.supply-root .price-table th.col-type { width: 100px; min-width: 100px; }
+/* 价格列：宽度按批发商名称文字自适应（不限宽） */
+.supply-root .price-table th.col-price {
+  width: auto;
+  min-width: 76px;
+  padding-left: clamp(8px, 0.7vw, 14px);
+  padding-right: clamp(8px, 0.7vw, 14px);
+}
+.supply-root .price-table th.col-action { width: 100px; min-width: 100px; }
+
+.supply-root .price-table td {
+  font-size: clamp(9px, 0.75vw, 14px);
+  padding: 0;
+  border: 1px solid #d1d5db;
+  text-align: center;
+  overflow: hidden;
+  height: 40px;
+}
+
+.supply-root .price-table tbody tr:hover {
+  background-color: #e5ebf8;
+}
+
+.supply-root .price-table td .cell-text {
+  display: inline-block;
+  padding: clamp(4px, 0.4vw, 8px) clamp(5px, 0.5vw, 10px);
+  font-weight: 500;
+}
+
+.supply-root .price-table td.cell-name .cell-text {
+  font-weight: 600;
+  text-align: left;
+}
+
+.supply-root .price-table td.cell-type .cell-text {
+  font-weight: 600;
+}
+
+/* 价格对比颜色标识 */
+.supply-root .price-cell {
+  position: relative;
+  padding: 0 !important;
+  text-align: center;
+}
+
+.supply-root .price-cell.lowest-price { background-color: #fff2cc !important; }
+.supply-root .price-cell.highest-price { background-color: #b6d7a8 !important; }
+.supply-root .price-cell.restaurant-exclusive { background-color: #a4c2f4 !important; }
+
+.supply-root .price-cell .currency-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px;
+  font-size: clamp(9px, 0.75vw, 14px);
+}
+
+.supply-root .price-cell .currency-symbol {
+  color: #6b7280;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.supply-root .price-cell .currency-amount {
+  font-weight: 600;
+  color: #000;
+}
+
+.supply-root .price-cell .empty-price {
+  color: #d1d5db;
+}
+
+/* 编辑输入框 */
+.supply-root .table-input {
+  width: 100%;
+  height: 40px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 4px;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  text-transform: uppercase;
+}
+
+.supply-root .table-input:focus {
+  background: #fff;
+  border: 2px solid #583e04;
+  outline: none;
+  position: relative;
+  z-index: 5;
+}
+
+.supply-root .table-select {
+  width: 100%;
+  height: 40px;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 13px;
+  padding: 8px 4px;
+  cursor: pointer;
+}
+
+.supply-root .table-select:focus {
+  background: #fff;
+  border: 2px solid #583e04;
+  outline: none;
+}
+
+/* 操作按钮 */
+.supply-root .action-cell {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  padding: 4px !important;
+  height: 40px !important;
+}
+
+.supply-root .action-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.supply-root .action-btn:hover { transform: scale(1.1); }
+.supply-root .action-btn.edit-btn { background: #f59e0b; }
+.supply-root .action-btn.edit-btn:hover { background: #d97706; }
+.supply-root .action-btn.delete-btn { background: #ef4444; }
+.supply-root .action-btn.delete-btn:hover { background: #dc2626; }
+.supply-root .action-btn.save-btn { background: #10b981; }
+.supply-root .action-btn.save-btn:hover { background: #059669; }
+
+/* 批量选择复选框 */
+.supply-root .batch-select-checkbox {
+  transform: scale(1.2);
+  margin: 0;
+  cursor: pointer;
+}
+
+/* 新增行 / 编辑行高亮 */
+.supply-root .editing-row,
+.supply-root .new-row {
+  background-color: #e0f2fe !important;
+}
+
+.supply-root .editing-row td,
+.supply-root .new-row td {
+  background-color: #e0f2fe !important;
+}
+
+.supply-root .new-row .table-input,
+.supply-root .new-row .table-select {
+  background: white !important;
+}
+
+/* 新增保存后：定位到新行并闪烁高亮 */
+@keyframes supplyRowFlash {
+  0% { background-color: #d1fae5; }
+  70% { background-color: #d1fae5; }
+  100% { background-color: #ffffff; }
+}
+
+.supply-root .price-table tbody tr.highlight-flash td {
+  animation: supplyRowFlash 2.5s ease;
+}
+
+.supply-root .price-table tbody tr.highlight-flash td.cell-no,
+.supply-root .price-table tbody tr.highlight-flash td.cell-name {
+  animation: supplyRowFlash 2.5s ease;
+}
+
+/* ---------- 统计栏 ---------- */
+.supply-root .stats-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  background: #f8f5eb;
+  border-top: 2px solid #583e04;
+  font-size: clamp(9px, 0.75vw, 14px);
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.supply-root .stat-value {
+  font-weight: bold;
+  color: #000;
+}
+
+/* ---------- 模态框 ---------- */
+.supply-root .modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+}
+
+.supply-root .modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 2px solid #000;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: prFadeIn 0.25s ease;
+}
+
+@keyframes prFadeIn {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.supply-root .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.supply-root .modal-title {
+  font-size: clamp(16px, 1.25vw, 20px);
+  font-weight: bold;
+  color: #000;
+  margin: 0;
+}
+
+.supply-root .modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #999;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.supply-root .modal-close:hover { background: #f0f0f0; color: #333; }
+
+.supply-root .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.supply-root .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.supply-root .form-group.full-width { grid-column: 1 / -1; }
+
+.supply-root .form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+}
+
+.supply-root .form-input,
+.supply-root .form-select {
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  color: #000;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.supply-root .form-input:focus,
+.supply-root .form-select:focus {
+  outline: none;
+  border-color: #000;
+  box-shadow: 0 0 0 3px rgba(88, 62, 4, 0.1);
+}
+
+.supply-root .modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.supply-root .btn-modal {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.supply-root .btn-modal-primary { background: #10b981; color: white; }
+.supply-root .btn-modal-primary:hover { background: #059669; transform: translateY(-1px); }
+.supply-root .btn-modal-secondary { background: #6b7280; color: white; }
+.supply-root .btn-modal-secondary:hover { background: #4b5563; }
+
+/* 已存在餐馆/批发商列表 */
+.supply-root .existing-restaurants {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.supply-root .section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 10px;
+}
+
+.supply-root .restaurant-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.supply-root .restaurant-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  gap: 12px;
+}
+
+.supply-root .restaurant-names {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-transform: uppercase;
+}
+
+.supply-root .restaurant-name-cn { font-weight: 600; color: #111827; }
+.supply-root .restaurant-name-en { font-size: 12px; color: #6b7280; }
+
+.supply-root .restaurant-delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.supply-root .restaurant-delete-btn:hover { background: #dc2626; }
+
+.supply-root .empty-placeholder {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 12px 0;
+}
+
+/* 新增记录：各列价格输入网格 */
+.supply-root .add-prices-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.supply-root .add-price-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.supply-root .add-price-item label {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.supply-root .add-price-item input {
+  width: 110px;
+  padding: 6px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  text-align: right;
+  font-size: 13px;
+}
+
+/* 加载中 / 空状态 */
+.supply-root .table-loading {
+  padding: 40px;
+  text-align: center;
+  color: #6b7280;
+}
+
+/* 数字输入框去掉 spinners */
+.supply-root input[type='number']::-webkit-outer-spin-button,
+.supply-root input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+.supply-root input[type='number'] {
+  -moz-appearance: textfield !important;
+}
+
+/* 响应式 */
+@media (max-width: 1200px) {
+  .supply-root .filter-grid { flex-wrap: wrap; }
+  .supply-root .filter-left { flex: 1 1 100%; }
+  .supply-root .filter-right { flex: 1 1 100%; justify-content: flex-end; }
+}
+
+@media (max-width: 768px) {
+  .supply-root .filter-grid { flex-direction: column; }
+  .supply-root .filter-left { flex-direction: column; width: 100%; }
+  .supply-root .filter-left .filter-group { width: 100%; }
+  .supply-root .filter-right { width: 100%; justify-content: flex-start; }
+  .supply-root .add-prices-grid { grid-template-columns: 1fr; }
+}

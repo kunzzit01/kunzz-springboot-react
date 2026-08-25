@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockExcelMapper">
+
+    <!-- 导出范围（对齐线上 stockeditapi.php?action=export：deleted_at IS NULL + 排除 SOT + 日期 + 正序） -->
+    <select id="listRange" resultType="java.util.LinkedHashMap">
+        SELECT date, time, code_number, product_name, in_quantity, out_quantity,
+               target_system, specification, price, receiver, remark
+        FROM ${table}
+        WHERE deleted_at IS NULL
+        <if test="excludeSot">
+            AND (target_system IS NULL OR target_system != 'SOT')
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND date &lt;= #{endDate}
+        </if>
+        <!-- 对齐旧系统：只含入库 -->
+        <if test="includeIn and !includeOut">
+            AND in_quantity &gt; 0
+        </if>
+        <!-- 对齐旧系统：只含出库 -->
+        <if test="includeOut and !includeIn">
+            AND out_quantity &gt; 0
+        </if>
+        <!-- 对齐旧系统 stockeditapi export：ORDER BY date ASC, time ASC（旧在上、新在底） -->
+        ORDER BY date ASC, time ASC, id ASC
+    </select>
+
+    <!-- 中央出库记录（invoice PDF）：对齐旧系统 confirmExport 过滤（out>0 + target_system 匹配 + 日期） -->
+    <select id="listInvoiceData" resultType="java.util.LinkedHashMap">
+        SELECT date, time, code_number, product_name, out_quantity, specification, price
+        FROM stockinout_data
+        WHERE deleted_at IS NULL
+          AND out_quantity &gt; 0
+          AND target_system = #{system}
+          AND date &gt;= #{startDate}
+          AND date &lt;= #{endDate}
+        ORDER BY date ASC, time ASC, id ASC
+    </select>
+
+    <!-- 分店入库记录（分店 Excel 导出）：对齐旧系统 export_branch_stock_excel.php（in>0，无 deleted_at 条件） -->
+    <select id="listBranchInbound" resultType="java.util.LinkedHashMap">
+        SELECT id, date, code_number, product_name, in_quantity, specification, price
+        FROM ${table}
+        WHERE date BETWEEN #{startDate} AND #{endDate}
+          AND in_quantity &gt; 0
+        ORDER BY date ASC, time ASC, id ASC
+    </select>
+
+</mapper>

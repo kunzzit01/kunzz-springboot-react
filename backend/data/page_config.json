@@ -1,0 +1,32 @@
+{
+  "homepage1" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/homepage1.webm",
+    "type" : "video",
+    "updated" : "2026-08-24 15:27:37"
+  },
+  "home_background" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/homepage1.webm",
+    "type" : "video",
+    "updated" : "2026-08-24 15:27:37"
+  },
+  "about1" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/about1.jpg",
+    "type" : "image",
+    "updated" : "2026-08-24 15:49:41"
+  },
+  "about_background" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/about1.jpg",
+    "type" : "image",
+    "updated" : "2026-08-24 15:49:41"
+  },
+  "join1" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/join1.jpg",
+    "type" : "image",
+    "updated" : "2026-08-24 15:49:42"
+  },
+  "joinus_background" : {
+    "file" : "C:/Users/kunzz/OneDrive/Desktop/inventory-system/backend/data/page-images/join1.jpg",
+    "type" : "image",
+    "updated" : "2026-08-24 15:49:42"
+  }
+}

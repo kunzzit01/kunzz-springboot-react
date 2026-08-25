@@ -1,0 +1,407 @@
+/* ============================================================
+   货品备注（RemarkAnalysis）— 对齐线上 stockremark?system=central
+   来源：旧系统 css/stockremark.css（橙色渐变卡片头 / 固定3列 / 420px等高卡片）
+   ============================================================ */
+
+/* 页面背景跟随全局（#f0f0f0），不单独设色避免与周围不协调 */
+
+/* ---------- 顶部标题与搜索 ---------- */
+.remark-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(18px, 1.67vw, 32px);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.remark-header h1 {
+  font-size: clamp(20px, 2.6vw, 50px);
+  font-weight: bold;
+  color: #000;
+  margin: 0;
+}
+
+.remark-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ---------- 视图切换 + 系统名按钮（对齐旧系统 selector-button） ---------- */
+.remark-page .selector-button {
+  background-color: #f99e00;
+  color: white;
+  font-weight: 500;
+  padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: clamp(10px, 0.73vw, 14px);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  width: clamp(90px, 6.77vw, 130px);
+  justify-content: space-between;
+  position: relative;
+  font-family: inherit;
+}
+
+.remark-page .selector-button:hover {
+  background-color: #f98500;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+}
+
+.remark-page .selector-dropdown {
+  position: absolute;
+  top: 96%;
+  right: 0;
+  background: white;
+  border: 2px solid #000;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+  width: 100%;
+  z-index: 10000;
+  display: none;
+  margin-top: 4px;
+}
+
+.remark-page .selector-dropdown.show {
+  display: block;
+}
+
+.remark-page .selector-dropdown .dropdown-item {
+  padding: clamp(6px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px);
+  cursor: pointer;
+  border-bottom: 1px solid #e5e7eb;
+  transition: all 0.2s;
+  color: #000;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 500;
+  text-decoration: none;
+  display: block;
+}
+
+.remark-page .selector-dropdown .dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.remark-page .selector-dropdown .dropdown-item:hover {
+  background-color: #f8f5eb;
+}
+
+.remark-page .selector-dropdown .dropdown-item.active {
+  background-color: #f99e00 !important;
+  color: white !important;
+}
+
+.remark-page .view-selector {
+  position: relative;
+  margin-right: 0;
+}
+
+.remark-page .view-selector .selector-dropdown {
+  width: 100%;
+}
+
+/* 搜索框（放大镜 + 输入框，对齐 smartSearchWrapper） */
+.remark-search {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 38px;
+  width: 260px;
+  transition: all 0.2s;
+}
+
+.remark-search:focus-within {
+  border-color: #f99e00;
+  box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.15);
+}
+
+.remark-search i {
+  color: #9ca3af;
+  font-size: 14px;
+  margin-right: 8px;
+}
+
+.remark-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  color: #111827;
+  font-family: inherit;
+}
+
+/* ---------- 货品列表：固定 3 列 ---------- */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: clamp(20px, 1.67vw, 32px);
+  margin-bottom: clamp(14px, 1.25vw, 24px);
+  min-width: 0;
+}
+
+/* ---------- 货品卡片：420px 等高、圆角20、hover 上浮 ---------- */
+.product-group {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 420px;
+  transition: transform 0.2s;
+}
+
+.product-group:hover {
+  transform: translateY(-2px);
+}
+
+/* 卡片头部：橙色渐变（对齐旧系统 #ff7800 → #F59E0B） */
+.product-header {
+  background: linear-gradient(135deg, #ff7800 0%, #F59E0B 100%);
+  color: white;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+}
+
+.product-header .product-info-item > div:first-child {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  color: white;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+/* 卡片统计行 */
+.card-stats {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+  font-size: 15px;
+  font-weight: 600;
+  opacity: 0.98;
+}
+
+.card-stats span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: white;
+}
+
+.card-stats-icon {
+  font-size: 18px;
+}
+
+/* ---------- 表格区域（内部滚动 + 自定义滚动条） ---------- */
+.product-table-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  flex-grow: 1;
+}
+
+.remark-page .table-wrapper {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-grow: 1;
+  padding: 0 28px 12px;
+}
+
+.remark-page .table-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.remark-page .table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.remark-page .table-wrapper::-webkit-scrollbar-thumb {
+  background-color: #D1D5DB;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* ---------- 备注表格：两列 50/50，数量列橙色右对齐 ---------- */
+.price-variants-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.remark-page .table-wrapper thead {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: white;
+}
+
+.price-variants-table th {
+  background: white;
+  color: #6B7280;
+  font-size: 13px;
+  text-align: left;
+  font-weight: 700;
+  padding: 12px 0 10px 0;
+  border-bottom: 2px solid #E5E7EB;
+}
+
+.price-variants-table th:last-child {
+  text-align: right;
+}
+
+.price-variants-table th:nth-child(1),
+.price-variants-table td:nth-child(1) {
+  width: 50%;
+}
+
+.price-variants-table th:nth-child(2),
+.price-variants-table td:nth-child(2) {
+  width: 50%;
+}
+
+.price-variants-table td {
+  font-size: 17px;
+  padding: 10px 0;
+  border-bottom: 1px solid #F3F4F6;
+  text-align: left;
+  vertical-align: middle;
+  font-weight: 700;
+  color: #1F2937;
+  transition: background 0.2s;
+  word-break: break-all;
+}
+
+.price-variants-table td:last-child {
+  text-align: right;
+  font-weight: 800;
+  color: #F59E0B;
+}
+
+.price-variants-table tr:last-child td {
+  border-bottom: none;
+}
+
+.price-variants-table tr:not(thead tr):hover td {
+  background-color: #FEF3C7;
+}
+
+/* ---------- 回到顶部按钮（固定左下，sidebar 旁） ---------- */
+.back-to-top {
+  position: fixed;
+  bottom: clamp(16px, 1.56vw, 30px);
+  left: calc(clamp(140px, 13.02vw, 250px) + clamp(16px, 1.25vw, 24px));
+  width: clamp(36px, 2.6vw, 50px);
+  height: clamp(36px, 2.6vw, 50px);
+  background-color: #f99e00;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(12px, 0.94vw, 18px);
+  box-shadow: 0 4px 12px rgba(88, 62, 4, 0.3);
+  transition: all 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(20px);
+  z-index: 1000;
+}
+
+.back-to-top.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  background-color: #f98500;
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(88, 62, 4, 0.4);
+}
+
+body.sidebar-collapsed .back-to-top {
+  left: calc(38px + clamp(16px, 1.25vw, 24px));
+}
+
+/* ---------- 无数据 / 加载 ---------- */
+.no-data {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+}
+
+.no-data i {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.no-data h3 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: #374151;
+}
+
+.no-data p {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.remark-loading {
+  text-align: center;
+  padding: 60px;
+  color: #6b7280;
+}
+
+.remark-loading .loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #f99e00;
+  border-radius: 50%;
+  animation: remarkSpin 1s linear infinite;
+}
+
+@keyframes remarkSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 小屏时退化为自适应列（保留可用性） */
+@media (max-width: 1100px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .products-grid {
+    grid-template-columns: 1fr;
+  }
+}

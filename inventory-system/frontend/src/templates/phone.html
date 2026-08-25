@@ -1,0 +1,82 @@
+<div class="container">
+        <!-- 页面标题 -->
+        <div class="header">
+            <h1 id="page-title">手机管理系统 - J1</h1>
+            <div class="restaurant-selector">
+                <button class="selector-button" onclick="toggleRestaurantSelector()">
+                    <span id="current-restaurant">J1</span>
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+                <div class="selector-dropdown" id="restaurant-dropdown">
+                    <div class="dropdown-item active" data-restaurant="J1" onclick="switchRestaurant('J1')">J1</div>
+                    <div class="dropdown-item" data-restaurant="J2" onclick="switchRestaurant('J2')">J2</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制栏 -->
+        <div class="card">
+            <div class="card-body">
+                <div class="schedule-controls">
+                    <div class="controls-left">
+                        <!-- 日期选择器 -->
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <label class="form-label" style="margin: 0; display: flex; align-items: center; gap: 4px;">
+                                <i class="fas fa-calendar" style="color: #ff5c00;"></i>
+                                选择日期
+                            </label>
+                            <div class="enhanced-date-picker" id="date-picker">
+                                <input type="date" id="selected-date" style="border: none; outline: none; background: transparent; font-size: clamp(8px, 0.74vw, 14px); font-weight: 600; color: #374151; padding: 0; width: 140px;">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="controls-right">
+                        <button class="btn-generate" onclick="showManagementPanel('employees')">
+                            <i class="fas fa-users"></i> 员工管理
+                        </button>
+                        <button class="btn-control" onclick="downloadPDF()">
+                            <i class="fas fa-file-pdf"></i> 下载PDF
+                        </button>
+                        <button class="btn-control btn-save" onclick="saveAllData()">
+                            <i class="fas fa-save"></i> 保存所有
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 表格 -->
+        <div class="table-container">
+            <div class="table-wrapper">
+                <table id="phoneTable">
+                    <thead>
+                        <tr>
+                            <th class="no-col" rowspan="2">NO</th>
+                            <th colspan="2" style="position: relative; width: 200px; background: #f99e00;">
+                                <div style="text-align: left; padding-left: 5px; font-weight: bold;">DATE:</div>
+                            </th>
+                            <th class="position-col" rowspan="2">POSITION</th>
+                            <th class="get-col" rowspan="2">GET</th>
+                            <th class="time-start-col" colspan="2" style="border-left: 2px solid #fff; border-right: 2px solid #fff;">TIME</th>
+                            <th class="return-col" rowspan="2">RETURN</th>
+                        </tr>
+                        <tr>
+                            <th colspan="2" style="position: relative; width: 200px; background: #f99e00;">
+                                <div style="text-align: left; padding-left: 5px; font-weight: bold;">NAME</div>
+                            </th>
+                            <th class="time-start-col" style="border-left: 2px solid #fff;">START</th>
+                            <th class="time-end-col" style="border-right: 2px solid #fff;">END</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <div class="loading" style="margin: 0 auto 10px;"></div>
+                                <div>正在加载数据...</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>

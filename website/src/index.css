@@ -1,0 +1,202 @@
+@import './styles/header.css';
+@import './styles/footer.css';
+@import './styles/social.css';
+@import './styles/index.css';
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: initial;
+  border: none;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+/* Full-screen swiper host (Home + About) */
+.vertical-swiper-shell {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  z-index: 1;
+}
+
+.vertical-swiper-shell .swiper {
+  width: 100%;
+  height: 100%;
+}
+
+/* Slides fill viewport width; content sections stretch to slide height */
+.vertical-swiper-shell .swiper-slide {
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.vertical-swiper-shell .swiper-slide:not(.footer-slide) {
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
+.vertical-swiper-shell .swiper-slide > section,
+.vertical-swiper-shell .swiper-slide > .home {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  flex: 1 1 auto;
+  box-sizing: border-box;
+}
+
+/* Full-height page sections inside swiper (not footer) */
+.vertical-swiper-shell .home,
+.vertical-swiper-shell .culture-section,
+.vertical-swiper-shell .about-section,
+.vertical-swiper-shell .joinus-section,
+.vertical-swiper-shell .comphoto-section,
+.vertical-swiper-shell .job-section,
+.vertical-swiper-shell .contact-form-section:not(.contact-form-section--feedback-only):not(.join-slide-card-center) {
+  height: 100%;
+  min-height: 100%;
+}
+
+.vertical-swiper-shell .swiper-slide.footer-slide {
+  height: clamp(18rem, 29vh, 32rem);
+  min-height: clamp(18rem, 29vh, 32rem);
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.vertical-swiper-shell .swiper-slide.footer-slide .footer-scroll-buffer {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* Home page mobile: allow slides to grow with stacked content */
+@media (max-width: 768px) {
+  .vertical-swiper-shell .swiper-slide.footer-slide .footer-scroll-buffer {
+    justify-content: flex-start;
+  }
+
+  .vertical-swiper-shell .swiper-slide:not(.footer-slide) {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vertical-swiper-shell .swiper-slide > section,
+  .vertical-swiper-shell .swiper-slide > .home {
+    height: auto;
+    min-height: 100%;
+  }
+
+  .vertical-swiper-shell .home,
+  .vertical-swiper-shell .culture-section,
+  .vertical-swiper-shell .about-section,
+  .vertical-swiper-shell .contact-form-section--feedback-only,
+  .vertical-swiper-shell .contact-form-section--contact-only {
+    height: auto;
+    min-height: 0;
+  }
+
+  .vertical-swiper-shell .swiper-slide.footer-slide {
+    height: auto;
+    min-height: 38vh;
+    overflow: visible;
+  }
+
+  /* Join Us: these sections use absolute children — must not collapse */
+  .vertical-swiper-shell .comphoto-section,
+  .vertical-swiper-shell .job-section,
+  .vertical-swiper-shell .contact-form-section:not(.contact-form-section--feedback-only):not(.join-slide-card-center),
+  .vertical-swiper-shell .joinus-section {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    flex: 1 1 auto;
+  }
+
+  .vertical-swiper-shell .joinus-section {
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .vertical-swiper-shell .swiper-slide:has(.comphoto-section),
+  .vertical-swiper-shell .swiper-slide:has(.job-section),
+  .vertical-swiper-shell .swiper-slide:has(.joinus-section) {
+    background-color: transparent;
+    align-items: stretch;
+  }
+
+  .vertical-swiper-shell .swiper-slide.swiper-slide--joinus-contact-only,
+  .vertical-swiper-shell .swiper-slide.swiper-slide--joinus-feedback-only {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden !important;
+    background-color: #ff5c00;
+  }
+
+  /* Join Us 联系/表单屏：随内容高度，在 slide 内垂直居中 */
+  .vertical-swiper-shell .swiper-slide:has(#comprofile) {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vertical-swiper-shell .about-section {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  .vertical-swiper-shell .about-section .comprofile-section {
+    flex: 1 1 auto;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .vertical-swiper-shell .about-section .stats-section {
+    flex: 0 0 auto;
+    margin-top: auto;
+    justify-content: center;
+  }
+
+  .vertical-swiper-shell .about-swiper .swiper-slide:has(#timeline-1) {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    align-items: stretch !important;
+  }
+
+  /* Join Us 联系/表单屏：随内容高度，在 slide 内垂直居中 */
+  .vertical-swiper-shell:has(.join-swiper) .join-slide-card-center {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--join-slide-top, 66px) - var(--join-slide-bottom, 68px)) !important;
+    flex: none !important;
+  }
+}

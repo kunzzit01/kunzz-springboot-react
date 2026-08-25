@@ -1,0 +1,1090 @@
+/* ===========================================
+   Header Component Styles - 现代化响应式版本
+   KUNZZ HOLDINGS Website Header Navigation
+   使用 clamp() 和 rem/vw/vh 单位实现响应式设计
+   =========================================== */
+
+/* 导航栏 - 现代化响应式 */
+.header-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  padding: 0 80px 0 70px;
+  font-size: clamp(12px, 1vw + 0.5rem, 16px);
+  background-color: #2F2F2F;
+  color: white;
+  z-index: 999;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  /* ✅ 让 padding 不撑大 */
+  transition: transform 0.3s ease-in-out;
+}
+
+/* 导航栏内部容器 */
+.header-logo-section {
+  display: flex;
+  align-items: center;
+}
+
+.header-logo {
+  height: 52px;
+  width: auto;
+}
+
+.header-company-name {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(10px, 1.2vw, 13px);
+  font-weight: bold;
+  line-height: 140%;
+}
+
+.header-nav-links {
+  height: 80px;
+  font-family: 'Inter', sans-serif;
+  font-weight: lighter;
+  display: flex;
+  gap: 30px;
+  /* 减少项间距 */
+  font-size: clamp(12px, 0.8vw + 0.3rem, 16px);
+  margin-left: 36px;
+  /* 这里控制 .nav-links 左侧的偏移量 */
+}
+
+/* 每个导航项的样式 */
+.header-nav-links a {
+  color: white;
+  text-decoration: none;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  /* 添加左右 padding，便于在悬停时变宽 */
+  transition: all 0.3s ease;
+  /* 添加过渡效果 */
+  white-space: nowrap;
+  /* 防止文字换行 */
+}
+
+.header-nav-item {
+  position: relative;
+}
+
+/* 当前页高亮 */
+.header-nav-links a.active {
+  background-color: #FF5C00;
+  color: white;
+  padding: 0 40px;
+}
+
+/* 鼠标悬停时 */
+.header-nav-links a:hover {
+  background-color: #FF5C00;
+  color: white;
+  padding: 0 40px;
+  /* 在鼠标悬停时增大 padding，使得区域变宽 */
+  text-decoration: none;
+}
+
+.header-right-section {
+  width: auto;
+  min-width: 240px;
+  height: auto;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  /* 登入 + 语言为一组：略收紧，并保持垂直对齐 */
+  gap: 0;
+  column-gap: 0;
+  margin: 26px 0 28px 0;
+}
+
+/* 仅顶栏右侧：登入与语言之间用细分隔，避免两颗强对比按钮贴太紧 */
+.header-right-section > .header-login-dropdown {
+  padding-right: 14px;
+  margin-right: 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+
+/* ===========================================
+   Login Button & Dropdown Styles
+   =========================================== */
+
+.header-login-dropdown {
+  position: relative;
+}
+
+/* 次级操作：线框胶囊，不把注意力从导航与语言切换上抢走 */
+.header-login-btn {
+  width: auto;
+  min-width: 84px;
+  height: 28px;
+  padding: 0 16px;
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 999px;
+  font-size: clamp(12px, 0.6vw + 0.42rem, 14px);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-decoration: none;
+  line-height: 1.15;
+  box-sizing: border-box;
+  transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: none;
+}
+
+.header-login-btn:hover {
+  background-color: rgba(255, 92, 0, 0.14);
+  border-color: rgba(255, 92, 0, 0.95);
+}
+
+.header-login-dropdown.is-open .header-login-btn,
+.header-login-btn.active {
+  background-color: rgba(255, 92, 0, 0.18);
+  border-color: #ff5c00;
+}
+
+/* 登录下拉菜单样式 */
+.header-login-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0px;
+  width: 120px;
+  /* 固定宽度 */
+  background: #2F2F2F;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  margin-top: 8px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.header-login-dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.header-login-dropdown-item {
+  display: block;
+  padding: 10px 20px;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: background-color 0.2s ease;
+  border: none;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header-login-dropdown-item:hover {
+  background-color: #FF5C00;
+  color: white;
+}
+
+.header-login-dropdown-item:first-child {
+  border-bottom: 0px solid #444;
+}
+
+/* ===========================================
+   Language Switch Styles
+   =========================================== */
+
+.header-language-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+}
+
+.header-language-option {
+  min-width: 52px;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(12px, 0.65vw + 0.45rem, 14px);
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.header-language-option:hover {
+  background: rgba(255, 92, 0, 0.16);
+  color: #fff;
+}
+
+.header-language-option.active {
+  background: #ff5c00;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
+}
+
+.header-language-option:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255, 92, 0, 0.45);
+}
+
+.header-language-switch .header-lang {
+  width: 100px;
+  height: 26px;
+  background-color: transparent;
+  color: white;
+  border: 1px solid #ff5c00;
+  border-style: solid;
+  border-radius: 25px;
+  padding: 1px 25px;
+  font-size: clamp(12px, 0.7vw + 0.5rem, 16px);
+  cursor: pointer;
+  display: inline-block;
+  /* 让 <a> 看起来像按钮 */
+  text-align: center;
+  /* 让文字居中 */
+  text-decoration: none;
+  /* 移除下划线 */
+  line-height: 26px;
+  /* 去掉浏览器默认的焦点虚线框 / 点击高亮（「中文」外圈粉虚线多由此产生） */
+  outline: none !important;
+  outline-offset: 0;
+  box-shadow: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Firefox 按钮内层虚线框 */
+.header-language-switch .header-lang::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
+.header-language-switch .header-lang:focus,
+.header-language-switch .header-lang:focus-visible,
+.header-language-switch .header-lang:active,
+.header-language-switch .header-lang.active {
+  outline: none !important;
+  outline-style: none !important;
+  box-shadow: none !important;
+}
+
+#languageBtn:focus,
+#languageBtn:focus-visible,
+#languageBtn:active,
+#languageBtn.active {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.header-language-switch .header-lang:hover {
+  background-color: #ff5c00;
+  color: white;
+  border-color: #ff5c00;
+}
+
+.header-language-switch .header-icon {
+  width: 24px;
+  height: 24px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+/* 语言切换下拉菜单样式 */
+.header-language-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: -20px;
+  width: 120px;
+  /* 固定宽度 */
+  background: #2F2F2F;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  margin-top: 8px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.header-language-dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.header-language-dropdown-item {
+  display: block;
+  padding: 10px 20px;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: background-color 0.2s ease;
+  border: none;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.header-language-dropdown-item:hover {
+  background-color: #FF5C00;
+  color: white;
+}
+
+.header-language-dropdown-item:not(:last-child) {
+  border-bottom: 1px solid #444;
+}
+
+/* ===========================================
+   Navigation State Styles
+   =========================================== */
+
+.header-nav-hidden {
+  transform: translateY(-100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.header-nav {
+  transition: transform 0.3s ease-in-out;
+}
+
+@media (max-width: 1280px) {
+  .header-navbar {
+    height: 50px;
+    padding: 0 42px 0 44px;
+  }
+
+  .header-logo {
+    height: 38px;
+    width: auto;
+  }
+
+  .header-company-name {
+    font-size: 8px;
+  }
+
+  .header-nav-links {
+    height: 50px;
+    gap: 20px;
+    margin-left: clamp(10px, 12vw, 90px);
+    font-size: 12px;
+  }
+
+  .header-nav-links a {
+    padding: 0 4px;
+  }
+
+  .header-nav-links a.active {
+    padding: 0 30px;
+  }
+
+  .header-nav-links a:hover {
+    padding: 0 30px;
+  }
+
+  .header-nav-dropdown-menu {
+    top: 84%;
+  }
+
+  .header-nav-dropdown-item {
+    padding: 6px 12px !important;
+    font-size: 10px;
+  }
+
+  .header-login-btn {
+    min-width: 58px;
+    height: 22px;
+    padding: 0 10px;
+    font-size: 10px;
+    line-height: 1.15;
+  }
+
+  .header-right-section > .header-login-dropdown {
+    padding-right: 10px;
+    margin-right: 8px;
+  }
+
+  .header-language-switch {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .header-language-option {
+    min-width: 44px;
+    height: 22px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .header-login-dropdown-menu {
+    left: 0;
+    width: 80px;
+    top: 80%;
+  }
+
+  .header-login-dropdown-item {
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+
+  .header-language-switch .header-lang {
+    width: auto;
+    min-width: 58px;
+    height: 26px;
+    border-radius: 17px;
+    padding: 0 12px;
+    font-size: 11px;
+    line-height: normal;
+    margin-left: 0;
+    margin-right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .header-language-switch .header-icon {
+    width: 18px;
+    height: 18px;
+    margin-right: 4px;
+  }
+
+  .header-language-dropdown-menu {
+    right: -40px;
+    width: 80px;
+    top: 80%;
+  }
+
+  .header-language-dropdown-item {
+    padding: 6px 12px;
+    font-size: 10px;
+  }
+
+  .header-right-section {
+    width: auto;
+    min-width: 0;
+    max-width: 50vw;
+    gap: 0;
+    column-gap: 0;
+  }
+}
+
+/* ===========================================
+   Brand Dropdown Menu Styles
+   =========================================== */
+
+/* 导航栏旗下品牌下拉菜单 */
+.header-nav-item.header-nav-dropdown {
+  position: relative;
+}
+
+.header-nav-dropdown-trigger {
+  color: white;
+  text-decoration: none;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.header-nav-dropdown-trigger:hover {
+  background-color: #FF5C00;
+  color: white;
+  padding: 0 40px;
+}
+
+.header-nav-dropdown-menu {
+  position: absolute;
+  top: 90%;
+  left: 0;
+  min-width: 220px;
+  background: #2F2F2F;
+  border-radius: 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  margin-top: 8px;
+  overflow: hidden;
+  z-index: 1000;
+}
+
+.header-nav-dropdown-menu.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.header-nav-dropdown-item {
+  display: block;
+  padding: 10px 16px !important;
+  color: white;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 400;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #444;
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+.header-nav-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.header-nav-dropdown-item:hover {
+  background-color: #FF5C00;
+  color: white;
+}
+
+/* ===========================================
+   Mobile Menu Styles
+   =========================================== */
+
+/* 汉堡菜单按钮，默认隐藏 */
+.header-hamburger {
+  display: none;
+  font-size: clamp(1.5rem, 3vw, 1.75rem);
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: clamp(0.25rem, 0.5vw, 0.375rem) 0;
+}
+
+.header-mobile-login {
+  display: none;
+}
+
+.header-desktop-login {
+  display: inline-block;
+}
+
+/* ===========================================
+   Page Indicator Styles
+   =========================================== */
+
+/* 左侧页面指示器样式 */
+.header-page-indicator {
+  position: fixed;
+  left: clamp(1rem, 1.56vw, 1.875rem);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 0.63vw, 0.75rem);
+  padding: clamp(0.75rem, 0.5vw, 1rem) clamp(0.4rem, 0.8vw, 0.6rem);
+  background: rgba(50, 50, 50, 0.3);
+  border-radius: clamp(1.25rem, 2.5vw, 1.75rem);
+  backdrop-filter: blur(clamp(0.6rem, 1.2vw, 0.8rem)) saturate(160%);
+  -webkit-backdrop-filter: blur(clamp(0.6rem, 1.2vw, 0.8rem)) saturate(160%);
+  border: clamp(0.05rem, 0.1vw, 0.08rem) solid rgba(255, 255, 255, 0.15);
+  /* 轻微边框提升质感 */
+  opacity: 0.5;
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.header-page-dot {
+  width: clamp(0.1rem, 0.2vw, 0.15rem);
+  height: clamp(0.1rem, 0.2vw, 0.15rem);
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.8);
+  border: clamp(0.1rem, 0.2vw, 0.15rem) solid rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.4s ease;
+  position: relative;
+}
+
+.header-page-dot:hover {
+  background-color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 1);
+  transform: scale(1.3);
+}
+
+.header-page-dot.active {
+  width: clamp(0.1rem, 0.2vw, 0.15rem);
+  height: clamp(1.25rem, 2.5vw, 1.5rem);
+  border-radius: clamp(0.3rem, 0.6vw, 0.4rem);
+  background-color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.header-page-dot.active:hover {
+  transform: scale(1.12);
+}
+
+/* ===========================================
+   移动端响应式设计 - 使用 clamp() 实现
+   =========================================== */
+
+/* 移动端导航菜单样式 - 当屏幕宽度小于 768px 时显示 */
+@media (max-width: 768px) {
+
+  .culture-right {
+    order: -1;          /* render before .culture-left */
+    padding-bottom: 4px;
+  }
+ 
+  /* Cards grid stays below */
+  .culture-left {
+    order: 0;
+  }
+
+  .header-navbar {
+    height: 56px;
+    min-height: 56px;
+    padding: 0 12px 0 14px;
+  }
+
+  .header-logo {
+    height: 40px;
+  }
+
+  /* 全屏遮罩：打开菜单时点击外部关闭（由 body 类名控制） */
+  body.header-mobile-menu-open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 998;
+    pointer-events: auto;
+  }
+
+  /* 菜单打开：禁止背后页面滚动（与 Swiper 等不叠加纵向滚动条） */
+  html.header-mobile-menu-open,
+  body.header-mobile-menu-open {
+    overflow: hidden !important;
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  /* 导航抽屉：层次清晰、左对齐、子品牌内嵌展示 */
+  .header-nav-links {
+    display: flex;
+    position: fixed;
+    top: 56px;
+    left: 0;
+    right: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 56px);
+    max-height: calc(100vh - 56px);
+    height: auto;
+    background: linear-gradient(168deg, #3a3a3a 0%, #2e2e2e 45%, #262626 100%);
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 0 0 20px;
+    box-sizing: border-box;
+    gap: 0;
+    z-index: 1000;
+    overflow: hidden;
+    overscroll-behavior: none;
+    border-radius: 0 0 20px 20px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: none;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+    transform: translate3d(0, -120%, 0);
+    visibility: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease, visibility 0.35s;
+  }
+
+  .header-nav-links.active {
+    display: flex;
+    transform: translate3d(0, 0, 0);
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  .header-nav-links > .header-nav-item {
+    width: 100%;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+
+  /* 手机上：顶栏右侧不显示 LOGIN，LOGIN 仅保留在汉堡抽屉里 */
+  .header-right-section > .header-login-dropdown {
+    display: none !important;
+    border-right: none;
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  .header-nav-links > .header-login-dropdown {
+    display: block;
+  }
+  .header-nav-links > .header-login-dropdown {
+    width: 100%;
+    margin-top: 0;
+    padding: 10px 16px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.2);
+    overflow: visible;
+  }
+
+  /* 登入：抽屉内静态层叠，默认收起，.show 展开（由 JS 点击切换） */
+  .header-nav-links .header-login-dropdown-menu {
+    position: static !important;
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: none;
+    transform: none !important;
+    transition: max-height 0.32s ease, opacity 0.22s ease, padding 0.22s ease, margin 0.22s ease;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+    box-shadow: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .header-nav-links .header-login-dropdown-menu.show {
+    max-height: 140px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: visible;
+  }
+
+  .header-nav-links .header-login-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 12px 16px !important;
+    margin: 0;
+    font-size: 0.9375rem !important;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95) !important;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .header-nav-links .header-login-dropdown-item:hover {
+    background: rgba(255, 92, 0, 0.25);
+    color: #fff !important;
+  }
+
+  /* right-section 宽度自适应，内容靠右排列 */
+  .header-right-section {
+    width: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    /* 明显间距：语言与汉堡分开（覆盖 1280 段的 gap:0） */
+    gap: 12px;
+    column-gap: 12px;
+  }
+
+  .header-language-switch {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .header-language-option {
+    min-width: 44px;
+    min-height: 36px;
+    height: auto;
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-sizing: border-box;
+  }
+
+  /* 取消 1280 段落在小屏上的负 margin；完整覆盖尺寸，避免 60×18 + line-height:1px 把文字挤花 */
+  .header-language-switch .header-lang {
+    margin-left: 0;
+    margin-right: 0;
+    width: auto;
+    min-width: 3.75rem;
+    height: auto;
+    min-height: 36px;
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    line-height: 1.25;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* hamburger 靠右边显示 */
+  .header-hamburger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    padding: clamp(0.35rem, 1vw, 0.5rem) 0.35rem;
+    margin-left: 2px;
+    min-width: 44px;
+    min-height: 44px;
+    box-sizing: border-box;
+  }
+
+  /* 覆盖 1280 段 right:-40px，避免顶栏出现横向滚动/怪异留白 */
+  .header-right-section .header-language-dropdown-menu {
+    right: 0;
+    left: auto;
+  }
+
+  .header-nav-links a {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 12px 18px;
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.96);
+    text-align: left;
+    width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .header-nav-links a:hover,
+  .header-nav-links a.active {
+    background-color: rgba(255, 92, 0, 0.14);
+    color: #fff;
+    padding: 12px 18px;
+  }
+
+  /* 最后一项主链与下方登入区只保留一条分隔，避免双线 */
+  .header-nav-links > .header-nav-item:nth-child(4) > a {
+    border-bottom: none;
+  }
+
+  /* 旗下品牌：与链接同宽左对齐，子项内嵌展开 */
+  .header-nav-item.header-nav-dropdown {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .header-nav-links .header-nav-dropdown-trigger {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    justify-content: flex-start;
+    position: relative;
+    padding: 12px 2.25rem 12px 18px;
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.96);
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    border-bottom: none;
+    cursor: pointer;
+  }
+
+  .header-nav-links .header-nav-dropdown-trigger:hover {
+    padding: 12px 2.25rem 12px 18px;
+    background-color: rgba(255, 92, 0, 0.14);
+  }
+
+  .header-nav-links .header-nav-dropdown-trigger::after {
+    content: '';
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid rgba(255, 255, 255, 0.55);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.55);
+    transform: translateY(-65%) rotate(45deg);
+    transition: transform 0.25s ease;
+    pointer-events: none;
+  }
+
+  .header-nav-item.header-nav-dropdown.is-open .header-nav-dropdown-trigger::after {
+    transform: translateY(-35%) rotate(225deg);
+  }
+
+  .header-nav-links .header-nav-dropdown-menu {
+    position: static !important;
+    display: block;
+    max-height: 0;
+    opacity: 0;
+    visibility: hidden;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    border: none;
+    transform: none !important;
+    transition: max-height 0.32s ease, opacity 0.22s ease, padding 0.22s ease;
+    min-width: 0 !important;
+    width: 100%;
+    left: auto;
+    top: auto;
+    box-shadow: none;
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.22);
+  }
+
+  .header-nav-links .header-nav-dropdown-menu.show {
+    max-height: 240px;
+    opacity: 1 !important;
+    visibility: visible !important;
+    padding: 8px 0 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    overflow: visible;
+  }
+
+  .header-nav-links .header-nav-dropdown-item {
+    padding: 12px 18px 12px 26px !important;
+    font-size: 0.9375rem !important;
+    font-weight: 400;
+    color: rgba(255, 255, 255, 0.82) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    text-align: left !important;
+    justify-content: flex-start !important;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .header-nav-links .header-nav-dropdown-item:last-child {
+    border-bottom: none !important;
+  }
+
+  .header-nav-links .header-nav-dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff !important;
+  }
+
+  /* 登入：全宽主按钮（抽屉内带下拉箭头） */
+  .header-nav-links .header-login-btn {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    min-height: 44px;
+    position: relative;
+    padding: 12px 2.25rem 12px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    border-radius: 14px;
+    text-align: center;
+    line-height: 1.25;
+    box-sizing: border-box;
+    box-shadow: 0 4px 14px rgba(255, 92, 0, 0.35);
+  }
+
+  .header-nav-links .header-login-btn::after {
+    content: '';
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid rgba(255, 255, 255, 0.9);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.9);
+    transform: translateY(-65%) rotate(45deg);
+    transition: transform 0.25s ease;
+    pointer-events: none;
+  }
+
+  .header-nav-links .header-login-dropdown.is-open .header-login-btn::after {
+    transform: translateY(-35%) rotate(225deg);
+  }
+
+  .header-nav-links .header-login-btn:hover {
+    background-color: #e65500;
+    padding: 12px 2.25rem 12px 20px;
+    line-height: 1.25;
+  }
+
+  /* Hide page indicator on mobile */
+  .header-page-indicator {
+    display: none;
+  }
+}
+
+/* ===========================================
+   Performance Optimizations
+   =========================================== */
+
+/* 让 transform/opacity 动画更流畅 */
+.animate-on-scroll,
+.header-navbar,
+/* .header-nav-links 不可在此统一 transform，否则会覆盖移动端菜单的 translate3d 隐藏态 */
+.header-nav-dropdown-menu,
+.header-login-dropdown-menu,
+.header-language-dropdown-menu,
+.header-page-indicator,
+.social-icon {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}

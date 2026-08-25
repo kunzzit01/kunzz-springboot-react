@@ -1,0 +1,278 @@
+/* ═══════════════════════════════════════════════════════════
+   FORM UI REFINE — 添加职员页表单控件统一设计
+   风格参考 antd Select（无 JS，纯 CSS）：
+   · 统一边框 #d1d5db，hover/focus 主色 #f97316 + 光晕
+   · select 去掉原生箭头，用内联 SVG chevron
+   · 输入控件统一 38px 高、14px 字体
+   ═══════════════════════════════════════════════════════════ */
+
+/* ---------- 列比例：左列加宽，3 列字段更舒适 ---------- */
+.add-root #addUserForm {
+  grid-template-columns: 40fr 52fr !important;
+}
+
+/* ---------- 表单控件统一 ---------- */
+.add-root #addUserForm .form-group input[type="text"],
+.add-root #addUserForm .form-group input[type="date"],
+.add-root #addUserForm .form-group input[type="email"],
+.add-root #addUserForm .form-group input[type="tel"],
+.add-root #addUserForm .form-group select,
+.add-root #addUserForm .form-group textarea {
+  width: 100%;
+  height: 38px !important;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background-color: #ffffff;
+  color: #111827;
+  font-size: 14px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.add-root #addUserForm .form-group textarea {
+  height: auto;
+  min-height: 60px;
+  padding: 9px 12px;
+  resize: vertical !important;
+  line-height: 1.5;
+}
+
+/* hover：边框变主色 */
+.add-root #addUserForm .form-group input:hover,
+.add-root #addUserForm .form-group select:hover,
+.add-root #addUserForm .form-group textarea:hover {
+  border-color: #f97316;
+}
+
+/* focus：主色边框 + 光晕（antd 风格） */
+.add-root #addUserForm .form-group input:focus,
+.add-root #addUserForm .form-group select:focus,
+.add-root #addUserForm .form-group textarea:focus {
+  outline: none;
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+/* 占位符 */
+.add-root #addUserForm .form-group input::placeholder,
+.add-root #addUserForm .form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+/* ---------- select：去掉原生箭头，自定义 chevron ---------- */
+.add-root #addUserForm .form-group select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 12px;
+  cursor: pointer;
+}
+
+/* hover / focus 时箭头变主色 */
+.add-root #addUserForm .form-group select:hover,
+.add-root #addUserForm .form-group select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f97316' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+/* 禁用态（职位未选账号类型前） */
+.add-root #addUserForm .form-group select:disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* option 下拉项 */
+.add-root #addUserForm select option {
+  font-size: 14px;
+  color: #111827;
+  padding: 8px 10px;
+}
+
+/* ---------- 所属公司多选下拉（custom-multi-select）统一 ---------- */
+.add-root .custom-multi-select .select-header {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 34px 0 12px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  font-size: 14px !important;
+  color: #111827 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.add-root .custom-multi-select .select-header:hover {
+  border-color: #f97316 !important;
+}
+
+.add-root .custom-multi-select.active .select-header {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12) !important;
+}
+
+/* 多选下拉的箭头（fa-chevron-down）统一颜色 */
+.add-root .custom-multi-select .select-header .fa-chevron-down {
+  color: #6b7280;
+  font-size: 11px;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.add-root .custom-multi-select.active .select-header .fa-chevron-down {
+  color: #f97316;
+  transform: rotate(180deg);
+}
+
+/* 多选下拉选项列表 */
+.add-root .custom-multi-select .select-options {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+  padding: 6px !important;
+}
+
+.add-root .custom-multi-select .select-options .checkbox-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 10px !important;
+  border-radius: 4px !important;
+  font-size: 13px !important;
+  color: #374151 !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.add-root .custom-multi-select .select-options .checkbox-item:hover {
+  background-color: #fff7ed !important;
+}
+
+.add-root .custom-multi-select .select-options .checkbox-item input[type="checkbox"] {
+  width: 15px !important;
+  height: 15px !important;
+  accent-color: #f97316 !important;
+  cursor: pointer !important;
+}
+
+/* ---------- 表单分组、卡片边框统一 ---------- */
+.add-root .left-card,
+.add-root .form-section {
+  border: 1px solid #e5e7eb !important;
+  border-radius: 10px !important;
+}
+
+.add-root .form-section-header,
+.add-root .form-section-header-bank {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px 10px 0 0 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.3px;
+}
+
+/* ---------- 标签 ---------- */
+.add-root #addUserForm .form-group label {
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  margin-bottom: 6px !important;
+  letter-spacing: 0.2px;
+}
+
+.add-root .required-mark {
+  color: #ef4444 !important;
+  margin-left: 2px !important;
+  font-weight: 700 !important;
+}
+
+/* ---------- 错误态 ---------- */
+.add-root #addUserForm .form-group.has-error input,
+.add-root #addUserForm .form-group.has-error select,
+.add-root #addUserForm .form-group.has-error textarea {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
+}
+
+.add-root .error-msg {
+  font-size: 12px !important;
+  color: #ef4444 !important;
+  margin-top: 4px !important;
+}
+
+/* ---------- 银行信息区 ---------- */
+.add-root .form-section-header-bank {
+  border-radius: 0 !important;
+}
+
+/* ---------- 字段间距：统一紧凑 ---------- */
+.add-root #addUserForm .form-section-content {
+  padding: 18px 20px !important;
+}
+
+.add-root #addUserForm .form-grid-3,
+.add-root #addUserForm .form-grid-2 {
+  gap: 14px 14px !important;
+}
+
+/* ---------- 账号设置区 select 与其余控件同高 ---------- */
+.add-root #add_account_type,
+.add-root #add_position {
+  height: 38px !important;
+}
+
+/* ---------- 保存/取消按钮统一 ---------- */
+.add-root #btn-save {
+  height: 40px !important;
+  padding: 0 28px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: filter 0.2s ease, transform 0.1s ease !important;
+  box-shadow: 0 2px 6px rgba(249, 115, 22, 0.3) !important;
+}
+
+.add-root #btn-save:hover {
+  filter: brightness(0.95) !important;
+}
+
+.add-root #btn-save:active {
+  transform: translateY(1px) !important;
+}
+
+.add-root #btn-save:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.add-root .btn-back-action {
+  height: 40px !important;
+  padding: 0 24px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  background: #ffffff !important;
+  color: #374151 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease !important;
+}
+
+.add-root .btn-back-action:hover {
+  border-color: #f97316 !important;
+  color: #f97316 !important;
+  background: #fff7ed !important;
+}

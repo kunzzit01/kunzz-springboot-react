@@ -1,0 +1,294 @@
+/* ===== 最低库存设置（对齐线上 stockminimum.php 设计） ===== */
+
+/* ─── Page Header（对齐线上 .header：标题 + 返回按钮） ─── */
+.min-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.min-page-header h1 {
+    font-size: clamp(18px, 2.08vw, 40px);
+    font-weight: bold;
+    color: #000;
+    margin: 0;
+}
+
+.min-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* ─── Controls Bar (系统标签 + 搜索 + 批量保存) ─── */
+.min-controls-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    background: #fff;
+    padding: 6px 8px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+    border: 2px solid #e5e0d8;
+    flex-wrap: wrap;
+}
+
+.system-tabs {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+}
+
+.controls-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tab-btn {
+    padding: 6px 18px;
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    background: transparent;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: inherit;
+}
+
+.tab-btn:hover {
+    background: #f8f5eb;
+    color: #583e04;
+}
+
+.tab-btn.active {
+    background: #f99e00;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(249, 158, 0, 0.4);
+}
+
+/* ─── Search Input ─── */
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-icon {
+    position: absolute;
+    left: 9px;
+    color: #9ca3af;
+    font-size: 12px;
+    pointer-events: none;
+}
+
+.search-input {
+    padding: 6px 12px 6px 30px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    font-size: 13px;
+    width: clamp(160px, 14vw, 240px);
+    background: #faf7f2;
+    color: #374151;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: inherit;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #f99e00;
+    box-shadow: 0 0 0 2px rgba(249, 158, 0, 0.18);
+    background: #fff;
+}
+
+/* ─── Table Container（对齐线上：黑边框 + 米色表头 + 灰底 sticky 表头） ─── */
+.min-table-container {
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+    border: 2px solid #000;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 72vh;
+}
+
+.table-header {
+    padding: 10px 16px;
+    background: #f8f5eb;
+    border-bottom: 2px solid #583e04;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.table-header h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #583e04;
+    margin: 0;
+}
+
+.table-stats {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.table-stats .stat-value {
+    font-weight: 700;
+    color: #583e04;
+}
+
+.table-scroll-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.settings-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.settings-table thead {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.settings-table th {
+    background: #636363;
+    color: white;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #555;
+    text-align: left;
+}
+
+.settings-table td {
+    padding: 8px 12px;
+    font-size: 13px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+
+/* 列宽（对齐线上） */
+.settings-table th:nth-child(1), .settings-table td:nth-child(1) { width: 5%; text-align: center; }
+.settings-table th:nth-child(2), .settings-table td:nth-child(2) { width: 13%; text-align: center; }
+.settings-table th:nth-child(3), .settings-table td:nth-child(3) { width: 22%; text-align: left; }
+.settings-table th:nth-child(4), .settings-table td:nth-child(4) { width: 10%; text-align: center; }
+.settings-table th:nth-child(5), .settings-table td:nth-child(5) { width: 13%; }
+.settings-table th:nth-child(6), .settings-table td:nth-child(6) { width: 13%; text-align: center; }
+.settings-table th:nth-child(7), .settings-table td:nth-child(7) { width: 10%; text-align: center; }
+
+.settings-table tbody tr:hover,
+.settings-table tbody tr:nth-child(even):hover {
+    background: #e5ebf8;
+}
+
+.settings-table tbody tr:nth-child(even) {
+    background: #fafafa;
+}
+
+.settings-table .text-center { text-align: center; }
+.settings-table .no-col { color: #9ca3af; font-size: 12px; }
+.settings-table .spec-cell { color: #6b7280; }
+.settings-table .code-cell { color: #374151; font-weight: 500; letter-spacing: 0.04em; }
+.settings-table .product-name-cell { color: #111827; font-weight: 600; }
+
+/* 低库存提示（8/24：总库存 < 设置值 时行高亮 + 红色库存 + 徽章） */
+.settings-table tr.min-low-row td {
+    background: #fff1f0 !important;
+}
+.settings-table tr.min-low-row:hover td {
+    background: #ffe4e1 !important;
+}
+.min-stock-low {
+    color: #cf1322;
+    font-weight: 700;
+}
+.min-stock-ok {
+    color: #111827;
+}
+.min-stock-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #cf1322;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ─── Quantity Input ─── */
+.quantity-input {
+    width: clamp(80px, 7vw, 130px);
+    padding: 6px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 13px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #fff;
+    font-family: inherit;
+}
+
+.quantity-input:focus {
+    outline: none;
+    border-color: #f99e00;
+    box-shadow: 0 0 0 2px rgba(249, 158, 0, 0.2);
+}
+
+/* ─── Loading / No Data ─── */
+.min-loading {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #583e04;
+    border-radius: 50%;
+    animation: min-spin 0.8s linear infinite;
+}
+
+@keyframes min-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.settings-table .no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.settings-table .no-data i {
+    font-size: 40px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+    display: block;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+    .min-controls-bar { flex-direction: column; align-items: stretch; }
+    .tab-btn { flex: 1; justify-content: center; }
+    .controls-right { justify-content: space-between; }
+    .min-table-container { max-height: 60vh; }
+}

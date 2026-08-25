@@ -1,0 +1,375 @@
+/* 发展历史管理（对齐线上 aboutpage4upload.php 视觉） */
+.timeline-section h2 {
+  margin-bottom: 18px;
+}
+
+.year-management {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.year-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.year-tab {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.year-tab:hover {
+  border-color: #f99e00;
+  color: #f99e00;
+}
+
+.year-tab.active {
+  background: #f99e00;
+  color: #fff;
+  border-color: #f99e00;
+}
+
+.btn-add {
+  background: #f99e00;
+  color: #fff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-add:hover {
+  background: #f98500;
+}
+
+.timeline-content {
+  margin-top: 10px;
+}
+
+.timeline-year-title {
+  color: #333;
+  border-bottom: 2px solid #f99e00;
+  padding-bottom: 10px;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.no-entries {
+  text-align: center;
+  padding: 40px;
+  color: #666;
+  background: #f8f9fa;
+  border-radius: 10px;
+  margin: 20px 0;
+}
+
+.entry-container {
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  background: #fff;
+}
+
+.entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.entry-header h4 {
+  margin: 0;
+  color: #555;
+  font-size: 15px;
+}
+
+.entry-photo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.entry-photo-preview {
+  position: relative;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 260px;
+}
+
+.entry-photo-preview img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.entry-photo-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.entry-photo-info strong { color: #fff; }
+
+.entry-photo-empty {
+  min-width: 200px;
+  min-height: 90px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 13px;
+}
+
+.btn-upload-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f99e00;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-upload-photo:hover {
+  background: #f98500;
+}
+
+.entry-form {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 16px;
+}
+
+.entry-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.entry-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: #f99e00;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* 足迹照片管理（对齐线上 joinpage2upload.php 视觉） */
+.stats-bar {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 20px;
+}
+
+.stats-item {
+  font-size: 14px;
+  color: #555;
+}
+
+.stats-number {
+  font-weight: 700;
+  color: #f99e00;
+}
+
+.section-title {
+  color: #333;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.photos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.photo-card {
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  padding: 14px;
+  background: #fff;
+}
+
+.photo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.photo-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f99e00;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.photo-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+
+.current-image {
+  position: relative;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.current-image img {
+  width: 100%;
+  height: 130px;
+  object-fit: cover;
+  display: block;
+  cursor: zoom-in;
+}
+
+.delete-form {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.delete-btn {
+  background: rgba(220, 53, 69, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.delete-btn:hover {
+  background: #c82333;
+}
+
+.image-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+.image-info strong { color: #fff; }
+
+.photo-card .file-input {
+  padding: 14px 10px;
+  margin-bottom: 10px;
+}
+
+.photo-card .file-input-text {
+  font-size: 13px;
+}
+
+.photo-card .file-input-text small {
+  font-size: 11px;
+}
+
+.upload-btn {
+  width: 100%;
+  background: #f99e00;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.upload-btn:hover {
+  background: #f98500;
+}
+
+.photo-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.photo-lightbox img {
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 10px;
+}
+
+.photo-lightbox-close {
+  position: absolute;
+  top: 20px;
+  right: 30px;
+  color: #fff;
+  font-size: 34px;
+  cursor: pointer;
+}

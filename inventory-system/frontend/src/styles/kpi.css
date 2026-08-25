@@ -1,0 +1,954 @@
+.kpi-root *{
+           margin: 0;
+           padding: 0;
+           box-sizing: border-box;
+       }.kpi-root{
+           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background-color: #faf7f2;
+           color: #000000;
+           min-height: 100vh;
+           overflow-x: hidden;
+           overflow-y: auto;
+       }.kpi-root .container{
+           max-width: 1800px;
+           margin: 0 auto;
+           padding: clamp(16px, 1.25vw, 24px) 24px;
+       }.kpi-root /* 主内容区域样式 */
+       .main-content{
+           margin-left: 300px;
+           /* 默认为侧边栏宽度 */
+           transition: margin-left 0.3s ease;
+           min-height: 100vh;
+           position: relative;
+           overflow: visible;
+       }.kpi-root /* 当侧边栏收起时，主内容区域扩展 */
+       .main-content.sidebar-collapsed{
+           margin-left: 60px;
+           /* 收起后的侧边栏宽度 */
+       }.kpi-root html{
+           height: 100%;
+           overflow-x: hidden;
+           overflow-y: auto;
+       }.kpi-root /* 自定义滚动条样式 */
+       ::-webkit-scrollbar{
+           width: 8px;
+       }.kpi-root ::-webkit-scrollbar-track{
+           background: #f1f1f1;
+           border-radius: 4px;
+       }.kpi-root ::-webkit-scrollbar-thumb{
+           background: #c1c1c1;
+           border-radius: 4px;
+       }.kpi-root ::-webkit-scrollbar-thumb:hover{
+           background: #a8a8a8;
+       }.kpi-root /* Firefox 滚动条样式 */
+       html{
+           scrollbar-width: thin;
+           scrollbar-color: #c1c1c1 #f1f1f1;
+       }.kpi-root .header{
+           display: flex;
+           justify-content: space-between;
+           align-items: center;
+           margin-bottom: clamp(16px, 1.67vw, 32px);
+       }.kpi-root .header h1{
+           font-size: clamp(20px, 2.6vw, 50px);
+           font-weight: bold;
+           color: #000000ff;
+       }.kpi-root .header .controls{
+           display: flex;
+           align-items: center;
+           gap: 16px;
+       }.kpi-root .btn{
+           padding: clamp(5px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px);
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: 14px;
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           text-decoration: none;
+       }.kpi-root .btn-primary{
+           background-color: #3b82f6;
+           color: white;
+       }.kpi-root .btn-primary:hover{
+           background-color: #2563eb;
+       }.kpi-root .btn-success{
+           background-color: #10b981;
+           color: white;
+       }.kpi-root .btn-success:hover{
+           background-color: #059669;
+       }.kpi-root .btn-secondary{
+           background-color: #f99e00;
+           color: white;
+       }.kpi-root .btn-secondary:hover{
+           background-color: #f98500ff;
+       }.kpi-root .back-button{
+           background-color: #583e04;
+           color: white;
+           font-weight: 500;
+           padding: 10px 20px;
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: 14px;
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           text-decoration: none;
+       }.kpi-root .back-button:hover{
+           background-color: #462d03;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+       }.kpi-root .back-button:active{
+           transform: translateY(0);
+       }.kpi-root /* 餐厅选择器样式 */
+       .restaurant-selector{
+           position: relative;
+           display: inline-block;
+       }.kpi-root /* 报表类型选择器推到右边 */
+       .report-type-selector{
+           margin-left: auto;
+       }.kpi-root /* 餐厅选择器紧跟在报表类型选择器后面 */
+       .report-type-selector+.restaurant-selector{
+           margin-left: clamp(-20px, -1vw, -10px);
+           /* 使用负边距抵消gap，让它紧挨着报表选择器 */
+       }.kpi-root .restaurant-btn{
+           padding: clamp(6px, 0.52vw, 10px) clamp(14px, 1.04vw, 20px);
+           border-radius: 8px;
+           border: 2px solid #583e04 !important;
+           cursor: pointer;
+           font-weight: 600;
+           background: white;
+           color: #000000ff;
+           position: relative;
+           width: clamp(60px, 5.21vw, 100px);
+           display: flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.3s ease;
+           border-color: #000000ff !important;
+       }.kpi-root .restaurant-btn:hover{
+           background: rgba(88, 62, 4, 0.1);
+       }.kpi-root .restaurant-dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 100%;
+           right: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 12px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           width: clamp(240px, 25vw, 320px);
+           /* 调整响应式宽度 */
+           min-width: 200px;
+           padding: clamp(6px, 0.63vw, 12px) clamp(8px, 1vw, 16px);
+           /* 响应式内边距 */
+       }.kpi-root .restaurant-dropdown-menu.show{
+           display: flex;
+           gap: 16px;
+           flex-direction: row;
+           /* 强制为行布局 */
+       }.kpi-root .letter-selection, .kpi-root .number-selection{
+           flex: 1;
+       }.kpi-root .letter-selection{
+           flex: 1;
+           border-right: 1px solid #e5e7eb;
+           padding-right: 12px;
+           min-width: 110px;
+           /* 稍微增加宽度以容纳横向布局 */
+       }.kpi-root .number-selection{
+           flex: 1;
+           padding-left: 0px;
+           min-width: 90px;
+           /* 固定最小宽度 */
+           visibility: hidden;
+           opacity: 0;
+           transition: opacity 0.3s ease, visibility 0.3s ease;
+       }.kpi-root .section-title{
+           font-size: clamp(10px, 0.9vw, 14px);
+           /* 增加最小值 */
+           font-weight: 600;
+           color: #000000ff;
+           margin-bottom: clamp(4px, 0.6vw, 8px);
+           /* 响应式边距 */
+           text-align: center;
+       }.kpi-root .letter-grid, .kpi-root .number-grid{
+           display: grid;
+           gap: 4px;
+       }.kpi-root .letter-grid{
+           display: flex;
+           flex-direction: row;
+           gap: clamp(4px, 0.8vw, 8px);
+           /* 响应式间距 */
+           align-items: center;
+           justify-content: center;
+       }.kpi-root .letter-item, .kpi-root .number-item, .kpi-root .number-item.total-option{
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           width: clamp(12px, 1.25vw, 24px);
+           /* 增加最小值 */
+           height: clamp(12px, 1.25vw, 24px);
+           /* 增加最小值 */
+           border: 1px solid #e5e7eb;
+           background: white;
+           color: #000000ff;
+           cursor: pointer;
+           font-size: clamp(7px, 0.63vw, 12px);
+           /* 增加最小值 */
+           font-weight: 500;
+           border-radius: 4px;
+           transition: all 0.15s ease;
+       }.kpi-root .letter-item:hover, .kpi-root .number-item:hover, .kpi-root .number-item.total-option:hover{
+           background-color: #f3f4f6;
+           color: black;
+           border-color: #d1d5db;
+       }.kpi-root .letter-item.selected, .kpi-root .number-item.selected, .kpi-root .number-item.total-option.selected{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+           font-weight: 600;
+       }.kpi-root /* 数字选择区域显示状态 */
+       .number-selection.show{
+           visibility: visible;
+           opacity: 1;
+       }.kpi-root .number-dropdown{
+           position: relative;
+           display: inline-block;
+       }.kpi-root .number-btn{
+           padding: 10px 16px;
+           border-radius: 0 8px 8px 0;
+           border: none;
+           cursor: pointer;
+           font-size: 16px;
+           font-weight: 600;
+           transition: all 0.3s ease;
+           background: white;
+           color: #583e04;
+           min-width: 60px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           gap: 8px;
+       }.kpi-root .number-btn:hover{
+           background: rgba(88, 62, 4, 0.1);
+       }.kpi-root .number-dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 120%;
+           left: 0;
+           background: white;
+           border: 2px solid #583e04;
+           border-radius: 8px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           padding: 4px;
+           min-width: 120px;
+       }.kpi-root .number-dropdown-menu.show{
+           display: block;
+       }.kpi-root .number-grid{
+           margin-left: 10px;
+           display: grid;
+           grid-template-columns: repeat(4, 0.2fr);
+           gap: 2px;
+       }.kpi-root .number-item:hover{
+           background-color: #f3f4f6;
+           color: black;
+           border-color: #d1d5db;
+       }.kpi-root .number-item.selected{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+           font-weight: 600;
+       }.kpi-root .restaurant-btn.active{
+           background: #583e04;
+           color: white;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.25);
+       }.kpi-root .restaurant-btn:hover:not(.active){
+           background: rgba(88, 62, 4, 0.1);
+           transform: translateY(-1px);
+       }.kpi-root .restaurant-btn::before{
+           content: '';
+           position: absolute;
+           top: 0;
+           left: 0;
+           right: 0;
+           bottom: 0;
+           border-radius: 8px;
+           background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+           opacity: 0;
+           transition: opacity 0.3s ease;
+       }.kpi-root .restaurant-btn.active::before{
+           opacity: 1;
+       }.kpi-root /* 总计按钮特殊样式 - 未激活时透明 */
+       .restaurant-btn[data-restaurant="total"]{
+           font-weight: 700;
+       }.kpi-root /* 总计按钮默认状态（未激活） - 透明背景 */
+       .restaurant-btn[data-restaurant="total"]:not(.active){
+           background: transparent !important;
+           color: #583e04 !important;
+           transform: none !important;
+           box-shadow: none !important;
+           text-shadow: none !important;
+       }.kpi-root /* 总计按钮激活状态 */
+       .restaurant-btn[data-restaurant="total"].active{
+           background: linear-gradient(135deg, #583e04, #805906) !important;
+           color: white !important;
+           box-shadow: 0 4px 16px rgba(88, 62, 4, 0.4) !important;
+           transform: translateY(-2px) !important;
+           text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+       }.kpi-root /* 总计按钮悬停状态（仅在非激活时） */
+       .restaurant-btn[data-restaurant="total"]:not(.active):hover{
+           background: rgba(88, 62, 4, 0.1) !important;
+           color: #583e04 !important;
+           transform: translateY(-1px) !important;
+           box-shadow: none !important;
+           text-shadow: none !important;
+       }.kpi-root /* 下拉菜单样式 */
+       .dropdown{
+           position: relative;
+           display: inline-block;
+       }.kpi-root .dropdown-toggle{
+           display: flex;
+           align-items: center;
+           font-size: clamp(8px, 0.74vw, 14px);
+           gap: 8px;
+       }.kpi-root .dropdown-menu{
+           display: none;
+           position: absolute;
+           top: 100%;
+           left: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 8px;
+           box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+           z-index: 1000;
+           width: 100%;
+           /* 改为固定 100% 宽度 */
+           box-sizing: border-box;
+           /* 确保边框不会增加宽度 */
+       }.kpi-root .dropdown-menu.show{
+           display: block;
+       }.kpi-root .dropdown-item{
+           display: block;
+           width: 100%;
+           padding: clamp(6px, 0.52vw, 10px) clamp(10px, 1.04vw, 20px);
+           border: none;
+           background: transparent;
+           color: #000000ff;
+           cursor: pointer;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 600;
+           text-align: left;
+           transition: background-color 0.2s;
+       }.kpi-root .dropdown-item:hover{
+           background-color: rgba(88, 62, 4, 0.1);
+       }.kpi-root .dropdown-item:first-child{
+           border-radius: 6px 6px 0 0;
+       }.kpi-root .dropdown-item:last-child{
+           border-radius: 0 0 6px 6px;
+       }.kpi-root .card{
+           background: rgba(255, 255, 255, 1);
+           border-radius: 8px;
+           box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+           border: 1px solid #e5e7eb;
+       }.kpi-root .card-body{
+           padding: clamp(5.5px, 0.7vw, 13.5px) clamp(14px, 1.25vw, 24px);
+       }.kpi-root .grid{
+           display: grid;
+           gap: 24px;
+       }.kpi-root .grid-cols-2{
+           grid-template-columns: repeat(2, 1fr);
+       }.kpi-root .grid-cols-3{
+           grid-template-columns: repeat(3, 1fr);
+       }.kpi-root /* KPI 网格 - 改为单行6列 */
+       .kpi-grid{
+           display: grid;
+           grid-template-columns: repeat(6, 1fr);
+           gap: 16px;
+           margin-bottom: clamp(14px, 1.67vw, 32px);
+       }.kpi-root /* 图表容器 - 改为全宽 */
+       .main-chart-container{
+           display: flex;
+           flex-direction: column;
+           margin-bottom: clamp(16px, 1.67vw, 32px);
+       }.kpi-root /* 下方图表网格 - 现在只有一个图表 */
+       .bottom-charts{
+           display: grid;
+           grid-template-columns: 1fr 1fr;
+           gap: 24px;
+       }.kpi-root .kpi-card{
+           display: flex;
+           align-items: center;
+           gap: 12px;
+       }.kpi-root .kpi-card .icon{
+           width: 40px;
+           height: 40px;
+           font-size: 24px;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           flex-shrink: 0;
+       }.kpi-root .kpi-card-vertical{
+           display: flex;
+           flex-direction: column;
+           align-items: left;
+           text-align: left;
+           gap: 0px;
+       }.kpi-root .kpi-card-vertical .icon{
+           width: 50px;
+           height: 50px;
+           font-size: clamp(20px, 1.5vw, 28px);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           flex-shrink: 0;
+           margin-bottom: clamp(0px, 0.21vw, 4px);
+       }.kpi-root .kpi-card-vertical .kpi-label{
+           font-size: clamp(10px, 0.84vw, 16px);
+           color: #000000;
+           font-weight: bold;
+           margin-bottom: 0px;
+       }.kpi-root .kpi-card-vertical .kpi-value{
+           font-size: clamp(16px, 1.25vw, 24px);
+           font-weight: bold;
+           color: #111827;
+       }.kpi-root .kpi-value{
+           font-size: 1.75rem;
+           font-weight: bold;
+           color: #111827;
+           margin-bottom: 2px;
+       }.kpi-root .kpi-label{
+           font-size: 15px;
+           color: #000000;
+           font-weight: bold;
+       }.kpi-root .table{
+           width: 100%;
+           border-collapse: collapse;
+       }.kpi-root .table th, .kpi-root .table td{
+           font-size: clamp(8px, 0.74vw, 14px);
+           padding: 12px clamp(6px, 1vw, 24px);
+           text-align: left;
+           border-bottom: 1px solid #e5e7eb;
+       }.kpi-root .table th{
+           background-color: rgba(255, 255, 255, 1);
+           font-weight: bold;
+           font-size: clamp(8px, 0.74vw, 14px);
+           color: #000000ff;
+           text-transform: uppercase;
+           letter-spacing: 0.8px;
+       }.kpi-root .table tbody tr:hover{
+           background-color: #f9fafb;
+       }.kpi-root .form-label{
+           display: block;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: bold;
+           color: #000000ff;
+           margin-bottom: 8px;
+       }.kpi-root .form-input{
+           width: 100%;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           padding: 8px 12px;
+           font-size: 14px;
+           transition: all 0.2s;
+           font-family: "Segoe UI", sans-serif;
+       }.kpi-root .form-input:focus{
+           outline: none;
+           border-color: #3b82f6;
+           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+       }.kpi-root /* 改进的日期选择器样式 */
+       .enhanced-date-picker{
+           display: flex;
+           align-items: center;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           padding: clamp(2px, 0.31vw, 6px) clamp(0px, 0.21vw, 4px);
+           gap: 0px;
+           min-width: 100px;
+           transition: all 0.2s;
+           position: relative;
+       }.kpi-root .enhanced-date-picker:focus-within{
+           border-color: #3b82f6;
+           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+       }.kpi-root .enhanced-date-picker:hover{
+           border-color: #9ca3af;
+       }.kpi-root /* 月份选择器的特殊样式 - 更小的宽度 */
+       .enhanced-date-picker.month-only{
+           min-width: clamp(80px, 6.77vw, 130px);
+       }.kpi-root /* 日期选择部分 */
+       .date-part{
+           position: relative;
+           cursor: pointer;
+           padding: 0px clamp(2px, 0.42vw, 8px);
+           border-radius: 4px;
+           transition: all 0.2s;
+           text-align: center;
+           user-select: none;
+           background: transparent;
+           border: 1px solid transparent;
+           font-size: clamp(8px, 0.74vw, 14px);
+           color: #374151;
+       }.kpi-root .date-part:hover{
+           background-color: #f3f4f6;
+           border-color: #d1d5db;
+       }.kpi-root .date-part.active{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.kpi-root .date-separator{
+           color: #9ca3af;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+           user-select: none;
+           margin: 0 2px;
+       }.kpi-root /* 下拉选择面板 */
+       .date-dropdown{
+           position: absolute;
+           top: 120%;
+           left: 0;
+           right: 0;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+           z-index: 1000;
+           margin-top: 4px;
+           max-height: 220px;
+           overflow-y: auto;
+           display: none;
+       }.kpi-root .date-dropdown.show{
+           display: block;
+           animation: dropdownFadeIn 0.2s ease-out;
+       }@keyframes dropdownFadeIn{.kpi-root from{
+               opacity: 0;
+               transform: translateY(-5px);
+           }.kpi-root to{
+               opacity: 1;
+               transform: translateY(0);
+           }
+       }.kpi-root /* 年份选择网格 */
+       .year-grid{
+           display: grid;
+           grid-template-columns: repeat(4, 1fr);
+           gap: clamp(0px, 0.21vw, 4px);
+           padding: clamp(2px, 0.36vw, 8px);
+       }.kpi-root /* 月份选择网格 */
+       .month-grid{
+           display: grid;
+           grid-template-columns: repeat(4, 1fr);
+           gap: clamp(0px, 0.21vw, 4px);
+           padding: clamp(4px, 0.42vw, 8px);
+       }.kpi-root /* 日期选择网格 */
+       .day-grid{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 0px;
+           padding: 2px;
+       }.kpi-root /* 选择项通用样式 */
+       .date-option{
+           padding: clamp(1px, 0.1vw, 2px);
+           text-align: center;
+           cursor: pointer;
+           border-radius: clamp(4px, 0.31vw, 6px);
+           transition: all 0.2s;
+           font-size: clamp(6px, 0.63vw, 12px);
+           color: #374151;
+           background: transparent;
+           border: 1px solid transparent;
+       }.kpi-root .date-option:hover{
+           background-color: #f3f4f6;
+           border-color: #d1d5db;
+       }.kpi-root .date-option.selected{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.kpi-root .date-option.today.selected{
+           background-color: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.kpi-root /* 日期网格的星期标题 */
+       .day-header{
+           padding: clamp(2px, 0.21vw, 4px);
+           text-align: center;
+           font-size: clamp(6px, 0.63vw, 12px);
+           color: #6b7280;
+           font-weight: 600;
+       }.kpi-root /* 日期控制区域 */
+       .date-controls{
+           display: flex;
+           flex-wrap: wrap;
+           gap: clamp(10px, 1.5vw, 30px);
+           align-items: center;
+       }.kpi-root /* 日期信息样式 */
+       .date-info{
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: bold;
+           color: #6b7280;
+           padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+           background: rgba(255, 255, 255, 1);
+           border-radius: 6px;
+       }.kpi-root /* 分隔线 */
+       .divider{
+           width: 1px;
+           height: 24px;
+           background-color: #583e04 !important;
+       }/* 响应式调整 */
+       @media (max-width: 768px){
+           .enhanced-date-picker {
+               min-width: auto;
+               width: 100%;
+           }
+
+           .enhanced-date-picker.month-only {
+               min-width: auto;
+               width: 100%;
+           }
+
+           .date-controls {
+               flex-direction: column;
+               align-items: stretch;
+               gap: 12px;
+           }
+       }.kpi-root .chart-container{
+           position: relative;
+           height: 300px;
+           width: 100%;
+       }.kpi-root /* 渐变背景样式 */
+       .mountain-gradient{
+           background: linear-gradient(180deg,
+                   rgba(88, 62, 4, 0.3) 0%,
+                   rgba(88, 62, 4, 0.1) 50%,
+                   rgba(88, 62, 4, 0.05) 100%);
+       }.kpi-root .text-green{
+           color: #000000ff;
+       }.kpi-root .text-blue{
+           color: #583e04;
+       }.kpi-root .text-purple{
+           color: #583e04;
+       }.kpi-root .text-red{
+           color: #583e04;
+       }.kpi-root .text-orange{
+           color: #583e04;
+       }.kpi-root .loading{
+           display: inline-block;
+           width: 20px;
+           height: 20px;
+           border: 3px solid #f3f3f3;
+           border-top: 3px solid #3498db;
+           border-radius: 50%;
+           animation: spin 1s linear infinite;
+       }@keyframes spin{.kpi-root 0%{
+               transform: rotate(0deg);
+           }.kpi-root 100%{
+               transform: rotate(360deg);
+           }
+       }.kpi-root .alert{
+           padding: 12px 16px;
+           margin-bottom: 16px;
+           border-radius: 8px;
+           font-size: 14px;
+       }.kpi-root .alert-success{
+           background-color: #d1fae5;
+           color: #065f46;
+           border: 1px solid #a7f3d0;
+       }.kpi-root .alert-error{
+           background-color: #fee2e2;
+           color: #991b1b;
+           border: 1px solid #fca5a5;
+       }.kpi-root /* 餐厅特定的颜色主题 */
+       .restaurant-j1{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.kpi-root .restaurant-j2{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.kpi-root .restaurant-j3{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.kpi-root .restaurant-total{
+           --primary-color: #583e04;
+           --secondary-color: #805906;
+       }.kpi-root /* 动态应用颜色 */
+       .dynamic-color{
+           color: #000000 !important;
+       }.kpi-root .dynamic-bg{
+           background-color: var(--primary-color) !important;
+       }.kpi-root .dynamic-border{
+           border-color: var(--primary-color) !important;
+       }.kpi-root .chart-back-button{
+           position: absolute;
+           top: -50px;
+           right: 250px;
+           background: #583e04;
+           color: white;
+           border: none;
+           padding: 8px 12px;
+           border-radius: 6px;
+           cursor: pointer;
+           font-size: 12px;
+           z-index: 10;
+           display: none;
+           align-items: center;
+           gap: 4px;
+           transition: all 0.2s ease;
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+       }.kpi-root .chart-back-button:hover{
+           background: #6b4a05;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+       }.kpi-root .chart-back-button i{
+           font-size: 10px;
+       }.kpi-root .chart-container{
+           position: relative;
+       }.kpi-root .date-range-display{
+           margin-top: 10px;
+           background: #f9fafb;
+           padding: 6px 12px;
+           border-radius: 6px;
+           border: 1px solid #e5e7eb;
+           white-space: nowrap;
+       }@media (max-width: 768px){.kpi-root .chart-header{
+               flex-direction: column;
+               align-items: flex-start !important;
+               gap: 8px;
+           }.kpi-root .date-range-display{
+               font-size: 12px;
+           }
+       }.kpi-root /* 2. 添加按钮样式CSS */
+       .chart-data-buttons{
+           display: flex;
+           gap: 8px;
+           align-items: center;
+       }.kpi-root .chart-data-btn{
+           padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+           border: 1px solid #d1d5db;
+           background: white;
+           color: #6b7280;
+           border-radius: 6px;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+           cursor: pointer;
+           transition: all 0.2s ease;
+           white-space: nowrap;
+       }.kpi-root .chart-data-btn:hover{
+           background: #f9fafb;
+           border-color: #9ca3af;
+           color: #4b5563;
+       }.kpi-root .chart-data-btn.active{
+           background: #f99e00;
+           color: white;
+           border-color: #f99e00;
+       }.kpi-root .chart-data-btn.active:hover{
+           background: #f98500ff;
+           border-color: #f98500ff;
+       }.kpi-root /* 报表类型选择器样式 - 与 stockeditall.php 一致 */
+       .report-type-selector{
+           position: relative;
+           display: inline-block;
+       }.kpi-root .report-type-btn{
+           background-color: #ff9e00;
+           color: white;
+           font-weight: 500;
+           padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+           border-radius: 8px;
+           border: none;
+           cursor: pointer;
+           font-size: clamp(10px, 0.73vw, 14px);
+           display: inline-flex;
+           align-items: center;
+           gap: 8px;
+           transition: all 0.2s;
+           justify-content: space-between;
+           position: relative;
+       }.kpi-root .report-type-btn:hover{
+           background-color: #f98500ff;
+           border-radius: 8px;
+           transform: translateY(-1px);
+           box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2);
+       }.kpi-root .report-dropdown-menu{
+           position: absolute;
+           top: 96%;
+           left: 0;
+           background: white;
+           border: 2px solid #000000ff;
+           border-radius: 8px;
+           width: clamp(116px, 8.3vw, 160px);
+           box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2);
+           z-index: 1000;
+           display: none;
+       }.kpi-root .report-dropdown-menu.show{
+           display: block;
+       }.kpi-root .report-dropdown-item{
+           padding: clamp(6px, 0.52vw, 10px) clamp(14px, 0.83vw, 16px);
+           color: #583e04;
+           text-decoration: none;
+           display: block;
+           font-size: clamp(10px, 0.73vw, 14px);
+           border-bottom: 1px solid #f3f4f6;
+           transition: background-color 0.2s;
+       }.kpi-root .report-dropdown-item:hover{
+           background-color: #f0f9ff;
+           color: #ff9e00;
+       }.kpi-root .report-dropdown-item:last-child{
+           border-bottom: none;
+       }.kpi-root /* 日历选择器样式 */
+       .date-range-picker{
+           display: flex;
+           align-items: center;
+           gap: clamp(4px, 0.42vw, 8px);
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: clamp(4px, 0.42vw, 8px);
+           padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+           cursor: pointer;
+           transition: all 0.2s;
+           position: relative;
+           min-width: clamp(180px, 15.63vw, 300px);
+           z-index: 1;
+       }.kpi-root .date-range-picker:hover{
+           border-color: #f99e00;
+           box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.1);
+       }.kpi-root .date-range-picker i{
+           color: #f99e00;
+           font-size: clamp(8px, 0.74vw, 14px);
+           margin: 0 clamp(2px, 0.32vw, 6px);
+       }.kpi-root .date-range-picker span{
+           color: #374151;
+           font-size: clamp(8px, 0.74vw, 14px);
+           font-weight: 500;
+       }.kpi-root .calendar-popup{
+           position: fixed;
+           background: white;
+           border: 1px solid #d1d5db;
+           border-radius: 8px;
+           box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+           z-index: 99999;
+           padding: clamp(8px, 0.83vw, 16px);
+           min-width: clamp(180px, 15.63vw, 300px);
+           max-height: 350px;
+           overflow: visible;
+       }.kpi-root .calendar-header{
+           display: flex;
+           align-items: center;
+           justify-content: space-between;
+           margin-bottom: 10px;
+       }.kpi-root .calendar-nav-btn{
+           background: transparent;
+           border: 0px solid #d1d5db;
+           border-radius: 4px;
+           width: clamp(20px, 1.25vw, 24px);
+           height: clamp(20px, 1.25vw, 24px);
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           cursor: pointer;
+           transition: all 0.2s;
+       }.kpi-root .calendar-nav-btn:hover{
+           background-color: #f3f4f6;
+           border-color: #f99e00;
+       }.kpi-root .calendar-nav-btn i{
+           color: #374151;
+           font-size: clamp(7px, 0.57vw, 11px);
+       }.kpi-root .calendar-month-year{
+           display: flex;
+           align-items: center;
+           gap: 4px;
+       }.kpi-root .calendar-month-year select{
+           border: 1px solid #d1d5db;
+           border-radius: 4px;
+           padding: clamp(2px, 0.21vw, 4px) clamp(4px, 0.31vw, 6px);
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 600;
+           color: #000000ff;
+           background: white;
+           cursor: pointer;
+           transition: all 0.2s;
+       }.kpi-root .calendar-month-year select:hover{
+           border-color: #f99e00;
+       }.kpi-root .calendar-month-year select:focus{
+           outline: none;
+           border-color: #f99e00;
+           box-shadow: 0 0 0 2px rgba(249, 158, 0, 0.1);
+       }.kpi-root .calendar-weekdays{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 2px;
+           margin-bottom: 4px;
+       }.kpi-root .calendar-weekday{
+           text-align: center;
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 600;
+           color: #898989;
+           padding: clamp(2px, 0.21vw, 4px) 0;
+       }.kpi-root .calendar-days{
+           display: grid;
+           grid-template-columns: repeat(7, 1fr);
+           gap: 0px;
+       }.kpi-root .calendar-day{
+           aspect-ratio: 1;
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           border-radius: 6px;
+           font-size: clamp(8px, 0.63vw, 12px);
+           font-weight: 500;
+           cursor: pointer;
+           transition: all 0.2s;
+           color: #000000ff;
+           background: transparent;
+           border: 1px solid transparent;
+           position: relative;
+           padding: 4px;
+       }.kpi-root .calendar-day:hover{
+           background-color: #f3f4f6;
+       }.kpi-root .calendar-day.today{
+           border-color: #f99e00;
+           font-weight: 600;
+       }.kpi-root .calendar-day.selected{
+           background-color: #f99e00;
+           color: white;
+           font-weight: 600;
+       }.kpi-root .calendar-day.in-range{
+           background-color: rgba(249, 158, 0, 0.2);
+           color: #374151;
+           border-radius: 0px;
+       }.kpi-root .calendar-day.start-date{
+           background-color: #f99e00;
+           color: white;
+           border-radius: 6px 0 0 6px;
+       }.kpi-root .calendar-day.end-date{
+           background-color: #f99e00;
+           color: white;
+           border-radius: 0 6px 6px 0;
+       }.kpi-root .calendar-day.start-date.end-date{
+           border-radius: 6px;
+       }.kpi-root .calendar-day.start-date.selecting{
+           border-radius: 6px;
+       }.kpi-root .calendar-day.preview-range{
+           background-color: rgba(249, 158, 0, 0.15);
+           color: #374151;
+           border-radius: 0px;
+       }.kpi-root .calendar-day.preview-end{
+           background-color: rgba(249, 158, 0, 0.4);
+           color: #374151;
+           font-weight: 600;
+           border: 1px dashed #f99e00;
+       }.kpi-root .calendar-day.other-month{
+           color: #d1d5db;
+       }.kpi-root .calendar-day.disabled{
+           color: #d1d5db;
+           cursor: not-allowed;
+       }.kpi-root .calendar-day.disabled:hover{
+           background-color: transparent;
+       }
+/* 对齐线上：数字选择区默认隐藏，点字母后由 .show 淡入 */
+.kpi-root .number-selection.show {
+  visibility: visible;
+  opacity: 1;
+}

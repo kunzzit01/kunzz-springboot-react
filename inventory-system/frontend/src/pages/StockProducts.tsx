@@ -1,0 +1,548 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms } from '../api'
+import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
+import '../styles/stockproducts.css'
+
+interface ProductRow {
+  id?: number
+  date?: string
+  time?: string
+  product_code?: string
+  product_name?: string
+  specification?: string
+  category?: string
+  supplier?: string
+  applicant?: string
+  approver?: string
+  system_assign?: string
+  freezer_category?: string
+}
+
+const SYSTEMS = [
+  { key: 'overview', label: '总览', value: '' },
+  { key: 'central', label: '中央', value: 'Central' },
+  { key: 'j1', label: 'J1', value: 'J1' },
+  { key: 'j2', label: 'J2', value: 'J2' },
+  { key: 'j3', label: 'J3', value: 'J3' },
+]
+const VIEW_NAMES: Record<string, string> = { list: '总库存', records: '进出货', remark: '货品备注', product: '货品种类', sot: '货品异常' }
+
+const SPEC_OPTIONS = ['Tub', 'Kilo', 'Piece', 'Bottle', 'Box', 'Packet', 'Carton', 'Tin', 'Roll', 'Nos', 'mL', 'Glass']
+const CATEGORY_OPTIONS = ['Service Line', 'Sake', 'Kitchen', 'Sushi Bar']
+const SYSTEM_OPTIONS = [
+  { value: 'Central', label: '中央' },
+  { value: 'J1', label: 'J1' },
+  { value: 'J2', label: 'J2' },
+  { value: 'J3', label: 'J3' },
+]
+const FREEZER_OPTIONS = ['K1-1', 'K1-2', 'K1-3', 'K1-4', 'K1-5', 'K1-6', 'K1-7', 'C-1', 'KDI-1', 'KDI-2', 'KDI-3', 'KDI-4', 'S1-1', 'S1-2', 'S1-3', 'S1-4', 'SBS-1', 'SBS-2', 'SBDI-1', 'SBDI-2']
+
+/** 多选单元格（system_assign / freezer_category） */
+function MultiSelect({ value, onChange, disabled, options }: { value?: string; onChange: (v: string) => void; disabled?: boolean; options: string[] }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const selected = (value || '').split(',').map(v => v.trim()).filter(Boolean)
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('click', h)
+    return () => document.removeEventListener('click', h)
+  }, [])
+  const toggle = (v: string) => {
+    const next = selected.includes(v) ? selected.filter(x => x !== v) : [...selected, v]
+    onChange(next.join(','))
+  }
+  return (
+    <div ref={ref} style={{ position: 'relative', width: '100%' }}>
+      <div
+        className="multiselect-trigger"
+        onClick={(e) => { if (!disabled) { e.stopPropagation(); setOpen(!open) } }}
+        style={{
+          width: '100%', height: 'clamp(30px, 2.08vw, 40px)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', gap: 6, cursor: disabled ? 'not-allowed' : 'pointer',
+          background: disabled ? '#f9fafb' : '#f0fdf4', fontSize: 'clamp(8px,0.74vw,14px)',
+          color: '#374151', padding: '0 8px', userSelect: 'none',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected.length > 0 ? selected.join(', ') : '选择'}
+        </span>
+        {!disabled && <i className="fas fa-chevron-down" style={{ fontSize: 10, flexShrink: 0 }} />}
+      </div>
+      {open && !disabled && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, zIndex: 1000, background: '#fff',
+          border: '1px solid #d1d5db', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          minWidth: 150, maxHeight: 220, overflow: 'auto', marginTop: 2,
+        }}>
+          {options.map(v => (
+            <div key={v} onClick={() => toggle(v)}
+              style={{ padding: '6px 12px', cursor: 'pointer', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}
+              onMouseEnter={e => (e.currentTarget.style.background = '#f8f5eb')}
+              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
+              <input type="checkbox" checked={selected.includes(v)} readOnly style={{ pointerEvents: 'none' }} />
+              {v}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function StockProducts() {
+  const navigate = useNavigate()
+  // 从 URL 读取系统（对齐 ?system=overview）
+  const urlSystem = new URL(window.location.href).searchParams.get('system')
+  const [system, setSystem] = useState(urlSystem && SYSTEMS.some(s => s.key === urlSystem) ? urlSystem : 'overview')
+  const [viewOpen, setViewOpen] = useState(false)
+  const [sysOpen, setSysOpen] = useState(false)
+  const [rows, setRows] = useState<ProductRow[]>([])
+  // 新增保存后定位高亮（按货品名）
+  const { flash, isHl } = useRowHighlight((r: any) => String(r.product_name))
+  const [newRows, setNewRows] = useState<ProductRow[]>([])
+  // 编辑已有行（对齐 toggleEdit：编辑/保存单行）
+  const [editing, setEditing] = useState<Set<number>>(new Set())
+  const [drafts, setDrafts] = useState<Record<number, ProductRow>>({})
+  const [kw, setKw] = useState('')
+  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [approvingId, setApprovingId] = useState<number | null>(null)
+  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState('')
+  const [showTop, setShowTop] = useState(false)
+  // 页面权限（对齐旧系统 check_permissions.php：无记录时默认全部可用，兼容 demo）
+  const [canApply, setCanApply] = useState(true)
+  const [canApprove, setCanApprove] = useState(true)
+  const [allowedSystems, setAllowedSystems] = useState<string[]>([])
+  const [allowedViews, setAllowedViews] = useState<string[]>([])
+  const searchRef = useRef<HTMLInputElement>(null)
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showMsg = (msg: string, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  // 当前用户（对齐 CURRENT_USER_APPLICANT：nickname > username_cn > username）
+  useEffect(() => {
+    getMe().then((u: any) => setCurrentUser(u?.displayName || u?.username || '')).catch(() => {})
+    // 页面权限：无配置（demo）默认全部可用；有配置则按 views/systems 控制（对齐 check_permissions.php）
+    getStockPerms().then((p: any) => {
+      const hasConfig = (p?.views || []).length > 0 || (p?.systems || []).length > 0
+      if (hasConfig) {
+        setCanApply(!!p?.canApply)
+        setCanApprove(!!p?.canApprove)
+        setAllowedSystems(p?.systems || [])
+        setAllowedViews(p?.views || [])
+      }
+    }).catch(() => {})
+  }, [])
+
+  const load = async () => {
+    setLoading(true)
+    try {
+      const d = await getStockProducts(system === 'overview' ? '' : system, kw || undefined)
+      // 对齐 generateStockTable：待批准在前、已批准在后，各自按产品名排序
+      const pending = (d.items || []).filter((i: any) => !i.approver)
+      const approved = (d.items || []).filter((i: any) => i.approver)
+      const sortByName = (a: any, b: any) => String(a.product_name || '').localeCompare(String(b.product_name || ''))
+      pending.sort(sortByName)
+      approved.sort(sortByName)
+      setRows([...pending, ...approved])
+      setEditing(new Set())
+      setDrafts({})
+      showMsg(`库存数据加载成功，共找到 ${d.total} 条记录`, 'success')
+    } catch {
+      setRows([])
+      showMsg('库存数据加载失败', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [system]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // smartSearch：点击外部且输入为空时折叠
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const t = e.target as HTMLElement
+      const w = document.querySelector('.sp-root .smartSearchWrapper')
+      if (w && w.contains(t)) return
+      if (!searchRef.current?.value) setSearchExpanded(false)
+    }
+    document.addEventListener('click', h)
+    return () => document.removeEventListener('click', h)
+  }, [])
+
+  // 统计（对齐 updateStats：总记录/已批准/待批准）
+  const stats = useMemo(() => {
+    const all = [...newRows, ...rows]
+    return {
+      total: all.length,
+      approved: all.filter(r => r.approver).length,
+      pending: all.filter(r => !r.approver).length,
+    }
+  }, [rows, newRows])
+
+  // 添加新行（对齐 addNewRow：系统分配默认当前系统，申请人默认当前用户）
+  const addRow = () => {
+    const sys = SYSTEMS.find(s => s.key === system)!
+    setNewRows(prev => [...prev, {
+      id: undefined,
+      product_code: '', product_name: '', specification: '', category: '',
+      supplier: '', applicant: currentUser || '', approver: '',
+      system_assign: system === 'overview' ? '' : sys.value,
+      freezer_category: '',
+    }])
+    // 创建空行后自动滚动到待填写位置
+    setTimeout(() => {
+      const sc = document.querySelector('.table-scroll-container')
+      const rows = document.querySelectorAll('#excel-table tbody tr.new-row')
+      if (sc && rows.length) {
+        const last = rows[rows.length - 1]
+        sc.scrollTop = Math.max(0, (last as HTMLElement).offsetTop - (((document.querySelector('#excel-table thead') as HTMLElement | null)?.offsetHeight) || 40) - 8)
+      }
+    }, 200)
+  }
+
+  const setNew = (idx: number, patch: Partial<ProductRow>) => {
+    setNewRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r))
+  }
+
+  const removeNewRow = (idx: number) => setNewRows(prev => prev.filter((_, i) => i !== idx))
+
+  // 编辑已有行（对齐 toggleEdit：点编辑进入编辑模式，再点保存）
+  const startEdit = (r: ProductRow) => {
+    const id = r.id!
+    setEditing(prev => new Set(prev).add(id))
+    setDrafts(prev => ({ ...prev, [id]: { ...r } }))
+  }
+  const cancelEdit = (id: number) => {
+    setEditing(prev => { const n = new Set(prev); n.delete(id); return n })
+    setDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
+  const setDraft = (id: number, patch: Partial<ProductRow>) => {
+    setDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+  }
+  const saveEdit = async (id: number) => {
+    const d = drafts[id]
+    if (!d) return
+    try {
+      // 对齐 saveSingleRowData：总览页保持原批准状态；系统页编辑后清除批准状态需重新批准
+      const approver = system === 'overview' ? (d.approver || '') : ''
+      await updateStockProduct(id, { ...d, applicant: d.applicant || currentUser, approver })
+      cancelEdit(id)
+      await load()
+      showMsg('记录已保存', 'success')
+    } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+  }
+
+  // 删除行（对齐 deleteRow：确认 + DELETE）
+  const removeRow = async (r: ProductRow) => {
+    if (!window.confirm('确定要删除这行数据吗？此操作不可恢复！')) return
+    if (r.id) {
+      try {
+        await deleteStockProduct(r.id)
+        await load()
+        showMsg('行已删除', 'success')
+      } catch (e: any) { showMsg(e?.response?.data?.message || '删除失败', 'error') }
+    } else {
+      const idx = newRows.indexOf(r)
+      if (idx >= 0) removeNewRow(idx)
+      showMsg('行已删除', 'success')
+    }
+  }
+
+  // 保存所有数据（新行 POST + 编辑中的行 PUT，对齐 saveAllData）
+  const saveAll = async () => {
+    if (saving) return
+    const validNew = newRows.filter(r => r.product_code && r.product_name && r.specification && r.category && r.supplier)
+    const editIds = rows.filter(r => r.id && editing.has(r.id!))
+    if (validNew.length === 0 && editIds.length === 0) { showMsg('没有可保存的数据', 'error'); return }
+    setSaving(true)
+    try {
+      let count = 0
+      for (const r of validNew) { await createStockProduct(r); count++ }
+      for (const r of editIds) {
+        const d = drafts[r.id!] || r
+        const approver = system === 'overview' ? (d.approver || '') : ''
+        await updateStockProduct(r.id!, { ...d, applicant: d.applicant || currentUser, approver })
+        count++
+      }
+      setNewRows([])
+      setEditing(new Set())
+      setDrafts({})
+      await load()
+      if (validNew.length) {
+        flashAfterRow('.table-scroll-container', 'td:nth-child(3)', String(validNew[0].product_name), flash)
+      }
+      showMsg(`已保存 ${count} 条记录`, 'success')
+    } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
+  }
+
+  // 批准（对齐 approveRecord：确认 + loading）
+  const approve = async (r: ProductRow) => {
+    if (!r.id) return
+    if (!window.confirm('确定要批准这条记录吗？')) return
+    setApprovingId(r.id)
+    try {
+      await approveStockProduct(r.id, currentUser || 'admin')
+      await load()
+      showMsg('记录已批准', 'success')
+    } catch (e: any) { showMsg(e?.response?.data?.message || '批准失败', 'error') }
+    finally { setApprovingId(null) }
+  }
+
+  // 回到顶部按钮
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
+    const onScroll = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => setShowTop(window.pageYOffset > 150), 10)
+    }
+    window.addEventListener('scroll', onScroll)
+    return () => { window.removeEventListener('scroll', onScroll); clearTimeout(timer) }
+  }, [])
+
+  // 视图切换（对齐 switchView）
+  const goView = (k: string) => {
+    setViewOpen(false)
+    if (k === 'list') navigate('/records?system=' + system)
+    else if (k === 'records') navigate('/inout?system=' + system)
+    else if (k === 'remark') navigate('/remark?system=' + system)
+    else if (k === 'sot') navigate('/sot')
+  }
+
+  // 实时搜索（对齐旧系统 initRealTimeSearch：300ms 防抖自动搜索）
+  const onSearchInput = (v: string) => {
+    setKw(v)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => { load() }, 300)
+  }
+
+  // 输入框点击全选（对齐旧系统 handleInputFocus）
+  const selectAllOnFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => e.target.select(), 0)
+  }
+
+  const currentSys = SYSTEMS.find(s => s.key === system)!
+  const pageTitle = system === 'overview' ? '库存货品管理后台' : `库存货品管理后台 - ${currentSys.label}`
+  const statusColTitle = system === 'overview' ? '批准状态' : '状态'
+
+  // 单行可编辑单元格（编辑模式用）
+  const EditableInput = ({ id, field, value, placeholder }: { id: number; field: keyof ProductRow; value?: string; placeholder?: string }) => (
+    <input className="excel-input text-input" placeholder={placeholder} value={value || ''} onFocus={selectAllOnFocus}
+      onChange={(e) => setDraft(id, { [field]: e.target.value } as any)} />
+  )
+
+  return (
+    <div className="sp-root">
+      <div className="container">
+        <div className="header">
+          <div><h1>{pageTitle}</h1></div>
+          <div className="controls">
+            <div className="view-selector">
+              <button className="selector-button" onClick={() => setViewOpen(!viewOpen)}>
+                <span id="current-view">货品种类</span>
+                <i className="fas fa-chevron-down"></i>
+              </button>
+              <div className={'selector-dropdown' + (viewOpen ? ' show' : '')}>
+                {Object.entries(VIEW_NAMES).filter(([k]) => allowedViews.length === 0 || allowedViews.includes(k)).map(([k, v]) => (
+                  <div key={k} className={'dropdown-item' + (k === 'product' ? ' active' : '')} onClick={() => goView(k)}>{v}</div>
+                ))}
+              </div>
+            </div>
+            <div className="system-selector">
+              <button className="selector-button" onClick={() => setSysOpen(!sysOpen)}>
+                <span id="current-system">{currentSys.label}</span>
+                <i className="fas fa-chevron-down"></i>
+              </button>
+              <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
+                {SYSTEMS.filter(s => s.key === 'overview' || allowedSystems.length === 0 || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
+                  <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')} onClick={() => { setSysOpen(false); setSystem(s.key); window.history.replaceState(null, '', '/products?system=' + s.key) }}>{s.label}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="filter-bar">
+          <div className="filter-group">
+            <div className="filter-item">
+              <label>搜索货品</label>
+              <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
+                onClick={(e) => { if (!searchExpanded) { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) } }}>
+                <i className="fas fa-search smartSearch-icon"></i>
+                <input ref={searchRef} type="text" className="smartSearch-input" placeholder="输入关键字搜索..."
+                  onChange={(e) => onSearchInput(e.target.value)} />
+              </div>
+            </div>
+          </div>
+          <div className="filter-group">
+            {canApply && <button className="btn btn-success" onClick={addRow}><i className="fas fa-plus" /> 添加新记录</button>}
+            {canApply && (
+              <button className="btn btn-primary" onClick={saveAll} disabled={saving}>
+                {saving ? <><span className="loading" style={{ width: 14, height: 14, borderTopColor: '#fff' }} /> 保存中...</> : <><i className="fas fa-save" /> 保存所有数据</>}
+              </button>
+            )}
+            <div className="stats-info">
+              <div className="stat-item"><i className="fas fa-boxes" /> <span>总记录数: <span className="stat-value">{stats.total}</span></span></div>
+              <div className="stat-item"><i className="fas fa-check-circle" /> <span>已批准: <span className="stat-value" style={{ color: '#065f46' }}>{stats.approved}</span></span></div>
+              <div className="stat-item"><i className="fas fa-clock" /> <span>待批准: <span className="stat-value" style={{ color: '#92400e' }}>{stats.pending}</span></span></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="excel-container">
+          <div className="table-scroll-container">
+            <table className="excel-table" id="excel-table">
+              <thead>
+                <tr>
+                  <th style={{ minWidth: 50 }}>序号</th>
+                  <th style={{ minWidth: 110 }}>货品编号</th>
+                  <th style={{ minWidth: 180 }}>货品名字</th>
+                  <th style={{ minWidth: 110 }}>规格</th>
+                  <th style={{ minWidth: 120 }}>货品类型</th>
+                  <th style={{ minWidth: 130 }}>供应商</th>
+                  <th style={{ minWidth: 100 }}>申请人</th>
+                  <th style={{ minWidth: 130 }}>系统分配</th>
+                  <th style={{ minWidth: 130 }}>冰箱分类</th>
+                  <th style={{ minWidth: 100 }}>{statusColTitle}</th>
+                  <th style={{ minWidth: 90 }}>操作</th>
+                </tr>
+              </thead>
+              <tbody id="excel-tbody">
+                {/* 新行（可编辑） */}
+                {newRows.map((r, idx) => (
+                  <tr key={'new-' + idx} className="new-row">
+                    <td className="serial-number-cell">-</td>
+                    <td><input className="excel-input text-input" placeholder="货品编号" value={r.product_code || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { product_code: e.target.value })} /></td>
+                    <td><input className="excel-input text-input" placeholder="货品名称" value={r.product_name || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { product_name: e.target.value })} /></td>
+                    <td>
+                      <select className="excel-select" value={r.specification || ''} onChange={(e) => setNew(idx, { specification: e.target.value })}>
+                        <option value="">选择规格</option>
+                        {SPEC_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <select className="excel-select" value={r.category || ''} onChange={(e) => setNew(idx, { category: e.target.value })}>
+                        <option value="">选择类型</option>
+                        {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </td>
+                    <td><input className="excel-input text-input" placeholder="供应商名称" value={r.supplier || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { supplier: e.target.value })} /></td>
+                    <td><input className="excel-input text-input readonly" readOnly value={r.applicant || ''} placeholder="申请人" /></td>
+                    <td><MultiSelect value={r.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setNew(idx, { system_assign: v })} /></td>
+                    <td><MultiSelect value={r.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
+                    <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
+                    <td className="action-cell">
+                      <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
+                    </td>
+                  </tr>
+                ))}
+                {/* 已有行 */}
+                {rows.map((r, idx) => {
+                  const id = r.id!
+                  const isEditing = editing.has(id)
+                  const draft = drafts[id] || r
+                  return (
+                    <tr key={id} className={(r.approver ? 'status-approved' : 'status-pending') + (isEditing ? ' editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
+                      <td className="serial-number-cell">{idx + 1}</td>
+                      <td>
+                        {isEditing
+                          ? <EditableInput id={id} field="product_code" value={draft.product_code} placeholder="货品编号" />
+                          : <input className="excel-input text-input" readOnly value={r.product_code || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <EditableInput id={id} field="product_name" value={draft.product_name} placeholder="货品名称" />
+                          : <input className="excel-input text-input" readOnly value={r.product_name || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <select className="excel-select" value={draft.specification || ''} onChange={(e) => setDraft(id, { specification: e.target.value })}>
+                              <option value="">选择规格</option>
+                              {SPEC_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          : <input className="excel-input" readOnly value={r.specification || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <select className="excel-select" value={draft.category || ''} onChange={(e) => setDraft(id, { category: e.target.value })}>
+                              <option value="">选择类型</option>
+                              {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                          : <input className="excel-input" readOnly value={r.category || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <EditableInput id={id} field="supplier" value={draft.supplier} placeholder="供应商名称" />
+                          : <input className="excel-input text-input" readOnly value={r.supplier || ''} />}
+                      </td>
+                      <td><input className="excel-input text-input" readOnly value={draft.applicant || r.applicant || ''} /></td>
+                      <td>
+                        {isEditing
+                          ? <MultiSelect value={draft.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setDraft(id, { system_assign: v })} />
+                          : <input className="excel-input" readOnly value={r.system_assign || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <MultiSelect value={draft.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setDraft(id, { freezer_category: v })} />
+                          : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
+                      </td>
+                      <td style={{ padding: 8 }}>
+                        {r.approver ? (
+                          <span style={{ color: '#065f46', fontWeight: 600 }}>已批准</span>
+                        ) : canApprove ? (
+                          <button className="approve-btn" onClick={() => approve(r)} disabled={approvingId === id}>
+                            {approvingId === id ? '批准中...' : <><i className="fas fa-check" /> 批准</>}
+                          </button>
+                        ) : (
+                          <span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span>
+                        )}
+                      </td>
+                      <td className="action-cell">
+                        {canApply && (isEditing ? (
+                          <>
+                            <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存记录"><i className="fas fa-save" /></button>
+                            <button className="delete-row-btn" onClick={() => cancelEdit(id)} title="取消"><i className="fas fa-times" /></button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="edit-btn" onClick={() => startEdit(r)} title="编辑记录"><i className="fas fa-edit" /></button>
+                            <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
+                          </>
+                        ))}
+                      </td>
+                    </tr>
+                  )
+                })}
+                {!loading && rows.length === 0 && newRows.length === 0 && (
+                  <tr><td colSpan={11} style={{ padding: 40, color: '#6b7280' }}>暂无数据</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <button className={'back-to-top' + (showTop ? ' show' : '')} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="回到顶部">
+        <i className="fas fa-chevron-up" />
+      </button>
+
+      {toast && (
+        <div className="toast-container">
+          <div className={'toast toast-' + toast.type}>
+            <span className="toast-content">{toast.msg}</span>
+            <span className="toast-progress" />
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

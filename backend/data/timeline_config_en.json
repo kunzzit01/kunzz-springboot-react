@@ -1,0 +1,56 @@
+[ {
+  "title" : "Cook with Heart, Warm the Soul ✨",
+  "description1" : "Tokyo Japanese Cuisine opened its first branch in JB Mid Valley Southkey in 2022. Since our establishment, we have been dedicated to crafting dishes with heart and serving with sincerity.",
+  "description2" : "We hope that every customer who steps into Tokyo Japanese Cuisine feels the warmth of home and enjoys a pleasant and memorable dining experience.",
+  "image" : "timeline/timeline_rec_1761793456_3519_发展.webp",
+  "year" : "2022",
+  "month" : 9,
+  "created" : "2025-10-30 03:04:16",
+  "id" : "rec_1761793456_3519",
+  "updated" : "2025-10-30 04:01:53",
+  "image_url" : "/api/timeline-files/timeline_rec_1761793456_3519_发展.webp"
+}, {
+  "title" : "Standardized Management, Steady Progress \uD83C\uDF31",
+  "description1" : "Since its establishment in 2023, Kunzz Holdings Sdn Bhd has grown steadily, carrying both dreams and warmth. As a mission-driven holding group, we serve as a strong foundation and strategic guide for our subsidiaries.",
+  "description2" : "Through systematic management and long-term planning, we nurture and amplify every idea and dream, allowing them to shine brightly on the stage of our time.",
+  "image" : "timeline/timeline_rec_1761793896_2543_发展.webp",
+  "year" : "2023",
+  "month" : 12,
+  "created" : "2025-10-30 03:11:36",
+  "id" : "rec_1761793896_2543",
+  "updated" : "2025-10-30 03:47:55",
+  "image_url" : "/api/timeline-files/timeline_rec_1761793896_2543_发展.webp"
+}, {
+  "title" : "Tokyo Japanese Cuisine Central Kitchen Development",
+  "description1" : "Established in 2024 to support the Mid Valley branch, the Tokyo Japanese Cuisine Central Kitchen ensures consistent quality and efficient supply across all outlets.",
+  "description2" : "Now serving the Mid Valley, Paradigm Mall, and Desa Tebrau branches, it stands as a key pillar driving the brand’s quality and operational excellence.",
+  "image" : "timeline/timeline_rec_1761793901_2935_发展.webp",
+  "year" : "2024",
+  "month" : 9,
+  "created" : "2025-10-30 03:11:41",
+  "id" : "rec_1761793901_2935",
+  "updated" : "2025-10-30 03:48:01",
+  "image_url" : "/api/timeline-files/timeline_rec_1761793901_2935_发展.webp"
+}, {
+  "title" : "Delivering Deliciousness, Continuing Warmth \uD83D\uDE80",
+  "description1" : "In January 2025, Tokyo Japanese Cuisine proudly opened its second branch at JB Paradigm Mall — another significant milestone in our journey of growth.",
+  "description2" : "At Paradigm Mall, we continue to uphold our commitment to exquisite cuisine and heartfelt service, creating a warm and relaxing dining atmosphere where every guest can enjoy a comfortable and memorable experience.",
+  "image" : "timeline/timeline_rec_1761793907_5048_发展.webp",
+  "year" : "2025",
+  "month" : 1,
+  "created" : "2025-10-30 03:11:47",
+  "id" : "rec_1761793907_5048",
+  "updated" : "2025-10-30 03:48:08",
+  "image_url" : "/api/timeline-files/timeline_rec_1761793907_5048_发展.webp"
+}, {
+  "title" : "Tokyo Izakaya · A New Flavor Journey Begins \uD83C\uDF76\uD83D\uDD25",
+  "description1" : "Opening in October 2025 at Desa Tebrau, Tokyo Izakaya is the third branch of Tokyo Japanese Cuisine, bringing the relaxed charm of a traditional izakaya with more grilled dishes and drinks to enjoy.",
+  "description2" : "It's a cozy place to gather, drink, and share laughter — where warmth and flavor linger into the night.",
+  "image" : "timeline/timeline_rec_1761793913_7204_发展.webp",
+  "year" : "2025",
+  "month" : 10,
+  "created" : "2025-10-30 03:11:53",
+  "id" : "rec_1761793913_7204",
+  "updated" : "2025-10-30 03:48:15",
+  "image_url" : "/api/timeline-files/timeline_rec_1761793913_7204_发展.webp"
+} ]

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.DishwareTransferMapper">
+
+    <!--
+        转卖记录列表（对齐旧系统 transfer_records 接口）：
+        - shop_type=j1 → out(from=j1) + in(to=j1)，即该店的"转卖"与"来自"
+        - start_date/end_date 服务端日期过滤
+        - 联表返回 code_number / product_name / 餐厅名（进出列只显示店名）
+        注意：Map 返回值不做驼峰转换，字段统一用 SQL 别名给出 camelCase
+    -->
+    <select id="listTransfers" resultType="java.util.LinkedHashMap">
+        SELECT t.id,
+               t.dishware_id       AS dishwareId,
+               t.from_shop_type    AS fromShopType,
+               t.to_shop_type      AS toShopType,
+               t.quantity,
+               t.unit_price        AS unitPrice,
+               t.total_price       AS totalPrice,
+               t.transfer_date     AS transferDate,
+               t.record_type       AS recordType,
+               t.related_record_id AS relatedRecordId,
+               t.recorded_by       AS recordedBy,
+               i.code_number       AS codeNumber,
+               i.product_name      AS productName,
+               fr.name             AS fromRestaurantName,
+               tr.name             AS toRestaurantName
+        FROM dishware_transfer_records t
+        LEFT JOIN dishware_info i                ON i.id = t.dishware_id
+        LEFT JOIN dishware_restaurant_locations fr ON fr.id = t.from_restaurant_id
+        LEFT JOIN dishware_restaurant_locations tr ON tr.id = t.to_restaurant_id
+        WHERE 1 = 1
+        <if test="shopType != null and shopType != ''">
+            AND (
+                (t.record_type = 'out' AND LOWER(t.from_shop_type) = LOWER(#{shopType}))
+                OR (t.record_type = 'in' AND LOWER(t.to_shop_type) = LOWER(#{shopType}))
+            )
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND t.transfer_date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND t.transfer_date &lt;= #{endDate}
+        </if>
+        ORDER BY t.transfer_date DESC, t.id DESC
+    </select>
+
+</mapper>

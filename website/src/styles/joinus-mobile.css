@@ -1,0 +1,956 @@
+/* Join Us responsive — mobile pure-swiper (one swipe = one viewport) */
+
+@media (max-width: 1280px) {
+  .jobs-container {
+    gap: clamp(10px, 1.5vw, 20px);
+  }
+
+  .company-job-container {
+    width: clamp(200px, 28vw, 320px);
+  }
+
+  .job-section {
+    padding: clamp(50px, 6vw, 80px) clamp(20px, 3vw, 50px);
+  }
+
+  .benefits-wrapper .benefits-grid {
+    gap: clamp(8px, 1vw, 16px);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Shared spacing: 56px header + 10px gap below nav */
+  .vertical-swiper-shell:has(.join-swiper) {
+    --join-header-h: 56px;
+    --join-slide-gap: 10px;
+    --join-slide-top: calc(var(--join-header-h) + var(--join-slide-gap) + env(safe-area-inset-top, 0px));
+    --join-slide-bottom: max(68px, calc(12px + env(safe-area-inset-bottom, 0px)));
+    --join-slide-inline: max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  /* ── Pure swiper: lock Join page slides to one viewport (override index.css scroll mode) ── */
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide:not(.footer-slide):not(.swiper-slide--joinus-feedback-only):not(.swiper-slide--joinus-contact-only) {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide > section,
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide > .benefits-wrapper--full-slide,
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide > .job-section {
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.footer-slide {
+    height: auto !important;
+    min-height: 38vh !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.footer-slide .footer-scroll-buffer {
+    min-height: 38vh;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .comphoto-section,
+  .vertical-swiper-shell:has(.join-swiper) .job-section,
+  .vertical-swiper-shell:has(.join-swiper) .joinus-section {
+    width: 100%;
+    height: 100% !important;
+    min-height: 100% !important;
+    max-height: 100% !important;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide:has(.comphoto-section),
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide:has(.job-section),
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide:has(.joinus-section) {
+    background-color: transparent;
+    align-items: stretch;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.swiper-slide--joinus-contact-only,
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.swiper-slide--joinus-feedback-only {
+    --join-slide-bottom: 0px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    max-height: 100dvh !important;
+    overflow: hidden !important;
+    background-color: #ff5c00;
+    padding: var(--join-slide-top) var(--join-slide-inline) var(--join-slide-bottom);
+    box-sizing: border-box;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.swiper-slide--joinus-contact-only > .join-slide-card-center,
+  .vertical-swiper-shell:has(.join-swiper) .swiper-slide.swiper-slide--joinus-feedback-only > .join-slide-card-center {
+    flex: 0 0 auto !important;
+    width: min(100%, 440px) !important;
+    max-width: 440px !important;
+    margin: 0 !important;
+    align-self: center;
+  }
+
+  /* ── Hero-only slide ── */
+  .joinus-section--hero-only {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .joinus-section--hero-only .joinus-banner--full {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: var(--join-slide-top) 16px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    isolation: isolate;
+    position: relative;
+  }
+
+  .joinus-section--hero-only .joinus-banner--full::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(15, 15, 15, 0.35) 0%,
+      rgba(18, 18, 18, 0.5) 42%,
+      rgba(22, 22, 22, 0.62) 100%
+    );
+  }
+
+  .joinus-section--hero-only .joinus-content {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0;
+    transform: none;
+    position: relative;
+    z-index: 1;
+    padding: 0 8px;
+    box-sizing: border-box;
+  }
+
+  .joinus-section--hero-only .joinus-content h1 {
+    font-size: clamp(28px, 8vw, 48px);
+    margin: 0;
+    white-space: normal;
+  }
+
+  .joinus-section--hero-only .joinus-content p {
+    font-size: clamp(13px, 3.8vw, 16px);
+    line-height: 1.55;
+    margin: 14px 0 0;
+    white-space: normal;
+    filter: none;
+  }
+
+  .joinus-banner:not(.joinus-loaded) .joinus-content h1,
+  .joinus-banner:not(.joinus-loaded) .joinus-content p,
+  .joinus-banner.joinus-loaded .joinus-content h1,
+  .joinus-banner.joinus-loaded .joinus-content p {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  /* ── Benefits-only slide ── */
+  .benefits-wrapper--full-slide {
+    --join-slide-bottom: 26px;
+    background: url('/images/背景3.webp') no-repeat center center/cover;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--join-slide-top) 20px var(--join-slide-bottom);
+    text-align: center;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .benefits-wrapper--full-slide:not(.benefits-loaded) h2,
+  .benefits-wrapper--full-slide:not(.benefits-loaded) .benefit-item,
+  .benefits-wrapper--full-slide.benefits-loaded h2,
+  .benefits-wrapper--full-slide.benefits-loaded .benefit-item,
+  .benefits-wrapper:not(.benefits-loaded) h2,
+  .benefits-wrapper:not(.benefits-loaded) .benefit-item,
+  .benefits-wrapper.benefits-loaded h2,
+  .benefits-wrapper.benefits-loaded .benefit-item {
+    opacity: 1 !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  .benefits-wrapper--full-slide h2,
+  .benefits-wrapper h2 {
+    font-size: clamp(18px, 5vw, 28px);
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto 12px;
+    text-align: center;
+  }
+
+  .benefits-wrapper--full-slide .benefits-grid,
+  .benefits-wrapper .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+    row-gap: 16px;
+    max-width: 400px;
+    width: min(100%, 400px);
+    margin-inline: auto;
+    box-sizing: border-box;
+  }
+
+  .benefits-wrapper--full-slide .benefit-item,
+  .benefits-wrapper .benefit-item {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .benefits-wrapper--full-slide .benefit-item img,
+  .benefits-wrapper .benefit-item img {
+    width: clamp(80px, 12vw, 56px);
+    margin-bottom: 6px;
+  }
+
+  .benefits-wrapper--full-slide .benefit-item p,
+  .benefits-wrapper .benefit-item p {
+    font-size: clamp(13px, 3vw, 23px);
+    line-height: 1.3;
+    margin-bottom: 0;
+  }
+
+  /* Legacy combined slide (fallback if rendered) */
+  .joinus-section {
+    height: 100%;
+    min-height: 100%;
+    overflow: hidden;
+  }
+
+  .comphoto-section {
+    min-height: 100%;
+    width: 100%;
+    padding-top: 50px;
+    flex: 1 1 auto;
+    box-sizing: border-box;
+  }
+
+  /* ── Jobs: tabbed single company ── */
+  .job-section--mobile-pure {
+    --joinus-inline: var(--join-slide-inline);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: var(--join-slide-top) var(--joinus-inline) var(--join-slide-bottom) var(--joinus-inline);
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+
+  .job-section--mobile-pure .job-table-container:not(.job-table-loaded) .job-table-title,
+  .job-section--mobile-pure .job-table-container.job-table-loaded .job-table-title {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+
+  .job-section--mobile-pure .job-table-title {
+    font-size: clamp(18px, 5.5vw, 28px);
+    margin: 0 auto clamp(0.5rem, 2vw, 1rem);
+    flex-shrink: 0;
+  }
+
+  .jobs-company-tabs {
+    display: flex;
+    gap: 8px;
+    margin: 0 auto 10px;
+    width: min(100%, 400px);
+    flex-shrink: 0;
+  }
+
+  .jobs-company-tab {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+    border: 1.5px solid rgba(255, 92, 0, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.85);
+    color: #ff5c00;
+    font-size: clamp(11px, 3.2vw, 13px);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+    letter-spacing: 0.02em;
+  }
+
+  .jobs-company-tab.active {
+    background: linear-gradient(135deg, #ff5c00 0%, #ff7a33 100%);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 2px 10px rgba(255, 92, 0, 0.35);
+  }
+
+  .jobs-wrapper--tabbed {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: min(100%, 400px);
+    margin-inline: auto;
+    display: flex;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .jobs-wrapper--tabbed .company-job-container {
+    width: 100%;
+    max-width: none;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 10px;
+    box-sizing: border-box;
+  }
+
+  .jobs-wrapper--tabbed .company-jobs-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+
+  .jobs-wrapper--tabbed .company-title {
+    font-size: clamp(12px, 3.5vw, 15px);
+    margin-bottom: 6px;
+    flex-shrink: 0;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  .jobs-wrapper--tabbed .department-title {
+    font-size: clamp(0.75rem, 3.2vw, 0.95rem);
+    padding: 0.25rem 0.4rem;
+    margin-bottom: 3px;
+  }
+
+  .jobs-wrapper--tabbed .department-section {
+    margin-bottom: 3px;
+  }
+
+  .jobs-wrapper--tabbed .department-jobs {
+    gap: 4px 6px;
+  }
+
+  .jobs-wrapper--tabbed .job-item {
+    font-size: clamp(10px, 3vw, 13px);
+    padding: 0.35rem 0.4rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .job-section--mobile-pure .no-jobs {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  /* ── Contact + Feedback slides：Grid 居中，卡片随内容高度 ── */
+  .joinus-feedback--inline {
+    display: none !important;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .join-slide-card-center .joinus-feedback--inline {
+    display: none !important;
+  }
+
+  .vertical-swiper-shell:has(.join-swiper) .join-slide-card-center {
+    --contact-card-pad: 14px;
+    width: min(100%, 440px) !important;
+    max-width: 440px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--join-slide-top) - var(--join-slide-bottom)) !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    display: block !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    background: transparent !important;
+    box-sizing: border-box;
+  }
+
+  .join-slide-card-center.contact-form-section--contact-only,
+  .join-slide-card-center.contact-form-section--feedback-only {
+    display: block !important;
+    width: min(100%, 440px) !important;
+    max-width: 440px !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: calc(100dvh - var(--join-slide-top) - var(--join-slide-bottom)) !important;
+    padding: 0 !important;
+    background: transparent !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  .join-slide-card-center .contact-form-container,
+  .join-slide-card-center .contact-form-container--contact-only,
+  .join-slide-card-center .contact-form-container--feedback-only {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    flex: none !important;
+    flex-basis: auto !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    align-items: stretch !important;
+  }
+
+  .join-slide-card-center .contact-card--mobile,
+  .join-slide-card-center .contact-card.contact-card--mobile,
+  .join-slide-card-center .feedback-card:not(.joinus-feedback--inline) {
+    flex: none !important;
+    flex-basis: auto !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    border-radius: 16px;
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.12);
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    overflow: hidden !important;
+    box-sizing: border-box;
+    background: rgba(255, 255, 255, 0.97);
+  }
+
+  .join-slide-card-center .contact-card--mobile {
+    padding: 0;
+    overflow: hidden !important;
+    max-width: 100%;
+  }
+
+  .join-slide-card-center .feedback-card {
+    padding: 10px var(--contact-card-pad) 12px;
+  }
+
+  .join-slide-card-center .contact-map-embed {
+    position: relative;
+    isolation: isolate;
+    flex: 0 0 auto !important;
+    flex-basis: auto !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    width: 100%;
+    max-width: 100%;
+    height: clamp(210px, 36vh, 270px) !important;
+    min-height: 280px !important;
+    max-height: clamp(210px, 36vh, 270px) !important;
+    aspect-ratio: unset;
+    overflow: hidden !important;
+    background: #eee;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .join-slide-card-center .contact-map-embed iframe {
+    width: 100%;
+    max-width: 100%;
+    height: calc(100% + 52px);
+    margin-bottom: -52px;
+    display: block;
+    border: none;
+  }
+
+  .join-slide-card-center .contact-info-bottom {
+    flex: 0 0 auto !important;
+    flex-basis: auto !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    position: relative;
+    z-index: 2;
+    min-height: 0;
+    overflow: visible;
+    padding: 12px var(--contact-card-pad) 14px;
+    box-sizing: border-box;
+    border-top: 1px solid #f0f0f0;
+    background: rgba(255, 255, 255, 0.98);
+  }
+
+  .contact-info-bottom .contact-card-header {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .contact-info-bottom .contact-title {
+    text-align: center;
+    margin:5px 0 5px;
+    font-size: clamp(1.5rem, 3.2vw, 1.15rem);
+  }
+
+  .contact-info-bottom .contact-subtitle {
+    font-size: 0.62rem;
+    letter-spacing: 0.18em;
+  }
+
+  .contact-info-bottom .contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .contact-info-bottom .contact-detail-item {
+    display: grid !important;
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 2px;
+    align-items: start;
+    width: 100%;
+    min-width: 0;
+    padding: 8px 0;
+    border-right: none;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-sizing: border-box;
+  }
+
+  .contact-info-bottom .contact-detail-item:nth-child(1),
+  .contact-info-bottom .contact-detail-item:nth-child(2),
+  .contact-info-bottom .contact-detail-item:nth-child(3),
+  .contact-info-bottom .contact-detail-item:nth-child(4) {
+    flex: unset !important;
+    display: grid !important;
+    width: 100%;
+  }
+
+  .contact-info-bottom .contact-detail-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .contact-info-bottom .contact-icon {
+    width: 32px;
+    height: 32px;
+    margin-top: 1px;
+  }
+
+  .contact-info-bottom .contact-icon svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  .contact-info-bottom .contact-label {
+    font-size: 0.62rem;
+    letter-spacing: 0.05em;
+  }
+
+  .contact-info-bottom .contact-detail-text {
+    min-width: 0;
+    overflow: hidden;
+    text-align: left;
+  }
+
+  .contact-info-bottom .contact-detail-text span:not(.contact-label),
+  .contact-info-bottom .contact-detail-text a {
+    font-size: clamp(0.72rem, 3.1vw, 0.85rem);
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  
+  /* ── Feedback-only slide 表单字段（scoped under join-slide-card-center） ── */
+  .join-slide-card-center .feedback-title {
+    font-size: clamp(1.5rem, 3.2vw, 1.15rem);
+    text-align: center;
+    margin: 5px 0 5px;
+  }
+
+  .join-slide-card-center .feedback-subtitle {
+    font-size: 0.68rem;
+    line-height: 1.3;
+    text-align: center;
+    margin: 0 0 6px;
+  }
+
+  .join-slide-card-center #feedbackForm,
+  .join-slide-card-center #feedbackFormMobile {
+    display: block !important;
+    width: 100%;
+    height: auto !important;
+    flex: none !important;
+    overflow: visible;
+    box-sizing: border-box;
+  }
+
+  .join-slide-card-center .fb-form-row {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .join-slide-card-center .fb-field {
+    width: 100%;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+  }
+
+  .join-slide-card-center .fb-form-row .fb-field {
+    margin-bottom: 5px;
+  }
+
+  .join-slide-card-center .fb-field-wide {
+    flex: 1.6 1 0 !important;
+    min-width: 0;
+    width: auto;
+  }
+
+  .join-slide-card-center .fb-field-narrow {
+    flex: 1 1 0 !important;
+    min-width: 72px;
+    width: auto;
+  }
+
+  .join-slide-card-center .fb-field label {
+    font-size: 0.72rem;
+    margin-bottom: 2px;
+  }
+
+  .join-slide-card-center .fb-field input[type='text'],
+  .join-slide-card-center .fb-field input[type='email'],
+  .join-slide-card-center .fb-field input[type='tel'],
+  .join-slide-card-center .fb-field select,
+  .join-slide-card-center .fb-field textarea {
+    width: 100%;
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 16px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  .join-slide-card-center .fb-field textarea {
+    min-height: 52px;
+    max-height: none;
+    resize: none;
+  }
+
+  .join-slide-card-center .fb-gender-options {
+    height: 38px;
+    min-height: 38px;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+  }
+
+  .join-slide-card-center .fb-gender-options label {
+    font-size: 0.75rem;
+    margin-bottom: 0 !important;
+    white-space: nowrap;
+  }
+
+  .join-slide-card-center .fb-phone-row {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .join-slide-card-center .fb-phone-row select {
+    flex: 0 0 82px !important;
+    width: 82px;
+    min-width: 82px;
+    max-width: 82px;
+    padding-left: 6px;
+    padding-right: 4px;
+  }
+
+  .join-slide-card-center .fb-phone-row input {
+    flex: 1 1 auto !important;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .join-slide-card-center .fb-submit-btn {
+    width: 100%;
+    min-height: 46px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    line-height: 1.2;
+    color: #fff !important;
+    -webkit-text-fill-color: #fff;
+    margin: 8px 0 0;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 10px;
+    box-sizing: border-box;
+    display: block;
+    cursor: pointer;
+    background: linear-gradient(135deg, #ff5c00 0%, #ff8c00 50%, #ff5c00 100%);
+    box-shadow: 0 4px 14px rgba(255, 92, 0, 0.35);
+  }
+
+  .job-modal-content {
+    width: 92vw;
+    max-width: 92vw;
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+
+  /* ── Job detail modal (职位详情弹窗) ── */
+  #jobDetailModal {
+    align-items: center;
+    justify-content: center;
+    padding: calc(56px + 10px + env(safe-area-inset-top, 0px)) 16px
+      max(16px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  #jobDetailModal .job-detail-modal {
+    width: 100%;
+    max-width: min(420px, 100%);
+    height: auto;
+    max-height: calc(
+      100dvh - 56px - 26px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+    min-height: 0;
+    margin-top: 0;
+    padding: 14px 16px 18px;
+    border-radius: 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  #jobDetailModal .close-btn {
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    line-height: 1;
+    z-index: 2;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  #jobDetailModal .job-detail-content h2 {
+    font-size: 1.125rem;
+    margin: 2px 36px 12px;
+    padding: 0 2px;
+    line-height: 1.3;
+  }
+
+  #jobDetailModal .job-detail-meta {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  #jobDetailModal .job-detail-item {
+    padding: 10px 12px;
+    gap: 6px;
+    flex-wrap: wrap;
+    align-items: center;
+    min-height: 42px;
+    box-sizing: border-box;
+  }
+
+  #jobDetailModal .job-detail-item:hover {
+    transform: none;
+  }
+
+  #jobDetailModal .job-detail-label,
+  #jobDetailModal .job-detail-item span {
+    font-size: 0.8125rem;
+    line-height: 1.35;
+  }
+
+  #jobDetailModal .job-detail-item span:last-child {
+    color: #333;
+    font-weight: 600;
+  }
+
+  #jobDetailModal .job-detail-description,
+  #jobDetailModal .job-detail-address {
+    margin-bottom: 12px;
+  }
+
+  #jobDetailModal .job-detail-description h3,
+  #jobDetailModal .job-detail-address h3 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0 0 6px;
+    line-height: 1.3;
+  }
+
+  #jobDetailModal .job-detail-description p,
+  #jobDetailModal .job-detail-address p {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    padding: 10px 12px 10px 14px;
+    margin: 0;
+    border-radius: 8px;
+    box-sizing: border-box;
+    word-break: break-word;
+  }
+
+  #jobDetailModal .apply-btn-container {
+    margin-top: 12px;
+    padding-top: 2px;
+  }
+
+  #jobDetailModal .apply-btn {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 0.9375rem;
+    border-radius: 12px;
+    box-sizing: border-box;
+  }
+
+  /* ── Job apply modal (申请职位弹窗) ── */
+  #formModal {
+    align-items: center;
+    justify-content: center;
+    padding: calc(56px + 10px + env(safe-area-inset-top, 0px)) 16px
+      max(16px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+  }
+
+  #formModal .job-modal-content {
+    width: 100%;
+    max-width: min(420px, 100%);
+    max-height: calc(
+      100dvh - 56px - 26px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+    margin-top: 0;
+    padding: 14px 16px 18px;
+    border-radius: 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-gutter: stable;
+  }
+
+  #formModal .close-btn {
+    top: 8px;
+    right: 8px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  #formModal .job-form h2 {
+    font-size: 1.05rem;
+    margin: 2px 36px 12px;
+    padding: 0 2px;
+  }
+
+  #formModal .job-form label {
+    font-size: 0.8125rem;
+    margin-top: 6px;
+    margin-bottom: 4px;
+  }
+
+  #formModal .job-form-row {
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0;
+  }
+
+  #formModal .job-phone-group {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #formModal .job-phone-group select,
+  #formModal .job-phone-group input {
+    flex: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  #formModal .job-submit-btn {
+    margin-top: 14px;
+    min-height: 44px;
+    font-size: 0.9375rem;
+    border-radius: 12px;
+  }
+}
+
+@media (min-width: 769px) {
+  body.joinus-desktop-merge-contact .header-page-dot[data-slide='4'] {
+    display: none !important;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .joinus-section--hero-only .joinus-content h1 {
+    font-size: clamp(22px, 7vw, 36px);
+  }
+
+  .benefits-wrapper--full-slide .benefits-grid {
+    column-gap: 10px;
+    row-gap: 12px;
+  }
+
+  .jobs-company-tab {
+    height: 36px;
+    padding: 7px 4px;
+    font-size: 12px;
+  }
+
+  .comphoto-title {
+    font-size: clamp(24px, 8vw, 48px);
+    letter-spacing: 0.1em;
+  }
+
+  .join-slide-card-center .contact-map-embed {
+    height: clamp(230px, 42vh, 290px) !important;
+    max-height: clamp(200px, 230px, 400px) !important;
+  }
+
+  .join-slide-card-center .contact-map-embed iframe {
+    height: calc(100% + 48px);
+    margin-bottom: -48px;
+  }
+}

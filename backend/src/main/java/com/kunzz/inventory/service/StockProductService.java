@@ -1,0 +1,130 @@
+package com.kunzz.inventory.service;
+
+import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.mapper.StockProductMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 货品种类台账（对齐线上 stockapi.php + stockproductname.php）
+ * 数量算式：已批准 = approver 非空；待批准 = approver 为空
+ * 列表排序：待批准在前、已批准在后（对齐 generateStockTable）
+ */
+@Service
+@RequiredArgsConstructor
+public class StockProductService {
+
+    private final StockProductMapper stockProductMapper;
+
+    /** 列表 + 统计 */
+    @Transactional(readOnly = true)
+    public Map<String, Object> list(String systemAssign, String keyword) {
+        String sys = (systemAssign == null || "overview".equals(systemAssign) || systemAssign.isBlank())
+                ? null : systemAssign;
+        List<Map<String, Object>> rows = stockProductMapper.listRows(sys,
+                (keyword == null || keyword.isBlank()) ? null : keyword.trim());
+
+        List<Map<String, Object>> items = new ArrayList<>();
+        for (Map<String, Object> r : rows) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", r.get("id"));
+            item.put("date", str(r.get("date")));
+            item.put("time", str(r.get("time")));
+            item.put("product_code", decodeHtml(str(r.get("product_code"))));
+            item.put("product_name", decodeHtml(str(r.get("product_name"))));
+            item.put("specification", decodeHtml(str(r.get("specification"))));
+            item.put("category", decodeHtml(str(r.get("category"))));
+            item.put("supplier", decodeHtml(str(r.get("supplier"))));
+            item.put("applicant", decodeHtml(str(r.get("applicant"))));
+            item.put("approver", decodeHtml(str(r.get("approver"))));
+            item.put("system_assign", decodeHtml(str(r.get("system_assign"))));
+            item.put("freezer_category", decodeHtml(str(r.get("freezer_category"))));
+            items.add(item);
+        }
+
+        long approved = items.stream().filter(i -> !((String) i.get("approver")).isBlank()).count();
+        long pending = items.size() - approved;
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("total", items.size());
+        out.put("approved", approved);
+        out.put("pending", pending);
+        out.put("items", items);
+        return out;
+    }
+
+    /** 新增记录（对齐 POST stockapi.php；date/time 为空时用当前日期时间） */
+    @Transactional
+    public Map<String, Object> create(Map<String, Object> body) {
+        String date = str(body.get("date"));
+        String time = str(body.get("time"));
+        if (date.isBlank()) date = java.time.LocalDate.now().toString();
+        if (time.isBlank()) time = java.time.LocalTime.now().withNano(0).toString();
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("date", date);
+        r.put("time", time);
+        r.put("productCode", body.getOrDefault("product_code", ""));
+        r.put("productName", body.getOrDefault("product_name", ""));
+        r.put("specification", body.getOrDefault("specification", ""));
+        r.put("category", body.getOrDefault("category", ""));
+        r.put("supplier", body.getOrDefault("supplier", ""));
+        r.put("applicant", body.getOrDefault("applicant", ""));
+        r.put("approver", body.getOrDefault("approver", ""));
+        r.put("systemAssign", body.getOrDefault("system_assign", ""));
+        r.put("freezerCategory", body.getOrDefault("freezer_category", ""));
+        stockProductMapper.insertRow(r);
+        return Map.of("success", true);
+    }
+
+    /** 更新记录（对齐 PUT stockapi.php；approver 由前端传，系统页编辑时清空重新批准） */
+    @Transactional
+    public Map<String, Object> update(Integer id, Map<String, Object> body) {
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("productCode", body.getOrDefault("product_code", ""));
+        r.put("productName", body.getOrDefault("product_name", ""));
+        r.put("specification", body.getOrDefault("specification", ""));
+        r.put("category", body.getOrDefault("category", ""));
+        r.put("supplier", body.getOrDefault("supplier", ""));
+        r.put("applicant", body.getOrDefault("applicant", ""));
+        r.put("approver", body.getOrDefault("approver", ""));
+        r.put("systemAssign", body.getOrDefault("system_assign", ""));
+        r.put("freezerCategory", body.getOrDefault("freezer_category", ""));
+        int n = stockProductMapper.updateRow(id, r);
+        if (n == 0) throw new BusinessException(404, "记录不存在");
+        return Map.of("success", true);
+    }
+
+    /** 删除记录（对齐 DELETE stockapi.php?id=） */
+    @Transactional
+    public Map<String, Object> delete(Integer id) {
+        int n = stockProductMapper.deleteRow(id);
+        if (n == 0) throw new BusinessException(404, "记录不存在");
+        return Map.of("success", true);
+    }
+
+    /** 批准记录（对齐 ?action=approve） */
+    @Transactional
+    public Map<String, Object> approve(Integer id, String approver) {
+        if (approver == null || approver.isBlank()) throw new BusinessException("审批人不能为空");
+        int n = stockProductMapper.approveRow(id, approver);
+        if (n == 0) throw new BusinessException(404, "记录不存在");
+        return Map.of("success", true);
+    }
+
+    /** HTML 实体解码（老库 product_name 等字段含 &amp; 等实体，对齐线上 decodeHtml） */
+    private String decodeHtml(String s) {
+        if (s == null || s.isBlank()) return "";
+        return s.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                .replace("&quot;", "\"").replace("&#39;", "'").replace("&nbsp;", " ");
+    }
+
+    private String str(Object o) {
+        return o == null ? "" : String.valueOf(o);
+    }
+}

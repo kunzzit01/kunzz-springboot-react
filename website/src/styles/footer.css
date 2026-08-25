@@ -1,0 +1,472 @@
+/* ===========================================
+   Footer Component Styles - 现代化响应式版本
+   使用 clamp() 和 rem/vw 单位实现响应式设计
+   =========================================== */
+
+/* Footer - Swiper Slide 容器样式 */
+.swiper-slide.footer-slide {
+    height: clamp(18rem, 29vh, 32rem); /* 响应式高度 */
+    justify-content: flex-end;
+    align-items: center;
+    padding: 0;
+    margin: 0;
+    overflow: hidden;
+    /* 关键：添加背景色遮盖上页残影 */
+    background: #2f2f2f; /* 使用footer的深色背景 */
+    position: relative;
+}
+
+/* Footer - Scroll Buffer 缓冲区 */
+.footer-scroll-buffer {
+    background-color: #2f2f2f;
+    display: flex;
+    flex-direction: column;
+    min-height: clamp(18rem, 29vh, 31rem); /* 响应式最小高度 */
+    justify-content: flex-end;
+    margin: 0;
+    padding: 0;
+    position: relative;
+    z-index: 2;
+}
+
+/* Footer - Slide 顶部遮罩（覆盖上方页面残影） */
+.swiper-slide.footer-slide::before {
+    content: '';
+    position: absolute;
+    top: -71vh;     /* 向上延伸覆盖前一页 */
+    left: 0;
+    right: 0;
+    height: 64vh;   /* 遮罩高度 */
+    background: #2a2a2a;
+    z-index: 1;
+}
+
+/* Footer - 主容器 */
+.footer {
+    padding: clamp(-0.0625rem, -0.1vw, 0rem) 0 clamp(1rem, 1.25vw, 1.5rem) clamp(5rem, 6.25vw, 7rem); /* 响应式内边距 */
+    height: clamp(-0.0625rem, 10.5vw, 12.5rem); /* 响应式高度 */
+    background-color: #2F2F2F;
+    color: white;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* 让内容整体居中 */
+    margin-top: auto;
+    min-height: auto;
+    position: relative;
+    z-index: 2;
+    text-align: left; /* 文字左对齐 */
+}
+
+/* Footer - 分栏容器 */
+.footer-section {
+    flex: 1 1 clamp(10rem, 12.5vw, 15rem); /* 响应式弹性基准 */
+    margin-bottom: 0;
+    max-width: clamp(10rem, 12.5vw, 15rem); /* 响应式最大宽度 */
+}
+
+/* Footer - 分栏标题 */
+.footer-section h4 {
+    font-size: clamp(0.875rem, 0.84vw, 1rem); /* 响应式字体大小 */
+    margin-bottom: 0;
+    color: #fff;
+}
+
+/* Footer - 分栏标题链接 */
+.footer-section h4 a {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Footer - 分栏列表 */
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+/* Footer - 分栏列表项 */
+.footer-section li {
+    margin-bottom: clamp(0.4rem, 0.5vw, 0.6rem); /* 响应式外边距 */
+    font-size: clamp(0.875rem, 0.84vw, 1rem); /* 响应式字体大小 */
+    color: #ccc;
+}
+
+/* Footer - 分栏列表项链接 */
+.footer-section li a {
+    color: #ccc;
+    text-decoration: none;
+}
+
+/* Footer - 底部版权区 */
+.footer-bottom {
+    position: relative;
+    text-align: center;
+    font-size: clamp(0.625rem, 0.84vw, 0.875rem); /* 响应式字体大小 */
+    color: #666;
+    background-color: #2F2F2F;
+    padding: clamp(0.5rem, 0.625vw, 0.75rem) clamp(4rem, 5vw, 6rem); /* 响应式内边距 */
+}
+
+/* Footer - 底部版权区分隔线 */
+.footer-bottom::before {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: clamp(4rem, 5vw, 6rem); /* 响应式左侧位置 */
+    right: clamp(4rem, 5vw, 6rem); /* 响应式右侧位置 */
+    height: clamp(0.0625rem, 0.075vw, 0.1rem); /* 响应式线条高度 */
+    background-color: #444;
+}
+
+/* Footer - 小屏幕宽度 (< 1280px) */
+@media (max-width: 1280px) {
+  .footer {
+    height: clamp(170px, 10.5vw, 200px);
+    padding: 14px 51px 14px 181px;
+    gap: 20px;
+    flex-wrap: nowrap;
+  }
+
+  .footer-logo,
+  .footer-section {
+    flex: 1 1 0;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .footer-logo h1 {
+    font-size: clamp(10px, 1vw, 16px);
+  }
+
+  .footer-logo h1 img.logo {
+    width: clamp(30px, 2.5vw, 36px);
+    height: clamp(28px, 2.5vw, 36px);
+  }
+
+  .footer-logo p {
+    font-size: clamp(9px, 1vw, 11px);
+    line-height: 1.4;
+  }
+
+  .footer-logo-img {
+    width: clamp(140px, 12vw, 200px); /* 更小屏宽时进一步限制最大宽度 */
+    margin-top: 10px;
+  }
+
+  .footer-section h4 {
+    font-size: clamp(10px, 1.1vw, 13px);
+    margin-bottom: 2px;
+  }
+
+  .footer-section li {
+    font-size: clamp(10px, 1.1vw, 13px);
+    margin-bottom: 10px;
+  }
+
+  .footer-bottom {
+    font-size: clamp(9px, 0.8vw, 12px);
+    padding: 8px 40px;
+  }
+
+  .footer-bottom::before {
+    left: 51px;
+    right: 51px;
+    height: 1px;
+  }
+}
+
+/* Footer - 屏幕高度 < 760px */
+@media(max-height: 760px) {
+  .footer-scroll-buffer {
+        min-height: 32vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 32vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -68vh;
+    }
+}
+
+/* Footer - 屏幕高度 < 680px */
+@media(max-height: 680px) {
+  .footer-scroll-buffer {
+        min-height: 36vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 36vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -64vh;
+    }
+}
+
+/* Footer - 屏幕高度 < 610px */
+@media(max-height: 610px) {
+  .footer-scroll-buffer {
+        min-height: 40vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 40vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -60vh;
+    }
+}
+
+/* Footer - 屏幕宽度 < 1280px (第二组) */
+@media (max-width: 1280px) {
+    .footer-scroll-buffer {
+        min-height: 29vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 29vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -71vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 770px */
+@media (max-width: 1280px) and (max-height: 770px) {
+    .footer-scroll-buffer {
+        min-height: 3vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 30vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -70vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 740px */
+@media (max-width: 1280px) and (max-height: 740px) {
+    .footer-scroll-buffer {
+        min-height: 3vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 31vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -69vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 720px */
+@media (max-width: 1280px) and (max-height: 720px) {
+    .footer-scroll-buffer {
+        min-height: 3vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 32.1vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -67.9vh;
+    }
+}
+
+@media (max-width: 1280px) and (max-height: 670px) {
+    .swiper-slide.footer-slide::before {
+        top: -74vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 690px */
+@media (max-width: 1280px) and (max-height: 690px) {
+    .footer-scroll-buffer {
+        min-height: 22vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 34vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -66vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 640px */
+@media (max-width: 1280px) and (max-height: 640px) {
+    .footer-scroll-buffer {
+        min-height: 22vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 36vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -64vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 620px */
+@media (max-width: 1280px) and (max-height: 620px) {
+    .footer-scroll-buffer {
+        min-height: 22vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 38vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -62vh;
+    }
+}
+
+/* Footer - 宽度 < 1280px 且高度 < 600px */
+@media (max-width: 1280px) and (max-height: 600px) {
+    .footer-scroll-buffer {
+        min-height: 22vh;
+    }
+    
+    .swiper-slide.footer-slide {
+        height: 39vh;
+    }
+    
+    .swiper-slide.footer-slide::before {
+        top: -74vh;
+    }
+}
+
+/* =============================================
+   移动端专属 Footer 样式 (< 768px)
+   ============================================= */
+@media (max-width: 768px) {
+    /* footer-slide 高度自适应，允许内容撑开 */
+    .swiper-slide.footer-slide {
+        height: auto;
+        min-height: 38vh;
+    }
+
+    .footer-scroll-buffer {
+        min-height: 38vh;
+        /* 供 .footer 与兄弟 .footer-bottom 共用，保证分隔线与版心左右对称 */
+        --footer-inline: max(58px, calc(14px + max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))));
+        --footer-top: 24px;
+        padding-top: var(--footer-top);
+        justify-content: flex-start;
+        box-sizing: border-box;
+    }
+
+    /* 手机端不使用向上遮罩，避免刷新时盖到上一屏 */
+    .swiper-slide.footer-slide::before {
+        display: none;
+    }
+
+    /* Footer 两栏：左右留白对称（浮动社交仍叠在右侧留白上，避免版心偏左） */
+    .footer {
+        height: auto;
+        padding: 0 var(--footer-inline) 12px var(--footer-inline);
+        margin-top: 0;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 16px;
+        row-gap: 12px;
+        align-items: start;
+        justify-content: stretch;
+    }
+
+    .footer-logo {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .footer-logo h1 {
+        font-size: 13px;
+    }
+
+    .footer-logo p {
+        font-size: 11px;
+        line-height: 1.5;
+        margin-top: 4px;
+    }
+
+    .footer-logo-img {
+        width: 100px;
+        margin-top: 6px;
+    }
+
+    .footer-section {
+        max-width: none;
+        min-width: 0;
+        margin-bottom: 0;
+    }
+
+    .footer-section h4 {
+        font-size: 0.82rem;
+        margin-bottom: 6px;
+        line-height: 1.25;
+    }
+
+    .footer-section li {
+        font-size: 0.76rem;
+        margin-bottom: 5px;
+        line-height: 1.25;
+        word-break: break-word;
+    }
+
+    .footer-bottom {
+        font-size: 10px;
+        padding: 8px var(--footer-inline) 10px var(--footer-inline);
+        text-align: center;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .footer-bottom::before {
+        left: var(--footer-inline);
+        right: var(--footer-inline);
+        height: 1px;
+    }
+}
+
+/* 超小屏幕 (< 480px) */
+@media (max-width: 480px) {
+    .swiper-slide.footer-slide {
+        height: auto;
+        min-height: 42vh;
+    }
+
+    .footer-scroll-buffer {
+        min-height: 42vh;
+        --footer-inline: max(52px, calc(12px + max(env(safe-area-inset-left, 0px), env(safe-area-inset-right, 0px))));
+        --footer-top: 20px;
+        padding-top: var(--footer-top);
+    }
+
+    .swiper-slide.footer-slide::before {
+        display: none;
+    }
+
+    .footer {
+        padding: 0 var(--footer-inline) 10px var(--footer-inline);
+        column-gap: 14px;
+        row-gap: 10px;
+    }
+
+    .footer-section h4 {
+        font-size: 11px;
+    }
+
+    .footer-section li {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+}

@@ -1,0 +1,354 @@
+/* ═══════════════════════════════════════════════════════════
+   问卷回答 — 对齐线上 kunzzgroup.com/backend/qna（css/qna.css 移植）
+   前缀 .qna-root 防止与全局通用类名冲突
+   ═══════════════════════════════════════════════════════════ */
+
+.qna-root {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: clamp(16px, 1.25vw, 24px) 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #faf7f2;
+}
+
+/* ---------- 顶部标题栏 ---------- */
+.qna-root .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: clamp(10px, 1.56vw, 30px);
+  position: relative;
+}
+
+.qna-root .header h1 {
+  color: #000000ff;
+  font-size: clamp(20px, 2.6vw, 50px);
+  margin-bottom: 10px;
+  text-align: left;
+  flex: 1;
+}
+
+.qna-root .header h1::after {
+  content: "";
+  display: block;
+  height: 3px;
+  width: 100%;
+  margin-top: 16px;
+  background: linear-gradient(90deg, rgba(255, 92, 0, 0) 0%, rgba(0, 0, 0, 1) 25%, rgba(0, 0, 0, 1) 75%, rgba(255, 92, 0, 0) 100%);
+}
+
+.qna-root .header-actions {
+  display: flex;
+  gap: clamp(8px, 0.83vw, 16px);
+  align-items: center;
+}
+
+.qna-root .btn-print-template {
+  background: #ff5c00;
+  border: none;
+  border-radius: 15px;
+  padding: clamp(4px, 0.42vw, 8px) clamp(8px, 0.83vw, 16px);
+  color: white;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qna-root .btn-print-template:hover:not(:disabled) {
+  background: #ff7700;
+  transform: translateY(-1px);
+}
+
+.qna-root .btn-print-template:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.qna-root .btn-print-template:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ---------- 消息区 ---------- */
+.qna-root .message {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: bold;
+  text-align: center;
+  display: none;
+}
+
+.qna-root .message.success,
+.qna-root .message.error {
+  display: block;
+}
+
+.qna-root .message.success {
+  background: #C8E6C9;
+  color: #2E7D32;
+  border: 2px solid #4CAF50;
+}
+
+.qna-root .message.error {
+  background: #FFCDD2;
+  color: #C62828;
+  border: 2px solid #F44336;
+}
+
+/* ---------- 内容卡片 ---------- */
+.qna-root .qna-content-container {
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 2px solid #000000ff;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.qna-root .qna-content-wrapper {
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
+}
+
+.qna-root .qna-content-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.qna-root .qna-content-wrapper::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.qna-root .qna-content-wrapper::-webkit-scrollbar-thumb {
+  background: #ff5c00;
+  border-radius: 4px;
+}
+
+.qna-root .qna-content-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #ff7700;
+}
+
+/* ---------- 问题卡片 ---------- */
+.qna-root .form-section {
+  margin-bottom: 0;
+  border: 1px solid #000000ff;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.qna-root .form-section-header {
+  padding: clamp(6px, 0.52vw, 10px) clamp(10px, 0.73vw, 14px);
+  border-bottom: 1px solid #ffddaa;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 700;
+  text-align: left;
+  color: white;
+  background: #f99e00;
+}
+
+.qna-root .form-section-content {
+  padding: clamp(6px, 0.52vw, 10px) clamp(8px, 0.63vw, 12px);
+}
+
+.qna-root .question-item {
+  margin-bottom: 0;
+}
+
+.qna-root .question-text {
+  font-size: clamp(10px, 0.83vw, 16px);
+  color: #000000ff;
+  margin-bottom: clamp(4px, 0.42vw, 8px);
+  line-height: 1.6;
+}
+
+.qna-root .question-example {
+  font-size: clamp(8px, 0.74vw, 14px);
+  color: #999999;
+  margin-bottom: clamp(6px, 0.63vw, 12px);
+  font-style: italic;
+}
+
+/* 编辑输入框（矮框，对齐线上 1.56vw ≤ 30px） */
+.qna-root .question-input {
+  width: 100%;
+  padding: 0px clamp(4px, 0.625vw, 12px);
+  border: 2px solid #ff5c00;
+  border-radius: 8px;
+  font-size: clamp(10px, 0.83vw, 16px);
+  font-family: inherit;
+  resize: none;
+  height: clamp(20px, 1.56vw, 30px);
+  transition: all 0.3s ease;
+  color: #111827;
+  box-sizing: border-box;
+  display: block;
+}
+
+.qna-root .question-input:focus {
+  outline: none;
+  border-color: #ff5c00;
+  box-shadow: 0 0 10px rgba(255, 115, 0, 0.8);
+}
+
+.qna-root .question-input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  border-color: #d5d5d5;
+}
+
+/* 查看模式答案 */
+.qna-root .view-answer {
+  width: 100%;
+  padding: 0px clamp(4px, 0.625vw, 12px);
+  border: 2px solid #d5d5d5;
+  border-radius: 8px;
+  font-size: clamp(10px, 0.83vw, 16px);
+  font-family: inherit;
+  height: clamp(20px, 1.56vw, 30px);
+  line-height: clamp(20px, 1.56vw, 30px);
+  color: #333333;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: white;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.qna-root .empty-answer {
+  color: #999999;
+  font-style: italic;
+}
+
+/* ---------- 底部按钮组 ---------- */
+.qna-root .button-group {
+  display: flex;
+  justify-content: center;
+  gap: clamp(12px, 1.25vw, 24px);
+  padding: clamp(12px, 1.25vw, 20px);
+  flex-shrink: 0;
+  border-top: 2px solid #000000ff;
+}
+
+.qna-root .btn {
+  width: clamp(60px, 6.25vw, 120px);
+  background: #ff5c00;
+  border: none;
+  border-radius: 20px;
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  color: white;
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 500;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.qna-root .btn:hover:not(:disabled) {
+  background: #ff7700;
+  transform: translateY(-1px);
+}
+
+.qna-root .btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.qna-root .btn:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.qna-root .btn-reset {
+  background: #6b7280;
+}
+
+.qna-root .btn-reset:hover:not(:disabled) {
+  background: #4b5563;
+}
+
+/* ---------- loading 转圈 ---------- */
+.qna-root .loading {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: qna-spin 0.8s linear infinite;
+}
+
+@keyframes qna-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 页面加载态 */
+.qna-root .qna-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.qna-root .qna-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ddd;
+  border-top-color: #ff5c00;
+  border-radius: 50%;
+  animation: qna-spin 0.8s linear infinite;
+}
+
+/* ---------- 响应式（对齐线上 media 768） ---------- */
+@media (max-width: 768px) {
+  .qna-root {
+    padding: 12px;
+  }
+
+  .qna-root .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .qna-root .header h1 {
+    font-size: 40px;
+    margin-bottom: 0;
+  }
+
+  .qna-root .header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .qna-root .btn-print-template {
+    width: auto;
+  }
+
+  .qna-root .button-group {
+    flex-direction: column;
+  }
+
+  .qna-root .btn {
+    width: 100%;
+  }
+}

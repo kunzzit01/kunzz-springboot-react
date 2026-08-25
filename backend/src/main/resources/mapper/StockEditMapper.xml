@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockEditMapper">
+
+    <!-- 编号列表（stock_data 台账，按编号排序） -->
+    <select id="codeNumbers" resultType="java.util.LinkedHashMap">
+        SELECT DISTINCT product_code AS code_number, product_name
+        FROM stock_data
+        WHERE product_code IS NOT NULL AND product_code &lt;&gt; ''
+        ORDER BY product_code
+    </select>
+
+    <!-- 产品列表（stock_data 台账，含供应商） -->
+    <select id="products" resultType="java.util.LinkedHashMap">
+        SELECT DISTINCT product_name, product_code, supplier, specification, category
+        FROM stock_data
+        WHERE product_name IS NOT NULL AND product_name &lt;&gt; ''
+        ORDER BY product_name
+    </select>
+
+    <!-- 收货人列表（出入库记录 distinct） -->
+    <select id="shippers" resultType="string">
+        <!-- 出货人选项：被赋予「出货人」权限（is_shipper）的职员昵称（对齐旧系统 get_shippers） -->
+        SELECT DISTINCT COALESCE(NULLIF(u.nickname, ''), NULLIF(u.username_cn, ''), u.username) AS name
+        FROM users u
+        JOIN user_sidebar_permissions s ON u.id = s.user_id
+        WHERE s.page_permissions_json LIKE '%"is_shipper":true%'
+        ORDER BY name
+    </select>
+
+    <!-- 价格批次：按价格降序，净库存 > 0（对齐线上 product_batches_for_hifo） -->
+    <select id="priceBatches" resultType="java.util.LinkedHashMap">
+        SELECT ROUND(price, 2) AS price,
+               SUM(in_quantity) - SUM(out_quantity) AS available_stock
+        FROM ${tableName}
+        WHERE product_name = #{productName} AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+        GROUP BY ROUND(price, 2)
+        HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        ORDER BY price DESC
+    </select>
+
+    <!-- 价格+库存明细（对齐线上 product_prices_with_stock） -->
+    <select id="priceStock" resultType="java.util.LinkedHashMap">
+        SELECT ROUND(price, 2) AS price,
+               SUM(in_quantity) - SUM(out_quantity) AS available_stock,
+               SUM(in_quantity) AS total_in,
+               SUM(out_quantity) AS total_out
+        FROM ${tableName}
+        WHERE product_name = #{productName} AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+        GROUP BY ROUND(price, 2)
+        HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        ORDER BY price DESC
+    </select>
+
+    <!-- 在库备注编号（净库存 > 0，对齐线上 product_remark_codes） -->
+    <select id="remarkCodes" resultType="string">
+        SELECT remark_number FROM (
+            SELECT remark_number, SUM(in_quantity) - SUM(out_quantity) AS net
+            FROM stockinout_data
+            WHERE product_name = #{productName}
+              AND product_remark_checked = 1
+              AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
+              AND deleted_at IS NULL
+            GROUP BY remark_number
+            HAVING net &gt; 0
+        ) t
+        ORDER BY remark_number
+    </select>
+
+</mapper>

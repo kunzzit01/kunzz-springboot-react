@@ -1,0 +1,348 @@
+<div class="container">
+        <div class="header">
+            <div>
+                <h1 id="page-title">总库存 - 中央</h1>
+            </div>
+            <div class="controls">
+                <div class="view-selector">
+                    <button class="selector-button" onclick="toggleViewSelector()">
+                        <span id="current-view">总库存</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="selector-dropdown" id="view-selector-dropdown">
+                        <div class="dropdown-item active" onclick="switchView('list')">总库存</div>
+                        <div class="dropdown-item" onclick="switchView('records')">进出货</div>
+                        <div class="dropdown-item" onclick="switchView('remark')">货品备注</div>
+                        <div class="dropdown-item" onclick="switchView('product')">货品种类</div>
+                        <div class="dropdown-item" onclick="switchView('sot')">货品异常</div>
+                    </div>
+                </div>
+                <div class="system-selector">
+                    <button class="selector-button" onclick="toggleSelector()">
+                        <span id="current-system">中央</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="selector-dropdown" id="selector-dropdown">
+                        <div class="dropdown-item active" onclick="switchSystem('central', event)">中央</div>
+                        <div class="dropdown-item" onclick="switchSystem('j1', event)">J1</div>
+                        <div class="dropdown-item" onclick="switchSystem('j2', event)">J2</div>
+                        <div class="dropdown-item" onclick="switchSystem('j3', event)">J3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Alert Messages -->
+        <div id="alert-container"></div>
+        
+        <!-- 中央库存页面 -->
+        <div id="central-page" class="page-section active">
+            <div class="unified-header-row">
+                <div class="header-summary">
+                    <div class="summary-title">总库存</div>
+                    <div class="summary-amount">
+                        <span class="currency-symbol">RM</span>
+                        <span class="value" id="central-total-value">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="type-grid-container">
+                    <div class="type-grid-item">
+                        <div class="grid-title">J1供应</div>
+                        <div class="grid-value" id="central-j1-supply-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item">
+                        <div class="grid-title">J2供应</div>
+                        <div class="grid-value" id="central-j2-supply-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item">
+                        <div class="grid-title">J3供应</div>
+                        <div class="grid-value" id="central-j3-supply-value">0.00</div>
+                    </div>
+                </div>
+
+                <div class="header-right-section">
+                <div class="header-search">
+                    <div class="smartSearchWrapper">
+                        <i class="fas fa-search smartSearch-icon"></i>
+                        <input type="text" id="central-unified-filter" class="smartSearch-input"
+                            placeholder="输入关键字搜索...">
+                    </div>
+                </div>
+                
+                <button class="btn btn-warning btn-expand" onclick="exportData('central')" title="导出数据"><span class="btn-expand-icon"><i class="fas fa-download"></i></span><span class="btn-expand-text">导出数据</span></button>
+                
+                <button class="btn btn-primary btn-expand" onclick="goToMinimumSettings()" title="设置最低库存"><span class="btn-expand-icon"><i class="fas fa-cog"></i></span><span class="btn-expand-text">设置最低库存</span></button>
+                
+                <div class="header-stats">
+                    <span>显示记录: <span class="stat-value" id="central-displayed-records">0</span></span>
+                    <span>总记录: <span class="stat-value" id="central-total-records">0</span></span>
+                </div>
+                </div>
+            </div>
+
+            <div class="table-container">              
+                <div class="table-scroll-container">
+                    <table class="stock-table" id="central-stock-table">
+                        <thead>
+                            <tr>
+                                <th>序号.</th>
+                                <th>货品编号</th>
+                                <th>货品</th>
+                                <th>最低库存</th>
+                                <th>库存数量</th>
+                                <th>规格</th>
+                                <th>单价</th>
+                                <th>总价</th>
+                            </tr>
+                        </thead>
+                        <tbody id="central-stock-tbody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- J1库存页面 -->
+        <div id="j1-page" class="page-section ">
+            <div class="unified-header-row">
+                <div class="header-summary">
+                    <div class="summary-title">总库存</div>
+                    <div class="summary-amount">
+                        <span class="currency-symbol">RM</span>
+                        <span class="value" id="j1-total-value">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="type-grid-container">
+                    <div class="type-grid-item is-filterable" data-type="Service Line" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Service Line</div>
+                        <div class="grid-value" id="j1-service-line-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Sake" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sake</div>
+                        <div class="grid-value" id="j1-sake-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Kitchen" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Kitchen</div>
+                        <div class="grid-value" id="j1-kitchen-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Sushi Bar" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sushi Bar</div>
+                        <div class="grid-value" id="j1-sushi-bar-value">0.00</div>
+                    </div>
+                </div>
+                
+                <div class="header-right-section">
+                <div class="header-search">
+                    <div class="smartSearchWrapper">
+                        <i class="fas fa-search smartSearch-icon"></i>
+                        <input type="text" id="j1-unified-filter" class="smartSearch-input"
+                            placeholder="搜索序号、货品编号、货品、库存数量、规格、单价、总价...">
+                    </div>
+                </div>
+                
+                <button class="btn btn-warning btn-expand" onclick="exportData('j1')" title="导出数据"><span class="btn-expand-icon"><i class="fas fa-download"></i></span><span class="btn-expand-text">导出数据</span></button>
+                
+                <button class="btn btn-primary btn-expand" onclick="goToMinimumSettings()" title="设置最低库存"><span class="btn-expand-icon"><i class="fas fa-cog"></i></span><span class="btn-expand-text">设置最低库存</span></button>
+                
+                <div class="header-stats">
+                    <span>显示记录: <span class="stat-value" id="j1-displayed-records">0</span></span>
+                    <span>总记录: <span class="stat-value" id="j1-total-records">0</span></span>
+                </div>
+                </div>
+            </div>
+
+            <div class="table-container">                           
+                <div class="table-scroll-container">
+                    <table class="stock-table" id="j1-stock-table">
+                        <thead>
+                            <tr>
+                                <th>序号.</th>
+                                <th>货品编号</th>
+                                <th>货品</th>
+                                <th>最低库存</th>
+                                <th>库存总量</th>
+                                <th>规格</th>
+                                <th>单价</th>
+                                <th>总价</th>
+                            </tr>
+                        </thead>
+                        <tbody id="j1-stock-tbody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- J2库存页面 -->
+        <div id="j2-page" class="page-section ">
+            <div class="unified-header-row">
+                <div class="header-summary">
+                    <div class="summary-title">总库存</div>
+                    <div class="summary-amount">
+                        <span class="currency-symbol">RM</span>
+                        <span class="value" id="j2-total-value">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="type-grid-container">
+                    <div class="type-grid-item is-filterable" data-type="Service Line" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Service Line</div>
+                        <div class="grid-value" id="j2-service-line-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" style="display: none;" data-type="Sake" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sake</div>
+                        <div class="grid-value" id="j2-sake-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Kitchen" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Kitchen</div>
+                        <div class="grid-value" id="j2-kitchen-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Sushi Bar" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sushi Bar</div>
+                        <div class="grid-value" id="j2-sushi-bar-value">0.00</div>
+                    </div>
+                </div>
+                
+                <div class="header-right-section">
+                <div class="header-search">
+                    <div class="smartSearchWrapper">
+                        <i class="fas fa-search smartSearch-icon"></i>
+                        <input type="text" id="j2-unified-filter" class="smartSearch-input"
+                            placeholder="搜索货品名称、编号或规格单位...">
+                    </div>
+                </div>
+                
+                <button class="btn btn-warning btn-expand" onclick="exportData('j2')" title="导出数据"><span class="btn-expand-icon"><i class="fas fa-download"></i></span><span class="btn-expand-text">导出数据</span></button>
+                
+                <button class="btn btn-primary btn-expand" onclick="goToMinimumSettings()" title="设置最低库存"><span class="btn-expand-icon"><i class="fas fa-cog"></i></span><span class="btn-expand-text">设置最低库存</span></button>
+                
+                <div class="header-stats">
+                    <span>显示记录: <span class="stat-value" id="j2-displayed-records">0</span></span>
+                    <span>总记录: <span class="stat-value" id="j2-total-records">0</span></span>
+                </div>
+                </div>
+            </div>
+
+            <div class="table-container">                              
+                <div class="table-scroll-container">
+                    <table class="stock-table" id="j2-stock-table">
+                        <thead>
+                            <tr>
+                                <th>序号.</th>
+                                <th>货品编号</th>
+                                <th>货品</th>
+                                <th>最低库存</th>
+                                <th>库存总量</th>
+                                <th>规格</th>
+                                <th>单价</th>
+                                <th>总价</th>
+                            </tr>
+                        </thead>
+                        <tbody id="j2-stock-tbody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- J3库存页面 -->
+        <div id="j3-page" class="page-section ">
+            <div class="unified-header-row">
+                <div class="header-summary">
+                    <div class="summary-title">总库存</div>
+                    <div class="summary-amount">
+                        <span class="currency-symbol">RM</span>
+                        <span class="value" id="j3-total-value">0.00</span>
+                    </div>
+                </div>
+                
+                <div class="type-grid-container">
+                    <div class="type-grid-item is-filterable" data-type="Service Line" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Service Line</div>
+                        <div class="grid-value" id="j3-service-line-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Sake" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sake</div>
+                        <div class="grid-value" id="j3-sake-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Kitchen" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Kitchen</div>
+                        <div class="grid-value" id="j3-kitchen-value">0.00</div>
+                    </div>
+                    <div class="type-grid-item is-filterable" data-type="Sushi Bar" role="button" tabindex="0" aria-pressed="false">
+                        <div class="grid-title">Sushi Bar</div>
+                        <div class="grid-value" id="j3-sushi-bar-value">0.00</div>
+                    </div>
+                </div>
+                
+                <div class="header-right-section">
+                <div class="header-search">
+                    <div class="smartSearchWrapper">
+                        <i class="fas fa-search smartSearch-icon"></i>
+                        <input type="text" id="j3-unified-filter" class="smartSearch-input"
+                            placeholder="搜索货品名称、编号或规格单位...">
+                    </div>
+                </div>
+                
+                <button class="btn btn-warning btn-expand" onclick="exportData('j3')" title="导出数据"><span class="btn-expand-icon"><i class="fas fa-download"></i></span><span class="btn-expand-text">导出数据</span></button>
+                
+                <button class="btn btn-primary btn-expand" onclick="goToMinimumSettings()" title="设置最低库存"><span class="btn-expand-icon"><i class="fas fa-cog"></i></span><span class="btn-expand-text">设置最低库存</span></button>
+                
+                <div class="header-stats">
+                    <span>显示记录: <span class="stat-value" id="j3-displayed-records">0</span></span>
+                    <span>总记录: <span class="stat-value" id="j3-total-records">0</span></span>
+                </div>
+                </div>
+            </div>
+
+            <div class="table-container">                              
+                <div class="table-scroll-container">
+                    <table class="stock-table" id="j3-stock-table">
+                        <thead>
+                            <tr>
+                                <th>序号.</th>
+                                <th>货品编号</th>
+                                <th>货品</th>
+                                <th>最低库存</th>
+                                <th>库存总量</th>
+                                <th>规格</th>
+                                <th>单价</th>
+                                <th>总价</th>
+                            </tr>
+                        </thead>
+                        <tbody id="j3-stock-tbody">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 价格分析页面 -->
+        <div id="remark-page" class="page-section">
+            <!-- 中央库存页面的过滤部分 -->
+            <div class="filter-section">
+                <div class="search-row">
+                    <div class="search-group">
+                        <label for="central-unified-filter">搜索货品</label>
+                        <label for="central-unified-filter" class="search-label">搜索</label>
+                        <div class="smartSearchWrapper">
+                            <i class="fas fa-search smartSearch-icon"></i>
+                            <input type="text" id="central-unified-filter" class="smartSearch-input"
+                                placeholder="搜索货品名称、编号或规格单位...">
+                        </div>
+                    </div>
+                    <button class="btn btn-warning btn-expand" onclick="exportData('central')" title="导出数据"><span class="btn-expand-icon"><i class="fas fa-download"></i></span><span class="btn-expand-text">导出数据</span></button>
+                </div>
+            </div>
+
+            <div id="remark-products-container">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>

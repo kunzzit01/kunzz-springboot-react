@@ -1,0 +1,276 @@
+/* ============================================================
+   视觉管理页面（精确对齐线上 bgmusicupload.php / homepage1upload.php 的 CSS）
+   ============================================================ */
+
+/* ---------- 页面头部（标题 + 面包屑） ---------- */
+.page-upload-header {
+  margin-bottom: 18px;
+}
+
+.page-upload-title {
+  font-size: clamp(20px, 2.6vw, 50px);
+  margin-bottom: 10px;
+  color: #000;
+  font-weight: 700;
+}
+
+.page-breadcrumb {
+  padding: 10px 0;
+}
+
+.page-breadcrumb a {
+  font-size: 14px;
+  color: #f99e00;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.page-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.page-breadcrumb span {
+  font-size: 14px;
+  color: #333;
+}
+
+/* ---------- 卡片（media-section / music-section 共用视觉） ---------- */
+.media-section,
+.music-section {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: clamp(18px, 1.56vw, 30px);
+  margin-bottom: 30px;
+  border-left: 5px solid #000;
+  box-shadow: 0px 5px 15px rgb(0 0 0 / 60%);
+}
+
+.media-section h2,
+.music-section h2 {
+  color: #333;
+  margin-bottom: clamp(10px, 1.04vw, 20px);
+  font-size: clamp(16px, 1.5vw, 28px);
+}
+
+.music-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.music-icon {
+  font-size: 1.2em;
+}
+
+/* ---------- 表单 ---------- */
+.upload-form {
+  display: grid;
+  gap: clamp(10px, 1.04vw, 20px);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: clamp(10px, 0.84vw, 16px);
+  font-weight: 600;
+  color: #555;
+}
+
+/* ---------- 上传框（点击 + 拖拽） ---------- */
+.file-input {
+  border: 2px dashed #000;
+  border-radius: 10px;
+  padding: clamp(20px, 2.08vw, 40px);
+  text-align: center;
+  background: #fff9f5;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.file-input:hover {
+  border-color: #000;
+  background: #fff5f0;
+}
+
+.file-input.drag-over {
+  border-color: #5a6fd8;
+  background: #f0f2ff;
+}
+
+.file-input-text {
+  color: #000;
+  font-size: clamp(10px, 0.84vw, 16px);
+  font-weight: 500;
+}
+
+.file-input-text small {
+  color: #666;
+  font-weight: 400;
+}
+
+/* ---------- 当前文件 / 当前音乐信息卡 ---------- */
+.current-file,
+.current-music {
+  font-size: clamp(10px, 0.84vw, 16px);
+  margin-top: clamp(5px, 0.78vw, 15px);
+  padding: 15px 18px;
+  background: #e8f4f8;
+  border-radius: 8px;
+  border-left: 4px solid #000;
+}
+
+.current-file strong,
+.current-music strong {
+  color: #155724;
+}
+
+.current-file small,
+.current-music small {
+  color: #666;
+}
+
+/* ---------- 背景音乐信息网格 ---------- */
+.music-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin: clamp(10px, 0.78vw, 15px) 0;
+}
+
+.info-item {
+  background: #fff;
+  padding: clamp(8px, 0.63vw, 12px);
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+}
+
+.info-item .label {
+  font-size: clamp(8px, 0.74vw, 14px);
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.info-item .value {
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 600;
+  color: #333;
+}
+
+.audio-player {
+  margin: clamp(0px, 0.78vw, 15px) 0;
+  width: 100%;
+}
+
+.audio-player audio {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* ---------- 预览 ---------- */
+.preview-container {
+  margin-top: clamp(10px, 1.04vw, 20px);
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.preview-video,
+.preview-image {
+  width: 100%;
+  max-height: 300px;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- 按钮（旧版橙色） ---------- */
+.btn {
+  background: #f99e00;
+  color: white;
+  border: none;
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  border-radius: clamp(4px, 0.42vw, 8px);
+  font-size: clamp(8px, 0.74vw, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+}
+
+.btn:hover {
+  background: #f98500;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 92, 0, 0.3);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-danger {
+  background: #dc3545;
+}
+
+.btn-danger:hover {
+  box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+  background: #c82333;
+  transform: translateY(-2px);
+}
+
+.btn-group {
+  display: flex;
+  gap: 15px;
+  margin-top: clamp(0px, 1.04vw, 20px);
+}
+
+/* ---------- alert 提示（页面内，旧版样式） ---------- */
+.alert {
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.alert-success {
+  background: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
+.alert-error {
+  background: #f8d7da;
+  color: #721c24;
+  border-left: 4px solid #dc3545;
+}
+
+/* ---------- 媒体管理总览页（新系统轻量表格） ---------- */
+.kz-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 768px) {
+  .btn-group {
+    flex-direction: column;
+  }
+
+  .music-info {
+    grid-template-columns: 1fr;
+  }
+
+  .media-section,
+  .music-section {
+    padding: 20px;
+  }
+}

@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockInoutMapper">
+
+    <!-- 出库库存校验（对齐旧系统 stockeditapi / jXstockeditpageapi：事务内校验，可用库存口径 = 显示单价 ROUND(price,2)）
+         product_name 匹配时兼容 HTML 实体（&amp;） -->
+    <select id="availableStockCentral" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(CASE WHEN in_quantity > 0 THEN in_quantity ELSE 0 END), 0)
+             - COALESCE(SUM(CASE WHEN out_quantity > 0 THEN out_quantity ELSE 0 END), 0) AS available_stock
+        FROM stockinout_data
+        WHERE REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+          AND ROUND(price, 2) = ROUND(#{price}, 2)
+          AND deleted_at IS NULL
+          AND (target_system IS NULL OR target_system != 'SOT')
+    </select>
+
+    <select id="availableStockBranch" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(CASE WHEN in_quantity > 0 THEN in_quantity ELSE 0 END), 0)
+             - COALESCE(SUM(CASE WHEN out_quantity > 0 THEN out_quantity ELSE 0 END), 0) AS available_stock
+        FROM ${table}
+        WHERE REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+          AND ROUND(price, 2) = ROUND(#{price}, 2)
+          AND deleted_at IS NULL
+    </select>
+
+    <select id="listBranch" resultType="java.util.LinkedHashMap">
+        SELECT id, date, time, product_name, code_number, in_quantity, out_quantity,
+               specification, price, receiver, remark,
+               type, created_by, created_at, target_system
+        FROM ${table}
+        WHERE deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+            AND (product_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR code_number LIKE CONCAT('%', #{keyword}, '%')
+                 OR remark LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND date &lt;= #{endDate}
+        </if>
+        -- 对齐旧系统分店 stockedit：ORDER BY date ASC, time ASC（旧在上、新在底）
+        ORDER BY date ASC, time ASC, id ASC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countBranch" resultType="long">
+        SELECT COUNT(*) FROM ${table}
+        WHERE deleted_at IS NULL
+        <if test="keyword != null and keyword != ''">
+            AND (product_name LIKE CONCAT('%', #{keyword}, '%')
+                 OR code_number LIKE CONCAT('%', #{keyword}, '%')
+                 OR remark LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="startDate != null and startDate != ''">
+            AND date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND date &lt;= #{endDate}
+        </if>
+    </select>
+
+    <insert id="insertBranch" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
+        INSERT INTO ${table}
+            (date, time, product_name, code_number, in_quantity, out_quantity,
+             specification, price, receiver, remark,
+             type, created_by, target_system, main_record_id)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.inQuantity}, #{r.outQuantity},
+             #{r.specification}, #{r.price}, #{r.receiver}, #{r.remark},
+             #{r.type}, #{r.createdBy}, #{r.targetSystem}, #{r.mainRecordId})
+    </insert>
+
+    <update id="updateBranch" parameterType="map">
+        UPDATE ${table}
+        SET date = #{r.date}, time = #{r.time},
+            product_name = #{r.productName}, code_number = #{r.codeNumber},
+            in_quantity = #{r.inQuantity}, out_quantity = #{r.outQuantity},
+            specification = #{r.specification}, price = #{r.price},
+            receiver = #{r.receiver}, remark = #{r.remark},
+            type = #{r.type}
+        WHERE id = #{id} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDeleteBranch">
+        UPDATE ${table} SET deleted_at = NOW(), deleted_by = #{deletedBy} WHERE id = #{id}
+    </update>
+
+    <!-- 查分店记录的中央关联 id（中央出货生成的分店记录有 main_record_id） -->
+    <select id="findBranchMainId" resultType="java.lang.Integer">
+        SELECT main_record_id FROM ${table} WHERE id = #{id}
+    </select>
+
+    <!-- 中央出库转分店入库（对齐旧系统 saveToJ1Table：out_quantity 作为 in_quantity，target_system='from_main'） -->
+    <!-- 注意：j3stockinout_data 没有 created_by 列（老库结构不一致），故不写该列 -->
+    <insert id="insertBranchInout" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
+        INSERT INTO ${table}
+            (date, time, code_number, product_name, in_quantity, out_quantity,
+             specification, price, type, receiver, remark, target_system, main_record_id)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.codeNumber}, #{r.productName}, #{r.inQuantity}, 0,
+             #{r.specification}, #{r.price}, #{r.type}, #{r.receiver}, #{r.remark}, 'from_main', #{r.mainRecordId})
+    </insert>
+
+    <update id="updateBranchInoutByMainId" parameterType="map">
+        UPDATE ${table}
+        SET date = #{r.date}, time = #{r.time},
+            code_number = #{r.codeNumber}, product_name = #{r.productName},
+            in_quantity = #{r.inQuantity}, out_quantity = 0,
+            specification = #{r.specification}, price = #{r.price},
+            type = #{r.type}, receiver = #{r.receiver}, remark = #{r.remark}
+        WHERE main_record_id = #{mainId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDeleteBranchInoutByMainId">
+        UPDATE ${table} SET deleted_at = NOW(), deleted_by = #{deletedBy}
+        WHERE main_record_id = #{mainId} AND deleted_at IS NULL
+    </update>
+
+    <update id="softDeleteBranchEditByMatch">
+        UPDATE ${table} SET deleted_at = NOW(), deleted_by = #{deletedBy}
+        WHERE product_name = #{productName} AND receiver = #{receiver}
+          AND target_system = #{targetSystem} AND deleted_at IS NULL
+    </update>
+
+    <!-- 8/23 线上修复：按 main_record_id 精确软删分店 stockedit 记录。
+         旧实现按 产品名+收货人 匹配，编辑时会误删同品名同收货人的历史记录 -->
+    <update id="softDeleteBranchEditByMainId">
+        UPDATE ${table} SET deleted_at = NOW(), deleted_by = #{deletedBy}
+        WHERE main_record_id = #{mainId} AND target_system = #{targetSystem} AND deleted_at IS NULL
+    </update>
+
+    <!-- 同前缀所有备注编号 + 净库存（对齐旧系统 generateRemarkCode 的查询） -->
+    <!-- 进出货检查弹窗：货品名 100% 精确匹配（兼容 &amp;），日期范围可选
+         注意：分店 jXstockedit_data 无 remark_number 列，故不查询该列 -->
+    <select id="checkInout" resultType="java.util.LinkedHashMap">
+        SELECT date, time, product_name, code_number, in_quantity, out_quantity,
+               specification, price, receiver, remark, type, target_system
+        FROM ${table}
+        WHERE deleted_at IS NULL
+          AND REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+        <if test="startDate != null and startDate != ''">
+            AND date &gt;= #{startDate}
+        </if>
+        <if test="endDate != null and endDate != ''">
+            AND date &lt;= #{endDate}
+        </if>
+        ORDER BY date ASC, time ASC, id ASC
+    </select>
+
+    <select id="remarkCodePool" resultType="java.util.LinkedHashMap">
+        SELECT remark_number,
+               SUM(in_quantity) AS total_in,
+               SUM(out_quantity) AS total_out
+        FROM stockinout_data
+        WHERE remark_number LIKE CONCAT(#{prefix}, '-%') AND deleted_at IS NULL
+        GROUP BY remark_number
+    </select>
+
+    <!-- 产品是否存在在库备注编号（净库存>0） -->
+    <select id="countInStockRemarkNumber" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT remark_number
+            FROM stockinout_data
+            WHERE product_name = #{productName}
+              AND product_remark_checked = 1
+              AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
+              AND deleted_at IS NULL
+            GROUP BY remark_number
+            HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        ) t
+    </select>
+
+    <!-- 备注编号是否在库（净库存>0） -->
+    <select id="countRemarkNumberInStock" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT remark_number
+            FROM stockinout_data
+            WHERE product_name = #{productName}
+              AND remark_number = #{remarkNumber}
+              AND product_remark_checked = 1
+              AND deleted_at IS NULL
+            GROUP BY remark_number
+            HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        ) t
+    </select>
+
+</mapper>

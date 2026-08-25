@@ -1,0 +1,226 @@
+/* 货品种类 Excel 模式（对齐线上 stockproductname.css） */
+.sp-root * { margin: 0; padding: 0; box-sizing: border-box; }
+.sp-root {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #faf7f2; color: #111827;
+  /* 全屏 Excel 风格（对齐旧系统 body：整页米色、页面不滚动、表格内部滚动） */
+  min-height: 100vh;
+  overflow: hidden;
+}
+.sp-root .container {
+  max-width: 1800px; margin: 0 auto;
+  padding: clamp(16px, 1.25vw, 24px) 24px;
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+.sp-root .header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: clamp(18px, 1.67vw, 32px);
+}
+.sp-root .header h1 { font-size: clamp(20px, 2.6vw, 50px); font-weight: bold; color: #000; }
+.sp-root .header .controls { display: flex; align-items: center; gap: 0px; }
+.sp-root .selector-button {
+  background-color: #f99e00; color: white; font-weight: 500;
+  padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
+  border-radius: 8px; border: none; cursor: pointer;
+  font-size: clamp(10px, 0.73vw, 14px);
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all 0.2s ease;
+  width: clamp(90px, 6.77vw, 130px); justify-content: space-between; position: relative;
+}
+.sp-root .selector-button:hover { background-color: #f98500; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2); }
+.sp-root .selector-dropdown {
+  position: absolute; top: 110%; right: 0; background: white;
+  border: 2px solid #000; border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2); width: 100%; z-index: 10000; display: none;
+}
+.sp-root .selector-dropdown.show { display: block; }
+.sp-root .selector-dropdown .dropdown-item {
+  padding: clamp(6px, 0.42vw, 8px) clamp(10px, 0.83vw, 16px); cursor: pointer;
+  border-bottom: 1px solid #e5e7eb; transition: all 0.2s;
+  color: #000; font-size: clamp(8px, 0.74vw, 14px); font-weight: 500; display: block;
+}
+.sp-root .selector-dropdown .dropdown-item:last-child { border-bottom: none; }
+.sp-root .selector-dropdown .dropdown-item:hover { background-color: #f8f5eb; }
+.sp-root .selector-dropdown .dropdown-item.active { background-color: #f99e00 !important; color: white !important; }
+.sp-root .view-selector { position: relative; margin-right: 16px; }
+.sp-root .view-selector .selector-dropdown { width: 100%; }
+.sp-root .system-selector { position: relative; }
+
+/* 过滤栏（对齐旧系统：白底 / 2px 黑边框 / 圆角12 / padding） */
+.sp-root .filter-bar {
+  flex-shrink: 0; background: white; border-radius: 12px;
+  padding: clamp(10px, 1.15vw, 22px) clamp(18px, 1.25vw, 24px);
+  margin-bottom: clamp(14px, 1.25vw, 24px); border: 2px solid #000;
+  box-shadow: 0 2px 8px rgba(88, 62, 4, 0.1);
+  display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.sp-root .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sp-root .filter-item label { font-size: clamp(10px, 0.84vw, 16px); font-weight: 600; color: #583e04; margin-right: 8px; }
+.sp-root .btn {
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  border-radius: clamp(4px, 0.42vw, 8px); border: none; cursor: pointer;
+  font-size: clamp(8px, 0.74vw, 14px); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;
+}
+.sp-root .btn-primary { background-color: #f99e00; color: white; }
+.sp-root .btn-primary:hover { background-color: #f98500; transform: translateY(-1px); }
+.sp-root .btn-success { background-color: #10b981; color: white; }
+.sp-root .btn-success:hover { background-color: #059669; transform: translateY(-1px); }
+.sp-root .stats-info { display: flex; gap: clamp(10px, 1.04vw, 20px); align-items: center; font-size: clamp(8px, 0.74vw, 14px); color: #6b7280; flex-wrap: wrap; }
+.sp-root .stat-item { display: flex; align-items: center; gap: 6px; }
+.sp-root .stat-value { font-weight: bold; color: #583e04; font-size: clamp(10px, 0.84vw, 16px); }
+
+/* Excel 表格 */
+.sp-root .excel-container {
+  background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(88, 62, 4, 0.1);
+  border: 2px solid #000; display: flex; flex-direction: column;
+  height: calc(100vh - 300px); min-height: 100px; flex: 1; overflow: hidden;
+}
+.sp-root .table-scroll-container { overflow-x: hidden; overflow-y: auto; flex: 1; position: relative; }
+.sp-root .excel-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
+.sp-root .excel-table th {
+  background: #636363; color: white;
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 600;
+  border: 1px solid #d1d5db; position: sticky; top: 0; z-index: 100; white-space: nowrap;
+}
+.sp-root .excel-table td {
+  font-size: clamp(8px, 0.74vw, 14px); padding: 0; border: 1px solid #d1d5db;
+  text-align: center; position: relative; vertical-align: middle;
+}
+.sp-root .excel-table tr:nth-child(even) { background-color: #f9fafb; }
+.sp-root .excel-table tr:hover { background-color: #f3f4f6; }
+/* 状态列（第10列）保留状态色背景：已批准浅绿 / 待批准浅黄 */
+.sp-root .excel-table tr.status-approved td:nth-child(10) { background-color: #d1fae5 !important; }
+.sp-root .excel-table tr.status-pending td:nth-child(10) { background-color: #fef3c7 !important; }
+/* 新行 / 编辑行（可编辑状态，浅绿/蓝色提示） */
+.sp-root .excel-table tr.new-row td { background-color: #f0fdf4 !important; }
+.sp-root .excel-table tr.editing-row td { background-color: #cde3ff !important; }
+.sp-root .excel-table tr.editing-row .serial-number-cell { background-color: #f9fafb !important; }
+/* 序号列（灰底） */
+.sp-root .serial-number-cell {
+  padding: 8px; text-align: center; font-weight: 600; color: #6b7280; background-color: #f9fafb;
+}
+/* 响应式列宽（对齐旧系统 11 列百分比） */
+.sp-root .excel-table th:nth-child(1), .sp-root .excel-table td:nth-child(1) { width: 4%; }
+.sp-root .excel-table th:nth-child(2), .sp-root .excel-table td:nth-child(2) { width: 10%; }
+.sp-root .excel-table th:nth-child(3), .sp-root .excel-table td:nth-child(3) { width: 20%; }
+.sp-root .excel-table th:nth-child(4), .sp-root .excel-table td:nth-child(4) { width: 8%; }
+.sp-root .excel-table th:nth-child(5), .sp-root .excel-table td:nth-child(5) { width: 8%; }
+.sp-root .excel-table th:nth-child(6), .sp-root .excel-table td:nth-child(6) { width: 14%; }
+.sp-root .excel-table th:nth-child(7), .sp-root .excel-table td:nth-child(7) { width: 7%; }
+.sp-root .excel-table th:nth-child(8), .sp-root .excel-table td:nth-child(8) { width: 8%; }
+.sp-root .excel-table th:nth-child(9), .sp-root .excel-table td:nth-child(9) { width: 10%; }
+.sp-root .excel-table th:nth-child(10), .sp-root .excel-table td:nth-child(10) { width: 12%; }
+.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 90px; }
+.sp-root .excel-input {
+  width: 100%; height: clamp(30px, 2.08vw, 40px); border: none; background: #f0fdf4;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 400;
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px); transition: all 0.2s;
+  font-family: inherit;
+}
+.sp-root .excel-input.text-input { text-align: left; padding-left: 8px; }
+.sp-root .excel-input:focus { background: #fff; border: 2px solid #583e04; outline: none; z-index: 5; position: relative; }
+/* 只读数据单元格：白底 + 常规字重（去掉全表浅绿） */
+.sp-root .excel-input[readonly] {
+  background-color: #ffffff !important;
+  font-weight: 400;
+  color: #111827;
+  cursor: default;
+}
+/* 货品编号、货品名字列：medium 到 semibold */
+.sp-root .excel-table td:nth-child(2) .excel-input,
+.sp-root .excel-table td:nth-child(3) .excel-input { font-weight: 600; }
+.sp-root .excel-select {
+  width: 100%; height: clamp(30px, 2.08vw, 40px); border: none; background: #f0fdf4;
+  text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 400;
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px); cursor: pointer;
+  font-family: inherit;
+}
+.sp-root .excel-select:focus { background: #fff; border: 2px solid #583e04; outline: none; }
+.sp-root .excel-select[disabled] { background: #f9fafb !important; pointer-events: none; color: #374151; }
+.sp-root .status-badge-approved { color: #065f46; font-weight: 600; }
+.sp-root .status-badge-pending { color: #92400e; font-weight: 600; }
+.sp-root .approve-btn {
+  background: #10b981; color: white; border: none; border-radius: 6px;
+  padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;
+}
+.sp-root .approve-btn:hover { background: #059669; transform: translateY(-1px); }
+.sp-root .approve-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+.sp-root .delete-row-btn {
+  background: #ef4444; color: white; border: none; border-radius: clamp(4px, 0.32vw, 6px);
+  width: clamp(18px, 1.67vw, 32px); height: clamp(18px, 1.67vw, 32px);
+  font-size: clamp(6px, 0.63vw, 12px); cursor: pointer; margin: 2px;
+  display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.sp-root .delete-row-btn:hover { background: #dc2626; transform: scale(1.1); }
+.sp-root .edit-btn {
+  background: #f59e0b; color: white; border: none; border-radius: clamp(4px, 0.32vw, 6px);
+  width: clamp(18px, 1.67vw, 32px); height: clamp(18px, 1.67vw, 32px);
+  font-size: clamp(6px, 0.63vw, 12px); cursor: pointer; margin: 2px;
+  display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;
+}
+.sp-root .edit-btn:hover { background: #d97706; transform: scale(1.1); }
+.sp-root .edit-btn.save-mode { background: #10b981; }
+.sp-root .edit-btn.save-mode:hover { background: #059669; }
+.sp-root .action-cell {
+  display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px;
+  padding: 4px; width: 100%; height: clamp(30px, 2.08vw, 40px); box-sizing: border-box;
+}
+
+/* smartSearch */
+.sp-root .smartSearchWrapper {
+  position: relative; width: 40px; height: 38px; flex-shrink: 0;
+  display: flex; align-items: center; background: #fff;
+  border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; cursor: pointer;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, border-radius 0.25s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.sp-root .smartSearchWrapper:hover { border-color: #ff7b00; }
+.sp-root .smartSearchWrapper.expanded { width: 250px; border-color: #ff7b00; border-radius: 6px; cursor: default; box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08); }
+.sp-root .smartSearch-icon {
+  width: 40px; min-width: 40px; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #9ca3af; flex-shrink: 0; pointer-events: none; transition: color 0.25s ease;
+}
+.sp-root .smartSearchWrapper.expanded .smartSearch-icon { color: #ff7b00; }
+.sp-root .smartSearch-input {
+  flex: 1; border: none; outline: none; background: transparent;
+  font-size: clamp(11px, 0.74vw, 14px); color: #111827; padding: 0 12px 0 0;
+  min-width: 0; font-family: inherit; height: 100%; display: none;
+}
+.sp-root .smartSearchWrapper.expanded .smartSearch-input { display: block; }
+.sp-root .smartSearch-input::placeholder { color: #9ca3af; }
+
+/* 回到顶部按钮（右下角，对齐旧系统） */
+.sp-root .back-to-top {
+  position: fixed; bottom: 30px; right: 20px; width: 50px; height: 50px;
+  background-color: #583e04; color: white; border: none; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; box-shadow: 0 4px 12px rgba(88, 62, 4, 0.3);
+  transition: all 0.3s ease; opacity: 0; visibility: hidden; transform: translateY(20px); z-index: 1000;
+}
+.sp-root .back-to-top.show { opacity: 1; visibility: visible; transform: translateY(0); }
+.sp-root .back-to-top:hover { background-color: #462d03; transform: translateY(-3px); box-shadow: 0 6px 16px rgba(88, 62, 4, 0.4); }
+
+/* toast */
+.sp-root .toast-container {
+  position: fixed; bottom: 20px; right: 20px; z-index: 10000;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.sp-root .toast {
+  width: clamp(100px, 15.63vw, 300px); padding: clamp(2px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  border-radius: clamp(6px, 0.42vw, 8px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  font-size: clamp(8px, 0.74vw, 14px); display: flex; align-items: center; gap: 12px;
+  color: white; position: relative; overflow: hidden;
+}
+.sp-root .toast-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.9), rgba(5, 150, 105, 0.9)); }
+.sp-root .toast-error { background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9)); }
+.sp-root .toast-info { background: linear-gradient(135deg, rgba(59, 130, 246, 0.9), rgba(37, 99, 235, 0.9)); }
+.sp-root .toast-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.9), rgba(217, 119, 6, 0.9)); }
+.sp-root .toast-content { flex: 1; font-weight: 500; line-height: 1.4; }
+.sp-root .toast-progress {
+  position: absolute; bottom: 0; left: 0; height: 3px; background: rgba(255, 255, 255, 0.3);
+  border-radius: 0 0 8px 8px; transform-origin: left; animation: toastProgress 3s linear forwards;
+}
+@keyframes toastProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
