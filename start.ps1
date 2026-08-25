@@ -55,6 +55,12 @@ function Run-Mysql([string]$sql) {
 }
 
 function Import-Dump {
+    if (-not (Test-Path $DUMP)) {
+        Write-Host "  [!!] 缺少数据库数据包: $DUMP" -ForegroundColor Red
+        Write-Host "       请将 database/u690174784_kunzz.sql 放入此目录后重试。" -ForegroundColor Yellow
+        Write-Host "       （该文件不包含在 GitHub 源码包中，需要单独提供）" -ForegroundColor Yellow
+        Wait-Enter "按回车退出"; exit 1
+    }
     Write-Host "  [..] 创建数据库并导入数据包 (约 $([math]::Round((Get-Item $DUMP).Length/1MB)) MB)..."
     & cmd /c "`"$MDB\bin\mysql.exe`" --ssl=0 -h 127.0.0.1 -P $PORT_DB -u root -e `"CREATE DATABASE IF NOT EXISTS $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`""
     if ($LASTEXITCODE -ne 0) { throw "创建数据库失败" }
@@ -68,6 +74,8 @@ function Get-JRE {
         Write-Host "  [OK] 已找到绿色 JRE 21" -ForegroundColor Green
         return
     }
+    # 从 GitHub 下载的源码包没有 runtime/ 目录，需先创建
+    New-Item -ItemType Directory -Path (Join-Path $ROOT 'runtime') -Force | Out-Null
     Write-Host "  [..] 未找到 JRE，正在下载 (约 48MB，首次运行仅一次)..."
     $zip = Join-Path $ROOT 'runtime\jre21.zip'
     curl.exe -L --progress-bar -o $zip "https://api.adoptium.net/v3/binary/latest/21/ga/windows/x64/jre/hotspot/normal/eclipse?project=jdk"
@@ -89,6 +97,8 @@ function Get-MariaDB {
         Write-Host "  [OK] 已找到绿色 MariaDB" -ForegroundColor Green
         return
     }
+    # 从 GitHub 下载的源码包没有 runtime/ 目录，需先创建
+    New-Item -ItemType Directory -Path (Join-Path $ROOT 'runtime') -Force | Out-Null
     if (-not (Test-Path $MDB_ZIP)) {
         Write-Host "  [..] 未找到 MariaDB，正在下载 (约 75MB，首次运行仅一次)..."
         curl.exe -L --progress-bar -o $MDB_ZIP "https://archive.mariadb.org/mariadb-10.4.32/winx64-packages/mariadb-10.4.32-winx64.zip"
@@ -167,6 +177,9 @@ function Start-Backend {
     }
     if (-not (Test-Path $JAR)) {
         Write-Host "  [!!] 缺少后端程序: $JAR" -ForegroundColor Red
+        Write-Host "       jar 不包含在 GitHub 源码包中，请先在本机构建：" -ForegroundColor Yellow
+        Write-Host "         cd backend && mvn -DskipTests package" -ForegroundColor Yellow
+        Write-Host "       然后将 backend/target/inventory-backend-1.0.0.jar 复制到用户设备对应位置。" -ForegroundColor Yellow
         Wait-Enter "按回车退出"; exit 1
     }
     Write-Host "  [..] 启动后端服务 (http://localhost:$PORT_API)..."
