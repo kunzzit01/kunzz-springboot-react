@@ -38,6 +38,8 @@ export default function Dishware() {
   const [sets, setSets] = useState<DishwareSet[]>([])
   const [setItems, setSetItems] = useState<Record<number, { productName: string; quantityInSet: number }[]>>({})
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
 
   // 添加/编辑弹窗
   const [modal, setModal] = useState<PhotoModalState>({ open: false, photoPath: '', photoFile: null })
@@ -164,7 +166,9 @@ export default function Dishware() {
     setModal(m => ({ ...m, photoFile: f }))
   }
   const saveModal = async () => {
+    if (saving) return
     if (!form.productName || !form.category) { showMsg('碗碟名称和分类必填', 'error'); return }
+    setSaving(true)
     try {
       let photoPath = modal.photoPath
       if (modal.photoFile) {
@@ -221,6 +225,7 @@ export default function Dishware() {
         }, 250)
       }
     } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const removeRow = async (r: DishwareStockVO) => {
     if (!window.confirm(`确定删除碗碟：${r.productName}？`)) return
@@ -327,13 +332,16 @@ export default function Dishware() {
   }
   const openRestModal = () => { setRestModal(true); loadLocations() }
   const saveRest = async () => {
+    if (saving) return
     if (!restForm.name.trim()) { showMsg('餐厅店面名称不能为空', 'error'); return }
+    setSaving(true)
     try {
       if (restForm.id) await updateDishwareLocation(restForm.id, { name: restForm.name.trim() })
       else await createDishwareLocation({ name: restForm.name.trim() })
       setRestAddModal(false); setRestForm({ id: 0, name: '' })
       loadLocations(); showMsg('已保存')
     } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const removeRest = async (id: number, name: string) => {
     if (!window.confirm(`确定要删除这个餐厅店面（${name}）吗？删除后该店面的库存数据将被移除。`)) return
@@ -761,14 +769,14 @@ export default function Dishware() {
                 <button type="button" className="btn edit-btn-cancel" onClick={() => setModal(m => ({ ...m, open: false }))}>
                   <i className="fas fa-times" /> 取消
                 </button>
-                <button type="button" className="btn edit-btn-save" onClick={saveModal}>
-                  <i className="fas fa-check" /> 保存更改
+                <button type="button" className="btn edit-btn-save" onClick={saveModal} disabled={saving}>
+                  <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')} /> {saving ? '保存中...' : '保存更改'}
                 </button>
               </div>
             ) : (
               <div className="modal-actions">
                 <button className="btn btn-secondary" onClick={() => setModal(m => ({ ...m, open: false }))}>取消</button>
-                <button className="btn btn-primary" onClick={saveModal}><i className="fas fa-save" /> 保存碗碟信息</button>
+                <button className="btn btn-primary" onClick={saveModal} disabled={saving}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存碗碟信息</>}</button>
               </div>
             )}
           </div>
@@ -833,7 +841,7 @@ export default function Dishware() {
             </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setRestAddModal(false)}>取消</button>
-              <button className="btn btn-primary" onClick={saveRest}><i className="fas fa-save" /> 保存</button>
+              <button className="btn btn-primary" onClick={saveRest} disabled={saving}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存</>}</button>
             </div>
           </div>
         </div>

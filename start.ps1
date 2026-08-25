@@ -125,6 +125,8 @@ function Prepare-Database {
             Wait-Enter "按回车退出"; exit 1
         }
         Write-Host "  [OK] 检测到已有数据库服务 (端口 $PORT_DB)，直接复用" -ForegroundColor Green
+        # 固定数据库会话时区为 UTC+8（马来西亚），确保 CURRENT_TIMESTAMP 与老系统一致
+        Run-Mysql "SET GLOBAL time_zone = '+08:00'" | Out-Null
         if ([int]$probe -eq 0) { Import-Dump }
         else {
             $tbl = Run-Mysql "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$DB_NAME'"
@@ -146,8 +148,9 @@ function Prepare-Database {
         if ($LASTEXITCODE -ne 0) { throw "MariaDB 数据目录初始化失败" }
     }
     Write-Host "  [..] 启动内置 MariaDB (端口 $PORT_DB)..."
+    # 固定数据库时区为 UTC+8（马来西亚），确保 CURRENT_TIMESTAMP 默认值与老系统一致
     $p = Start-Process "$MDB\bin\mysqld.exe" `
-         -ArgumentList "--datadir=$MDB_DATA", "--port=$PORT_DB", "--console" `
+         -ArgumentList "--datadir=$MDB_DATA", "--port=$PORT_DB", "--default-time-zone=+08:00", "--console" `
          -WindowStyle Hidden `
          -RedirectStandardOutput (Join-Path $ROOT 'runtime\mysqld.out.log') `
          -RedirectStandardError  (Join-Path $ROOT 'runtime\mysqld.err.log') `
@@ -215,7 +218,7 @@ function Start-Backend {
     }
     Write-Host "  [..] 启动后端服务 (http://localhost:$PORT_API)..."
     $p = Start-Process "$JRE\bin\java.exe" `
-         -ArgumentList "-jar", "`"$JAR`"" `
+         -ArgumentList "-Duser.timezone=GMT+8", "-jar", "`"$JAR`"" `
          -WorkingDirectory (Join-Path $ROOT 'backend') `
          -WindowStyle Hidden `
          -RedirectStandardOutput (Join-Path $ROOT 'backend_run.log') `

@@ -64,6 +64,8 @@ export default function Evaluation() {
   const [department, setDepartment] = useState('')
   const [evaluatorName, setEvaluatorName] = useState('')
   const [evaluationDate, setEvaluationDate] = useState(() => new Date().toISOString().slice(0, 10))
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [employees, setEmployees] = useState<ScheduleEmployee[]>([])
   const [criteria, setCriteria] = useState<CriteriaConfig[]>([])
   const [scores, setScores] = useState<Record<string, Record<number, string>>>({})
@@ -158,6 +160,7 @@ export default function Evaluation() {
   }
 
   const saveForm = async () => {
+    if (saving) return
     if (!evaluatorName.trim() || !evaluationDate) {
       message.error('请填写评估人姓名和评估日期')
       return
@@ -168,6 +171,7 @@ export default function Evaluation() {
       criteria.forEach((_, i) => { detail['criteria' + (i + 1)] = s[i + 1] || '' })
       return detail
     })
+    setSaving(true)
     try {
       await createEvalForm({
         formName: `${DEPT_LABELS[department]} - ${evaluationDate}`,
@@ -179,6 +183,7 @@ export default function Evaluation() {
       })
       message.success('表单保存成功')
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   const downloadPDF = async () => {
@@ -235,6 +240,7 @@ export default function Evaluation() {
   }
 
   const saveStandards = async () => {
+    if (saving) return
     const items: EvalStandard[] = []
     for (const d of DEPTS) {
       for (let co = 1; co <= 5; co++) {
@@ -243,6 +249,7 @@ export default function Evaluation() {
         }
       }
     }
+    setSaving(true)
     try {
       await saveEvalStandard(items as unknown as Record<string, unknown>)
       message.success('考核标准已保存')
@@ -250,6 +257,7 @@ export default function Evaluation() {
       console.error(e)
       message.error('保存失败')
     }
+    finally { setSaving(false) }
   }
 
   const exportStandardsPDF = async () => {
@@ -377,7 +385,7 @@ export default function Evaluation() {
 
               {formCreated && (
                 <div className="ev-form-buttons">
-                  <button className="ev-save-form-btn" onClick={saveForm}><i className="fas fa-save" /> 保存表单</button>
+                  <button className="ev-save-form-btn" onClick={saveForm} disabled={saving}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存表单</>}</button>
                   <button className="ev-print-btn" onClick={downloadPDF}><i className="fas fa-file-pdf" /> 下载PDF</button>
                 </div>
               )}
@@ -486,7 +494,7 @@ export default function Evaluation() {
                   </div>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <button className="ev-btn-secondary" onClick={exportStandardsPDF}><i className="fas fa-file-pdf" /> 导出标准PDF</button>
-                    <button className="ev-btn-primary" style={{ width: 'auto' }} onClick={saveStandards}><i className="fas fa-save" /> 保存标准</button>
+                    <button className="ev-btn-primary" style={{ width: 'auto' }} onClick={saveStandards} disabled={saving}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存标准</>}</button>
                   </div>
                 </div>
 

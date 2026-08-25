@@ -28,40 +28,41 @@
         ORDER BY name
     </select>
 
-    <!-- 价格批次：按价格降序，净库存 > 0（对齐线上 product_batches_for_hifo） -->
+    <!-- 价格批次：按价格降序，净库存 > 0（对齐线上 product_batches_for_hifo）
+         COALESCE 处理：全新进货价（只有入库、出库全 NULL）SUM(out)=NULL 会把净库存算成 NULL 被 HAVING 排除 -->
     <select id="priceBatches" resultType="java.util.LinkedHashMap">
         SELECT ROUND(price, 2) AS price,
-               SUM(in_quantity) - SUM(out_quantity) AS available_stock
+               COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS available_stock
         FROM ${tableName}
         WHERE product_name = #{productName} AND deleted_at IS NULL
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
         </if>
         GROUP BY ROUND(price, 2)
-        HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &gt; 0
         ORDER BY price DESC
     </select>
 
     <!-- 价格+库存明细（对齐线上 product_prices_with_stock） -->
     <select id="priceStock" resultType="java.util.LinkedHashMap">
         SELECT ROUND(price, 2) AS price,
-               SUM(in_quantity) - SUM(out_quantity) AS available_stock,
-               SUM(in_quantity) AS total_in,
-               SUM(out_quantity) AS total_out
+               COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS available_stock,
+               COALESCE(SUM(in_quantity), 0) AS total_in,
+               COALESCE(SUM(out_quantity), 0) AS total_out
         FROM ${tableName}
         WHERE product_name = #{productName} AND deleted_at IS NULL
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
         </if>
         GROUP BY ROUND(price, 2)
-        HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+        HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &gt; 0
         ORDER BY price DESC
     </select>
 
     <!-- 在库备注编号（净库存 > 0，对齐线上 product_remark_codes） -->
     <select id="remarkCodes" resultType="string">
         SELECT remark_number FROM (
-            SELECT remark_number, SUM(in_quantity) - SUM(out_quantity) AS net
+            SELECT remark_number, COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS net
             FROM stockinout_data
             WHERE product_name = #{productName}
               AND product_remark_checked = 1

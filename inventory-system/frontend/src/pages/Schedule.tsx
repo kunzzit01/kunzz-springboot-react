@@ -72,7 +72,8 @@ function decodeHolidayOverlayNotes(notes?: string | null) {
       }
     } catch { /* ignore */ }
   }
-  return null
+  // 兼容老系统数据：notes 为普通文本时视为 shift 班次代码（公共假期上的加班班次）
+  return { type: 'shift', code: t, notes: '' }
 }
 
 function encodeHolidayOverlayData(r?: Rec) {
@@ -96,6 +97,8 @@ export default function Schedule() {
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [dateType, setDateType] = useState<'year' | 'month' | null>(null)
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   // 排班模态框
   const [cellSel, setCellSel] = useState<CellSel | null>(null)
   const [schType, setSchType] = useState('')
@@ -203,7 +206,8 @@ export default function Schedule() {
           shiftCode = overlay.code || null
         } else {
           color = ht ? (ht.color || '') : '#f3f4f6'
-          showText = true
+          // 对齐 live：纯假期只显示底色，不显示假期代码文字
+          showText = false
         }
       }
     }
@@ -233,6 +237,7 @@ export default function Schedule() {
   const empNameOf = (id: number) => employees.find(e => e.id === id)?.name || ''
 
   const saveSchedule = async () => {
+    if (saving) return
     if (!cellSel) return
     if (!schType || !schValue) { showMsg('请选择排班类型和值', 'error'); return }
     const existing = findRec(cellSel.employeeId, cellSel.dateStr)
@@ -245,12 +250,14 @@ export default function Schedule() {
     const others = records.filter(r => r.employeeId !== cellSel.employeeId || r.scheduleDate !== cellSel.dateStr)
     const newRec: Rec = { employeeId: cellSel.employeeId, scheduleDate: cellSel.dateStr, valueType: schType, valueCode: schValue, notes: notes || undefined }
     const all = [...others, newRec]
+    setSaving(true)
     try {
       await saveScheduleRecords(monthStr, all)
       setRecords(all)
       setCellSel(null)
       showMsg('排班已保存')
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
 
   const deleteSchedule = async () => {
@@ -324,9 +331,11 @@ export default function Schedule() {
 
   // ---------- 保存所有更改（批处理） ----------
   const saveAllChanges = async () => {
+    if (saving) return
     const modifiedMap = modifiedRef.current
     if (modifiedMap.size === 0) { showMsg('没有需要保存的更改', 'info'); return }
     if (!window.confirm('确定要保存 ' + modifiedMap.size + ' 个更改吗？')) return
+    setSaving(true)
     try {
       let next = [...records]
       for (const [key, data] of modifiedMap.entries()) {
@@ -358,6 +367,7 @@ export default function Schedule() {
       dirtyCellsRef.current.clear()
       showMsg('所有更改已保存')
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
 
   // ================= 编辑模式（对齐线上：contentEditable 直接编辑 + 自动保存 + 多选/复制/粘贴/批量输入） =================
@@ -803,7 +813,9 @@ export default function Schedule() {
 
   // ---------- 员工管理 ----------
   const saveEmployee = async () => {
+    if (saving) return
     if (!empName.trim() || !empPhone.trim()) { showMsg('请填写姓名和手机号码', 'error'); return }
+    setSaving(true)
     try {
       await saveScheduleEmployee({ id: empId || undefined, name: empName.trim(), phone: empPhone.trim(), position: empPosition, workArea: empArea, restaurant })
       setEmpModal(false)
@@ -811,6 +823,7 @@ export default function Schedule() {
       const es = await getScheduleEmployees(restaurant)
       setEmployees(es.filter(e => e.isActive !== false))
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const deleteEmployee = async (id: number) => {
     if (!window.confirm('确定删除该员工吗？')) return
@@ -824,7 +837,9 @@ export default function Schedule() {
 
   // ---------- 班次管理 ----------
   const saveShiftItem = async () => {
+    if (saving) return
     if (!shiftCode.trim() || !shiftStart || !shiftEnd) { showMsg('请填写班次代码和时间', 'error'); return }
+    setSaving(true)
     try {
       await saveShift({ id: shiftId || undefined, shiftCode: shiftCode.trim().toUpperCase(), restaurant, startTime: shiftStart + ':00', endTime: shiftEnd + ':00' })
       setShiftModal(false)
@@ -832,6 +847,7 @@ export default function Schedule() {
       const ss = await getShifts()
       setShifts(ss.filter(s => !s.restaurant || s.restaurant === restaurant))
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const deleteShiftItem = async (id: number) => {
     if (!window.confirm('确定删除该班次吗？')) return
@@ -1059,7 +1075,7 @@ export default function Schedule() {
                 </div>
               </div>
               <div className="controls-right">
-                <button id="saveAllBtn" className="btn-control" onClick={saveAllChanges} style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}>
+                <button id="saveAllBtn" className="btn-control" onClick={saveAllChanges} disabled={saving} style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}>
                   <i className="fas fa-save"></i> 保存所有更改
                 </button>
                 <button className="btn-generate" onClick={() => setPanel('shifts')}>
@@ -1193,7 +1209,7 @@ export default function Schedule() {
             <div className="form-actions">
               <button className="btn-action btn-delete" onClick={deleteSchedule}><i className="fas fa-trash"></i> 删除</button>
               <button className="btn-action btn-cancel" onClick={() => setCellSel(null)}><i className="fas fa-times"></i> 取消</button>
-              <button className="btn-action btn-save" onClick={saveSchedule}><i className="fas fa-check"></i> 保存</button>
+              <button className="btn-action btn-save" onClick={saveSchedule} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> 保存</button>
             </div>
           </div>
         </div>
@@ -1381,7 +1397,7 @@ export default function Schedule() {
             </div>
             <div className="form-actions">
               <button className="btn-action btn-cancel" onClick={() => setEmpModal(false)}><i className="fas fa-times"></i> 取消</button>
-              <button className="btn-action btn-save" onClick={saveEmployee}><i className="fas fa-check"></i> 保存</button>
+              <button className="btn-action btn-save" onClick={saveEmployee} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> 保存</button>
             </div>
           </div>
         </div>
@@ -1409,7 +1425,7 @@ export default function Schedule() {
             </div>
             <div className="form-actions">
               <button className="btn-action btn-cancel" onClick={() => setShiftModal(false)}><i className="fas fa-times"></i> 取消</button>
-              <button className="btn-action btn-save" onClick={saveShiftItem}><i className="fas fa-check"></i> 保存</button>
+              <button className="btn-action btn-save" onClick={saveShiftItem} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> 保存</button>
             </div>
           </div>
         </div>

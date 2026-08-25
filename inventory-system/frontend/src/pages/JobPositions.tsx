@@ -32,6 +32,8 @@ export default function JobPositions() {
   const [lang, setLang] = useState<'zh' | 'en'>('zh')
   const [jobs, setJobs] = useState<JobPosition[]>([])
   const [draft, setDraft] = useState<Draft>(emptyDraft())
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
@@ -51,6 +53,7 @@ export default function JobPositions() {
   const showDept = draft.companyCategory === 'TOKYO JAPANESE CUISINE' || draft.companyCategory === 'TOKYO IZAKAYA'
 
   const doSave = async () => {
+    if (saving) return
     if (!draft.jobTitle.trim() || !draft.recruitmentCount.trim() || !draft.workExperience.trim()
       || !draft.publishDate || !draft.companyCategory || !draft.salary.trim() || !draft.jobDescription.trim()) {
       setAlert({ type: 'error', msg: t('请填写所有必填项！', 'Please fill in all required fields!') })
@@ -72,6 +75,7 @@ export default function JobPositions() {
       jobDescription: draft.jobDescription.trim(),
       language: lang,
     }
+    setSaving(true)
     try {
       if (editId !== null) {
         await updateJob(editId, payload)
@@ -84,6 +88,7 @@ export default function JobPositions() {
       setEditId(null)
       load()
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   const startEdit = (job: JobPosition) => {
@@ -189,8 +194,8 @@ export default function JobPositions() {
           </div>
 
           <div className="form-buttons">
-            <button className="btn" onClick={doSave}>
-              {editId !== null ? t('更新职位', 'Update Job Position') : t('添加职位', 'Add Job Position')}
+            <button className="btn" onClick={doSave} disabled={saving}>
+              {saving ? t('保存中...', 'Saving...') : (editId !== null ? t('更新职位', 'Update Job Position') : t('添加职位', 'Add Job Position'))}
             </button>
             {editId !== null && (
               <button className="btn btn-secondary" onClick={cancelEdit}>{t('取消编辑', 'Cancel Edit')}</button>

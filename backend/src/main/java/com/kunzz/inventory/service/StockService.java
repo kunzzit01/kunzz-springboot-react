@@ -416,20 +416,28 @@ public class StockService {
             return new StockInout();
         }
 
+        StockInout s = stockInoutRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(404, "记录不存在"));
+
         // ====== 出货备注校验（对齐 createInout：有在库备注编号时必须填且必须在库） ======
+        // 编辑时：保持原备注编号则跳过「在库」校验——该编号可能已被本记录自身消耗（净库存 ≤ 0），
+        // 重新校验必然失败导致无法保存编辑（对齐旧系统 PATCH 编辑不做校验）；仅当改动编号时才要求新编号在库。
         boolean isOutgoing = req.outQuantity() != null && req.outQuantity().signum() > 0;
         String remarkNumber = req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase();
+        String oldRemark = s.getRemarkNumber() == null ? null : s.getRemarkNumber().trim().toUpperCase();
         if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(req.productName()) > 0) {
             if (remarkNumber == null || remarkNumber.isBlank()) {
-                throw new BusinessException("货品 [" + req.productName() + "] 有备注编码在库，出货时必须填写备注编号");
-            }
-            if (stockInoutMapper.countRemarkNumberInStock(req.productName(), remarkNumber) == 0) {
+                if (oldRemark == null || oldRemark.isBlank()) {
+                    throw new BusinessException("货品 [" + req.productName() + "] 有备注编码在库，出货时必须填写备注编号");
+                }
+                // 原记录已有备注编号但本次提交为空 → 保留原编号（避免编辑误清）
+                remarkNumber = oldRemark;
+            } else if (!remarkNumber.equals(oldRemark)
+                    && stockInoutMapper.countRemarkNumberInStock(req.productName(), remarkNumber) == 0) {
                 throw new BusinessException("备注编号 [" + remarkNumber + "] 不在库中");
             }
         }
 
-        StockInout s = stockInoutRepository.findById(id)
-                .orElseThrow(() -> new BusinessException(404, "记录不存在"));
         // 记录原值，用于判断是否需同步分店表（对齐旧系统 handlePut）
         String oldTarget = s.getTargetSystem();
         String oldProduct = s.getProductName();
@@ -440,28 +448,27 @@ public class StockService {
         s.setProductRemarkChecked(req.productRemarkChecked());
         s = stockInoutRepository.save(s);
 
-        // 原记录为中央出库到分店 → 同步分店入库记录
-        if (oldOutgoing && oldTarget != null && List.of("j1", "j2", "j3").contains(oldTarget.toLowerCase())) {
-            String branch = oldTarget.toLowerCase();
-            String newTarget = req.targetSystem() == null ? null : req.targetSystem().trim().toLowerCase();
-            boolean productChanged = oldProduct != null && !oldProduct.equals(req.productName());
-            boolean targetChanged = !branch.equals(newTarget);
+        // ====== 分店同步：编辑时目标单位/货品/数量变化 → 中央 ↔ 分店保持一致 ======
+        // 修复：原目标为 NULL/central 改成出货到分店时，也必须写入分店记录（旧逻辑要求原记录已是分店出货才同步）
+        String newTarget = req.targetSystem() == null ? null : req.targetSystem().trim().toLowerCase();
+        boolean nowOutgoing = req.outQuantity() != null && req.outQuantity().signum() > 0;
+        boolean newIsBranch = newTarget != null && List.of("j1", "j2", "j3").contains(newTarget);
+        String oldBranch = (oldOutgoing && oldTarget != null && List.of("j1", "j2", "j3").contains(oldTarget.toLowerCase()))
+                ? oldTarget.toLowerCase() : null;
+        boolean productChanged = oldProduct != null && !oldProduct.equals(req.productName());
 
-            // jXstockinout_data：按 main_record_id 软删旧记录后重新插入（无论是否变化，保证一致）
-            stockInoutMapper.softDeleteBranchInoutByMainId(branch + "stockinout_data", id, "System");
-            if (req.outQuantity() != null && req.outQuantity().signum() > 0 && newTarget != null && List.of("j1", "j2", "j3").contains(newTarget)) {
-                insertBranchInout(newTarget, req, id);
-            }
+        // 1) 旧分店清理：不再出货 / 目标改了 / 货品改了 → 删除旧分店记录（避免残留）
+        if (oldBranch != null && (!nowOutgoing || !newIsBranch || !oldBranch.equals(newTarget) || productChanged)) {
+            stockInoutMapper.softDeleteBranchInoutByMainId(oldBranch + "stockinout_data", id, "System");
+            stockInoutMapper.softDeleteBranchEditByMainId(oldBranch + "stockedit_data", id, oldBranch, "System");
+        }
 
-            // jXstockedit_data：货品或目标变化时删除旧记录并重建（对齐旧系统 productChanged 清理）
-            // 8/23 修复：按 main_record_id 精确删除，避免按 产品名+收货人 误删同品名历史记录
-            if (productChanged || targetChanged || (req.outQuantity() != null && req.outQuantity().signum() <= 0)) {
-                stockInoutMapper.softDeleteBranchEditByMainId(branch + "stockedit_data", id, branch, "System");
-                if (req.outQuantity() != null && req.outQuantity().signum() > 0
-                        && newTarget != null && List.of("j1", "j2", "j3").contains(newTarget)) {
-                    insertBranchEdit(newTarget, req, id);
-                }
-            }
+        // 2) 新分店写入：出货到分店 → 软删该分店旧记录后重建（保证数量/价格/目标一致）
+        if (nowOutgoing && newIsBranch) {
+            stockInoutMapper.softDeleteBranchInoutByMainId(newTarget + "stockinout_data", id, "System");
+            stockInoutMapper.softDeleteBranchEditByMainId(newTarget + "stockedit_data", id, newTarget, "System");
+            insertBranchInout(newTarget, req, id);
+            insertBranchEdit(newTarget, req, id);
         }
         return s;
     }
@@ -496,6 +503,41 @@ public class StockService {
         s.setDeletedAt(LocalDateTime.now());
         s.setDeletedBy(deletedBy);
         stockInoutRepository.save(s);
+    }
+
+    /** 批量恢复软删除记录（撤销删除，与 deleteInout 双向联动镜像） */
+    @Transactional
+    public void restoreInout(List<Integer> ids, String system) {
+        if (ids == null || ids.isEmpty()) return;
+        boolean branch = system != null && List.of("j1", "j2", "j3").contains(system);
+        for (Integer id : ids) {
+            if (branch) {
+                // 分店恢复：先恢复本行，若有中央关联（中央出货生成）→ 同步恢复中央记录（对齐旧系统 restore 双向恢复）
+                Integer mainId = stockInoutMapper.findBranchMainId(system + "stockedit_data", id);
+                stockInoutMapper.restoreBranch(system + "stockedit_data", id);
+                if (mainId != null) {
+                    StockInout main = stockInoutRepository.findById(mainId).orElse(null);
+                    if (main != null && main.getDeletedAt() != null) {
+                        main.setDeletedAt(null);
+                        main.setDeletedBy(null);
+                        stockInoutRepository.save(main);
+                    }
+                }
+                continue;
+            }
+            StockInout s = stockInoutRepository.findById(id).orElse(null);
+            if (s == null) continue;
+            // 中央记录为出库到分店 → 同步恢复分店入库 + 分店 edit 记录（对齐旧系统 restore 双向恢复）
+            if (s.getOutQuantity() != null && s.getOutQuantity().signum() > 0
+                    && s.getTargetSystem() != null && List.of("j1", "j2", "j3").contains(s.getTargetSystem().toLowerCase())) {
+                String b = s.getTargetSystem().toLowerCase();
+                stockInoutMapper.restoreBranchInoutByMainId(b + "stockinout_data", id);
+                stockInoutMapper.restoreBranchEditByMainId(b + "stockedit_data", id, b);
+            }
+            s.setDeletedAt(null);
+            s.setDeletedBy(null);
+            stockInoutRepository.save(s);
+        }
     }
 
     private void applyInout(StockInout s, StockInoutRequest req) {

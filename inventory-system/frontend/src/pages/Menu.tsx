@@ -12,6 +12,8 @@ export default function Menu() {
   const [newCat, setNewCat] = useState('')
   const [kw, setKw] = useState('')
   const [showAdd, setShowAdd] = useState(false)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [add, setAdd] = useState<Record<string, string>>({ itemCode: '', itemName: '', itemNameCn: '', itemDesc: '', price: '', status: 'active' })
 
   const load = async () => {
@@ -28,14 +30,17 @@ export default function Menu() {
   }
 
   const submit = async () => {
+    if (saving) return
     if (!add.itemName) return
     const savedName = add.itemName
+    setSaving(true)
     try {
       await saveMenuItem({ menuType: tab, categoryId: cats[0] ? Number(cats[0].id) : undefined, itemCode: add.itemCode, itemName: add.itemName, itemNameCn: add.itemNameCn, itemDesc: add.itemDesc, price: add.price ? Number(add.price) : undefined, status: add.status })
       setShowAdd(false); setAdd({ itemCode: '', itemName: '', itemNameCn: '', itemDesc: '', price: '', status: 'active' })
       await load()
       flashAfterRow('body', 'td:nth-child(2)', savedName, flash)
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   const filtered = items.filter((m) => !kw || String(m.itemName || '').toLowerCase().includes(kw.toLowerCase()))
@@ -74,7 +79,7 @@ export default function Menu() {
               <select value={add.status} onChange={(e) => setAdd({ ...add, status: e.target.value })} style={{ padding: '6px 8px', border: '1px solid #ddd', borderRadius: 6 }}>
                 <option value="active">上架</option><option value="inactive">下架</option>
               </select>
-              <button className="btn btn-primary" onClick={submit}>保存</button>
+              <button className="btn btn-primary" onClick={submit} disabled={saving}>{saving ? '保存中...' : '保存'}</button>
               <button className="btn btn-default" onClick={() => setShowAdd(false)}>取消</button>
             </div>
             <input placeholder="描述" value={add.itemDesc} onChange={(e) => setAdd({ ...add, itemDesc: e.target.value })} style={{ width: '100%', padding: '6px 8px', border: '1px solid #ddd', borderRadius: 6 }} />

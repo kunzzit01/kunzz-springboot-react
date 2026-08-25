@@ -14,8 +14,8 @@
                MIN(price) AS price_raw,
                MAX(price) AS price_raw_max,
                MAX(type) AS type,
-               SUM(in_quantity) - SUM(out_quantity) AS total_stock,
-               SUM((in_quantity - out_quantity) * ROUND(price, 2)) AS total_price
+               COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS total_stock,
+               SUM((COALESCE(in_quantity, 0) - COALESCE(out_quantity, 0)) * ROUND(price, 2)) AS total_price
         FROM ${table}
         <where>
             deleted_at IS NULL
@@ -24,7 +24,7 @@
             </if>
         </where>
         GROUP BY product_name, code_number, specification, ROUND(price, 2)
-        HAVING SUM(in_quantity) - SUM(out_quantity) &lt;&gt; 0
+        HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &lt;&gt; 0
         ORDER BY product_name, code_number
     </select>
 

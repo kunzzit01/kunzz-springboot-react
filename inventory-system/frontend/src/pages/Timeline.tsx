@@ -18,6 +18,8 @@ export default function Timeline() {
   const [activeYear, setActiveYear] = useState('')
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [newYear, setNewYear] = useState<number>(new Date().getFullYear())
   const [newMonth, setNewMonth] = useState<number>(1)
   const [editDraft, setEditDraft] = useState<Record<string, { title: string; description1: string; description2: string; month: number }>>({})
@@ -40,17 +42,22 @@ export default function Timeline() {
   const yearItems = items.filter((it) => String(it.year) === activeYear)
 
   const doAdd = async () => {
+    if (saving) return
     if (!newYear || !newMonth) { message.warning(t('请填写年份和月份', 'Please enter year and month')); return }
+    setSaving(true)
     try {
       await addTimeline(lang, newYear, newMonth)
       setAddOpen(false)
       setAlert({ type: 'success', msg: t('新增记录成功！', 'Record added successfully!') })
       load(lang)
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   const doSave = async (it: TimelineItem) => {
+    if (saving) return
     const d = editDraft[String(it.id)] || {}
+    setSaving(true)
     try {
       await updateTimeline(String(it.id), lang, {
         title: d.title ?? it.title ?? '',
@@ -61,6 +68,7 @@ export default function Timeline() {
       setAlert({ type: 'success', msg: t('保存成功！', 'Saved successfully!') })
       load(lang)
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   const doUploadPhoto = async (it: TimelineItem, file?: File) => {
@@ -195,8 +203,8 @@ export default function Timeline() {
                           onChange={(e) => setEditDraft(p => ({ ...p, [String(it.id)]: { ...p[String(it.id)], description2: e.target.value } }))} />
                       </div>
                       <div className="form-actions">
-                        <button className="btn" onClick={() => doSave(it)}>
-                          <i className="fas fa-save" /> {t('保存修改', 'Save Changes')}
+                        <button className="btn" onClick={() => doSave(it)} disabled={saving}>
+                          <i className="fas fa-save" /> {saving ? t('保存中...', 'Saving...') : t('保存修改', 'Save Changes')}
                         </button>
                       </div>
                     </div>

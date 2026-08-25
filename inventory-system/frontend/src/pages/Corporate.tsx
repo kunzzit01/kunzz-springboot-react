@@ -33,6 +33,50 @@ function formatDate(dateStr?: string) {
   }
 }
 
+/** 把后端存储的 {ceo, pa, cLevel} 转成 orgchart 插件需要的嵌套树结构 */
+function toOrgTree(org: any): OrgNode | null {
+  if (!org || !org.ceo) return null
+  const children: OrgNode[] = []
+  if (org.pa && (org.pa.name || org.pa.title)) {
+    children.push({ id: 'pa', name: org.pa.name || '', title: org.pa.title || 'PA', level: 'pa' })
+  }
+  ;(org.cLevel || []).forEach((c: any, i: number) => {
+    if (c && (c.name || c.title)) {
+      children.push({ id: 'cl' + i, name: c.name || '', title: c.fullTitle || c.title || '', level: 'cLevel' })
+    }
+  })
+  return {
+    id: 'ceo',
+    name: org.ceo.name || '',
+    title: org.ceo.title || 'CEO',
+    level: 'ceo',
+    ...(children.length ? { children } : {}),
+  }
+}
+
+/** 把各里程碑按 S 曲线路径均匀分布（数据无 left/top 时自动计算） */
+function positionMilestones(wrapper: HTMLElement) {
+  const path = wrapper.querySelector<SVGPathElement>('.map-route-path')
+  const milestones = wrapper.querySelectorAll<HTMLElement>('.map-milestone')
+  if (!path || !milestones.length) return
+  const svg = path.ownerSVGElement as SVGSVGElement | null
+  const vb = svg?.viewBox.baseVal
+  const svgRect = svg?.getBoundingClientRect()
+  const wrapRect = wrapper.getBoundingClientRect()
+  if (!svg || !vb || !vb.width || !svgRect) return
+  const len = path.getTotalLength()
+  milestones.forEach((m, i) => {
+    // 数据里已带显式定位则不覆盖
+    if (m.style.left) return
+    const t = milestones.length === 1 ? 0 : i / (milestones.length - 1)
+    const pt = path.getPointAtLength(len * t)
+    const px = svgRect.left + (pt.x / vb.width) * svgRect.width
+    const py = svgRect.top + (pt.y / vb.height) * svgRect.height
+    m.style.left = ((px - wrapRect.left) / wrapRect.width) * 100 + '%'
+    m.style.top = ((py - wrapRect.top) / wrapRect.height) * 100 + '%'
+  })
+}
+
 /** 企业蓝图：与线上 corporate_blueprint.php 结构 1:1（数据来自 Spring API /api/corporate） */
 export default function Corporate() {
   const [data, setData] = useState<any>(null)
@@ -52,6 +96,7 @@ export default function Corporate() {
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
+            positionMilestones(wrapper)
             const route = wrapper.querySelector('.map-route-path')
             if (route) {
               setTimeout(() => route.classList.add('animate-in'), 200)
@@ -107,14 +152,14 @@ export default function Corporate() {
 
   // orgchart 初始化
   useEffect(() => {
-    if (!data || !data.organizationStructure || typeof (window as any).jQuery === 'undefined') return
+    if (!data || !orgRoot || typeof (window as any).jQuery === 'undefined') return
     const $ = (window as any).jQuery
     const el = document.getElementById('orgchart-container')
     if (!el || el.getAttribute('data-inited')) return
     el.setAttribute('data-inited', '1')
     try {
       $(el).orgchart({
-        data: data.organizationStructure,
+        data: orgRoot,
         nodeContent: 'title',
         nodeId: 'id',
         pan: false,
@@ -157,7 +202,7 @@ export default function Corporate() {
     .flatMap(([year, list]: [string, any]) =>
       (Array.isArray(list) ? list : []).map((item: any) => ({ ...item, year: Number(year) }))
     )
-  const orgRoot: OrgNode | null = data.organizationStructure || null
+  const orgRoot: OrgNode | null = toOrgTree(data.organizationStructure)
 
   const selectStrategy = (idx: number) => {
     setActiveIdx(idx)

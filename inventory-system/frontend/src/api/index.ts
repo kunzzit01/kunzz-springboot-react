@@ -139,6 +139,8 @@ export const updateStockInout = (id: number, data: Partial<StockInout>, system?:
   http.put<unknown, StockInout>('/stock/inout/' + id, data, { params: { system } })
 export const deleteStockInout = (id: number, deletedBy?: string, system?: string) =>
   http.delete<unknown, void>('/stock/inout/' + id, { params: { deletedBy, system } })
+export const restoreStockInout = (ids: number[], system?: string) =>
+  http.put<unknown, void>('/stock/inout/restore', { ids, system })
 
 // ---------- 最低库存 ----------
 export const getMinimums = (system?: string) =>

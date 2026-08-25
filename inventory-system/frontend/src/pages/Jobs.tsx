@@ -117,6 +117,8 @@ export default function Jobs() {
 
   // 筛选状态
   const [keyword, setKeyword] = useState('')
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [company, setCompany] = useState('')
   const [jobTitle, setJobTitle] = useState('')
   const [status, setStatus] = useState<number | ''>('')
@@ -341,7 +343,9 @@ export default function Jobs() {
 
   // 详情弹窗保存
   const saveModal = async () => {
+    if (saving) return
     if (!modalApp) return
+    setSaving(true)
     try {
       await updateApplication(modalApp.id, { status: modalStatus, hrRemarks: modalRemarks })
       message.success('保存成功')
@@ -349,6 +353,7 @@ export default function Jobs() {
       setModalApp(null)
       fetchData(1)
     } catch { /* 拦截器已提示 */ }
+    finally { setSaving(false) }
   }
 
   // 导出 Excel（UTF-8 BOM CSV）
@@ -648,7 +653,7 @@ export default function Jobs() {
         width={900}
         footer={[
           <Button key="c" onClick={() => setModalApp(null)}>取消关闭</Button>,
-          <Button key="s" type="primary" style={{ background: '#ff7b00', fontWeight: 'bold' }} onClick={saveModal}>保存更新</Button>,
+          <Button key="s" type="primary" style={{ background: '#ff7b00', fontWeight: 'bold' }} onClick={saveModal} loading={saving} disabled={saving}>保存更新</Button>,
         ]}
       >
         {modalApp && (

@@ -49,6 +49,8 @@ export default function Price() {
   const highlightTimer = useRef<any>(null)
 
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const showMsg = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
@@ -134,6 +136,8 @@ export default function Price() {
 
   // ---------- 新增餐馆 / 批发商 ----------
   const saveEntity = async () => {
+    if (saving) return
+    setSaving(true)
     try {
       if (mode === 'restaurant') {
         const cn = entityCn.trim().toUpperCase()
@@ -149,6 +153,7 @@ export default function Price() {
       setShowAddEntity(false); setEntityCn(''); setEntityEn('')
       load(mode)
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const removeEntity = async (id: number) => {
     if (!window.confirm('确定删除该' + (mode === 'restaurant' ? '餐馆' : '批发商') + '及其全部价格记录？')) return
@@ -179,8 +184,10 @@ export default function Price() {
   const setNewRowPrice = (ri: number, colId: string, v: string) =>
     setNewRows((prev) => prev.map((r, i) => (i === ri ? { ...r, prices: { ...r.prices, [colId]: v } } : r)))
   const saveNewRows = async () => {
+    if (saving) return
     const rows = newRows.filter((r) => r.name.trim())
     if (!rows.length) { showMsg('没有可保存的行', 'error'); return }
+    setSaving(true)
     try {
       const savedNames = rows.map((r) => r.name.trim().toUpperCase())
       for (const r of rows) {
@@ -212,6 +219,7 @@ export default function Price() {
         highlightTimer.current = setTimeout(() => setHighlightName(null), 3000)
       }, 200)
     } catch { showMsg('批量保存失败', 'error') }
+    finally { setSaving(false) }
   }
 
   // ---------- 批量删除 ----------
@@ -249,6 +257,8 @@ export default function Price() {
     setEditPrices(prices)
   }
   const saveEdit = async (row: PriceCompareRow) => {
+    if (saving) return
+    setSaving(true)
     try {
       for (const col of visibleCols) {
         const v = editPrices[String(col.id)]
@@ -260,6 +270,7 @@ export default function Price() {
       setEditRow(null)
       load(mode)
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const deleteRow = async (row: PriceCompareRow) => {
     if (!window.confirm('确定删除「' + row.name + '」的全部价格记录？')) return
@@ -342,8 +353,8 @@ export default function Price() {
               <i className="fas fa-plus"></i> 新增记录
             </button>
             {newRows.length > 0 && (
-              <button className="btn btn-primary" onClick={saveNewRows}>
-                <i className="fas fa-save"></i> 批量保存 ({newRows.length})
+              <button className="btn btn-primary" onClick={saveNewRows} disabled={saving}>
+                {saving ? <><i className="fas fa-spinner fa-spin"></i> 保存中...</> : <><i className="fas fa-save"></i> 批量保存 ({newRows.length})</>}
               </button>
             )}
             {!batchMode ? (
@@ -443,9 +454,7 @@ export default function Price() {
                         </>
                       ) : (
                         <>
-                          <button className="action-btn save-btn" title="保存" onClick={() => saveEdit(row)}>
-                            <i className="fas fa-check"></i>
-                          </button>
+                          <button className="action-btn save-btn" title={saving ? '保存中...' : '保存'} onClick={() => saveEdit(row)} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
                           <button className="action-btn delete-btn" title="取消" onClick={() => setEditRow(null)}>
                             <i className="fas fa-times"></i>
                           </button>
@@ -548,7 +557,7 @@ export default function Price() {
             </div>
             <div className="modal-footer">
               <button className="btn-modal btn-modal-secondary" onClick={() => setShowAddEntity(false)}>取消</button>
-              <button className="btn-modal btn-modal-primary" onClick={saveEntity}><i className="fas fa-save"></i> 保存</button>
+              <button className="btn-modal btn-modal-primary" onClick={saveEntity} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')}></i> 保存</button>
             </div>
           </div>
         </div>

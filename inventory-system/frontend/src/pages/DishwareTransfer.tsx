@@ -242,10 +242,12 @@ export default function DishwareTransferPage() {
     })
   }
   const saveEditTransfer = async () => {
+    if (transferSaving) return
     if (!transferEditing || !transferEditing.dishwareId || !transferEditing.quantity) { showMsg('请选择产品并填写数量', 'error'); return }
     const qty = Number(transferEditing.quantity)
     const row = rows.find(r => String(r.dishwareId) === transferEditing.dishwareId)
     const price = Number(row?.unitPrice || 0)
+    setTransferSaving(true)
     try {
       await updateDishwareTransfer(transferEditing.id, {
         dishwareId: Number(transferEditing.dishwareId),
@@ -256,6 +258,7 @@ export default function DishwareTransferPage() {
       })
       setTransferEditing(null); load(); showMsg('转卖记录已更新')
     } catch { showMsg('更新失败', 'error') }
+    finally { setTransferSaving(false) }
   }
   const removeTransfer = async (t: DishwareTransfer) => {
     if (!window.confirm('确定删除此转卖记录？')) return
@@ -272,13 +275,16 @@ export default function DishwareTransferPage() {
   }
   const openRestModal = () => { setRestModal(true); loadLocations() }
   const saveRest = async () => {
+    if (transferSaving) return
     if (!restForm.name.trim()) { showMsg('餐厅店面名称不能为空', 'error'); return }
+    setTransferSaving(true)
     try {
       if (restForm.id) await updateDishwareLocation(restForm.id, { name: restForm.name.trim() })
       else await createDishwareLocation({ name: restForm.name.trim() })
       setRestAddModal(false); setRestForm({ id: 0, name: '' })
       loadLocations(); showMsg('已保存')
     } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setTransferSaving(false) }
   }
   const removeRest = async (id: number, name: string) => {
     if (!window.confirm(`确定要删除这个餐厅店面（${name}）吗？删除后该店面的库存数据将被移除。`)) return
@@ -503,7 +509,7 @@ export default function DishwareTransferPage() {
                             <td><div className="currency-display"><span className="currency-symbol" style={{ color }}>RM</span><span className="currency-amount" style={{ color }}>{Number(rows.find(r => String(r.dishwareId) === transferEditing.dishwareId)?.unitPrice || 0).toFixed(2)}</span></div></td>
                             <td><div className="currency-display"><span className="currency-symbol" style={{ color }}>RM</span><span className="currency-amount" style={{ color }}>{(Number(rows.find(r => String(r.dishwareId) === transferEditing.dishwareId)?.unitPrice || 0) * (Number(transferEditing.quantity) || 0)).toFixed(2)}</span></div></td>
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              <button className="action-btn save-btn" onClick={saveEditTransfer} title="保存" style={{ background: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', marginRight: 4 }}><i className="fas fa-check" /></button>
+                              <button className="action-btn save-btn" onClick={saveEditTransfer} title={transferSaving ? '保存中...' : '保存'} disabled={transferSaving} style={{ background: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', marginRight: 4 }}><i className={'fas ' + (transferSaving ? 'fa-spinner fa-spin' : 'fa-check')} /></button>
                               <button className="action-btn cancel-btn" onClick={() => setTransferEditing(null)} title="取消" style={{ background: '#6c757d', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}><i className="fas fa-times" /></button>
                             </td>
                           </tr>
@@ -674,7 +680,7 @@ export default function DishwareTransferPage() {
             </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setRestAddModal(false)}>取消</button>
-              <button className="btn btn-primary" onClick={saveRest}><i className="fas fa-save" /> 保存</button>
+              <button className="btn btn-primary" onClick={saveRest} disabled={transferSaving}>{transferSaving ? '保存中...' : <><i className="fas fa-save" /> 保存</>}</button>
             </div>
           </div>
         </div>

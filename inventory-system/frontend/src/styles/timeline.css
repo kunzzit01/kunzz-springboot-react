@@ -202,8 +202,9 @@
   justify-content: flex-end;
 }
 
-/* 足迹照片管理（对齐线上 joinpage2upload.php 视觉） */
-.stats-bar {
+/* 足迹照片管理（对齐线上 joinpage2upload.php 视觉）——限定 .content 作用域，
+   避免泄漏到 /price /suppliers 的 .stats-bar（那些页面有自己的 scoped 规则） */
+.content .stats-bar {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;

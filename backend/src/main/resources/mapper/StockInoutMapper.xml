@@ -87,6 +87,10 @@
         UPDATE ${table} SET deleted_at = NOW(), deleted_by = #{deletedBy} WHERE id = #{id}
     </update>
 
+    <update id="restoreBranch">
+        UPDATE ${table} SET deleted_at = NULL, deleted_by = NULL WHERE id = #{id}
+    </update>
+
     <!-- 查分店记录的中央关联 id（中央出货生成的分店记录有 main_record_id） -->
     <select id="findBranchMainId" resultType="java.lang.Integer">
         SELECT main_record_id FROM ${table} WHERE id = #{id}
@@ -131,6 +135,16 @@
         WHERE main_record_id = #{mainId} AND target_system = #{targetSystem} AND deleted_at IS NULL
     </update>
 
+    <update id="restoreBranchInoutByMainId">
+        UPDATE ${table} SET deleted_at = NULL, deleted_by = NULL
+        WHERE main_record_id = #{mainId} AND deleted_at IS NOT NULL
+    </update>
+
+    <update id="restoreBranchEditByMainId">
+        UPDATE ${table} SET deleted_at = NULL, deleted_by = NULL
+        WHERE main_record_id = #{mainId} AND target_system = #{targetSystem} AND deleted_at IS NOT NULL
+    </update>
+
     <!-- 同前缀所有备注编号 + 净库存（对齐旧系统 generateRemarkCode 的查询） -->
     <!-- 进出货检查弹窗：货品名 100% 精确匹配（兼容 &amp;），日期范围可选
          注意：分店 jXstockedit_data 无 remark_number 列，故不查询该列 -->
@@ -168,7 +182,7 @@
               AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
               AND deleted_at IS NULL
             GROUP BY remark_number
-            HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+            HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &gt; 0
         ) t
     </select>
 
@@ -182,7 +196,7 @@
               AND product_remark_checked = 1
               AND deleted_at IS NULL
             GROUP BY remark_number
-            HAVING SUM(in_quantity) - SUM(out_quantity) &gt; 0
+            HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &gt; 0
         ) t
     </select>
 

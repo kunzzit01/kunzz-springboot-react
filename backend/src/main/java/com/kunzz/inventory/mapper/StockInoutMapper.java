@@ -35,6 +35,9 @@ public interface StockInoutMapper {
     /** 分店软删除 */
     int softDeleteBranch(@Param("table") String table, @Param("id") Integer id, @Param("deletedBy") String deletedBy);
 
+    /** 分店恢复（撤销删除：清空 deleted_at/deleted_by） */
+    int restoreBranch(@Param("table") String table, @Param("id") Integer id);
+
     /** 查分店记录的中央关联 id */
     Integer findBranchMainId(@Param("table") String table, @Param("id") Integer id);
 
@@ -57,6 +60,13 @@ public interface StockInoutMapper {
     /** 按 main_record_id 精确软删除分店 stockedit 记录（8/23 线上修复：避免按 产品名+收货人 误删同品名历史记录） */
     int softDeleteBranchEditByMainId(@Param("table") String table, @Param("mainId") Integer mainId,
                                      @Param("targetSystem") String targetSystem, @Param("deletedBy") String deletedBy);
+
+    /** 按 main_record_id 恢复分店入库记录 */
+    int restoreBranchInoutByMainId(@Param("table") String table, @Param("mainId") Integer mainId);
+
+    /** 按 main_record_id 恢复分店 stockedit 记录 */
+    int restoreBranchEditByMainId(@Param("table") String table, @Param("mainId") Integer mainId,
+                                  @Param("targetSystem") String targetSystem);
 
     // ---------- 出库库存校验（事务内，对齐旧系统） ----------
 

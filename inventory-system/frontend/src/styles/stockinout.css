@@ -127,19 +127,19 @@
 .sio-root .stock-table th:nth-child(1), .sio-root .stock-table td:nth-child(1) { width: 4.5%; }   /* 日期 60 */
 .sio-root .stock-table th:nth-child(2), .sio-root .stock-table td:nth-child(2) { width: 6.3%; }   /* 货品编号 84 */
 .sio-root .stock-table th:nth-child(3), .sio-root .stock-table td:nth-child(3) { width: 11.6%; }  /* 货品 155 */
-.sio-root .stock-table th:nth-child(4), .sio-root .stock-table td:nth-child(4) { width: 4.5%; }   /* 进货 60 */
-.sio-root .stock-table th:nth-child(5), .sio-root .stock-table td:nth-child(5) { width: 4.5%; }   /* 出货 60 */
-.sio-root .stock-table th:nth-child(6), .sio-root .stock-table td:nth-child(6) { width: 5.4%; }   /* 收货单位 72 */
+.sio-root .stock-table th:nth-child(4), .sio-root .stock-table td:nth-child(4) { width: 6.5%; }   /* 进货 87（加宽：容纳 147.000 不截断） */
+.sio-root .stock-table th:nth-child(5), .sio-root .stock-table td:nth-child(5) { width: 6.5%; }   /* 出货 87（加宽：容纳 147.000 不截断） */
+.sio-root .stock-table th:nth-child(6), .sio-root .stock-table td:nth-child(6) { width: 5.0%; }   /* 收货单位 67 */
 .sio-root .stock-table th:nth-child(7), .sio-root .stock-table td:nth-child(7) { width: 4.5%; }   /* 规格 60 */
 .sio-root .stock-table th:nth-child(8), .sio-root .stock-table td:nth-child(8) { width: 7.2%; }   /* 单价 96 */
 .sio-root .stock-table th:nth-child(9), .sio-root .stock-table td:nth-child(9) { width: 9.0%; }   /* 总价 120 */
 .sio-root .stock-table th:nth-child(10), .sio-root .stock-table td:nth-child(10) { width: 6.3%; }  /* 类型 84 */
-.sio-root .stock-table th:nth-child(11), .sio-root .stock-table td:nth-child(11) { width: 4.5%; }  /* 货品备注 60 */
-.sio-root .stock-table th:nth-child(12), .sio-root .stock-table td:nth-child(12) { width: 5.4%; }  /* 备注编号 72 */
+.sio-root .stock-table th:nth-child(11), .sio-root .stock-table td:nth-child(11) { width: 4.0%; }  /* 货品备注 53 */
+.sio-root .stock-table th:nth-child(12), .sio-root .stock-table td:nth-child(12) { width: 4.9%; }  /* 备注编号 65 */
 .sio-root .stock-table th:nth-child(13), .sio-root .stock-table td:nth-child(13) { width: 9.0%; }  /* 供应商/出货人 120 */
 .sio-root .stock-table th:nth-child(14), .sio-root .stock-table td:nth-child(14) { width: 7.2%; }  /* 备注 96 */
 .sio-root .stock-table th:nth-child(15), .sio-root .stock-table td:nth-child(15) { width: 4.5%; }  /* 创建人 60 */
-.sio-root .stock-table th:nth-child(16), .sio-root .stock-table td:nth-child(16) { width: 6.3%; }  /* 操作/选择 84 */
+.sio-root .stock-table th:nth-child(16), .sio-root .stock-table td:nth-child(16) { width: 5.9%; }  /* 操作/选择 79 */
 .sio-root .stock-table td span {
   display: inline-block; width: 100%;
   line-height: clamp(14px, 1.25vw, 24px);
@@ -232,7 +232,7 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 .sio-root .smartSearchWrapper:hover { border-color: #ff7b00; }
-.sio-root .smartSearchWrapper.expanded { width: 260px; border-color: #ff7b00; border-radius: 6px; cursor: default; box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08); }
+.sio-root .smartSearchWrapper.expanded { width: max(150px, 15vw); border-color: #ff7b00; border-radius: 6px; cursor: default; box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08); }
 .sio-root .smartSearch-icon {
   width: 40px; min-width: 40px; height: 100%; display: flex; align-items: center; justify-content: center;
   font-size: 15px; color: #9ca3af; flex-shrink: 0; pointer-events: none; transition: color 0.25s ease;
@@ -240,7 +240,7 @@
 .sio-root .smartSearchWrapper.expanded .smartSearch-icon { color: #ff7b00; }
 .sio-root .smartSearch-input {
   flex: 1; border: none; outline: none; background: transparent;
-  font-size: clamp(11px, 0.74vw, 14px); color: #111827; padding: 0 12px 0 0;
+  font-size: clamp(8px, 0.74vw, 14px); color: #111827; padding: 0 12px 0 0;
   min-width: 0; font-family: inherit; height: 100%; display: none;
 }
 .sio-root .smartSearchWrapper.expanded .smartSearch-input { display: block; }
@@ -327,11 +327,11 @@
   color: #9ca3af;
 }
 .sio-root .btn-secondary {
-  background-color: #6b7280;
+  background-color: #f99e00;
   color: white;
 }
 .sio-root .btn-secondary:hover {
-  background-color: #4b5563;
+  background-color: #f98500;
   transform: translateY(-1px);
 }
 .sio-root .batch-select-checkbox {
@@ -399,18 +399,26 @@
 .sio-root .calendar-day.in-range, .sio-root .calendar-day.preview-range { background: #fff7e6; }
 .sio-root .calendar-day.preview-end { background: #ffd591; border-radius: 6px; }
 
-/* 快速选择下拉 */
-.sio-root .dropdown { position: relative; }
+/* 快速选择下拉（对齐 KPI/Cost 统一设计：橙色按钮 + 2px 黑边菜单 + 600 权重选项） */
+.sio-root .dropdown { position: relative; display: inline-block; }
+.sio-root .dropdown-toggle {
+  display: flex; align-items: center; font-size: clamp(8px, 0.74vw, 14px); gap: 8px;
+}
 .sio-root .dropdown-menu {
-  position: absolute; top: 100%; right: 0; z-index: 20000; background: #fff;
-  border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.15);
-  min-width: 120px; margin-top: 4px; overflow: hidden;
+  position: absolute; top: 100%; left: 0;
+  background: white; border: 2px solid #000000ff; border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(88, 62, 4, 0.15);
+  z-index: 1000; width: 100%; box-sizing: border-box;
 }
 .sio-root .dropdown-menu .dropdown-item {
-  display: block; width: 100%; padding: 8px 14px; border: none; background: #fff;
-  cursor: pointer; font-size: 13px; text-align: left; color: #111827;
+  display: block; width: 100%; padding: clamp(6px, 0.52vw, 10px) clamp(10px, 1.04vw, 20px);
+  border: none; background: transparent; color: #000000ff; cursor: pointer;
+  font-size: clamp(8px, 0.74vw, 14px); font-weight: 600; text-align: left;
+  transition: background-color 0.2s;
 }
-.sio-root .dropdown-menu .dropdown-item:hover { background: #f8f5eb; }
+.sio-root .dropdown-menu .dropdown-item:hover { background-color: rgba(88, 62, 4, 0.1); }
+.sio-root .dropdown-menu .dropdown-item:first-child { border-radius: 6px 6px 0 0; }
+.sio-root .dropdown-menu .dropdown-item:last-child { border-radius: 0 0 6px 6px; }
 
 /* 弹窗 */
 .sio-root .modal-overlay {
@@ -473,13 +481,10 @@
   align-items: center;
   gap: clamp(6px, 0.63vw, 12px);
 }
-.sio-root .header-search .smartSearchWrapper {
+.sio-root .header-search .smartSearchWrapper:not(.expanded) {
   width: 40px;
   flex-shrink: 0;
   cursor: pointer;
-}
-.sio-root .header-search .smartSearchWrapper.expanded {
-  width: 250px;
 }
 .sio-root .header-stats {
   display: flex;
@@ -591,4 +596,45 @@
     color: #6b7280;
     text-align: center;
     min-height: 18px;
+}
+
+/* ---------- 删除撤销条（对齐旧系统 #undoBar：删除后 10 秒内可撤销，Ctrl+Shift+Z） ---------- */
+.sio-undo-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #333;
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+    animation: sio-undo-in 0.3s ease;
+}
+@keyframes sio-undo-in {
+    from { opacity: 0; transform: translateX(-50%) translateY(100px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.sio-undo-bar button {
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+}
+.sio-undo-bar button:hover {
+    background: #4338ca;
+}
+.sio-undo-shortcut {
+    color: #aaa;
+    font-size: 11px;
+    margin-left: 5px;
 }

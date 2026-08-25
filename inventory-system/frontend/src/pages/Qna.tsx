@@ -22,7 +22,8 @@ declare global {
 
 export default function Qna() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [submitted, setSubmitted] = useState<Record<string, unknown> | null>(null)
+  // 仅当本次会话内提交成功后进入查看模式；刷新页面一律回到可编辑状态
+  const [viewMode, setViewMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
@@ -37,13 +38,12 @@ export default function Qna() {
   const load = async () => {
     try {
       const [mine, me] = await Promise.all([getMyQna(), getMe().catch(() => null)])
-      setSubmitted(mine)
       if (me) userRef.current = { name: String(me.displayName || me.username || ''), position: String(me.position || '') }
-      if (mine) {
-        const a: Record<string, string> = {}
-        QUESTIONS.forEach((_, i) => { a['question' + (i + 1)] = String(mine['question' + (i + 1)] || '') })
-        setAnswers(a)
-      }
+      // 刷新页面：始终预填已有回答并回到可编辑状态，允许再次填写/修改
+      const a: Record<string, string> = {}
+      QUESTIONS.forEach((_, i) => { a['question' + (i + 1)] = String(mine?.['question' + (i + 1)] || '') })
+      setAnswers(a)
+      setViewMode(false)
     } catch { /* 拦截器已提示 */ }
     setLoading(false)
   }
@@ -59,6 +59,7 @@ export default function Qna() {
       await createQna(answers)
       showMsg('问卷提交成功！')
       await load()
+      setViewMode(true) // 提交后本次会话内查看模式，方便生成 PDF
     } catch (e: any) {
       showMsg(e?.message || '提交失败，请重试', 'error')
     }
@@ -184,7 +185,7 @@ export default function Qna() {
     )
   }
 
-  const isSubmitted = !!submitted
+  const isSubmitted = viewMode
 
   return (
     <div className="qna-root">
@@ -253,9 +254,12 @@ export default function Qna() {
         {/* 底部按钮组（线上被注释，此处保留功能按钮） */}
         <div className="button-group" id="buttonGroup">
           {isSubmitted ? (
-            <button type="button" className="btn" id="printBtn" onClick={() => buildPdf(true)} disabled={pdfBusy}>
-              {pdfBusy ? <><div className="loading"></div> 生成中...</> : '生成PDF'}
-            </button>
+            <>
+              <button type="button" className="btn btn-reset" id="backEditBtn" onClick={() => setViewMode(false)}>重新填写</button>
+              <button type="button" className="btn" id="printBtn" onClick={() => buildPdf(true)} disabled={pdfBusy}>
+                {pdfBusy ? <><div className="loading"></div> 生成中...</> : '生成PDF'}
+              </button>
+            </>
           ) : (
             <>
               <button type="button" className="btn btn-reset" id="resetBtn" onClick={reset}>重新回答</button>

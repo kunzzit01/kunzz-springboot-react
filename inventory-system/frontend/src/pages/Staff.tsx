@@ -448,6 +448,8 @@ export default function Staff() {
   // 新增职员后返回列表定位高亮（按 username）
   const { flash, isHl } = useRowHighlight((u: any) => String(u.username))
   const [kw, setKw] = useState('')
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [branchL1, setBranchL1] = useState('all')
   const [branchL2, setBranchL2] = useState('')
   const [showAdd, setShowAdd] = useState(false)
@@ -534,6 +536,7 @@ export default function Staff() {
   }
 
   const submitAdd = async () => {
+    if (saving) return
     if (!addForm.username || !addForm.email || !addForm.account_type) {
       showMsg('请填写所有必填字段（英文姓名、邮箱、账号类型）！', 'error')
       return
@@ -544,6 +547,7 @@ export default function Staff() {
       showMsg('请至少选择一项用户权限', 'error')
       return
     }
+    setSaving(true)
     const permData = extractPerms(addPerms)
     try {
       // 密码/申请码由后端生成（对齐线上 add_user）
@@ -567,6 +571,7 @@ export default function Staff() {
     } catch (e: any) {
       showMsg(e?.message || '添加失败', 'error')
     }
+    finally { setSaving(false) }
   }
 
   const openEdit = (u: StaffUser) => {
@@ -586,7 +591,9 @@ export default function Staff() {
   }
 
   const submitEdit = async () => {
+    if (saving) return
     if (!editUser) return
+    setSaving(true)
     try {
       await updateStaff(editUser.id, {
         username: editForm.username, usernameCn: editForm.username_cn, nickname: editForm.nickname,
@@ -607,6 +614,7 @@ export default function Staff() {
     } catch (e: any) {
       showMsg(e?.message || '更新失败', 'error')
     }
+    finally { setSaving(false) }
   }
 
   const confirmDelete = (u: StaffUser) => {
@@ -878,8 +886,8 @@ export default function Staff() {
                 </div>
               </div>
               <div className="modal-buttons" style={{ marginTop: 30, borderTop: '1px solid #eee', paddingTop: 20 }}>
-                <button type="button" className="btn-action btn-save" onClick={submitAdd} style={{ background: '#10b981' }}>
-                  <i className="fas fa-check"></i> 确认添加
+                <button type="button" className="btn-action btn-save" onClick={submitAdd} disabled={saving} style={{ background: '#10b981' }}>
+                  <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> {saving ? '添加中...' : '确认添加'}
                 </button>
                 <button type="button" className="btn-action btn-cancel" onClick={() => setShowAdd(false)}>
                   <i className="fas fa-times"></i> 取消
@@ -1026,8 +1034,8 @@ export default function Staff() {
                 </div>
               </div>
               <div className="modal-buttons">
-                <button type="button" className="btn-action btn-save" onClick={submitEdit} style={{ background: '#f59e0b' }}>
-                  <i className="fas fa-check"></i> 保存修改
+                <button type="button" className="btn-action btn-save" onClick={submitEdit} disabled={saving} style={{ background: '#f59e0b' }}>
+                  <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> {saving ? '保存中...' : '保存修改'}
                 </button>
                 <button type="button" className="btn-action btn-cancel" onClick={() => setShowEdit(false)}>
                   <i className="fas fa-times"></i> 取消

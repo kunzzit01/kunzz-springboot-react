@@ -18,6 +18,8 @@ export default function DishwareBreakPage() {
     String((rows.find((r) => r.dishwareId === b.dishwareId)?.codeNumber) || '#' + b.dishwareId))
   const [breaks, setBreaks] = useState<DishwareBreak[]>([])
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const showMsg = (msg: string, type = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 3000)
@@ -159,9 +161,11 @@ export default function DishwareBreakPage() {
       totalPrice: b.unitPrice && q ? (Number(q) * Number(b.unitPrice)).toFixed(2) : '' }))
   }
   const saveBreak = async () => {
+    if (saving) return
     if (!brk.dishwareId || !brk.breakQuantity) { showMsg('请选择产品并填写破损数量', 'error'); return }
     const qty = Number(brk.breakQuantity)
     const price = Number(brk.unitPrice || 0)
+    setSaving(true)
     try {
       await createDishwareBreak({
         dishwareId: Number(brk.dishwareId), shopType: breakShop,
@@ -175,6 +179,7 @@ export default function DishwareBreakPage() {
       flashAfterRow('.break-record-table-wrapper', 'td:nth-child(2)', savedCode, flash)
       showMsg('破损记录已保存')
     } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const removeBreak = async (b: DishwareBreak) => {
     if (!window.confirm('确定删除此破损记录？')) return
@@ -184,10 +189,12 @@ export default function DishwareBreakPage() {
     setEditingBreak({ id: b.id, dishwareId: String(b.dishwareId), breakQuantity: String(b.breakQuantity), shopType: b.shopType, breakDate: b.breakDate })
   }
   const saveEditBreak = async () => {
+    if (saving) return
     if (!editingBreak || !editingBreak.dishwareId || !editingBreak.breakQuantity) { showMsg('请选择产品并填写数量', 'error'); return }
     const qty = Number(editingBreak.breakQuantity)
     const row = rows.find(r => String(r.dishwareId) === editingBreak.dishwareId)
     const price = Number(row?.unitPrice || 0)
+    setSaving(true)
     try {
       await updateDishwareBreak(editingBreak.id, {
         dishwareId: Number(editingBreak.dishwareId), shopType: editingBreak.shopType,
@@ -197,6 +204,7 @@ export default function DishwareBreakPage() {
       })
       setEditingBreak(null); load(); showMsg('破损记录已更新')
     } catch { showMsg('更新失败', 'error') }
+    finally { setSaving(false) }
   }
   const toggleBatchDelete = (shop: string) => {
     setBatchDelMode(prev => ({ ...prev, [shop]: !prev[shop] }))
@@ -484,7 +492,7 @@ export default function DishwareBreakPage() {
                             <td><div className="currency-display"><span className="currency-symbol">RM</span><span className="currency-amount">{Number(rows.find(r => String(r.dishwareId) === editingBreak.dishwareId)?.unitPrice || 0).toFixed(2)}</span></div></td>
                             <td><div className="currency-display"><span className="currency-symbol">RM</span><span className="currency-amount">{(Number(rows.find(r => String(r.dishwareId) === editingBreak.dishwareId)?.unitPrice || 0) * (Number(editingBreak.breakQuantity) || 0)).toFixed(2)}</span></div></td>
                             <td style={{ whiteSpace: 'nowrap' }}>
-                              <button className="action-btn save-btn" onClick={saveEditBreak} title="保存" style={{ background: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', marginRight: 4 }}><i className="fas fa-check" /></button>
+                              <button className="action-btn save-btn" onClick={saveEditBreak} title={saving ? '保存中...' : '保存'} disabled={saving} style={{ background: '#28a745', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer', marginRight: 4 }}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')} /></button>
                               <button className="action-btn cancel-btn" onClick={() => setEditingBreak(null)} title="取消" style={{ background: '#6c757d', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4, cursor: 'pointer' }}><i className="fas fa-times" /></button>
                             </td>
                           </tr>
@@ -600,7 +608,7 @@ export default function DishwareBreakPage() {
             </div>
             <div className="modal-actions">
               <button className="btn btn-secondary" onClick={() => setBreakModal(false)}>取消</button>
-              <button className="btn btn-primary" onClick={saveBreak}><i className="fas fa-save" /> 保存破损记录</button>
+              <button className="btn btn-primary" onClick={saveBreak} disabled={saving}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存破损记录</>}</button>
             </div>
           </div>
         </div>

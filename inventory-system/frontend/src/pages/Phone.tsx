@@ -33,6 +33,8 @@ export default function Phone() {
   const [records, setRecords] = useState<PhoneRec[]>([])
   const [restaurantOpen, setRestaurantOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  // 保存中（防连点/重复提交）
+  const [saving, setSaving] = useState(false)
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 员工管理面板
   const [panel, setPanel] = useState(false)
@@ -83,6 +85,7 @@ export default function Phone() {
   }
 
   const saveAll = async () => {
+    if (saving) return
     const payload = records.map(r => ({
       employeeId: r.employeeId,
       getChecked: !!r.getChecked,
@@ -90,10 +93,12 @@ export default function Phone() {
       endTime: r.endTime || '',
       returnChecked: !!r.returnChecked
     }))
+    setSaving(true)
     try {
       await savePhoneRecordsByDate(restaurant, date, payload)
       showMsg('保存成功')
     } catch { showMsg('保存失败，请重试', 'error') }
+    finally { setSaving(false) }
   }
 
   const downloadPDF = async () => {
@@ -128,7 +133,9 @@ export default function Phone() {
 
   // ---------- 员工管理 ----------
   const saveEmployee = async () => {
+    if (saving) return
     if (!empName.trim() || !empPhone.trim()) { showMsg('请填写姓名和手机号码', 'error'); return }
+    setSaving(true)
     try {
       await saveScheduleEmployee({ id: empId || undefined, name: empName.trim(), phone: empPhone.trim(), position: empPosition, workArea: empArea, restaurant })
       setEmpModal(false)
@@ -136,6 +143,7 @@ export default function Phone() {
       const es = await getScheduleEmployees(restaurant)
       setEmployees(es.filter(e => e.isActive !== false))
     } catch { showMsg('保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const deleteEmployee = async (id: number) => {
     if (!window.confirm('确定删除该员工吗？')) return
@@ -204,9 +212,7 @@ export default function Phone() {
                 <button className="btn-control" onClick={downloadPDF}>
                   <i className="fas fa-file-pdf"></i> 下载PDF
                 </button>
-                <button className="btn-control btn-save" onClick={saveAll} style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}>
-                  <i className="fas fa-save"></i> 保存所有
-                </button>
+                <button className="btn-control btn-save" onClick={saveAll} disabled={saving} style={{ background: '#3b82f6', color: 'white', borderColor: '#3b82f6' }}>{saving ? '保存中...' : <><i className="fas fa-save" /> 保存所有</>}</button>
               </div>
             </div>
           </div>
@@ -365,7 +371,7 @@ export default function Phone() {
             </div>
             <div className="form-actions">
               <button className="btn-action btn-cancel" onClick={() => setEmpModal(false)}><i className="fas fa-times"></i> 取消</button>
-              <button className="btn-action btn-save" onClick={saveEmployee}><i className="fas fa-check"></i> 保存</button>
+              <button className="btn-action btn-save" onClick={saveEmployee} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i> 保存</button>
             </div>
           </div>
         </div>

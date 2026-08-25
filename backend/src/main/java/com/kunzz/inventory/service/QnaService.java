@@ -30,15 +30,22 @@ public class QnaService {
         return qnaRepo.findByUserId(userId);
     }
 
-    /** 提交问卷：每个用户只能提交一次（对齐线上 qnaapi POST） */
+    /** 提交问卷：同一用户重复提交时覆盖更新原记录（刷新后可再次填写） */
     @Transactional
     public QnaResponse create(Integer userId, QnaResponse r) {
-        if (qnaRepo.findByUserId(userId).isPresent()) {
-            throw new BusinessException("您已经提交过问卷，每个用户只能提交一次");
-        }
-        r.setUserId(userId);
-        r.setId(null);
-        return qnaRepo.save(r);
+        QnaResponse entity = qnaRepo.findByUserId(userId).orElseGet(QnaResponse::new);
+        entity.setUserId(userId);
+        entity.setQuestion1(r.getQuestion1());
+        entity.setQuestion2(r.getQuestion2());
+        entity.setQuestion3(r.getQuestion3());
+        entity.setQuestion4(r.getQuestion4());
+        entity.setQuestion5(r.getQuestion5());
+        entity.setQuestion6(r.getQuestion6());
+        entity.setQuestion7(r.getQuestion7());
+        entity.setQuestion8(r.getQuestion8());
+        entity.setQuestion9(r.getQuestion9());
+        entity.setQuestion10(r.getQuestion10());
+        return qnaRepo.save(entity);
     }
 
     @Transactional

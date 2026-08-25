@@ -2,6 +2,7 @@ package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.entity.StockInout;
+import com.kunzz.inventory.mapper.StockInoutMapper;
 import com.kunzz.inventory.repository.StockInoutRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,7 @@ import java.util.Set;
 public class StockEnhanceService {
 
     private final StockInoutRepository stockInoutRepository;
+    private final StockInoutMapper stockInoutMapper;
 
     // ---------- 回收站 ----------
 
@@ -37,6 +39,13 @@ public class StockEnhanceService {
     public void restore(Integer id) {
         StockInout s = stockInoutRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "记录不存在"));
+        // 中央出库到分店 → 同步恢复分店入库 + 分店 edit 记录（对齐旧系统 restore 双向恢复）
+        if (s.getOutQuantity() != null && s.getOutQuantity().signum() > 0
+                && s.getTargetSystem() != null && List.of("j1", "j2", "j3").contains(s.getTargetSystem().toLowerCase())) {
+            String b = s.getTargetSystem().toLowerCase();
+            stockInoutMapper.restoreBranchInoutByMainId(b + "stockinout_data", id);
+            stockInoutMapper.restoreBranchEditByMainId(b + "stockedit_data", id, b);
+        }
         s.setDeletedAt(null);
         s.setDeletedBy(null);
         stockInoutRepository.save(s);

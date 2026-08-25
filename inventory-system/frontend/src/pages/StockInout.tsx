@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProducts,
-  getRemarkCodes, getShippers, getStaff, getStockInout, updateStockInout, type CheckInoutResult } from '../api'
+  getRemarkCodes, getShippers, getStaff, getStockInout, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
 import { useRowHighlight } from '../utils/rowHighlight'
 import { generateInvoiceNumber, generateInvoicePdf } from '../utils/invoicePdf'
 import { useRealtime } from '../utils/useRealtime'
@@ -93,9 +94,13 @@ function useRawPriceTooltip() {
 
 const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
-/** 自动补全下拉（对齐线上 combobox） */
+/** 自动补全下拉（对齐线上 combobox）
+ *  下拉菜单通过 portal 渲染到 body 并 fixed 定位，避免被表格滚动容器 overflow 裁剪；
+ *  输入框底部空间不足时自动向上展开（对齐旧系统 calculateDropdownPosition）。 */
+type ComboOption = string | { label: string; value: string }
+
 function Combobox({ options, value, onChange, onSelect, placeholder, style, disabled }: {
-  options: string[]
+  options: ComboOption[]
   value: string
   onChange: (v: string) => void
   onSelect?: (v: string) => void
@@ -105,45 +110,100 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
 }) {
   const [open, setOpen] = useState(false)
   const [focusAll, setFocusAll] = useState(false)
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; width: number; up: boolean; maxH: number } | null>(null)
   const ref = useRef<HTMLDivElement>(null)
-  const filtered = useMemo(
-    () => options.filter(o => !(focusAll ? '' : value) || o.toLowerCase().includes((focusAll ? '' : value).toLowerCase())).slice(0, 30),
-    [options, value, focusAll],
+  const dropRef = useRef<HTMLDivElement>(null)
+  // 选项归一化：纯字符串或 { label, value }（货品显示 NAME (SUPPLIER)、编号显示 CODE (NAME)，对齐旧系统）
+  const norm = useMemo(
+    () => options.map(o => (typeof o === 'string' ? { label: o, value: o } : o)),
+    [options],
   )
+  const filtered = useMemo(
+    // 对齐旧系统：展示全部匹配项（可滚动），不做条数截断；按 value（真实值）过滤
+    () => norm.filter(o => !(focusAll ? '' : value) || o.value.toLowerCase().includes((focusAll ? '' : value).toLowerCase())),
+    [norm, value, focusAll],
+  )
+  const close = () => setOpen(false)
+  // 计算下拉位置：基于输入框 viewport 坐标（fixed 定位），下方空间不足（约 220px）时向上展开。
+  // 向上展开用 bottom 定位（选单底部贴住输入框顶部，按实际高度自然贴合，无估算缝隙）
+  const computePos = (): { top?: number; bottom?: number; left: number; width: number; up: boolean; maxH: number } | null => {
+    const input = ref.current?.querySelector('input')
+    if (!input) return null
+    const r = input.getBoundingClientRect()
+    const DROP_H = 220
+    const below = window.innerHeight - r.bottom - 8
+    const above = r.top - 8
+    let up: boolean
+    if (below >= DROP_H) up = false
+    else if (above >= DROP_H) up = true
+    else up = above > below
+    // 宽度按最长选项内容自适应（对齐旧系统 min-width 200 / max-width 400），选项不换行
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    let w = Math.max(r.width, 200)
+    if (ctx) {
+      // 与选项字体一致（15px，视力友好）
+      ctx.font = '15px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+      for (const o of filtered) w = Math.max(w, ctx.measureText(o.label).width + 36)
+    }
+    const width = Math.min(400, w)
+    // 向上时按可用空间限高避免超出视口顶
+    if (up) return { bottom: window.innerHeight - r.top + 4, left: r.left, width, up, maxH: Math.min(200, Math.max(60, above)) }
+    return { top: r.bottom + 2, left: r.left, width, up, maxH: 200 }
+  }
+  const openDropdown = () => { setPos(computePos()); setOpen(true) }
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      // 点击输入框包裹层或 portal 下拉内都不关闭
+      if (ref.current?.contains(t) || dropRef.current?.contains(t)) return
+      setOpen(false)
     }
     document.addEventListener('click', h)
     return () => document.removeEventListener('click', h)
   }, [])
+  // 打开期间滚动 → 跟随输入框重新定位（不关闭，避免选单被滚动误关）
+  useEffect(() => {
+    if (!open) return
+    const h = () => setPos(computePos())
+    window.addEventListener('scroll', h, true)
+    const sc = ref.current?.closest('.table-scroll-container') as HTMLElement | null
+    sc?.addEventListener('scroll', h)
+    return () => {
+      window.removeEventListener('scroll', h, true)
+      sc?.removeEventListener('scroll', h)
+    }
+  }, [open])
   return (
     <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 80, ...style }}>
       <input className="table-input text-input" placeholder={placeholder} value={value} disabled={disabled}
         style={{ width: '100%', paddingRight: value && !disabled ? 22 : 8 }}
-        onChange={(e) => { setFocusAll(false); onChange(e.target.value); setOpen(true) }}
-        onFocus={(e) => { e.target.select(); setFocusAll(true); setOpen(true) }} />
+        onChange={(e) => { setFocusAll(false); onChange(e.target.value); openDropdown() }}
+        onFocus={(e) => { e.target.select(); setFocusAll(true); openDropdown() }} />
       {/* 清除按钮：点击后清空当前值（方便更换货品/编号） */}
       {value && !disabled && (
         <button type="button"
-          onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(true) }}
+          onClick={(e) => { e.stopPropagation(); onChange(''); openDropdown() }}
           style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '2px 4px', zIndex: 2 }}
           title="清除">×</button>
       )}
-      {open && !disabled && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999, background: '#fff',
-          border: '1px solid #d1d5db', borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
-          maxHeight: 200, overflow: 'auto', marginTop: 2, textAlign: 'left',
+      {open && !disabled && pos && createPortal(
+        <div ref={dropRef} style={{
+          position: 'fixed', left: pos.left, width: pos.width, zIndex: 9999,
+          top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto',
+          background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
+          maxHeight: pos.maxH, overflow: 'auto', textAlign: 'left',
         }}>
-          {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 12 }}>无匹配</div>}
+          {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 14 }}>无匹配</div>}
           {filtered.map((o, i) => (
-            <div key={o + '-' + i} onClick={() => { setFocusAll(false); onChange(o); onSelect?.(o); setOpen(false) }}
-              style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 13 }}
+            <div key={o.value + '-' + i} onClick={() => { setFocusAll(false); onChange(o.value); onSelect?.(o.value); close() }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={o.label}
               onMouseEnter={e => (e.currentTarget.style.background = '#f8f5eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{o}</div>
+              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{o.label}</div>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
@@ -221,13 +281,18 @@ export default function StockInout() {
   const [exportOpen, setExportOpen] = useState(false)
   const [exportForm, setExportForm] = useState({ start: '', end: '', system: '', invoiceDate: '', invoiceSuffix: '', includeIn: true, includeOut: true })
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
+  // 保存中标志（防连点/防重复提交，对齐旧系统 batchSaveNewRows 的 disabled + spinner）
+  const [saving, setSaving] = useState(false)
+  // 删除撤销（对齐旧系统 undoDelete：删除后 10 秒内可撤销，Ctrl+Shift+Z）
+  const [undo, setUndo] = useState<{ ids: number[]; count: number } | null>(null)
+  const undoTimer = useRef<number | null>(null)
   const [showTop, setShowTop] = useState(false)
   const [searchExpanded, setSearchExpanded] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
 
-  const [productOptions, setProductOptions] = useState<string[]>([])
-  const [codeOptions, setCodeOptions] = useState<string[]>([])
+  const [productOptions, setProductOptions] = useState<{ label: string; value: string }[]>([])
+  const [codeOptions, setCodeOptions] = useState<{ label: string; value: string }[]>([])
   const [shipperOptions, setShipperOptions] = useState<string[]>([])
   // 创建人昵称映射（对齐旧系统 resolveCreatedByNicknames：nickname > username_cn > username）
   const [nicknameMap, setNicknameMap] = useState<Map<string, string>>(new Map())
@@ -267,8 +332,19 @@ export default function StockInout() {
     editingId !== null || viewOpen || checkOpen || rowsModal || exportOpen || sysOpen)
 
   useEffect(() => {
-    getProducts().then((list) => setProductOptions((list || []).map((p: any) => p.product_name))).catch(() => {})
-    getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => c.code_number))).catch(() => {})
+    // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统 generateComboboxOptions）
+    getProducts().then((list) => setProductOptions((list || []).map((p: any) => {
+      const name = String(p?.product_name || '')
+      const sup = String(p?.supplier || '').trim()
+      const code = String(p?.product_code || '').trim()
+      return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name }
+    }))).catch(() => {})
+    // 编号下拉：显示 CODE (NAME)（对齐旧系统）
+    getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => {
+      const code = String(c?.code_number || '')
+      const name = String(c?.product_name || '').trim()
+      return { value: code, label: name ? `${code} (${name})` : code }
+    }))).catch(() => {})
     getShippers().then((list) => setShipperOptions(list || [])).catch(() => {})
     // 当前登录用户（用于 created_by / deleted_by，对齐旧系统存 username）
     getMe().then((u) => setCurrentUser(u?.username || '')).catch(() => {})
@@ -300,6 +376,54 @@ export default function StockInout() {
       window.removeEventListener('scroll', h)
       document.removeEventListener('click', outClick)
     }
+  }, [])
+
+  // ---- 快捷键（对齐旧系统 stockeditall.js 全局快捷键：Ctrl+S 保存、Ctrl+Shift+Z 撤销、Ctrl+D 批量删除、Ctrl+A 加行、Ctrl+Shift+A 新增弹窗） ----
+  const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {})
+  useEffect(() => {
+    shortcutRef.current = (e: KeyboardEvent) => {
+      const active = document.activeElement as HTMLElement | null
+      const isInput = !!active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.tagName === 'SELECT' || active.isContentEditable)
+      // 弹窗/日历内不抢快捷键（对齐旧系统 isShortcutBlockedInput）
+      const inBlocked = !!active?.closest('.modal-overlay, .calendar-popup, .sio-undo-bar')
+      const inTable = !!active?.closest('.stock-table tbody')
+      if (!(e.ctrlKey || e.metaKey)) return
+      // A. 撤销删除 (Ctrl+Shift+Z)
+      if (e.shiftKey && (e.code === 'KeyZ' || e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault(); e.stopPropagation()
+        undoDelete(); return
+      }
+      // A2. 批量删除 (Ctrl+D)：未开启→进入批量模式；已开启→确认删除
+      if (!e.shiftKey && (e.code === 'KeyD' || e.key === 'd' || e.key === 'D')) {
+        e.preventDefault()
+        if (batchMode) confirmBatchDelete(); else toggleBatch()
+        return
+      }
+      // A3. 打开新增记录弹窗 (Ctrl+Shift+A)
+      if (e.shiftKey && (e.code === 'KeyA' || e.key === 'a' || e.key === 'A')) {
+        if (!isInput) { e.preventDefault(); showDateRowsModal() }
+        return
+      }
+      // A4. 新增一行 (Ctrl+A)：表格内可连续按，不抢焦点
+      if (!e.shiftKey && (e.code === 'KeyA' || e.key === 'a' || e.key === 'A')) {
+        if (!inBlocked && (!isInput || inTable)) {
+          e.preventDefault(); e.stopPropagation()
+          appendNewRow()
+        }
+        return
+      }
+      // B. 保存 (Ctrl+S)：编辑中→保存当前行；有待保存新增行→批量保存
+      if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        if (editingId !== null) { saveEdit(editingId); return }
+        if (newRows.length > 0) saveNewRows()
+      }
+    }
+  })
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => { if (e.ctrlKey || e.metaKey) shortcutRef.current(e) }
+    window.addEventListener('keydown', h, true)
+    return () => window.removeEventListener('keydown', h, true)
   }, [])
 
   const fmtCN = (d: string) => {
@@ -420,6 +544,23 @@ export default function StockInout() {
       }
     }, 200)
   }
+  /** 快速追加一行（快捷键 Ctrl+A，对齐旧系统 appendNewStockRow） */
+  const appendNewRow = () => {
+    const row: NewRow = {
+      key: 'new-' + Date.now() + '-' + (newRowCounter.current++),
+      date: fmtDate(new Date()), codeNumber: '', productName: '',
+      inQty: '', outQty: '', target: system, specification: '', price: '', priceMode: 'manual',
+      type: '', remarkChecked: false, remarkPrefix: '', remarkSuffix: '', receiver: '', remark: '',
+    }
+    setNewRows(prev => [...prev, row])
+    setTimeout(() => {
+      const sc = scrollRef.current
+      const newRow = document.querySelector('#stock-table tbody tr.new-row')
+      if (sc && newRow) {
+        sc.scrollTop = Math.max(0, (newRow as HTMLElement).offsetTop - (((document.querySelector('#stock-table thead') as HTMLElement | null)?.offsetHeight) || 40) - 8)
+      }
+    }, 200)
+  }
   const patchNew = (key: string, patch: Partial<NewRow>) => {
     setNewRows(prev => prev.map(r => r.key === key ? { ...r, ...patch } : r))
   }
@@ -460,10 +601,64 @@ export default function StockInout() {
       })
     } catch { /* ignore */ }
   }
+  /** 选择编号后自动回填货品（对齐旧系统 handleCodeNumberChange：code → 货品名/规格/类型/供应商/价格） */
+  const onPickCode = async (key: string, code: string) => {
+    if (!code) return
+    const row = newRows.find(r => r.key === key)
+    try {
+      const list = await getProducts()
+      const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
+      const name = hit?.product_name ? String(hit.product_name) : (row?.productName || '')
+      if (!name) return
+      // 与 onPickProduct 同款：按出库数量加载价格+库存
+      const reqQty = row && parseFloat(row.outQty) > 0 ? parseFloat(row.outQty) : 0
+      const priceList = await getPriceStock(name, code || undefined, reqQty || undefined, system)
+      setPriceStock(priceList || [])
+      const spec = hit?.specification ? String(hit.specification) : (row?.specification || '')
+      let cat = hit?.category ? String(hit.category) : (row?.type || '')
+      if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
+      const isBranch = system !== 'central'
+      patchNew(key, {
+        productName: name,
+        codeNumber: code,
+        remarkPrefix: computePrefix(name),
+        specification: spec,
+        type: cat || row?.type || '',
+        supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
+        stockOptions: priceList || [],
+        price: (!isBranch && priceList && priceList.length > 0) ? priceList[0].price : '',
+        priceMode: (!isBranch && priceList && priceList.length > 0) ? 'batch' : 'manual',
+        // 进货时自动填入该编号货品的供应商并锁死（对齐旧系统 updateSupplierIfNeeded）
+        receiver: parseFloat(row?.inQty || '0') > 0 && hit?.supplier ? String(hit.supplier) : row?.receiver,
+      })
+    } catch { /* ignore */ }
+  }
+  /** 编辑模式：选择编号 → 回填货品名/规格/类型（对齐旧系统编辑态 handleCodeNumberChange） */
+  const onEditPickCode = async (code: string) => {
+    if (!code) return
+    try {
+      const list = await getProducts()
+      const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
+      if (!hit?.product_name) return
+      let cat = String(hit.category || '')
+      if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
+      setEditDraft(prev => ({
+        ...prev,
+        productName: String(hit.product_name),
+        specification: hit.specification ? String(hit.specification) : prev.specification,
+        type: cat || prev.type,
+      }))
+    } catch { /* ignore */ }
+  }
   /** HIFO 拆行（对齐 hifoAutoSplit） */
   const handleOutQty = async (key: string, v: string) => {
     const row = newRows.find(r => r.key === key)
-    patchNew(key, { outQty: v, inQty: parseFloat(v) > 0 ? '0' : row?.inQty || '' })
+    patchNew(key, {
+      outQty: v,
+      inQty: parseFloat(v) > 0 ? '0' : row?.inQty || '',
+      // 中央出货数量为 0（含进货行）→ 收货单位锁死为中央（对齐旧系统 handleNewRowOutQuantityChange）
+      target: system === 'central' ? (parseFloat(v) > 0 ? (row?.target || '') : 'central') : row?.target || '',
+    })
     // 出库数量变化 → 用该数量重新加载价格+库存列表（对齐旧系统 loadNewRowProductPricesWithStock，所有系统生效）
     if (row && row.productName && parseFloat(v) > 0) {
       getPriceStock(row.productName, row.codeNumber || undefined, parseFloat(v), system)
@@ -509,8 +704,10 @@ export default function StockInout() {
   }
   /** 批量保存新增行（对齐 batchSaveNewRows） */
   const saveNewRows = async () => {
+    if (saving) return // 防连点/重复提交
     const valid = newRows.filter(r => r.productName)
     if (valid.length === 0) { showMsg('没有可保存的新增行', 'error'); return }
+    setSaving(true)
     try {
       // 8/23 修复：库存校验已由后端在事务内完成，前端不再逐个请求 getPriceStock，
       // 避免保存时产生大量请求（请求风暴）。
@@ -575,39 +772,58 @@ export default function StockInout() {
       }, 100)
       showMsg(`已保存 ${valid.length} 条记录`)
     } catch (e: any) { showMsg(e?.response?.data?.message || e?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const removeNew = (key: string) => setNewRows(prev => prev.filter(r => r.key !== key))
 
   // ---- 编辑 ----
   const startEdit = (r: StockInout) => {
     setEditingId(Number(r.id))
+    const isOut = parseFloat(String(r.outQuantity ?? 0)) > 0
     setEditDraft({
       date: String(r.date || ''), time: String(r.time || ''), codeNumber: String(r.codeNumber || ''), productName: String(r.productName || ''),
       inQuantity: String(r.inQuantity ?? ''), outQuantity: String(r.outQuantity ?? ''), specification: String(r.specification || ''),
       price: String(r.price ?? ''), receiver: String(r.receiver || ''), remark: String(r.remark || ''), type: String(r.type || ''),
-      remarkNumber: String(r.remarkNumber || ''), productRemarkChecked: r.productRemarkChecked ? '1' : '0',
+      targetSystem: String(r.targetSystem || ''), remarkNumber: String(r.remarkNumber || ''), productRemarkChecked: r.productRemarkChecked ? '1' : '0',
+      // 出库行先按批量价格模式，价格选项加载后按是否匹配修正（匹配→batch 下拉；否则→manual 输入框显示手输价）
+      priceMode: isOut ? 'batch' : 'manual',
     })
     // 编辑模式下出库：加载 HIFO 价格批次（对齐 createNewRowPriceSelectWithStock）
-    if (parseFloat(String(r.outQuantity ?? 0)) > 0 && r.productName) {
+    if (isOut && r.productName) {
       getPriceStock(r.productName, r.codeNumber || undefined, 1, system)
-        .then((list) => setPriceStock(list || []))
+        .then((list) => {
+          const l = list || []
+          setPriceStock(l)
+          setEditDraft(prev => ({
+            ...prev,
+            priceMode: l.some(p => parseFloat(String(p.price)) === parseFloat(String(prev.price))) ? 'batch' : 'manual',
+          }))
+        })
         .catch(() => setPriceStock([]))
     } else {
       setPriceStock([])
     }
   }
   const saveEdit = async (id: number) => {
+    if (saving) return // 防连点/重复提交
+    setSaving(true)
     try {
       const outQ = parseFloat(editDraft.outQuantity || '0') || 0
+      // 原记录的备注编号（用于判断是否保持原编号；保持时跳过「在库」校验——
+      // 该编号可能已被本记录自身消耗，对齐后端 updateInout 与旧系统编辑行为）
+      const origRow = rows.find(r => Number(r.id) === id)
+      const origRemark = origRow ? String(origRow.remarkNumber || '').trim().toUpperCase() : ''
       // 出货备注校验（8/23 修复：仅 Central 系统有在库备注码，分店查 central 表无意义）
       if (outQ > 0 && editDraft.productName && system === 'central') {
         const codes = await getRemarkCodes(editDraft.productName)
         const rn = (editDraft.remarkNumber || '').trim().toUpperCase()
         if ((codes || []).length > 0) {
           if (!rn) {
-            showMsg(`货品 [${editDraft.productName}] 有备注编码在库，出货时请填写备注编号`, 'error'); return
-          }
-          if (!codes.includes(rn)) {
+            // 编号为空：原记录已有编号则保留（不拦截）；否则要求填写
+            if (!origRemark) {
+              showMsg(`货品 [${editDraft.productName}] 有备注编码在库，出货时请填写备注编号`, 'error'); return
+            }
+          } else if (rn !== origRemark && !codes.includes(rn)) {
             showMsg(`备注编号 [${rn}] 不在库中，有效编号：${codes.slice(0, 5).join(', ')}`, 'error'); return
           }
         }
@@ -621,14 +837,42 @@ export default function StockInout() {
         specification: editDraft.specification || undefined, price: editDraft.price !== '' ? Number(editDraft.price) : undefined,
         receiver: editDraft.receiver || undefined, remark: editDraft.remark || undefined,
         type: editDraft.type || undefined, remarkNumber: editDraft.remarkNumber || undefined,
+        // 出货可改目标单位；进货/无出货 → 锁死中央（对齐新行与旧系统）
+        targetSystem: outQ > 0 ? (editDraft.targetSystem || undefined) : 'central',
         productRemarkChecked: editDraft.productRemarkChecked === '1',
       }, system === 'central' ? undefined : system)
       setEditingId(null); load(page); showMsg('保存成功')
     } catch (e: any) { showMsg(e?.response?.data?.message || e?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
   }
   const remove = async (r: StockInout) => {
     if (!window.confirm(`确定删除记录：${r.productName}（${r.date}）？`)) return
-    try { await deleteStockInout(Number(r.id), currentUser || 'demo', system === 'central' ? undefined : system); load(page); showMsg('已删除') } catch { showMsg('删除失败', 'error') }
+    try {
+      await deleteStockInout(Number(r.id), currentUser || 'demo', system === 'central' ? undefined : system)
+      load(page); showMsg('已删除')
+      showUndoBar([Number(r.id)])
+    } catch { showMsg('删除失败', 'error') }
+  }
+
+  // ---- 删除撤销（对齐旧系统 undoDelete / showUndoBar：删除后 10 秒内可撤销） ----
+  const hideUndoBar = () => {
+    if (undoTimer.current) { clearTimeout(undoTimer.current); undoTimer.current = null }
+    setUndo(null)
+  }
+  const showUndoBar = (ids: number[]) => {
+    if (!ids.length) return
+    setUndo({ ids, count: ids.length })
+    if (undoTimer.current) clearTimeout(undoTimer.current)
+    undoTimer.current = window.setTimeout(() => setUndo(null), 10000)
+  }
+  const undoDelete = async () => {
+    if (!undo || undo.ids.length === 0) return
+    try {
+      await restoreStockInout(undo.ids, system === 'central' ? undefined : system)
+      hideUndoBar()
+      load(page)
+      showMsg(`已撤销删除 ${undo.count} 条记录`)
+    } catch { showMsg('撤销失败', 'error') }
   }
 
   // ---- 批量删除 ----
@@ -661,9 +905,11 @@ export default function StockInout() {
     if (selected.size === 0) return
     if (!window.confirm(`确定删除选中的 ${selected.size} 条记录？`)) return
     try {
-      for (const id of selected) await deleteStockInout(id, currentUser || 'demo', system === 'central' ? undefined : system)
+      const ids = [...selected]
+      for (const id of ids) await deleteStockInout(id, currentUser || 'demo', system === 'central' ? undefined : system)
       setBatchMode(false); setSelected(new Set()); load(page)
-      showMsg(`已删除 ${selected.size} 条记录`)
+      showMsg(`已删除 ${ids.length} 条记录`)
+      showUndoBar(ids)
     } catch { showMsg('批量删除失败', 'error') }
   }
 
@@ -804,7 +1050,9 @@ export default function StockInout() {
             <button className="btn btn-warning" onClick={openExport}><i className="fas fa-download" /> 导出数据</button>
             <div className="batch-actions" style={{ display: 'flex', gap: 8 }}>
               {newRows.length >= 2 && (
-                <button className="btn btn-primary" onClick={saveNewRows}><i className="fas fa-save" /> 批量保存 ({newRows.length})</button>
+                <button className="btn btn-primary" onClick={saveNewRows} disabled={saving}>
+                  {saving ? <><i className="fas fa-spinner fa-spin"></i> 保存中...</> : <><i className="fas fa-save" /> 批量保存 ({newRows.length})</>}
+                </button>
               )}
               <button className={'btn ' + (batchMode ? 'btn-secondary' : 'btn-danger')} onClick={toggleBatch}>
                 <i className="fas fa-trash-alt" /> {batchMode ? '取消批量' : '批量删除'}
@@ -865,7 +1113,7 @@ export default function StockInout() {
                     <tr key={r.id} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
                       <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => setEditDraft({ ...editDraft, date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
                       <td>{isEditing
-                        ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => setEditDraft({ ...editDraft, codeNumber: v })} style={{ minWidth: 90 }} />
+                        ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => setEditDraft({ ...editDraft, codeNumber: v })} onSelect={(v) => onEditPickCode(v)} style={{ minWidth: 90 }} />
                         : (r.codeNumber || '-')}</td>
                       <td>{isEditing
                         ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => setEditDraft({ ...editDraft, productName: v })} style={{ minWidth: 150 }} />
@@ -876,7 +1124,16 @@ export default function StockInout() {
                       <td>{isEditing
                         ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.outQuantity || ''} onChange={(e) => setEditDraft({ ...editDraft, outQuantity: e.target.value, inQuantity: parseFloat(e.target.value) > 0 ? '0' : editDraft.inQuantity })} />
                         : <span className={outQ > 0 ? 'negative-value' : ''}>{outQ > 0 ? fmtNum(outQ) : fmtNum(0)}</span>}</td>
-                      <td>{r.targetSystem ? r.targetSystem.toUpperCase() : '-'}</td>
+                      <td>{isEditing
+                        ? (system === 'central' ? (
+                            <select className="table-select" value={parseFloat(editDraft.outQuantity || '0') > 0 ? (editDraft.targetSystem || '') : 'central'}
+                              disabled={parseFloat(editDraft.outQuantity || '0') <= 0}
+                              onChange={(e) => setEditDraft({ ...editDraft, targetSystem: e.target.value })}>
+                              <option value="">请选择</option>
+                              <option value="j1">J1</option><option value="j2">J2</option><option value="j3">J3</option><option value="central">中央</option>
+                            </select>
+                          ) : <span>{system.toUpperCase()}</span>)
+                        : (r.targetSystem ? r.targetSystem.toUpperCase() : '-')}</td>
                       <td>{isEditing
                         ? <select className="table-select" value={editDraft.specification || ''} onChange={(e) => setEditDraft({ ...editDraft, specification: e.target.value })}>
                             <option value="">-</option>{SPEC_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -885,17 +1142,19 @@ export default function StockInout() {
                       <td>
                         <div className="currency-display">
                           <span className="currency-symbol">RM</span>
-                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.price !== 'manual' ? (
+                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.priceMode === 'batch' ? (
                             <select className="table-select" style={{ width: 110 }} value={editPriceValue}
-                              onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value === 'manual' ? 'manual' : e.target.value })}>
-                              <option value="">{priceStock.length ? '请选择价格' : '暂无足够库存的价格'}</option>
+                              onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
+                              {/* 对齐旧系统：显示所有价格选项，库存不足的标注 (库存:X, 不足) */}
+                              <option value="">{priceStock.length ? '请选择价格' : '暂无历史价格'}</option>
                               <option value="manual">手动输入价格</option>
-                              {priceStock
-                                .filter(p => (parseFloat(editDraft.outQuantity || '0') || 0) <= 0 || p.available_stock >= (parseFloat(editDraft.outQuantity || '0') || 0))
-                                .map(p => <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock})</option>)}
+                              {priceStock.map(p => {
+                                const enough = (parseFloat(editDraft.outQuantity || '0') || 0) <= 0 || p.available_stock >= (parseFloat(editDraft.outQuantity || '0') || 0)
+                                return <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock}{enough ? '' : ', 不足'})</option>
+                              })}
                             </select>
                           ) : isEditing ? (
-                            <input type="number" className="table-input" style={{ width: 90 }} step="0.00001" value={editDraft.price === 'manual' ? '' : editDraft.price || ''} onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value })} />
+                            <input type="number" className="table-input" style={{ width: 90 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value, priceMode: 'manual' })} />
                           ) : (
                             <span className="currency-amount">{renderPriceRawTip(r.price)}</span>
                           )}
@@ -933,7 +1192,7 @@ export default function StockInout() {
                             }} />
                         ) : isEditing ? (
                           <>
-                            <button className="action-btn save-btn" onClick={() => saveEdit(Number(r.id))} title="保存"><i className="fas fa-save" /></button>
+                            <button className="action-btn save-btn" onClick={() => saveEdit(Number(r.id))} title={saving ? '保存中...' : '保存'} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
                             <button className="action-btn delete-btn" onClick={() => setEditingId(null)} title="取消"><i className="fas fa-times" /></button>
                           </>
                         ) : (
@@ -956,7 +1215,8 @@ export default function StockInout() {
 <tr key={nr.key} className="new-row">
                     <td><input type="date" className="table-input" value={nr.date} onChange={(e) => patchNew(nr.key, { date: e.target.value })} /></td>
                     <td><Combobox options={codeOptions} value={nr.codeNumber} placeholder="编号"
-                      onChange={(v) => patchNew(nr.key, { codeNumber: v })} /></td>
+                      onChange={(v) => patchNew(nr.key, { codeNumber: v })}
+                      onSelect={(v) => onPickCode(nr.key, v)} /></td>
                     <td><Combobox options={productOptions} value={nr.productName} placeholder="货品"
                       onChange={(v) => patchNew(nr.key, { productName: v })}
                       onSelect={(v) => onPickProduct(nr.key, v)} /></td>
@@ -977,7 +1237,7 @@ export default function StockInout() {
                     <td>
                       {system === 'central' ? (
                         <select className="table-select" value={nr.target}
-                          disabled={parseFloat(nr.outQty) <= 0 && !nr.target}
+                          disabled={parseFloat(nr.outQty) <= 0}
                           onChange={(e) => patchNew(nr.key, { target: e.target.value })}>
                           <option value="">请选择</option>
                           <option value="j1">J1</option><option value="j2">J2</option><option value="j3">J3</option><option value="central">中央</option>
@@ -992,18 +1252,20 @@ export default function StockInout() {
                     <td>
                       <div className="currency-display">
                         <span className="currency-symbol">RM</span>
-                        {nr.productName && parseFloat(nr.outQty) > 0 && nr.price !== 'manual' ? (
-                          <select className="table-select" style={{ width: 90 }} value={nr.price}
-                            onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
-                            <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无足够库存的价格'}</option>
+                        {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode === 'batch' ? (
+                          <select className="table-select" style={{ width: 110 }} value={nr.price}
+                            onChange={(e) => patchNew(nr.key, { price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
+                            {/* 对齐旧系统：显示所有价格选项，不管库存是否足够；不足的标注 (库存:X, 不足) */}
+                            <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无历史价格'}</option>
                             <option value="manual">手动输入价格</option>
-                            {(nr.stockOptions || [])
-                              .filter(p => (parseFloat(nr.outQty) || 0) <= 0 || p.available_stock >= (parseFloat(nr.outQty) || 0))
-                              .map(p => <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock})</option>)}
+                            {(nr.stockOptions || []).map(p => {
+                              const enough = (parseFloat(nr.outQty) || 0) <= 0 || p.available_stock >= (parseFloat(nr.outQty) || 0)
+                              return <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock}{enough ? '' : ', 不足'})</option>
+                            })}
                           </select>
                         ) : (
                           <input type="number" className="table-input" style={{ width: 80 }} step="0.00001" placeholder="0.00"
-                            value={nr.price === 'manual' ? '' : nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
+                            value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
                         )}
                       </div>
                     </td>
@@ -1039,7 +1301,7 @@ export default function StockInout() {
                     <td><input className="table-input" placeholder="备注" value={nr.remark} onChange={(e) => patchNew(nr.key, { remark: e.target.value })} /></td>
                     <td className="created-user">-</td>
                     <td>
-                      <button className="action-btn save-btn" onClick={() => saveNewRows()} title="保存"><i className="fas fa-save" /></button>
+                      <button className="action-btn save-btn" onClick={() => saveNewRows()} title={saving ? '保存中...' : '保存'} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
                       <button className="action-btn delete-btn" onClick={() => removeNew(nr.key)} title="取消"><i className="fas fa-times" /></button>
                     </td>
                   </tr>
@@ -1154,7 +1416,7 @@ export default function StockInout() {
                     value={checkForm.name} onChange={(e) => setCheckForm({ ...checkForm, name: e.target.value })}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); doCheck() } }} />
                   <datalist id="product-summary-name-list">
-                    {productOptions.map((n) => <option key={n} value={n} />)}
+                    {productOptions.map((o) => <option key={o.value + '|' + o.label} value={o.value} />)}
                   </datalist>
                 </div>
                 <small className="product-summary-hint">须与货品名称完全一致，才会纳入统计</small>
@@ -1243,6 +1505,13 @@ export default function StockInout() {
         <button className="back-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} title="回到顶部">
           <i className="fas fa-chevron-up" />
         </button>
+      )}
+
+      {undo && (
+        <div className="sio-undo-bar">
+          <span>已删除 {undo.count} 条记录</span>
+          <button type="button" onClick={undoDelete}>撤销 <span className="sio-undo-shortcut">(Ctrl+Shift+Z)</span></button>
+        </div>
       )}
 
       {toast && (

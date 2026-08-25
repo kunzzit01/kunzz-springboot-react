@@ -198,6 +198,12 @@ npm run dev                # 打开 http://localhost:5175
 | GET | /dashboard/summary | 仪表盘统计 |
 | WS | /ws/realtime | WebSocket 实时数据推送 |
 
+## 📚 运维文档（上 live / 同步数据 / 排查问题前必读）
+
+- **`LIVE_OPS.md`** — live 运维与数据同步手册：时区规范（统一 UTC+8）、同步脚本用法、静态 dump 分发的坑（导出后新增会漏）、检查清单
+- **`DATA_SYNC_CHECKLIST.md`** — 数据清洗检查清单：HTML 编码产品名、gender 空串、负数库存
+- **`sync-live-stock.cjs`** — 从 live API 同步最新进出货到本地（`inventory-system/frontend/` 下运行，凭证在 `live-credentials.json`，勿推 git）
+
 ## ⚙️ 配置（backend/src/main/resources/application.yml）
 
 - 数据库连接：`jdbc:mysql://localhost:3306/u690174784_kunzz`（root 无密码，可用 `DB_URL`/`DB_USERNAME`/`DB_PASSWORD` 环境变量覆盖）

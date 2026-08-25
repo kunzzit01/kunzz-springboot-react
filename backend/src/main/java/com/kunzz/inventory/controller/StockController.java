@@ -118,6 +118,14 @@ public class StockController {
         return ApiResponse.ok();
     }
 
+    /** 批量恢复（撤销删除：清空 deleted_at/deleted_by，双向联动分店记录） */
+    @PutMapping("/stock/inout/restore")
+    public ApiResponse<Void> restoreInout(@RequestBody RestoreInoutRequest req) {
+        stockService.restoreInout(req.ids(), req.system());
+        realtimeService.notifyStockChanged("all");
+        return ApiResponse.ok();
+    }
+
     // ---------- 最低库存设置 ----------
 
     @GetMapping("/stock/minimum")

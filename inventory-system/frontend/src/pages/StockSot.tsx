@@ -39,9 +39,9 @@ interface SotRow {
   category?: string
 }
 
-/** 自动补全下拉（combobox） */
+/** 自动补全下拉（combobox）——支持 { label, value }（货品显示 NAME (SUPPLIER)，对齐旧系统） */
 function Combobox({ options, value, onChange, onSelect, placeholder, disabled }: {
-  options: string[]
+  options: (string | { label: string; value: string })[]
   value: string
   onChange: (v: string) => void
   onSelect?: (v: string) => void
@@ -50,9 +50,14 @@ function Combobox({ options, value, onChange, onSelect, placeholder, disabled }:
 }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const norm = useMemo(
+    () => options.map(o => (typeof o === 'string' ? { label: o, value: o } : o)),
+    [options],
+  )
   const filtered = useMemo(
-    () => options.filter(o => !value || o.toLowerCase().includes(value.toLowerCase())).slice(0, 30),
-    [options, value],
+    // 对齐老系统：展示全部匹配项，不做条数截断；按 value（真实值）过滤
+    () => norm.filter(o => !value || o.value.toLowerCase().includes(value.toLowerCase())),
+    [norm, value],
   )
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -73,12 +78,13 @@ function Combobox({ options, value, onChange, onSelect, placeholder, disabled }:
           border: '1px solid #d1d5db', borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
           maxHeight: 200, overflow: 'auto', marginTop: 2, textAlign: 'left',
         }}>
-          {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 12 }}>无匹配</div>}
+          {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 14 }}>无匹配</div>}
           {filtered.map((o) => (
-            <div key={o} onClick={() => { onChange(o); onSelect?.(o); setOpen(false) }}
-              style={{ padding: '6px 10px', cursor: 'pointer', fontSize: 13 }}
+            <div key={o.value + '|' + o.label} onClick={() => { onChange(o.value); onSelect?.(o.value); setOpen(false) }}
+              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={o.label}
               onMouseEnter={e => (e.currentTarget.style.background = '#f8f5eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{o}</div>
+              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{o.label}</div>
           ))}
         </div>
       )}
@@ -232,7 +238,7 @@ export default function StockSot() {
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
-  const [productOptions, setProductOptions] = useState<string[]>([])
+  const [productOptions, setProductOptions] = useState<{ label: string; value: string }[]>([])
   const [codeOptions, setCodeOptions] = useState<string[]>([])
 
   // 新增保存后定位高亮（按货品名）
@@ -249,7 +255,13 @@ export default function StockSot() {
       .catch(() => {})
   useEffect(() => { load() }, [])
   useEffect(() => {
-    getProducts().then((list) => setProductOptions((list || []).map((p: any) => p.product_name))).catch(() => {})
+    // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统）
+    getProducts().then((list) => setProductOptions((list || []).map((p: any) => {
+      const name = String(p?.product_name || '')
+      const sup = String(p?.supplier || '').trim()
+      const code = String(p?.product_code || '').trim()
+      return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name }
+    }))).catch(() => {})
     getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => c.code_number))).catch(() => {})
   }, [])
 
