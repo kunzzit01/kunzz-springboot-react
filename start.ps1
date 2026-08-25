@@ -162,6 +162,31 @@ function Prepare-Database {
     else { Write-Host "  [OK] 数据库 $DB_NAME 已就绪 ($tables 张表)" -ForegroundColor Green }
 }
 
+function Ensure-NewTables {
+    # 新系统功能表（老库备份/数据包不含，导入后需补齐）
+    $existing = Run-Mysql "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('operation_logs','phone_records')"
+    if ($existing -and $existing -match 'operation_logs' -and $existing -match 'phone_records') {
+        Write-Host "  [OK] 新系统功能表已就绪 (operation_logs, phone_records)" -ForegroundColor Green
+        return
+    }
+    Write-Host "  [..] 补齐新系统功能表 (operation_logs, phone_records)..."
+    Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.operation_logs (\
+      id int(11) NOT NULL AUTO_INCREMENT, operator varchar(100) DEFAULT NULL, action varchar(200) DEFAULT NULL, \
+      target varchar(200) DEFAULT NULL, detail text DEFAULT NULL, created_at timestamp NULL DEFAULT current_timestamp(), \
+      PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
+    Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.phone_records (\
+      id int(11) NOT NULL AUTO_INCREMENT, employee_id int(11) DEFAULT NULL, record_date date DEFAULT NULL, \
+      get_checked tinyint(1) DEFAULT 0, start_time varchar(10) DEFAULT NULL, end_time varchar(10) DEFAULT NULL, \
+      return_checked tinyint(1) DEFAULT 0, restaurant varchar(10) DEFAULT NULL, \
+      created_at timestamp NULL DEFAULT current_timestamp(), updated_at timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
+      PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
+    $chk = Run-Mysql "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('operation_logs','phone_records')"
+    if (-not $chk -or $chk -notmatch 'operation_logs' -or $chk -notmatch 'phone_records') {
+        throw "新系统功能表创建失败"
+    }
+    Write-Host "  [OK] 新系统功能表已补齐" -ForegroundColor Green
+}
+
 # ---------- 启动后端 ----------
 function Start-Backend {
     if (Test-PortOpen $PORT_API) {
@@ -222,6 +247,7 @@ try {
     Write-Host ""
     Write-Host "  [2/3] 检查数据库..."
     Prepare-Database
+    Ensure-NewTables
     Write-Host ""
     Write-Host "  [3/3] 启动系统..."
     Start-Backend
