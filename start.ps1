@@ -176,11 +176,17 @@ function Start-Backend {
         Wait-Enter "按回车退出"; exit 1
     }
     if (-not (Test-Path $JAR)) {
-        Write-Host "  [!!] 缺少后端程序: $JAR" -ForegroundColor Red
-        Write-Host "       jar 不包含在 GitHub 源码包中，请先在本机构建：" -ForegroundColor Yellow
-        Write-Host "         cd backend && mvn -DskipTests package" -ForegroundColor Yellow
-        Write-Host "       然后将 backend/target/inventory-backend-1.0.0.jar 复制到用户设备对应位置。" -ForegroundColor Yellow
-        Wait-Enter "按回车退出"; exit 1
+        # 从 GitHub 源码包下载时没有 target/，自动下载 Release 中的 jar
+        New-Item -ItemType Directory -Path (Split-Path $JAR) -Force | Out-Null
+        Write-Host "  [..] 未找到后端程序，正在从 GitHub Release 下载 (约 71MB，仅首次)..."
+        curl.exe -L --progress-bar -o $JAR "https://github.com/kunzzit01/kunzz-springboot-react/releases/download/v1.0.0/inventory-backend-1.0.0.jar"
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $JAR)) {
+            Write-Host "  [!!] jar 下载失败，请检查网络后重试" -ForegroundColor Red
+            Write-Host "       也可手动下载后放入: $JAR" -ForegroundColor Yellow
+            Write-Host "       https://github.com/kunzzit01/kunzz-springboot-react/releases/tag/v1.0.0" -ForegroundColor Yellow
+            Wait-Enter "按回车退出"; exit 1
+        }
+        Write-Host "  [OK] 后端程序就绪" -ForegroundColor Green
     }
     Write-Host "  [..] 启动后端服务 (http://localhost:$PORT_API)..."
     $p = Start-Process "$JRE\bin\java.exe" `
