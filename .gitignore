@@ -31,7 +31,9 @@ database/*
 *.sql.bak
 
 # ---------- 用户上传数据 ----------
-backend/uploads/
+# 碗碟照片需要随仓库分发（新用户直接可用），故纳入版本库；
+# 若后续图片过多导致仓库过大，可改为只推送 backend/uploads/dishware/ 或使用 Git LFS
+# backend/uploads/
 
 # ---------- live 同步脚本凭证（绝不可推送，仓库是公开的） ----------
 live-credentials.json
