@@ -2,6 +2,7 @@ package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.entity.StockInout;
+import com.kunzz.inventory.realtime.RealtimeService;
 import com.kunzz.inventory.service.StockEditService;
 import com.kunzz.inventory.service.StockEnhanceService;
 import com.kunzz.inventory.service.StockProductService;
@@ -20,6 +21,7 @@ public class StockEnhanceController {
     private final StockEnhanceService stockEnhanceService;
     private final StockProductService stockProductService;
     private final StockEditService stockEditService;
+    private final RealtimeService realtimeService;
 
     /** 回收站：软删除的出入库记录 */
     @GetMapping("/recycle")
@@ -66,29 +68,45 @@ public class StockEnhanceController {
         return ApiResponse.ok(stockProductService.list(systemAssign, keyword));
     }
 
+    /** 进货默认单价（货品种类里最新维护的 price；无则 null） */
+    @GetMapping("/products/default-price")
+    public ApiResponse<Double> productDefaultPrice(
+            @RequestParam String productName,
+            @RequestParam(required = false) String codeNumber) {
+        return ApiResponse.ok(stockProductService.getDefaultPrice(productName, codeNumber));
+    }
+
     /** 新增记录 */
     @PostMapping("/products")
     public ApiResponse<Map<String, Object>> createProduct(@RequestBody Map<String, Object> body) {
-        return ApiResponse.ok(stockProductService.create(body));
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.create(body));
+        realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
+        return resp;
     }
 
     /** 更新记录 */
     @PutMapping("/products/{id}")
     public ApiResponse<Map<String, Object>> updateProduct(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
-        return ApiResponse.ok(stockProductService.update(id, body));
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.update(id, body));
+        realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
+        return resp;
     }
 
     /** 删除记录 */
     @DeleteMapping("/products/{id}")
     public ApiResponse<Map<String, Object>> deleteProduct(@PathVariable Integer id) {
-        return ApiResponse.ok(stockProductService.delete(id));
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.delete(id));
+        realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
+        return resp;
     }
 
     /** 批准记录 */
     @PutMapping("/products/{id}/approve")
     public ApiResponse<Map<String, Object>> approveProduct(@PathVariable Integer id, @RequestBody(required = false) Map<String, Object> body) {
         String approver = body == null ? null : (String) body.get("approver");
-        return ApiResponse.ok(stockProductService.approve(id, approver));
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.approve(id, approver));
+        realtimeService.notifyStockChanged("all"); // 实时：批准后广播（其他视图/用户自动刷新）
+        return resp;
     }
 
     // ---------- 进出货辅助选项（stockeditapi.php） ----------

@@ -90,9 +90,9 @@
 }
 .sp-root .excel-table tr:nth-child(even) { background-color: #f9fafb; }
 .sp-root .excel-table tr:hover { background-color: #f3f4f6; }
-/* 状态列（第10列）保留状态色背景：已批准浅绿 / 待批准浅黄 */
-.sp-root .excel-table tr.status-approved td:nth-child(10) { background-color: #d1fae5 !important; }
-.sp-root .excel-table tr.status-pending td:nth-child(10) { background-color: #fef3c7 !important; }
+/* 状态列（第11列）保留状态色背景：已批准浅绿 / 待批准浅黄 */
+.sp-root .excel-table tr.status-approved td:nth-child(11) { background-color: #d1fae5 !important; }
+.sp-root .excel-table tr.status-pending td:nth-child(11) { background-color: #fef3c7 !important; }
 /* 新行 / 编辑行（可编辑状态，浅绿/蓝色提示） */
 .sp-root .excel-table tr.new-row td { background-color: #f0fdf4 !important; }
 .sp-root .excel-table tr.editing-row td { background-color: #cde3ff !important; }
@@ -101,18 +101,21 @@
 .sp-root .serial-number-cell {
   padding: 8px; text-align: center; font-weight: 600; color: #6b7280; background-color: #f9fafb;
 }
-/* 响应式列宽（对齐旧系统 11 列百分比） */
+/* 响应式列宽（12 列：序号/编号/名字/规格/单价/类型/供应商/申请人/系统分配/冰箱分类/状态/操作） */
 .sp-root .excel-table th:nth-child(1), .sp-root .excel-table td:nth-child(1) { width: 4%; }
 .sp-root .excel-table th:nth-child(2), .sp-root .excel-table td:nth-child(2) { width: 10%; }
-.sp-root .excel-table th:nth-child(3), .sp-root .excel-table td:nth-child(3) { width: 20%; }
+.sp-root .excel-table th:nth-child(3), .sp-root .excel-table td:nth-child(3) { width: 18%; }
 .sp-root .excel-table th:nth-child(4), .sp-root .excel-table td:nth-child(4) { width: 8%; }
 .sp-root .excel-table th:nth-child(5), .sp-root .excel-table td:nth-child(5) { width: 8%; }
-.sp-root .excel-table th:nth-child(6), .sp-root .excel-table td:nth-child(6) { width: 14%; }
-.sp-root .excel-table th:nth-child(7), .sp-root .excel-table td:nth-child(7) { width: 7%; }
-.sp-root .excel-table th:nth-child(8), .sp-root .excel-table td:nth-child(8) { width: 8%; }
-.sp-root .excel-table th:nth-child(9), .sp-root .excel-table td:nth-child(9) { width: 10%; }
-.sp-root .excel-table th:nth-child(10), .sp-root .excel-table td:nth-child(10) { width: 12%; }
-.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 90px; }
+.sp-root .excel-table th:nth-child(6), .sp-root .excel-table td:nth-child(6) { width: 8%; }
+.sp-root .excel-table th:nth-child(7), .sp-root .excel-table td:nth-child(7) { width: 13%; }
+.sp-root .excel-table th:nth-child(8), .sp-root .excel-table td:nth-child(8) { width: 7%; }
+.sp-root .excel-table th:nth-child(9), .sp-root .excel-table td:nth-child(9) { width: 8%; }
+.sp-root .excel-table th:nth-child(10), .sp-root .excel-table td:nth-child(10) { width: 9%; }
+.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 8%; }
+.sp-root .excel-table th:nth-child(12), .sp-root .excel-table td:nth-child(12) { width: 90px; }
+/* 单价列：数字右对齐 + 等宽可读性（只读/编辑一致） */
+.sp-root .excel-table td:nth-child(5) .excel-input { text-align: right; padding-right: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .sp-root .excel-input {
   width: 100%; height: clamp(30px, 2.08vw, 40px); border: none; background: #f0fdf4;
   text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 400;

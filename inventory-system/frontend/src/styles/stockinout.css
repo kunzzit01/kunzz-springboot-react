@@ -178,6 +178,11 @@
   transition: all 0.2s; box-sizing: border-box; vertical-align: middle; line-height: 24px;
 }
 .sio-root .table-input:focus { background: #fff; border: 2px solid #583e04; outline: none; z-index: 5; position: relative; }
+/* 进/出数量互斥禁用态（对齐旧系统 enforceQuantityMutex：填进禁用出、填出禁用进） */
+.sio-root .table-input:disabled {
+  background: #f3f4f6; color: #b0b7c3; cursor: not-allowed; opacity: 1;
+  -webkit-text-fill-color: #b0b7c3;
+}
 .sio-root .table-select {
   width: 100%; height: 40px; border: none; background: transparent;
   text-align: center; font-size: clamp(8px, 0.74vw, 14px); padding: 8px 4px; cursor: pointer; appearance: none;
@@ -235,8 +240,10 @@
 .sio-root .smartSearchWrapper.expanded { width: max(150px, 15vw); border-color: #ff7b00; border-radius: 6px; cursor: default; box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08); }
 .sio-root .smartSearch-icon {
   width: 40px; min-width: 40px; height: 100%; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; color: #9ca3af; flex-shrink: 0; pointer-events: none; transition: color 0.25s ease;
+  font-size: 15px; color: #9ca3af; flex-shrink: 0; border: none; background: none; padding: 0;
+  cursor: pointer; transition: color 0.25s ease;
 }
+.sio-root .smartSearch-icon:hover { color: #ff7b00; }
 .sio-root .smartSearchWrapper.expanded .smartSearch-icon { color: #ff7b00; }
 .sio-root .smartSearch-input {
   flex: 1; border: none; outline: none; background: transparent;
@@ -373,6 +380,7 @@
 .sio-root .calendar-popup {
   position: fixed; z-index: 20000; background: #fff; border: 1px solid #e5e7eb;
   border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 14px; width: 300px;
+  max-width: calc(100vw - 16px); /* 小屏不超出视口 */
 }
 .sio-root .calendar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .sio-root .calendar-nav-btn {
@@ -424,19 +432,25 @@
 .sio-root .modal-overlay {
   position: fixed; inset: 0; z-index: 15000; background: rgba(0,0,0,.5);
   display: flex; align-items: center; justify-content: center;
+  padding: 12px; /* 小屏留边距，弹窗不贴屏边 */
 }
 .sio-root .modal-content {
-  background: #fff; border-radius: 12px; width: 460px; max-height: 80vh; overflow: hidden;
+  background: #fff; border-radius: 12px;
+  width: min(460px, 100%); /* 小屏自适应（不超出 overlay 内边距） */
+  max-height: min(80vh, calc(100vh - 24px));
+  display: flex; flex-direction: column; /* header/body/footer 纵向布局，footer 始终可见 */
+  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0,0,0,.3);
 }
 .sio-root .modal-header {
   background: linear-gradient(135deg,#f99300,#f98500); color: #fff;
   padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;
+  flex-shrink: 0; /* header 不被压缩 */
 }
 .sio-root .modal-header h2 { font-size: 18px; margin: 0; }
 .sio-root .modal-close { background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
-.sio-root .modal-body { padding: 20px; }
-.sio-root .modal-footer { padding: 14px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; }
+.sio-root .modal-body { padding: 20px; flex: 1 1 auto; min-height: 0; overflow-y: auto; } /* 内容超高时内部滚动 */
+.sio-root .modal-footer { padding: 14px 20px; background: #f9fafb; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; } /* footer 固定在底部不被遮挡 */
 .sio-root .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
 .sio-root .form-group label { font-size: 14px; font-weight: 600; color: #583e04; }
 .sio-root .form-input, .sio-root .form-select {
@@ -445,6 +459,41 @@
 .sio-root .form-input:focus, .sio-root .form-select:focus {
   outline: none; border-color: #583e04; box-shadow: 0 0 0 3px rgba(88,62,4,.1);
 }
+
+/* 新增记录弹窗（对齐旧版 live stockeditall.css date-rows-modal：白底黑标题 + 2px 黑边 + 绿色创建按钮） */
+.sio-root .modal-content.sio-rows-modal-content {
+  max-width: 400px; width: 90%; padding: 0; border: 2px solid #000;
+  border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.2); overflow: hidden;
+}
+.sio-root .sio-rows-modal-content .modal-header {
+  background: #fff; color: #000; padding: 20px 24px 12px;
+  border-bottom: 2px solid #f0f0f0;
+}
+.sio-root .sio-rows-modal-content .modal-title {
+  font-size: 18px; font-weight: bold; color: #000; margin: 0;
+}
+.sio-root .sio-rows-modal-content .modal-close { color: #999; border-radius: 50%; }
+.sio-root .sio-rows-modal-content .modal-close:hover { background: #f0f0f0; color: #333; }
+.sio-root .sio-rows-modal-content .modal-body { padding: 20px 24px; margin-bottom: 0; }
+.sio-root .sio-rows-modal-content .form-group { gap: 6px; margin-bottom: 16px; }
+.sio-root .sio-rows-modal-content .form-group label { color: #333; font-size: 15px; }
+.sio-root .sio-rows-modal-content .form-input {
+  border: 2px solid #ddd; border-radius: 6px; color: #333; background: #fff;
+}
+.sio-root .sio-rows-modal-content .form-input:focus {
+  outline: none; border-color: #583e04; box-shadow: 0 0 0 3px rgba(88,62,4,.1);
+}
+.sio-root .sio-rows-modal-content .modal-footer {
+  padding: 14px 24px 20px; background: transparent; border-top: none;
+}
+.sio-root .sio-rows-modal-content .btn-modal {
+  padding: 10px 20px; border: none; border-radius: 6px; font-size: 15px; font-weight: 600;
+  cursor: pointer; transition: all .2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.sio-root .sio-rows-modal-content .btn-modal-primary { background: #10b981; color: #fff; }
+.sio-root .sio-rows-modal-content .btn-modal-primary:hover { background: #059669; transform: translateY(-1px); }
+.sio-root .sio-rows-modal-content .btn-modal-secondary { background: #6b7280; color: #fff; }
+.sio-root .sio-rows-modal-content .btn-modal-secondary:hover { background: #4b5563; }
 
 /* 回到顶部 */
 .sio-root .back-to-top {
@@ -474,6 +523,7 @@
   align-items: flex-end;
   gap: clamp(2px, 0.32vw, 8px);
   margin-left: auto;
+  flex-wrap: wrap; /* 小屏换行，按钮不挤压 */
 }
 .sio-root .header-search {
   flex: none;

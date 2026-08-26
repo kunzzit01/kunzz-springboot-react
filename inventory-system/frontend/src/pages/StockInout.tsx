@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProducts,
+import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProductDefaultPrice, getProducts,
   getRemarkCodes, getShippers, getStaff, getStockInout, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
 import { useRowHighlight } from '../utils/rowHighlight'
 import { generateInvoiceNumber, generateInvoicePdf } from '../utils/invoicePdf'
@@ -179,7 +179,7 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
       <input className="table-input text-input" placeholder={placeholder} value={value} disabled={disabled}
         style={{ width: '100%', paddingRight: value && !disabled ? 22 : 8 }}
         onChange={(e) => { setFocusAll(false); onChange(e.target.value); openDropdown() }}
-        onFocus={(e) => { e.target.select(); setFocusAll(true); openDropdown() }} />
+        onFocus={(e) => { e.target.select(); setFocusAll(false); openDropdown() }} />
       {/* 清除按钮：点击后清空当前值（方便更换货品/编号） */}
       {value && !disabled && (
         <button type="button"
@@ -258,7 +258,10 @@ export default function StockInout() {
   const { flash, isHl } = useRowHighlight((r: any) => String(r.id))
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(0)
-  const [kw, setKw] = useState('')
+  const [kw, setKw] = useState('') // 输入框即时值
+  const [searchKw, setSearchKw] = useState('') // 防抖后的搜索词（300ms，对齐旧系统 setupRealTimeSearch）
+  const [exactMatch, setExactMatch] = useState(false) // 精确搜索：产品名 = 关键字（不区分大小写）
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 默认日期范围 = 今天（对齐线上：默认加载今日记录）
   const [dateRange, setDateRange] = useState({ start: fmtDate(new Date()), end: fmtDate(new Date()) })
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -315,17 +318,28 @@ export default function StockInout() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  // 实时搜索（对齐旧系统 setupRealTimeSearch：300ms 防抖 + 搜索后回到第一页）
+  const onSearchInput = (v: string) => {
+    setKw(v)
+    if (searchTimer.current) clearTimeout(searchTimer.current)
+    searchTimer.current = setTimeout(() => {
+      setSearchKw(v)
+      setPage(0)
+    }, 300)
+  }
+
   const load = (p: number) =>
     getStockInout({
       page: p, size: PAGE_SIZE,
       targetSystem: system === 'central' ? undefined : system,
-      keyword: kw || undefined,
+      keyword: searchKw || undefined,
+      exactMatch: exactMatch || undefined,
       startDate: dateRange.start || undefined,
       endDate: dateRange.end || undefined,
     })
       .then((res) => { setRows(res.items); setTotal(res.total); return res.items })
       .catch(() => [] as StockInout[])
-  useEffect(() => { load(page) }, [page, system, kw, dateRange.start, dateRange.end]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(page) }, [page, system, searchKw, exactMatch, dateRange.start, dateRange.end]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 全站实时更新：收到当前系统变更信号自动刷新（节流 3s + 尾部补刷；编辑行/弹窗打开时暂停）
   useRealtime(system, () => load(page), 1000, 3000, () =>
@@ -470,9 +484,13 @@ export default function StockInout() {
     setCalStart(s); setCalEnd(e)
     setCalYear(s.getFullYear()); setCalMonth(s.getMonth())
     // 对齐旧系统 toggleCalendar：基于 date-range-picker 的位置动态定位（下方 8px）
+    // 小屏防溢出：弹窗左缘不超出视口（左对齐输入框，靠右时夹紧）
     const rect = datePickerRef.current?.getBoundingClientRect()
     if (rect) {
-      setCalPos({ top: rect.bottom + 8, left: rect.left })
+      const popupW = 300
+      let left = rect.left
+      if (left + popupW > window.innerWidth - 8) left = Math.max(8, window.innerWidth - popupW - 8)
+      setCalPos({ top: rect.bottom + 8, left })
     }
     setCalOpen(true)
   }
@@ -518,17 +536,31 @@ export default function StockInout() {
   }
 
   // ---- 新增记录（对齐 date-rows-modal → 行内新增） ----
+  const dateInputRef = useRef<HTMLInputElement>(null)
+  // 备注 placeholder（对齐旧系统：中央保持原样，J1/J2/J3 改为“输入备注（发票号码/损耗）”）
+  const remarkPlaceholder = system === 'central' ? '输入备注（可选）' : '输入备注（发票号码/损耗）'
+  const closeRowsModal = () => {
+    setRowsModal(false)
+    setRowsForm(prev => ({ ...prev, remark: '' })) // 对齐旧系统 closeDateRowsModal：关闭时清空备注
+  }
   const showDateRowsModal = () => {
     setRowsForm({ date: fmtDate(new Date()), count: '1', remark: '' })
     setRowsModal(true)
+    // 对齐旧系统 showDateRowsModal：聚焦到日期输入框
+    setTimeout(() => dateInputRef.current?.focus(), 100)
   }
   const createMultipleRows = () => {
-    const n = Math.min(Math.max(parseInt(rowsForm.count) || 1, 1), 50)
+    const selectedDate = rowsForm.date
+    const rowsCount = parseInt(rowsForm.count) || 0
+    // 对齐旧系统 createMultipleRows 输入验证
+    if (!selectedDate) { showMsg('请选择日期', 'error'); return }
+    if (!rowsCount || rowsCount < 1 || rowsCount > 50) { showMsg('请输入有效的行数（1-50）', 'error'); return }
+    const n = Math.min(Math.max(rowsCount, 1), 50)
     const newOnes: NewRow[] = []
     for (let i = 0; i < n; i++) {
       newOnes.push({
         key: 'new-' + Date.now() + '-' + (newRowCounter.current++),
-        date: rowsForm.date, codeNumber: '', productName: '',
+        date: selectedDate, codeNumber: '', productName: '',
         inQty: '', outQty: '', target: system, specification: '', price: '', priceMode: 'manual',
         type: '', remarkChecked: false, remarkPrefix: '', remarkSuffix: '', receiver: '', remark: rowsForm.remark,
       })
@@ -588,17 +620,30 @@ export default function StockInout() {
       const spec = (hit && hit.specification) ? hit.specification : (row?.specification || '')
       let cat = (hit && hit.category) ? hit.category : (row?.type || '')
       if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
-      const isBranch = system !== 'central'
-      patchNew(key, {
-        codeNumber: autoCode, remarkPrefix: computePrefix(name),
-        specification: spec,
-        type: cat || row?.type || '',
-        // 记录货品供应商（出货时不自动填，保持占位符由用户点选出货人；进货时自动填入并锁死）
-        supplier: hit?.supplier ? String(hit.supplier) : '',
-        stockOptions: priceList || [],
-        price: (!isBranch && priceList && priceList.length > 0) ? priceList[0].price : '',
-        priceMode: (!isBranch && priceList && priceList.length > 0) ? 'batch' : 'manual',
-      })
+      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，无则 0.00）；出货/未填数量 → 下拉（HIFO/自行选价）
+      const isIncoming = parseFloat(row?.inQty || '0') > 0
+      if (isIncoming) {
+        const dp = await fetchDefaultPrice(name, autoCode || undefined)
+        patchNew(key, {
+          codeNumber: autoCode, remarkPrefix: computePrefix(name),
+          specification: spec,
+          type: cat || row?.type || '',
+          supplier: hit?.supplier ? String(hit.supplier) : '',
+          stockOptions: priceList || [],
+          price: dp !== null ? dp : '0.00',
+          priceMode: 'manual',
+        })
+      } else {
+        patchNew(key, {
+          codeNumber: autoCode, remarkPrefix: computePrefix(name),
+          specification: spec,
+          type: cat || row?.type || '',
+          supplier: hit?.supplier ? String(hit.supplier) : '',
+          stockOptions: priceList || [],
+          price: '',
+          priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
+        })
+      }
     } catch { /* ignore */ }
   }
   /** 选择编号后自动回填货品（对齐旧系统 handleCodeNumberChange：code → 货品名/规格/类型/供应商/价格） */
@@ -617,20 +662,36 @@ export default function StockInout() {
       const spec = hit?.specification ? String(hit.specification) : (row?.specification || '')
       let cat = hit?.category ? String(hit.category) : (row?.type || '')
       if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
-      const isBranch = system !== 'central'
-      patchNew(key, {
-        productName: name,
-        codeNumber: code,
-        remarkPrefix: computePrefix(name),
-        specification: spec,
-        type: cat || row?.type || '',
-        supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
-        stockOptions: priceList || [],
-        price: (!isBranch && priceList && priceList.length > 0) ? priceList[0].price : '',
-        priceMode: (!isBranch && priceList && priceList.length > 0) ? 'batch' : 'manual',
-        // 进货时自动填入该编号货品的供应商并锁死（对齐旧系统 updateSupplierIfNeeded）
-        receiver: parseFloat(row?.inQty || '0') > 0 && hit?.supplier ? String(hit.supplier) : row?.receiver,
-      })
+      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，无则 0.00）；出货/未填数量 → 下拉
+      const isIncoming = parseFloat(row?.inQty || '0') > 0
+      if (isIncoming) {
+        const dp = await fetchDefaultPrice(name, code || undefined)
+        patchNew(key, {
+          productName: name,
+          codeNumber: code,
+          remarkPrefix: computePrefix(name),
+          specification: spec,
+          type: cat || row?.type || '',
+          supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
+          stockOptions: priceList || [],
+          price: dp !== null ? dp : '0.00',
+          priceMode: 'manual',
+          receiver: hit?.supplier ? String(hit.supplier) : row?.receiver,
+        })
+      } else {
+        patchNew(key, {
+          productName: name,
+          codeNumber: code,
+          remarkPrefix: computePrefix(name),
+          specification: spec,
+          type: cat || row?.type || '',
+          supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
+          stockOptions: priceList || [],
+          price: '',
+          priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
+          receiver: parseFloat(row?.inQty || '0') > 0 && hit?.supplier ? String(hit.supplier) : row?.receiver,
+        })
+      }
     } catch { /* ignore */ }
   }
   /** 编辑模式：选择编号 → 回填货品名/规格/类型（对齐旧系统编辑态 handleCodeNumberChange） */
@@ -650,7 +711,45 @@ export default function StockInout() {
       }))
     } catch { /* ignore */ }
   }
+  /** 编辑行：进货数量变化 → 单价自动抓取：优先货品种类默认单价，无则回退 HIFO 最高单价 */
+  const handleEditInQty = async (v: string) => {
+    setEditDraft(prev => ({
+      ...prev,
+      inQuantity: v,
+      outQuantity: parseFloat(v) > 0 ? '0' : prev.outQuantity,
+    }))
+    if (editDraft.productName && parseFloat(v) > 0) {
+      const dp = await fetchDefaultPrice(editDraft.productName, editDraft.codeNumber || undefined)
+      setEditDraft(prev => ({ ...prev, price: dp !== null ? dp : '0.00' }))
+    }
+  }
   /** HIFO 拆行（对齐 hifoAutoSplit） */
+  /** 进货默认单价：优先货品种类里维护的 price，无则返回 null（回退 HIFO 最高单价） */
+  const fetchDefaultPrice = async (productName: string, codeNumber?: string): Promise<string | null> => {
+    try {
+      const dp = await getProductDefaultPrice(productName, codeNumber)
+      // 单价 0 也是合法单价（RM0 货品需要记录）
+      if (dp !== null && dp !== undefined && Number(dp) >= 0) return String(dp)
+    } catch { /* ignore */ }
+    return null
+  }
+  /** 进货数量变化（互斥 + 单价自动抓取：货品种类有单价则抓取，无单价则 0.00） */
+  const handleInQty = async (key: string, v: string) => {
+    const row = newRows.find(r => r.key === key)
+    patchNew(key, {
+      inQty: v,
+      outQty: parseFloat(v) > 0 ? '0' : row?.outQty || '',
+      // 中央进货：收货单位默认中央（对齐旧系统）
+      target: system === 'central' && parseFloat(v) > 0 ? 'central' : row?.target || '',
+      // 明确进货 → 自动填入货品供应商（锁死）
+      receiver: parseFloat(v) > 0 && row?.supplier ? row.supplier : row?.receiver,
+    })
+    // 进货数量变化 → 单价自动抓取（所有系统生效）：有单价用货品种类单价，无单价显示 0.00
+    if (row && row.productName && parseFloat(v) > 0) {
+      const dp = await fetchDefaultPrice(row.productName, row.codeNumber || undefined)
+      patchNew(key, { price: dp !== null ? dp : '0.00', priceMode: 'manual' })
+    }
+  }
   const handleOutQty = async (key: string, v: string) => {
     const row = newRows.find(r => r.key === key)
     patchNew(key, {
@@ -658,6 +757,8 @@ export default function StockInout() {
       inQty: parseFloat(v) > 0 ? '0' : row?.inQty || '',
       // 中央出货数量为 0（含进货行）→ 收货单位锁死为中央（对齐旧系统 handleNewRowOutQuantityChange）
       target: system === 'central' ? (parseFloat(v) > 0 ? (row?.target || '') : 'central') : row?.target || '',
+      // 出货 → 价格下拉模式（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
+      priceMode: parseFloat(v) > 0 ? 'batch' : row?.priceMode || 'manual',
     })
     // 出库数量变化 → 用该数量重新加载价格+库存列表（对齐旧系统 loadNewRowProductPricesWithStock，所有系统生效）
     if (row && row.productName && parseFloat(v) > 0) {
@@ -719,6 +820,11 @@ export default function StockInout() {
         const outQ = parseFloat(row.outQty || '0') || 0
         const isIncoming = inQ > 0
         const isOutgoing = outQ > 0
+        // 验证单价：不能为空且不能小于0（对齐旧系统 saveNewRowRecord；0 合法，RM0 需要记录）
+        const priceStr = (row.price ?? '').toString().trim()
+        if (priceStr === '' || isNaN(parseFloat(priceStr)) || parseFloat(priceStr) < 0) {
+          showMsg(`货品 [${row.productName}] 单价不能为空且不能小于0`, 'error'); return
+        }
         // 备注编号（对齐旧系统：前缀-编号 拼接）——前缀和编号都填写才算完整编号，否则视为未填写（触发自动生成）
         const remarkNumber = row.remarkChecked && row.remarkPrefix && row.remarkSuffix
           ? `${row.remarkPrefix.toUpperCase()}-${row.remarkSuffix.toUpperCase()}` : undefined
@@ -809,6 +915,11 @@ export default function StockInout() {
     setSaving(true)
     try {
       const outQ = parseFloat(editDraft.outQuantity || '0') || 0
+      // 验证单价：不能为空且不能小于0（对齐旧系统；0 合法，RM0 需要记录）
+      const editPriceStr = (editDraft.price ?? '').toString().trim()
+      if (editPriceStr === '' || isNaN(parseFloat(editPriceStr)) || parseFloat(editPriceStr) < 0) {
+        showMsg('单价不能为空且不能小于0', 'error'); return
+      }
       // 原记录的备注编号（用于判断是否保持原编号；保持时跳过「在库」校验——
       // 该编号可能已被本记录自身消耗，对齐后端 updateInout 与旧系统编辑行为）
       const origRow = rows.find(r => Number(r.id) === id)
@@ -1040,9 +1151,14 @@ export default function StockInout() {
             <div className="header-search">
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
                 onClick={(e) => { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
-                <i className="fas fa-search smartSearch-icon"></i>
+                {/* 左侧图标即搜索模式切换：放大镜=模糊（含关键字全部匹配）/ 等号=精确（产品名完全等于关键字）；点击同时展开输入框 */}
+                <span className="smartSearch-icon"
+                  title={exactMatch ? '精确搜索：只显示产品名完全等于关键字的记录（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的记录（点击切换为精确）'}
+                  onClick={(e) => { e.stopPropagation(); setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
+                  <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
+                </span>
                 <input ref={searchInputRef} type="text" className="smartSearch-input" placeholder="输入关键字搜索..." value={kw}
-                  onChange={(e) => setKw(e.target.value)} />
+                  onChange={(e) => onSearchInput(e.target.value)} />
               </div>
             </div>
             <button className="btn btn-success" onClick={showDateRowsModal}><i className="fas fa-plus" /> 新增记录</button>
@@ -1119,10 +1235,14 @@ export default function StockInout() {
                         ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => setEditDraft({ ...editDraft, productName: v })} style={{ minWidth: 150 }} />
                         : <b>{r.productName}</b>}</td>
                       <td>{isEditing
-                        ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.inQuantity || ''} onChange={(e) => setEditDraft({ ...editDraft, inQuantity: e.target.value, outQuantity: parseFloat(e.target.value) > 0 ? '0' : editDraft.outQuantity })} />
+                        ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.inQuantity || ''}
+                            disabled={parseFloat(editDraft.outQuantity || '0') > 0} /* 对齐旧系统 enforceQuantityMutex */
+                            onChange={(e) => handleEditInQty(e.target.value)} />
                         : <span style={{ color: inQ > 0 ? '#10b981' : '#6b7280', fontWeight: inQ > 0 ? 600 : 400 }}>{fmtNum(inQ)}</span>}</td>
                       <td>{isEditing
-                        ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.outQuantity || ''} onChange={(e) => setEditDraft({ ...editDraft, outQuantity: e.target.value, inQuantity: parseFloat(e.target.value) > 0 ? '0' : editDraft.inQuantity })} />
+                        ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.outQuantity || ''}
+                            disabled={parseFloat(editDraft.inQuantity || '0') > 0} /* 对齐旧系统 enforceQuantityMutex */
+                            onChange={(e) => setEditDraft({ ...editDraft, outQuantity: e.target.value, inQuantity: parseFloat(e.target.value) > 0 ? '0' : editDraft.inQuantity })} />
                         : <span className={outQ > 0 ? 'negative-value' : ''}>{outQ > 0 ? fmtNum(outQ) : fmtNum(0)}</span>}</td>
                       <td>{isEditing
                         ? (system === 'central' ? (
@@ -1142,11 +1262,11 @@ export default function StockInout() {
                       <td>
                         <div className="currency-display">
                           <span className="currency-symbol">RM</span>
-                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.priceMode === 'batch' ? (
+                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.priceMode !== 'manual' ? (
                             <select className="table-select" style={{ width: 110 }} value={editPriceValue}
                               onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
-                              {/* 对齐旧系统：显示所有价格选项，库存不足的标注 (库存:X, 不足) */}
-                              <option value="">{priceStock.length ? '请选择价格' : '暂无历史价格'}</option>
+                              {/* 对齐旧系统：显示所有价格选项，库存不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
+                              <option value="">{priceStock.length ? '请选择价格' : '暂无库存价格'}</option>
                               <option value="manual">手动输入价格</option>
                               {priceStock.map(p => {
                                 const enough = (parseFloat(editDraft.outQuantity || '0') || 0) <= 0 || p.available_stock >= (parseFloat(editDraft.outQuantity || '0') || 0)
@@ -1154,7 +1274,13 @@ export default function StockInout() {
                               })}
                             </select>
                           ) : isEditing ? (
-                            <input type="number" className="table-input" style={{ width: 90 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value, priceMode: 'manual' })} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <input type="number" className="table-input" style={{ width: 90 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value, priceMode: 'manual' })} />
+                              {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
+                              {parseFloat(editDraft.outQuantity || '0') > 0 && !priceStock.length && (
+                                <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
+                              )}
+                            </div>
                           ) : (
                             <span className="currency-amount">{renderPriceRawTip(r.price)}</span>
                           )}
@@ -1221,18 +1347,10 @@ export default function StockInout() {
                       onChange={(v) => patchNew(nr.key, { productName: v })}
                       onSelect={(v) => onPickProduct(nr.key, v)} /></td>
                     <td><input type="number" className="table-input" min={0} step="0.001" placeholder="0" value={nr.inQty}
-                      onChange={(e) => {
-                        const inQ = e.target.value
-                        patchNew(nr.key, {
-                          inQty: inQ,
-                          outQty: parseFloat(inQ) > 0 ? '0' : nr.outQty,
-                          // 中央进货：收货单位默认中央（对齐旧系统）
-                          target: system === 'central' && parseFloat(inQ) > 0 ? 'central' : nr.target,
-                          // 明确进货 → 自动填入货品供应商（锁死）
-                          receiver: parseFloat(inQ) > 0 && nr.supplier ? nr.supplier : nr.receiver,
-                        })
-                      }} /></td>
+                      disabled={parseFloat(nr.outQty) > 0} /* 对齐旧系统 enforceQuantityMutex：出>0 时禁用进货 */
+                      onChange={(e) => handleInQty(nr.key, e.target.value)} /></td>
                     <td><input type="number" className="table-input" min={0} step="0.001" placeholder="0" value={nr.outQty}
+                      disabled={parseFloat(nr.inQty) > 0} /* 对齐旧系统 enforceQuantityMutex：进>0 时禁用出货 */
                       onChange={(e) => handleOutQty(nr.key, e.target.value)} /></td>
                     <td>
                       {system === 'central' ? (
@@ -1252,11 +1370,11 @@ export default function StockInout() {
                     <td>
                       <div className="currency-display">
                         <span className="currency-symbol">RM</span>
-                        {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode === 'batch' ? (
+                        {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode !== 'manual' ? (
                           <select className="table-select" style={{ width: 110 }} value={nr.price}
                             onChange={(e) => patchNew(nr.key, { price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
-                            {/* 对齐旧系统：显示所有价格选项，不管库存是否足够；不足的标注 (库存:X, 不足) */}
-                            <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无历史价格'}</option>
+                            {/* 对齐旧系统：显示所有价格选项，不管库存是否足够；不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
+                            <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无库存价格'}</option>
                             <option value="manual">手动输入价格</option>
                             {(nr.stockOptions || []).map(p => {
                               const enough = (parseFloat(nr.outQty) || 0) <= 0 || p.available_stock >= (parseFloat(nr.outQty) || 0)
@@ -1264,8 +1382,14 @@ export default function StockInout() {
                             })}
                           </select>
                         ) : (
-                          <input type="number" className="table-input" style={{ width: 80 }} step="0.00001" placeholder="0.00"
-                            value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <input type="number" className="table-input" style={{ width: 80 }} step="0.00001" placeholder="0.00"
+                              value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
+                            {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
+                            {nr.productName && parseFloat(nr.outQty) > 0 && !(nr.stockOptions || []).length && (
+                              <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     </td>
@@ -1315,42 +1439,50 @@ export default function StockInout() {
         </div>
       </div>
 
-      {/* 新增记录弹窗（对齐 date-rows-modal） */}
+      {/* 新增记录弹窗（对齐 date-rows-modal：白底黑标题 + 2px 黑边 + Enter 创建） */}
       {rowsModal && (
-        <div className="modal-overlay" onClick={() => setRowsModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={closeRowsModal}>
+          <div className="modal-content sio-rows-modal-content" onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              // 对齐旧系统 date-rows-modal：弹窗内按 Enter 直接创建记录（button 上除外，避免双触发）
+              if (e.key === 'Enter' && e.target instanceof HTMLElement && e.target.tagName !== 'BUTTON') {
+                e.preventDefault()
+                createMultipleRows()
+              }
+            }}>
             <div className="modal-header">
-              <h2><i className="fas fa-plus" /> 新增记录</h2>
-              <ModalClose onClick={() => setRowsModal(false)} />
+              <h3 className="modal-title">新增记录</h3>
+              <button type="button" className="modal-close" onClick={closeRowsModal}>&times;</button>
             </div>
             <div className="modal-body">
               <div className="form-group">
-                <label>选择日期 *</label>
-                <input type="date" className="form-input" value={rowsForm.date} onChange={(e) => setRowsForm({ ...rowsForm, date: e.target.value })} />
+                <label htmlFor="sio-selected-date">选择日期 *</label>
+                <input ref={dateInputRef} type="date" id="sio-selected-date" className="form-input" value={rowsForm.date}
+                  onChange={(e) => setRowsForm({ ...rowsForm, date: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>要创建的行数 *</label>
-                <input type="number" className="form-input" min={1} max={50} value={rowsForm.count}
+                <label htmlFor="sio-rows-count">要创建的行数 *</label>
+                <input type="number" id="sio-rows-count" className="form-input" min={1} max={50} value={rowsForm.count}
                   onChange={(e) => setRowsForm({ ...rowsForm, count: e.target.value })} />
               </div>
               <div className="form-group">
-                <label>备注</label>
-                <input type="text" className="form-input" placeholder="输入备注（可选）" value={rowsForm.remark}
+                <label htmlFor="sio-new-record-remark">备注</label>
+                <input type="text" id="sio-new-record-remark" className="form-input" placeholder={remarkPlaceholder} value={rowsForm.remark}
                   onChange={(e) => setRowsForm({ ...rowsForm, remark: e.target.value })} />
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-secondary" onClick={() => setRowsModal(false)}>取消</button>
-              <button className="btn btn-primary" onClick={createMultipleRows}><i className="fas fa-plus" /> 创建记录</button>
+              <button className="btn-modal btn-modal-secondary" onClick={closeRowsModal}>取消</button>
+              <button className="btn-modal btn-modal-primary" onClick={createMultipleRows}><i className="fas fa-plus" /> 创建记录</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 导出弹窗（对齐 export-modal：DD/MM/YYYY） */}
+      {/* 导出弹窗（对齐 export-modal：DD/MM/YYYY）；宽度由 CSS 自适应（小屏不溢出） */}
       {exportOpen && (
         <div className="modal-overlay" onClick={() => setExportOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ width: 460 }}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2><i className="fas fa-file-excel" /> 生成Excel</h2>
               <ModalClose onClick={() => setExportOpen(false)} />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms } from '../api'
+import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stockproducts.css'
 
@@ -11,6 +12,7 @@ interface ProductRow {
   product_code?: string
   product_name?: string
   specification?: string
+  price?: string
   category?: string
   supplier?: string
   applicant?: string
@@ -136,8 +138,18 @@ export default function StockProducts() {
       if (hasConfig) {
         setCanApply(!!p?.canApply)
         setCanApprove(!!p?.canApprove)
-        setAllowedSystems(p?.systems || [])
+        const perms = p?.systems || []
+        setAllowedSystems(perms)
         setAllowedViews(p?.views || [])
+        // 无权限的系统不展示：当前 system 不在权限内 → 自动切到第一个有权限的系统（按 SYSTEMS 顺序）
+        // 修复：未勾选总览的用户首次进入不应展示总览
+        setSystem(prev => {
+          const allowedKeys = SYSTEMS
+            .filter(s => perms.includes(s.key) || perms.some((x: string) => x.toLowerCase() === s.value.toLowerCase()))
+            .map(s => s.key)
+          if (allowedKeys.includes(prev)) return prev
+          return allowedKeys.length > 0 ? allowedKeys[0] : prev
+        })
       }
     }).catch(() => {})
   }, [])
@@ -146,12 +158,17 @@ export default function StockProducts() {
     setLoading(true)
     try {
       const d = await getStockProducts(system === 'overview' ? '' : system, kw || undefined)
-      // 对齐 generateStockTable：待批准在前、已批准在后，各自按产品名排序
+      // 待批准在前（按产品名）、已批准在后（按批准时间 updated_at 升序：最新批准的排最后）
       const pending = (d.items || []).filter((i: any) => !i.approver)
       const approved = (d.items || []).filter((i: any) => i.approver)
       const sortByName = (a: any, b: any) => String(a.product_name || '').localeCompare(String(b.product_name || ''))
+      const sortByApprovedTime = (a: any, b: any) => {
+        const ta = String(a.updated_at || '')
+        const tb = String(b.updated_at || '')
+        return ta.localeCompare(tb) || Number(a.id) - Number(b.id)
+      }
       pending.sort(sortByName)
-      approved.sort(sortByName)
+      approved.sort(sortByApprovedTime)
       setRows([...pending, ...approved])
       setEditing(new Set())
       setDrafts({})
@@ -165,6 +182,9 @@ export default function StockProducts() {
   }
 
   useEffect(() => { load() }, [system]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 实时：货品种类变更（新增/编辑/删除/批准）自动刷新；编辑/保存/批准中不打断，结束后补刷
+  useRealtime('*', () => load(), 1000, 3000, () => saving || approvingId !== null || editing.size > 0 || newRows.length > 0)
 
   // smartSearch：点击外部且输入为空时折叠
   useEffect(() => {
@@ -234,7 +254,7 @@ export default function StockProducts() {
     try {
       // 对齐 saveSingleRowData：总览页保持原批准状态；系统页编辑后清除批准状态需重新批准
       const approver = system === 'overview' ? (d.approver || '') : ''
-      await updateStockProduct(id, { ...d, applicant: d.applicant || currentUser, approver })
+      await updateStockProduct(id, { ...d, system_assign: system === 'overview' ? (d.system_assign || '') : currentSys.value, applicant: d.applicant || currentUser, approver })
       cancelEdit(id)
       await load()
       showMsg('记录已保存', 'success')
@@ -257,6 +277,24 @@ export default function StockProducts() {
     }
   }
 
+  // 保存单条新增行（对齐编辑行 save-mode：填写完整后就地保存）
+  const saveNewRow = async (r: ProductRow, idx: number) => {
+    if (saving) return
+    if (!r.product_code || !r.product_name || !r.specification || !r.category || !r.supplier) {
+      showMsg('请填写完整的货品编号、名称、规格、类型、供应商', 'error')
+      return
+    }
+    setSaving(true)
+    try {
+      await createStockProduct({ ...r, system_assign: system === 'overview' ? (r.system_assign || '') : currentSys.value, applicant: r.applicant || currentUser })
+      removeNewRow(idx)
+      await load()
+      flashAfterRow('.table-scroll-container', 'td:nth-child(3)', String(r.product_name), flash)
+      showMsg('记录已保存')
+    } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { setSaving(false) }
+  }
+
   // 保存所有数据（新行 POST + 编辑中的行 PUT，对齐 saveAllData）
   const saveAll = async () => {
     if (saving) return
@@ -266,11 +304,11 @@ export default function StockProducts() {
     setSaving(true)
     try {
       let count = 0
-      for (const r of validNew) { await createStockProduct(r); count++ }
+      for (const r of validNew) { await createStockProduct({ ...r, system_assign: system === 'overview' ? (r.system_assign || '') : currentSys.value }); count++ }
       for (const r of editIds) {
         const d = drafts[r.id!] || r
         const approver = system === 'overview' ? (d.approver || '') : ''
-        await updateStockProduct(r.id!, { ...d, applicant: d.applicant || currentUser, approver })
+        await updateStockProduct(r.id!, { ...d, system_assign: system === 'overview' ? (d.system_assign || '') : currentSys.value, applicant: d.applicant || currentUser, approver })
         count++
       }
       setNewRows([])
@@ -285,7 +323,7 @@ export default function StockProducts() {
     finally { setSaving(false) }
   }
 
-  // 批准（对齐 approveRecord：确认 + loading）
+  // 批准（对齐旧系统：确认 + loading；仅 Approver 权限可见）
   const approve = async (r: ProductRow) => {
     if (!r.id) return
     if (!window.confirm('确定要批准这条记录吗？')) return
@@ -363,7 +401,7 @@ export default function StockProducts() {
                 <i className="fas fa-chevron-down"></i>
               </button>
               <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
-                {SYSTEMS.filter(s => s.key === 'overview' || allowedSystems.length === 0 || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
+                {SYSTEMS.filter(s => allowedSystems.length === 0 || allowedSystems.includes(s.key) || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
                   <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')} onClick={() => { setSysOpen(false); setSystem(s.key); window.history.replaceState(null, '', '/products?system=' + s.key) }}>{s.label}</div>
                 ))}
               </div>
@@ -407,6 +445,7 @@ export default function StockProducts() {
                   <th style={{ minWidth: 110 }}>货品编号</th>
                   <th style={{ minWidth: 180 }}>货品名字</th>
                   <th style={{ minWidth: 110 }}>规格</th>
+                  <th style={{ minWidth: 90 }}>单价 (RM)</th>
                   <th style={{ minWidth: 120 }}>货品类型</th>
                   <th style={{ minWidth: 130 }}>供应商</th>
                   <th style={{ minWidth: 100 }}>申请人</th>
@@ -430,6 +469,10 @@ export default function StockProducts() {
                       </select>
                     </td>
                     <td>
+                      <input className="excel-input text-input" type="number" min={0} step="0.001" placeholder="0.00"
+                        value={r.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { price: e.target.value })} />
+                    </td>
+                    <td>
                       <select className="excel-select" value={r.category || ''} onChange={(e) => setNew(idx, { category: e.target.value })}>
                         <option value="">选择类型</option>
                         {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -437,10 +480,15 @@ export default function StockProducts() {
                     </td>
                     <td><input className="excel-input text-input" placeholder="供应商名称" value={r.supplier || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { supplier: e.target.value })} /></td>
                     <td><input className="excel-input text-input readonly" readOnly value={r.applicant || ''} placeholder="申请人" /></td>
-                    <td><MultiSelect value={r.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setNew(idx, { system_assign: v })} /></td>
+                    <td>
+                      {system === 'overview'
+                        ? <MultiSelect value={r.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setNew(idx, { system_assign: v })} />
+                        : <input className="excel-input text-input readonly" readOnly value={currentSys.value} title="仅总览可设置系统分配" />}
+                    </td>
                     <td><MultiSelect value={r.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
                     <td className="action-cell">
+                      <button className="edit-btn save-mode" onClick={() => saveNewRow(r, idx)} title="保存记录" disabled={saving}><i className="fas fa-save" /></button>
                       <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
                     </td>
                   </tr>
@@ -473,6 +521,12 @@ export default function StockProducts() {
                       </td>
                       <td>
                         {isEditing
+                          ? <input className="excel-input text-input" type="number" min={0} step="0.001" placeholder="0.00"
+                              value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
+                          : <input className="excel-input" readOnly value={r.price || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
                           ? <select className="excel-select" value={draft.category || ''} onChange={(e) => setDraft(id, { category: e.target.value })}>
                               <option value="">选择类型</option>
                               {CATEGORY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -486,9 +540,13 @@ export default function StockProducts() {
                       </td>
                       <td><input className="excel-input text-input" readOnly value={draft.applicant || r.applicant || ''} /></td>
                       <td>
-                        {isEditing
-                          ? <MultiSelect value={draft.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setDraft(id, { system_assign: v })} />
-                          : <input className="excel-input" readOnly value={r.system_assign || ''} />}
+                        {system === 'overview' ? (
+                          isEditing
+                            ? <MultiSelect value={draft.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setDraft(id, { system_assign: v })} />
+                            : <input className="excel-input" readOnly value={r.system_assign || ''} />
+                        ) : (
+                          <input className="excel-input" readOnly value={currentSys.value} title="仅总览可设置系统分配" />
+                        )}
                       </td>
                       <td>
                         {isEditing
@@ -523,7 +581,7 @@ export default function StockProducts() {
                   )
                 })}
                 {!loading && rows.length === 0 && newRows.length === 0 && (
-                  <tr><td colSpan={11} style={{ padding: 40, color: '#6b7280' }}>暂无数据</td></tr>
+                  <tr><td colSpan={12} style={{ padding: 40, color: '#6b7280' }}>暂无数据</td></tr>
                 )}
               </tbody>
             </table>

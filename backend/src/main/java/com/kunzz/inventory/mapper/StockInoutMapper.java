@@ -18,13 +18,15 @@ public interface StockInoutMapper {
                                          @Param("startDate") String startDate,
                                          @Param("endDate") String endDate,
                                          @Param("offset") int offset,
-                                         @Param("size") int size);
+                                         @Param("size") int size,
+                                         @Param("exactMatch") boolean exactMatch);
 
     /** 分店流水总数 */
     long countBranch(@Param("table") String table,
                      @Param("keyword") String keyword,
                      @Param("startDate") String startDate,
-                     @Param("endDate") String endDate);
+                     @Param("endDate") String endDate,
+                     @Param("exactMatch") boolean exactMatch);
 
     /** 分店新增 */
     int insertBranch(@Param("table") String table, @Param("r") Map<String, Object> r);

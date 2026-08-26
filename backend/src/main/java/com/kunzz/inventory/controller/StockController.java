@@ -79,8 +79,9 @@ public class StockController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(stockService.listInout(keyword, targetSystem, type, startDate, endDate, page, size));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean exactMatch) {
+        return ApiResponse.ok(stockService.listInout(keyword, targetSystem, type, startDate, endDate, page, size, exactMatch));
     }
 
     /** 进出货检查（弹窗）：货品名 100% 精确匹配，返回 IN/OUT 数量与金额汇总 + 明细 */

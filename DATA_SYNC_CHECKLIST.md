@@ -42,6 +42,30 @@ mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_
 >   ——后端代码需同步适配（见 2026-08-24 提交：实体/Mapper/DashboardService 移除 stock_system）。
 > - 导入后 `users` 里的 demo 账号若不存在，后端启动时 DataInitializer 会自动重建（demo@kunzz.local / demo123）。
 
+## 第 0.6 步：补建新系统结构（每次导入后必做）
+
+> 最新 dump（67 张原表）**不含**新系统依赖的结构，导入后必须执行补丁脚本：
+
+```bash
+mysql -u root < add_new_tables.sql
+```
+
+补丁内容（幂等，可重复执行）：
+1. **操作日志表** `operation_logs`（新系统操作日志）
+2. **手机记录表** `phone_records`（电话版功能）
+3. **货品种类默认单价列** `stock_data.price DECIMAL(10,3)`（2026-08-26 新增：货品种类页面维护的单价，
+   进出货「进货」输入数量时自动抓取该单价；无单价显示 0.00。**不补该列会导致后端启动失败/保存报错**）
+
+验证：
+```sql
+-- 表（应返回 2 行）
+SELECT table_name FROM information_schema.tables
+WHERE table_schema='u690174784_kunzz' AND table_name IN ('operation_logs','phone_records');
+-- 列（应返回 1 行）
+SELECT column_name, column_type FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz' AND table_name='stock_data' AND column_name='price';
+```
+
 ---
 
 ## 第 1 步：HTML 编码产品名（最常见！会导致负数库存 / 幽灵产品）

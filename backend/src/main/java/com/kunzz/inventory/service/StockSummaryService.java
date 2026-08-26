@@ -53,39 +53,71 @@ public class StockSummaryService {
         List<Map<String, Object>> summary = new ArrayList<>();
         double totalValue = 0;
         Map<String, Double> typeStats = new LinkedHashMap<>();
-        int no = 1;
+        // 合并：同编号同货品不同单价 → 一行（库存合并），单价变体明细保存在 price_variants
+        LinkedHashMap<String, Map<String, Object>> merged = new LinkedHashMap<>();
         for (Map<String, Object> r : rows) {
+            String name = str(r.get("product_name"));
+            String code = r.get("code_number") == null ? "" : String.valueOf(r.get("code_number"));
+            String spec = r.get("specification") == null ? "" : String.valueOf(r.get("specification"));
             double stock = toD(r.get("total_stock"));
             double price = toD(r.get("price"));
-            // 总价 = SUM((in - out) × 显示价ROUND2)，由 SQL 计算（对齐线上 8/23 修复：用显示价而非原始单价）
             double totalPrice = toD(r.get("total_price"));
-            totalValue += totalPrice;
             String type = r.get("type") == null ? "" : String.valueOf(r.get("type"));
             if (isCentral) {
-                type = normalizeType.apply(productType.getOrDefault(String.valueOf(r.get("product_name")), ""));
+                type = normalizeType.apply(productType.getOrDefault(name, ""));
             } else {
                 type = normalizeType.apply(type);
             }
-            if (!type.isBlank()) {
-                typeStats.merge(type, totalPrice, Double::sum);
+            String key = name + "\u0000" + code + "\u0000" + spec;
+            Map<String, Object> m = merged.get(key);
+            if (m == null) {
+                m = new LinkedHashMap<>();
+                m.put("product_name", name);
+                m.put("code_number", code);
+                m.put("specification", spec);
+                m.put("total_stock", 0.0);
+                m.put("total_price", 0.0);
+                m.put("type", type);
+                m.put("variants", new ArrayList<Map<String, Object>>());
+                merged.put(key, m);
             }
-            // 原始单价范围（对齐线上 raw_prices：组内原始价与显示价不一致时标记，前端悬浮显示原始价）
-            double priceRaw = toD(r.get("price_raw"));
-            double priceRawMax = toD(r.get("price_raw_max"));
-            boolean hasPriceDiff = Math.abs(priceRaw - price) > 0.0001 || Math.abs(priceRawMax - price) > 0.0001;
+            m.put("total_stock", (Double) m.get("total_stock") + stock);
+            m.put("total_price", (Double) m.get("total_price") + totalPrice);
+            typeStats.merge(type, totalPrice, Double::sum);
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> variants = (List<Map<String, Object>>) m.get("variants");
+            Map<String, Object> v = new LinkedHashMap<>();
+            v.put("price", price);
+            v.put("stock", stock);
+            v.put("total_price", round2(totalPrice));
+            v.put("formatted_stock", fmtStock(stock, spec));
+            v.put("formatted_price", String.format("%.2f", price));
+            v.put("formatted_total_price", THOUSANDS.format(totalPrice));
+            variants.add(v);
+        }
+
+        int no = 1;
+        for (Map<String, Object> m : merged.values()) {
+            double stock = (Double) m.get("total_stock");
+            double totalPrice = (Double) m.get("total_price");
+            totalValue += totalPrice;
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> variants = (List<Map<String, Object>>) m.get("variants");
+            String type = (String) m.get("type");
+            double firstPrice = variants.isEmpty() ? 0 : (Double) variants.get(0).get("price");
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("no", no++);
-            item.put("product_name", r.get("product_name"));
-            item.put("code_number", r.get("code_number") == null ? "" : r.get("code_number"));
-            item.put("specification", r.get("specification") == null ? "" : r.get("specification"));
+            item.put("product_name", m.get("product_name"));
+            item.put("code_number", m.get("code_number"));
+            item.put("specification", m.get("specification"));
             item.put("total_stock", stock);
-            item.put("price", price);
+            item.put("price", firstPrice);
             item.put("total_price", round2(totalPrice));
-            item.put("formatted_stock", fmtStock(stock, str(r.get("specification"))));
-            item.put("formatted_price", String.format("%.2f", price));
+            item.put("formatted_stock", fmtStock(stock, str(m.get("specification"))));
+            item.put("formatted_price", String.format("%.2f", firstPrice));
             item.put("formatted_total_price", THOUSANDS.format(totalPrice));
-            item.put("price_raw", priceRaw);
-            item.put("has_price_diff", hasPriceDiff);
+            item.put("price_count", variants.size());
+            item.put("price_variants", variants);
             item.put("type", type);
             summary.add(item);
         }

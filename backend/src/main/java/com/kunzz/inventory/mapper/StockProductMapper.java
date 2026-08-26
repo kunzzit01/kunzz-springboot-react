@@ -23,6 +23,10 @@ public interface StockProductMapper {
     /** 更新记录 */
     int updateRow(@Param("id") Integer id, @Param("r") Map<String, Object> r);
 
+    /** 进货默认单价（货品种类里最新维护的 price，无则 null） */
+    Double defaultPrice(@Param("productName") String productName,
+                        @Param("codeNumber") String codeNumber);
+
     /** 批准记录（设置 approver） */
     int approveRow(@Param("id") Integer id, @Param("approver") String approver);
 

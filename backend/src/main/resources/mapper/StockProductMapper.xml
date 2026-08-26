@@ -4,7 +4,7 @@
 
     <!-- 货品种类列表：对齐旧系统 stockapi.php —— FIND_IN_SET 逗号精确匹配，未分配系统的记录只出现在总览 -->
     <select id="listRows" resultType="java.util.LinkedHashMap">
-        SELECT id, date, time, product_code, product_name, specification, category,
+        SELECT id, date, time, product_code, product_name, specification, price, category,
                supplier, applicant, approver, system_assign, freezer_category,
                created_at, updated_at
         FROM stock_data
@@ -21,10 +21,10 @@
 
     <insert id="insertRow" parameterType="map">
         INSERT INTO stock_data
-            (date, time, product_code, product_name, specification, category,
+            (date, time, product_code, product_name, specification, price, category,
              supplier, applicant, approver, system_assign, freezer_category)
         VALUES
-            (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.category},
+            (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.price}, #{r.category},
              #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory})
     </insert>
 
@@ -33,6 +33,7 @@
         SET product_code = #{r.productCode},
             product_name = #{r.productName},
             specification = #{r.specification},
+            price = #{r.price},
             category = #{r.category},
             supplier = #{r.supplier},
             applicant = #{r.applicant},
@@ -41,6 +42,18 @@
             freezer_category = #{r.freezerCategory}
         WHERE id = #{id}
     </update>
+
+    <!-- 进货默认单价：按货品名（+编号）取货品种类里最新维护的单价（updated_at/id 降序取第一条） -->
+    <select id="defaultPrice" resultType="java.lang.Double">
+        SELECT price FROM stock_data
+        WHERE price IS NOT NULL AND price &gt; 0
+        <if test="codeNumber != null and codeNumber != ''">
+            AND product_code = #{codeNumber}
+        </if>
+        AND product_name = #{productName}
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+    </select>
 
     <update id="approveRow">
         UPDATE stock_data SET approver = #{approver} WHERE id = #{id}

@@ -343,10 +343,10 @@ export function PermTree({ value, onChange, compact }: { value: PermState; onCha
           </div>
           <div className="perm-level-3-section">
             <div className="perm-section-title">系统选项</div>
-            {['central', 'j1', 'j2', 'j3'].map(v => (
+            {[['overview', '总览'], ['central', '中央'], ['j1', 'J1'], ['j2', 'J2'], ['j3', 'J3']].map(([v, l]) => (
               <label key={v}><input type="checkbox" className="perm-stock-system" value={v}
                 checked={(value.page.stock_inventory?.system || []).includes(v)}
-                onChange={(e) => setPage('stock_inventory', 'system', v, e.target.checked)} /> {v === 'central' ? '中央' : v.toUpperCase()}</label>
+                onChange={(e) => setPage('stock_inventory', 'system', v, e.target.checked)} /> {l}</label>
             ))}
           </div>
           <div className="perm-level-3-section">
@@ -428,7 +428,7 @@ export const defaultPerms = (): PermState => ({
   },
   page: {
     kpi_upload: { system: ['j1', 'j2', 'j3'], type: ['kpi', 'cost'] },
-    stock_inventory: { system: ['central', 'j1', 'j2', 'j3'], views: ['list', 'records', 'remark', 'product', 'apply', 'approve', 'sot'], is_shipper: true }
+    stock_inventory: { system: ['overview', 'central', 'j1', 'j2', 'j3'], views: ['list', 'records', 'remark', 'product', 'apply', 'approve', 'sot'], is_shipper: true }
   },
   brand: {
     kunzz_holdings: { blueprint: ['blueprint'] },

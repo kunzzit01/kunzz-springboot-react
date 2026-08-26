@@ -116,8 +116,9 @@ grep -c "uca1400" database/u690174784_kunzz.sql      # 应为 0（排序规则�
 5. 推送 git → 用户设备重新下载 zip
 ```
 
-> 说明：数据库 `phone_records` / `operation_logs` 是新系统功能表，老库备份不含，
-> 一键启动（start.ps1 `Ensure-NewTables`）会自动补建，无需手动处理。
+> 说明：数据库 `phone_records` / `operation_logs` 是新系统功能表，`stock_data.price` 是 2026-08-26 新增的
+> 货品种类默认单价列（进货自动抓取），老库备份均不含；一键启动（start.ps1 `Ensure-NewTables`）或手动执行
+> `add_new_tables.sql` 会自动补建/补列，无需手动处理。
 
 ---
 
@@ -129,4 +130,4 @@ grep -c "uca1400" database/u690174784_kunzz.sql      # 应为 0（排序规则�
 | `live-credentials.json` | live 登录凭证（**勿推 git**） |
 | `start.ps1` | 一键启动（含时区三道防线 + 自动补新系统表） |
 | `DATA_SYNC_CHECKLIST.md` | 数据清洗检查清单（HTML 编码 / gender / 负数） |
-| `add_new_tables.sql` | 新系统功能表建表语句（operation_logs / phone_records） |
+| `add_new_tables.sql` | 新系统结构补丁（幂等）：operation_logs / phone_records 两张功能表 + stock_data.price 默认单价列 |

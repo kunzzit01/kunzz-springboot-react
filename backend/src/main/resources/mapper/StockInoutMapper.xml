@@ -9,7 +9,9 @@
              - COALESCE(SUM(CASE WHEN out_quantity > 0 THEN out_quantity ELSE 0 END), 0) AS available_stock
         FROM stockinout_data
         WHERE REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+        <if test="price != null">
           AND ROUND(price, 2) = ROUND(#{price}, 2)
+        </if>
           AND deleted_at IS NULL
           AND (target_system IS NULL OR target_system != 'SOT')
     </select>
@@ -19,7 +21,9 @@
              - COALESCE(SUM(CASE WHEN out_quantity > 0 THEN out_quantity ELSE 0 END), 0) AS available_stock
         FROM ${table}
         WHERE REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+        <if test="price != null">
           AND ROUND(price, 2) = ROUND(#{price}, 2)
+        </if>
           AND deleted_at IS NULL
     </select>
 
@@ -30,9 +34,16 @@
         FROM ${table}
         WHERE deleted_at IS NULL
         <if test="keyword != null and keyword != ''">
-            AND (product_name LIKE CONCAT('%', #{keyword}, '%')
-                 OR code_number LIKE CONCAT('%', #{keyword}, '%')
-                 OR remark LIKE CONCAT('%', #{keyword}, '%'))
+            <choose>
+                <when test="exactMatch">
+                    AND product_name = #{keyword}
+                </when>
+                <otherwise>
+                    AND (product_name LIKE CONCAT('%', #{keyword}, '%')
+                         OR code_number LIKE CONCAT('%', #{keyword}, '%')
+                         OR remark LIKE CONCAT('%', #{keyword}, '%'))
+                </otherwise>
+            </choose>
         </if>
         <if test="startDate != null and startDate != ''">
             AND date &gt;= #{startDate}
@@ -49,9 +60,16 @@
         SELECT COUNT(*) FROM ${table}
         WHERE deleted_at IS NULL
         <if test="keyword != null and keyword != ''">
-            AND (product_name LIKE CONCAT('%', #{keyword}, '%')
-                 OR code_number LIKE CONCAT('%', #{keyword}, '%')
-                 OR remark LIKE CONCAT('%', #{keyword}, '%'))
+            <choose>
+                <when test="exactMatch">
+                    AND product_name = #{keyword}
+                </when>
+                <otherwise>
+                    AND (product_name LIKE CONCAT('%', #{keyword}, '%')
+                         OR code_number LIKE CONCAT('%', #{keyword}, '%')
+                         OR remark LIKE CONCAT('%', #{keyword}, '%'))
+                </otherwise>
+            </choose>
         </if>
         <if test="startDate != null and startDate != ''">
             AND date &gt;= #{startDate}

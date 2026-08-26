@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStockSummary, getMinimums } from '../api'
 import { useRealtime } from '../utils/useRealtime'
@@ -18,6 +18,9 @@ interface SummaryItem {
   type?: string
   price_raw?: number | string
   has_price_diff?: boolean
+  /** 同货品多单价：合并展示（库存合并，单价变体明细） */
+  price_count?: number
+  price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string }[]
 }
 interface SummaryData {
   summary: SummaryItem[]
@@ -162,6 +165,13 @@ export default function StockRecords() {
   const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
+  // 多单价展开（按行 no 记录展开状态）
+  const [openVariants, setOpenVariants] = useState<Set<number>>(new Set())
+  const toggleVariants = (no: number) => setOpenVariants(prev => {
+    const n = new Set(prev)
+    if (n.has(no)) n.delete(no); else n.add(no)
+    return n
+  })
   const searchRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const navigate = useNavigate()
 
@@ -543,8 +553,11 @@ export default function StockRecords() {
                   const diff = productTotal - minimumQuantity
                   const isLowStock = minimumQuantity > 0 && diff <= 0.001
                   const minClass = minimumQuantity > 0 ? 'minimum-stock-value' : 'zero-value'
+                  const multi = (item.price_count || 0) > 1
+                  const expanded = multi && openVariants.has(Number(item.no))
                   return (
-                    <tr key={idx} className={isLowStock ? 'low-stock-row' : ''}>
+                    <Fragment key={idx}>
+                    <tr className={isLowStock ? 'low-stock-row' : ''}>
                       <td className="text-center">{idx + 1}</td>
                       <td className="text-center">{item.code_number || '-'}</td>
                       <td><strong>{item.product_name}</strong></td>
@@ -562,10 +575,21 @@ export default function StockRecords() {
                       </td>
                       <td className="text-center">{item.specification || '-'}</td>
                       <td className="price-cell">
-                        <div className="currency-display">
-                          <span className="currency-symbol">RM</span>
-                          <span className="currency-amount">{renderPriceRawTip(item)}</span>
-                        </div>
+                        {multi ? (
+                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                            <button className={'multi-price-btn' + (expanded ? ' expanded' : '')} onClick={() => toggleVariants(Number(item.no))}
+                              title="点击展开各单价明细">
+                              <span className="mpp-text">多个单价</span>
+                              <span className="mpp-count">({item.price_count})</span>
+                              <i className={'fas fa-chevron-' + (expanded ? 'up' : 'down')} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="currency-display">
+                            <span className="currency-symbol">RM</span>
+                            <span className="currency-amount">{renderPriceRawTip(item)}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="price-cell">
                         <div className={'currency-display ' + (price > 0 ? 'positive-value' : 'zero-value')}>
@@ -574,6 +598,27 @@ export default function StockRecords() {
                         </div>
                       </td>
                     </tr>
+                    {expanded && (
+                      <tr className="price-variants-expand-row">
+                        <td colSpan={8} style={{ padding: 0, border: 'none' }}>
+                          <div className="pv-expand-inner">
+                            <div className="pv-expand-list">
+                              {(item.price_variants || []).map((v, vi) => (
+                                <div key={vi} className="pv-expand-item">
+                                  <span className="pve-dot">●</span>
+                                  <span className="pve-price">RM {v.formatted_price || Number(v.price).toFixed(2)}</span>
+                                  <span className="pve-mid">×</span>
+                                  <span className="pve-stock">{v.formatted_stock || Number(v.stock).toFixed(2)}</span>
+                                  <span className="pve-eq">=</span>
+                                  <span className="pve-total">RM {v.formatted_total_price || Number(v.total_price).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   )
                 })}
                 {!loading[sys] && sysFiltered.length > 0 && (

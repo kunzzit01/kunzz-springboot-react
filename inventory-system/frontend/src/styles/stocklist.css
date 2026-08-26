@@ -469,7 +469,35 @@
 .stock-table td.price-cell{
     padding: 0;
     text-align: left;
-}.stl-root .stock-table td.stock-cell{
+}
+/* 多单价：朴素文字按钮（无边框无背景）居中 + 表格内嵌展开行 */
+.stl-root .multi-price-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: none; border: none; padding: 0;
+  color: #111827; font-size: inherit; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: color 0.15s;
+}
+.stl-root .multi-price-btn:hover { color: #ff7b00; }
+.stl-root .multi-price-btn.expanded { color: #ff7b00; }
+.stl-root .multi-price-btn .mpp-count { color: #9ca3af; font-weight: 500; }
+.stl-root .multi-price-btn i { font-size: 10px; color: #9ca3af; }
+.stl-root .price-variants-expand-row td { background: #fffbf5; }
+.stl-root .pv-expand-inner {
+  margin: 4px 8px 10px; border: 1px solid #ffe3bd; border-radius: 10px;
+  background: linear-gradient(180deg, #fffdf8, #fff7ec); overflow: hidden;
+}
+.stl-root .pv-expand-list { padding: 4px 0; }
+.stl-root .pv-expand-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 16px 7px 20px; font-size: clamp(8px, 0.74vw, 13px);
+  border-bottom: 1px dashed #f4e2c8; white-space: nowrap;
+}
+.stl-root .pv-expand-item:last-child { border-bottom: none; }
+.stl-root .pv-expand-item .pve-dot { color: #ff7b00; font-size: 8px; width: 10px; }
+.stl-root .pv-expand-item .pve-price { font-weight: 700; color: #111827; min-width: 74px; }
+.stl-root .pv-expand-item .pve-mid, .stl-root .pv-expand-item .pve-eq { color: #b8a892; }
+.stl-root .pv-expand-item .pve-stock { color: #6b7280; min-width: 56px; }
+.stl-root .pv-expand-item .pve-total { color: #065f46; font-weight: 600; }.stl-root .stock-table td.stock-cell{
     padding: 0;
     text-align: center;
 }.stl-root .stock-cell .currency-display{

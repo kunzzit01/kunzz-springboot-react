@@ -39,6 +39,7 @@ public class StockProductService {
             item.put("product_code", decodeHtml(str(r.get("product_code"))));
             item.put("product_name", decodeHtml(str(r.get("product_name"))));
             item.put("specification", decodeHtml(str(r.get("specification"))));
+            item.put("price", r.get("price"));
             item.put("category", decodeHtml(str(r.get("category"))));
             item.put("supplier", decodeHtml(str(r.get("supplier"))));
             item.put("applicant", decodeHtml(str(r.get("applicant"))));
@@ -59,6 +60,26 @@ public class StockProductService {
         return out;
     }
 
+    /** 进货默认单价（货品种类里最新维护的 price；无则返回 null） */
+    @Transactional(readOnly = true)
+    public Double getDefaultPrice(String productName, String codeNumber) {
+        if (productName == null || productName.isBlank()) return null;
+        return stockProductMapper.defaultPrice(productName.trim(),
+                (codeNumber == null || codeNumber.isBlank()) ? null : codeNumber.trim());
+    }
+
+    /** 单价清洗：空串/空白/非法数字 → null（避免 '' 写入 DECIMAL 列报 Data truncation） */
+    private Double cleanPrice(Object v) {
+        if (v == null) return null;
+        String s = String.valueOf(v).trim();
+        if (s.isEmpty()) return null;
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     /** 新增记录（对齐 POST stockapi.php；date/time 为空时用当前日期时间） */
     @Transactional
     public Map<String, Object> create(Map<String, Object> body) {
@@ -72,6 +93,7 @@ public class StockProductService {
         r.put("productCode", body.getOrDefault("product_code", ""));
         r.put("productName", body.getOrDefault("product_name", ""));
         r.put("specification", body.getOrDefault("specification", ""));
+        r.put("price", cleanPrice(body.get("price")));
         r.put("category", body.getOrDefault("category", ""));
         r.put("supplier", body.getOrDefault("supplier", ""));
         r.put("applicant", body.getOrDefault("applicant", ""));
@@ -89,6 +111,7 @@ public class StockProductService {
         r.put("productCode", body.getOrDefault("product_code", ""));
         r.put("productName", body.getOrDefault("product_name", ""));
         r.put("specification", body.getOrDefault("specification", ""));
+        r.put("price", cleanPrice(body.get("price")));
         r.put("category", body.getOrDefault("category", ""));
         r.put("supplier", body.getOrDefault("supplier", ""));
         r.put("applicant", body.getOrDefault("applicant", ""));

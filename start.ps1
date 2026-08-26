@@ -170,24 +170,38 @@ function Ensure-NewTables {
     $existing = Run-Mysql "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('operation_logs','phone_records')"
     if ($existing -and $existing -match 'operation_logs' -and $existing -match 'phone_records') {
         Write-Host "  [OK] 新系统功能表已就绪 (operation_logs, phone_records)" -ForegroundColor Green
-        return
+    } else {
+        Write-Host "  [..] 补齐新系统功能表 (operation_logs, phone_records)..."
+        Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.operation_logs (\
+          id int(11) NOT NULL AUTO_INCREMENT, operator varchar(100) DEFAULT NULL, action varchar(200) DEFAULT NULL, \
+          target varchar(200) DEFAULT NULL, detail text DEFAULT NULL, created_at timestamp NULL DEFAULT current_timestamp(), \
+          PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
+        Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.phone_records (\
+          id int(11) NOT NULL AUTO_INCREMENT, employee_id int(11) DEFAULT NULL, record_date date DEFAULT NULL, \
+          get_checked tinyint(1) DEFAULT 0, start_time varchar(10) DEFAULT NULL, end_time varchar(10) DEFAULT NULL, \
+          return_checked tinyint(1) DEFAULT 0, restaurant varchar(10) DEFAULT NULL, \
+          created_at timestamp NULL DEFAULT current_timestamp(), updated_at timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
+          PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
+        $chk = Run-Mysql "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('operation_logs','phone_records')"
+        if (-not $chk -or $chk -notmatch 'operation_logs' -or $chk -notmatch 'phone_records') {
+            throw "新系统功能表创建失败"
+        }
+        Write-Host "  [OK] 新系统功能表已补齐" -ForegroundColor Green
     }
-    Write-Host "  [..] 补齐新系统功能表 (operation_logs, phone_records)..."
-    Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.operation_logs (\
-      id int(11) NOT NULL AUTO_INCREMENT, operator varchar(100) DEFAULT NULL, action varchar(200) DEFAULT NULL, \
-      target varchar(200) DEFAULT NULL, detail text DEFAULT NULL, created_at timestamp NULL DEFAULT current_timestamp(), \
-      PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
-    Run-Mysql "CREATE TABLE IF NOT EXISTS $DB_NAME.phone_records (\
-      id int(11) NOT NULL AUTO_INCREMENT, employee_id int(11) DEFAULT NULL, record_date date DEFAULT NULL, \
-      get_checked tinyint(1) DEFAULT 0, start_time varchar(10) DEFAULT NULL, end_time varchar(10) DEFAULT NULL, \
-      return_checked tinyint(1) DEFAULT 0, restaurant varchar(10) DEFAULT NULL, \
-      created_at timestamp NULL DEFAULT current_timestamp(), updated_at timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(), \
-      PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci" | Out-Null
-    $chk = Run-Mysql "SELECT GROUP_CONCAT(table_name) FROM information_schema.tables WHERE table_schema='$DB_NAME' AND table_name IN ('operation_logs','phone_records')"
-    if (-not $chk -or $chk -notmatch 'operation_logs' -or $chk -notmatch 'phone_records') {
-        throw "新系统功能表创建失败"
+
+    # 货品种类默认单价列 stock_data.price（2026-08-26 新增，进货自动抓取单价来源）
+    $hasPrice = Run-Mysql "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE table_schema='$DB_NAME' AND table_name='stock_data' AND column_name='price'"
+    if ($hasPrice -and [int]$hasPrice -gt 0) {
+        Write-Host "  [OK] stock_data.price 默认单价列已就绪" -ForegroundColor Green
+    } else {
+        Write-Host "  [..] 补齐 stock_data.price 默认单价列..."
+        Run-Mysql "ALTER TABLE $DB_NAME.stock_data ADD COLUMN price DECIMAL(10,3) NULL DEFAULT NULL AFTER specification" | Out-Null
+        $chk2 = Run-Mysql "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE table_schema='$DB_NAME' AND table_name='stock_data' AND column_name='price'"
+        if (-not $chk2 -or [int]$chk2 -le 0) {
+            throw "stock_data.price 列添加失败"
+        }
+        Write-Host "  [OK] stock_data.price 默认单价列已补齐" -ForegroundColor Green
     }
-    Write-Host "  [OK] 新系统功能表已补齐" -ForegroundColor Green
 }
 
 # ---------- 启动后端 ----------

@@ -76,6 +76,9 @@ export const getPriceBatches = (productName: string, codeNumber?: string, system
   http.get<unknown, { price: string; available_stock: number }[]>('/stock/price-batches', { params: { productName, codeNumber, system } })
 export const getPriceStock = (productName: string, codeNumber?: string, requiredQty?: number, system?: string) =>
   http.get<unknown, { price: string; available_stock: number; total_in: number; total_out: number; is_sufficient: boolean }[]>('/stock/price-stock', { params: { productName, codeNumber, requiredQty, system } })
+/** 进货默认单价（货品种类里最新维护的 price；无则 null） */
+export const getProductDefaultPrice = (productName: string, codeNumber?: string) =>
+  http.get<unknown, number | null>('/stock/products/default-price', { params: { productName, codeNumber } })
 export const getRemarkCodes = (productName: string) =>
   http.get<unknown, string[]>('/stock/remark-codes', { params: { productName } })
 export const getStockRecords = (params: StockQuery) =>
@@ -96,6 +99,7 @@ export interface InoutQuery {
   endDate?: string
   page?: number
   size?: number
+  exactMatch?: boolean
 }
 export const getStockInout = (params: InoutQuery) =>
   http.get<unknown, PageResult<StockInout>>('/stock/inout', { params })

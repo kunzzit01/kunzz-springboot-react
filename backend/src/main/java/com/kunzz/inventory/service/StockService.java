@@ -104,15 +104,16 @@ public class StockService {
 
     @Transactional(readOnly = true)
     public PageResult<StockInout> listInout(String keyword, String targetSystem, String type,
-                                            LocalDate startDate, LocalDate endDate, int page, int size) {
+                                            LocalDate startDate, LocalDate endDate, int page, int size,
+                                            boolean exactMatch) {
         // 分店（j1/j2/j3）进出货来自各自 stockedit 表（对齐 stockeditall?system=jX）
         if (targetSystem != null && List.of("j1", "j2", "j3").contains(targetSystem)) {
             String table = targetSystem + "stockedit_data";
             String k = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
             String sd = startDate == null ? null : startDate.toString();
             String ed = endDate == null ? null : endDate.toString();
-            long total = stockInoutMapper.countBranch(table, k, sd, ed);
-            List<Map<String, Object>> rows = stockInoutMapper.listBranch(table, k, sd, ed, page * size, size);
+            long total = stockInoutMapper.countBranch(table, k, sd, ed, exactMatch);
+            List<Map<String, Object>> rows = stockInoutMapper.listBranch(table, k, sd, ed, page * size, size, exactMatch);
             List<StockInout> items = new ArrayList<>();
             for (Map<String, Object> r : rows) {
                 StockInout s = new StockInout();
@@ -144,12 +145,18 @@ public class StockService {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.isNull(root.get("deletedAt"))); // 排除软删除
             if (keyword != null && !keyword.isBlank()) {
-                String k = "%" + keyword.trim().toLowerCase() + "%";
-                ps.add(cb.or(
-                        cb.like(cb.lower(root.get("productName")), k),
-                        cb.like(cb.lower(root.get("codeNumber")), k),
-                        cb.like(cb.lower(root.get("remark")), k)
-                ));
+                String k = keyword.trim().toLowerCase();
+                if (exactMatch) {
+                    // 精确匹配：产品名 = 关键字（不区分大小写）
+                    ps.add(cb.equal(cb.lower(root.get("productName")), k));
+                } else {
+                    String like = "%" + k + "%";
+                    ps.add(cb.or(
+                            cb.like(cb.lower(root.get("productName")), like),
+                            cb.like(cb.lower(root.get("codeNumber")), like),
+                            cb.like(cb.lower(root.get("remark")), like)
+                    ));
+                }
             }
             if (targetSystem != null && !targetSystem.isBlank()) ps.add(cb.equal(root.get("targetSystem"), targetSystem));
             if (type != null && !type.isBlank()) ps.add(cb.equal(root.get("type"), type));
@@ -181,6 +188,11 @@ public class StockService {
         boolean isIncoming = req.inQuantity() != null && req.inQuantity().signum() > 0;
         boolean isOutgoing = req.outQuantity() != null && req.outQuantity().signum() > 0;
 
+        // ====== 单价校验（对齐旧系统 saveNewRowRecord：不能为空且不能小于 0；0 合法，RM0 需记录） ======
+        if (req.price() == null || req.price().signum() < 0) {
+            throw new BusinessException("单价不能为空且不能小于0");
+        }
+
         // ====== 备注编号处理（对齐旧系统 stockeditapi.php） ======
         String remarkNumber = req.remarkNumber();
         if (remarkNumber != null) remarkNumber = remarkNumber.trim().toUpperCase();
@@ -207,8 +219,10 @@ public class StockService {
         // ====== 备注编号处理结束 ======
 
         // ====== 出库库存校验（事务内，对齐旧系统 handlePost/handleBatchSave：8/23 修复后前端不再预检查，由后端统一校验） ======
-        if (isOutgoing && req.productName() != null && !req.productName().isBlank()) {
-            java.math.BigDecimal checkPrice = req.price() == null ? java.math.BigDecimal.ZERO : req.price();
+        // RM0 单价出货（用户手动输入 0）跳过库存校验：赠品/损耗类特殊出库，按 0 价匹配不到批次会误报，直接放行
+        if (isOutgoing && req.productName() != null && !req.productName().isBlank()
+                && req.price() != null && req.price().signum() > 0) {
+            java.math.BigDecimal checkPrice = req.price();
             java.math.BigDecimal available;
             String sys2 = normalizeSystem(system);
             if (sys2 != null && List.of("j1", "j2", "j3").contains(sys2)) {
@@ -398,6 +412,10 @@ public class StockService {
 
     @Transactional
     public StockInout updateInout(Integer id, StockInoutRequest req, String system) {
+        // ====== 单价校验（对齐旧系统：不能为空且不能小于 0；0 合法） ======
+        if (req.price() == null || req.price().signum() < 0) {
+            throw new BusinessException("单价不能为空且不能小于0");
+        }
         if (system != null && List.of("j1", "j2", "j3").contains(system)) {
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("date", req.date());
