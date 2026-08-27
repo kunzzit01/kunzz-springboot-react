@@ -6,5 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface StockMinimumSettingRepository extends JpaRepository<StockMinimumSetting, Integer> {
-    List<StockMinimumSetting> findAllByOrderByProductNameAsc();
+    List<StockMinimumSetting> findByStockSystemOrderByProductNameAsc(String stockSystem);
 }

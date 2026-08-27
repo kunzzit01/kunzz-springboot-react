@@ -22,6 +22,10 @@ public class StockMinimumSetting {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    /** 所属系统：central / j1 / j2 / j3（分店独立设置，不互相影响通知） */
+    @Column(name = "stock_system", length = 20)
+    private String stockSystem = "central";
+
     @Column(name = "product_name", length = 255)
     private String productName;
 

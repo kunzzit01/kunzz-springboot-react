@@ -202,6 +202,21 @@ function Ensure-NewTables {
         }
         Write-Host "  [OK] stock_data.price 默认单价列已补齐" -ForegroundColor Green
     }
+
+    # 最低库存设置分系统独立 stock_minimum_settings.stock_system（中央设置不影响分店低库存通知）
+    $hasMinSys = Run-Mysql "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE table_schema='$DB_NAME' AND table_name='stock_minimum_settings' AND column_name='stock_system'"
+    if ($hasMinSys -and [int]$hasMinSys -gt 0) {
+        Write-Host "  [OK] stock_minimum_settings.stock_system 分系统列已就绪" -ForegroundColor Green
+    } else {
+        Write-Host "  [..] 升级最低库存设置为分系统独立 (stock_system)..."
+        Run-Mysql "ALTER TABLE $DB_NAME.stock_minimum_settings ADD COLUMN stock_system VARCHAR(20) NOT NULL DEFAULT 'central' COMMENT '系统：central/j1/j2/j3' AFTER id" | Out-Null
+        Run-Mysql "ALTER TABLE $DB_NAME.stock_minimum_settings DROP INDEX IF EXISTS unique_product, ADD UNIQUE KEY unique_system_product (stock_system, product_name)" | Out-Null
+        $chkMin = Run-Mysql "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE table_schema='$DB_NAME' AND table_name='stock_minimum_settings' AND column_name='stock_system'"
+        if (-not $chkMin -or [int]$chkMin -le 0) {
+            throw "stock_minimum_settings.stock_system 列添加失败"
+        }
+        Write-Host "  [OK] 最低库存设置已升级为分系统独立（旧设置归入中央）" -ForegroundColor Green
+    }
 }
 
 # ---------- 启动后端 ----------

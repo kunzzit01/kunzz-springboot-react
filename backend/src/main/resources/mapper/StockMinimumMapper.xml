@@ -19,6 +19,7 @@
         FROM ${table} t
         LEFT JOIN stock_minimum_settings m
             ON m.product_name = t.product_name
+           AND m.stock_system = #{system}
         WHERE t.product_name IS NOT NULL
           AND t.product_name != ''
           AND t.deleted_at IS NULL
@@ -40,10 +41,10 @@
         GROUP BY product_name
     </select>
 
-    <!-- 按产品名 UPSERT（product_name 唯一键；最低库存全局，不按系统） -->
+    <!-- 按 系统+产品名 UPSERT（(stock_system, product_name) 联合唯一键；各系统设置独立） -->
     <insert id="upsert">
-        INSERT INTO stock_minimum_settings (product_name, minimum_quantity)
-        VALUES (#{productName}, #{quantity})
+        INSERT INTO stock_minimum_settings (stock_system, product_name, minimum_quantity)
+        VALUES (#{system}, #{productName}, #{quantity})
         ON DUPLICATE KEY UPDATE
             minimum_quantity = VALUES(minimum_quantity),
             updated_at = CURRENT_TIMESTAMP

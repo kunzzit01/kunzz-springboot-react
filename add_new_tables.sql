@@ -47,6 +47,32 @@ PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 4) 最低库存设置分系统独立（stock_minimum_settings.stock_system）
+--    中央/分店(J1/J2/J3) 各自维护最低库存：中央设置不影响分店低库存通知，分店之间也互不影响。
+--    旧结构是 product_name 全局唯一（无 stock_system 列），迁移后现有设置默认归入 central。
+SET @min_col := (
+  SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE table_schema = 'u690174784_kunzz' AND table_name = 'stock_minimum_settings' AND column_name = 'stock_system'
+);
+SET @ddl := IF(@min_col = 0,
+  'ALTER TABLE stock_minimum_settings ADD COLUMN stock_system VARCHAR(20) NOT NULL DEFAULT ''central'' COMMENT ''系统：central/j1/j2/j3'' AFTER id',
+  'SELECT ''stock_minimum_settings.stock_system 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 唯一键从 product_name 换成 (stock_system, product_name)（旧索引存在才删，新索引存在则跳过）
+SET @min_uk := (
+  SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE table_schema = 'u690174784_kunzz' AND table_name = 'stock_minimum_settings' AND index_name = 'unique_system_product'
+);
+SET @ddl := IF(@min_uk = 0,
+  'ALTER TABLE stock_minimum_settings DROP INDEX IF EXISTS unique_product, ADD UNIQUE KEY unique_system_product (stock_system, product_name)',
+  'SELECT ''unique_system_product 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- =============================================================================
 -- 验证：
 --   1) 表：SELECT table_name FROM information_schema.tables

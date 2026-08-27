@@ -623,15 +623,15 @@ public class StockService {
         return out;
     }
 
-    /** 某系统全部在库货品 + 最低库存设置（对齐线上 stockminimumapi.php?action=list）
+    /** 某系统全部在库货品 + 该系统最低库存设置（对齐线上 stockminimumapi.php?action=list）
      *  current_stock 按产品名汇总（名字不管价格；检测口径与低库存通知一致）
-     *  最低库存设置全局（对齐线上：product_name 唯一，不按系统独立） */
+     *  最低库存设置分系统独立（stock_system 列：中央设置不影响分店通知） */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listMinimumProducts(String system) {
         String sys = normalizeSystem(system);
         String table = minimumTable(sys);
         boolean central = "central".equals(table);
-        List<Map<String, Object>> rows = stockMinimumMapper.productsWithMinimum(table);
+        List<Map<String, Object>> rows = stockMinimumMapper.productsWithMinimum(table, sys);
         // 产品名汇总库存（覆盖价格行库存，检测按名字统一数量）
         Map<String, java.math.BigDecimal> totals = new java.util.HashMap<>();
         for (Map<String, Object> r : stockMinimumMapper.totalStockByName(table, central)) {
@@ -644,29 +644,35 @@ public class StockService {
         return rows;
     }
 
-    /** 按产品名 UPSERT 单条最低库存（对齐线上 saveSingleSetting；全局唯一） */
+    /** 按 系统+产品名 UPSERT 单条最低库存（对齐线上 saveSingleSetting；各系统独立） */
     @Transactional
     public void saveMinimum(String system, String productName, java.math.BigDecimal quantity) {
+        String sys = normalizeSystem(system);
+        if (sys == null) throw new BusinessException("无效的系统：" + system);
         String name = productName == null ? "" : productName.trim();
         if (name.isEmpty()) throw new BusinessException("产品名称不能为空");
-        stockMinimumMapper.upsert(name, quantity == null ? java.math.BigDecimal.ZERO : quantity);
+        stockMinimumMapper.upsert(sys, name, quantity == null ? java.math.BigDecimal.ZERO : quantity);
     }
 
-    /** 批量 UPSERT 最低库存（事务内，对齐线上 saveBatchSettings；全局唯一） */
+    /** 批量 UPSERT 最低库存（事务内，对齐线上 saveBatchSettings；各系统独立） */
     @Transactional
     public void saveMinimumBatch(String system, List<Map<String, Object>> products) {
+        String sys = normalizeSystem(system);
+        if (sys == null) throw new BusinessException("无效的系统：" + system);
         if (products == null || products.isEmpty()) throw new BusinessException("没有要保存的数据");
         for (Map<String, Object> p : products) {
             String name = p.get("product_name") == null ? "" : String.valueOf(p.get("product_name")).trim();
             if (name.isEmpty()) throw new BusinessException("货品名称不能为空");
-            stockMinimumMapper.upsert(name, dec2(p.get("minimum_quantity")));
+            stockMinimumMapper.upsert(sys, name, dec2(p.get("minimum_quantity")));
         }
     }
 
     @Transactional(readOnly = true)
     public List<StockMinimumSetting> listMinimum(String system) {
-        // 最低库存全局（对齐线上：不按系统分）
-        return minimumRepository.findAllByOrderByProductNameAsc();
+        // 最低库存分系统独立（stock_system 列）
+        String sys = normalizeSystem(system);
+        if (sys == null) sys = "central";
+        return minimumRepository.findByStockSystemOrderByProductNameAsc(sys);
     }
 
     @Transactional

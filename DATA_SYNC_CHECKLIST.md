@@ -38,8 +38,8 @@ mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_
 ```
 
 > ⚠️ 导入后后端要**重启**，且注意表结构变更：
-> - `stock_minimum_settings` 已无 `stock_system` 列（最低库存从「分店独立」改为**全局**，product_name 唯一）
->   ——后端代码需同步适配（见 2026-08-24 提交：实体/Mapper/DashboardService 移除 stock_system）。
+> - `stock_minimum_settings` 自 2026-08-27 起恢复 `stock_system` 列（最低库存**分系统独立**：中央设置不影响分店通知，唯一键 (stock_system, product_name)）。
+>   老库导入后执行 `add_new_tables.sql`（第 4 步幂等补列+换键）或重启时由 `start.ps1` `Ensure-NewTables` 自动补齐。
 > - 导入后 `users` 里的 demo 账号若不存在，后端启动时 DataInitializer 会自动重建（demo@kunzz.local / demo123）。
 
 ## 第 0.6 步：补建新系统结构（每次导入后必做）

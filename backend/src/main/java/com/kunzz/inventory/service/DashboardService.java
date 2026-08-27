@@ -51,10 +51,10 @@ public class DashboardService {
         Map<String, BaseBranchStockTotal> j2 = mapByName(j2Repo.findAllByOrderByProductNameAsc());
         Map<String, BaseBranchStockTotal> j3 = mapByName(j3Repo.findAllByOrderByProductNameAsc());
 
-        // 低库存预警：最低库存设置全局（product_name 唯一，对齐线上 getLowStockAlerts）
+        // 低库存预警：最低库存设置分系统独立（stock_system 列）
         //  - 按产品名汇总库存（名字不管价格，同一产品所有价格行的库存相加）
         //  - 中央只算中央库存（stockinout_data，排除 SOT）；分店只算各自 stockedit_data，不跨系统加总
-        //  - 任一系统总库存 < 全局最低库存(>0) 才进入预警
+        //  - 某系统总库存 < 该系统自己设置的最低库存(>0) 才进入预警；中央设置不影响分店
         List<LowStockVO> lowStockList = new java.util.ArrayList<>();
         Map<String, java.math.BigDecimal> centralQty = nameTotal(stockMinimumMapper.totalStockByName("stockinout_data", true));
         Map<String, java.math.BigDecimal> j1Qty = nameTotal(stockMinimumMapper.totalStockByName("j1stockedit_data", false));
@@ -62,10 +62,11 @@ public class DashboardService {
         Map<String, java.math.BigDecimal> j3Qty = nameTotal(stockMinimumMapper.totalStockByName("j3stockedit_data", false));
         Map<String, Map<String, java.math.BigDecimal>> qtyBySys = Map.of(
                 "central", centralQty, "j1", j1Qty, "j2", j2Qty, "j3", j3Qty);
-        for (StockMinimumSetting m : minimumRepository.findAllByOrderByProductNameAsc()) {
-            if (m.getMinimumQuantity() == null
-                    || m.getMinimumQuantity().compareTo(BigDecimal.ZERO) <= 0) continue;
-            for (String sys : List.of("central", "j1", "j2", "j3")) {
+        for (String sys : List.of("central", "j1", "j2", "j3")) {
+            // 每个系统只读取自己的最低库存设置（分店独立，互不影响）
+            for (StockMinimumSetting m : minimumRepository.findByStockSystemOrderByProductNameAsc(sys)) {
+                if (m.getMinimumQuantity() == null
+                        || m.getMinimumQuantity().compareTo(BigDecimal.ZERO) <= 0) continue;
                 checkLowStock(lowStockList, sys, m.getProductName(), m.getMinimumQuantity(),
                         qtyBySys.get(sys).get(m.getProductName()));
             }

@@ -14,12 +14,12 @@ import java.util.Map;
 @Mapper
 public interface StockMinimumMapper {
 
-    /** 某系统全部在库货品 + 最低库存设置（表名动态：stockinout_data 或 jXstockedit_data；最低库存全局，不按系统） */
-    List<Map<String, Object>> productsWithMinimum(@Param("table") String table);
+    /** 某系统全部在库货品 + 该系统最低库存设置（表名动态：stockinout_data 或 jXstockedit_data；各系统设置独立） */
+    List<Map<String, Object>> productsWithMinimum(@Param("table") String table, @Param("system") String system);
 
     /** 按产品名汇总净库存（不管价格/规格；检测口径：名字统一库存数量） */
     List<Map<String, Object>> totalStockByName(@Param("table") String table, @Param("excludeSot") boolean excludeSot);
 
-    /** 按产品名 UPSERT 最低库存（product_name 唯一键：INSERT ... ON DUPLICATE KEY UPDATE） */
-    int upsert(@Param("productName") String productName, @Param("quantity") BigDecimal quantity);
+    /** 按 系统+产品名 UPSERT 最低库存（(stock_system, product_name) 联合唯一键） */
+    int upsert(@Param("system") String system, @Param("productName") String productName, @Param("quantity") BigDecimal quantity);
 }
