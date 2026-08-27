@@ -362,13 +362,15 @@ export default function CostEdit() {
     return () => window.removeEventListener('keydown', h)
   })
 
-  // ---- 着色：sales 恒为 auto-filled 蓝，成本字段 has-data/no-data ----
+  // ---- 着色：sales 恒为 auto-filled 蓝，成本字段 has-data/no-data（查看/编辑均按数据状态着色，对齐旧系统 updateInputColors） ----
   const inputCls = (day: number, field: string) => {
     if (field === 'sales') return 'excel-input currency-input auto-filled'
     const base = 'excel-input currency-input'
-    if (editingDay !== day) return base + ' readonly'
     const r = rows[day] || {}
-    return base + (hasVal(r[field]) ? ' has-data' : ' no-data')
+    const state = hasVal(r[field]) ? ' has-data' : ' no-data'
+    // 非编辑（只读）也按数据状态着色：有值(含 RM0)→蓝，空→红；readonly 类在 has-data/no-data 之前定义，蓝/红优先
+    if (editingDay !== day) return base + ' readonly' + state
+    return base + state
   }
 
   const weekday = (day: number) => ['日', '一', '二', '三', '四', '五', '六'][new Date(year, month - 1, day).getDay()]
