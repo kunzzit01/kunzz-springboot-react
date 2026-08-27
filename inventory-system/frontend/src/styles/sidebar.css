@@ -13,7 +13,7 @@
   z-index: 5000;
   display: flex;
   flex-direction: column;
-  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: width 0.22s cubic-bezier(0.4, 0, 0.2, 1); /* 缩短：大表格页面重排帧更少，不卡 */
 }
 
 .informationmenu,
@@ -419,7 +419,7 @@
   padding: 12px 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start; /* 图标靠左，与展开时水平位置一致 */
   gap: 2px;
   overflow: visible; /* 收起时图标少不需滚动；tooltip 悬浮在侧栏右侧，不能被 overflow 裁掉 */
   scrollbar-width: none;
@@ -430,7 +430,7 @@
 .informationmenu.collapsed .informationmenu-section {
   width: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start; /* 图标靠左，与展开时一致 */
   padding: 0;
 }
 .informationmenu.collapsed .informationmenu-section-title,
@@ -440,7 +440,7 @@
   justify-content: center;
   gap: 0;
   padding: 0;
-  margin: 3px auto;
+  margin: 3px 0 3px clamp(4px, 0.52vw, 10px); /* 左边缘 ≈ 展开态 padding-left，icon 不跳位 */
   width: 40px;
   height: 40px;
   border-radius: 12px;
@@ -558,7 +558,7 @@
 
 /* 内容区联动 */
 .kz-main {
-  transition: margin-left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: margin-left 0.22s cubic-bezier(0.4, 0, 0.2, 1);
 }
 body.sidebar-collapsed .kz-main {
   margin-left: clamp(50px, 3.65vw, 70px) !important;
