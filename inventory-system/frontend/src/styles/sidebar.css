@@ -421,11 +421,16 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  scrollbar-width: none; /* 收起时隐藏滚动条，避免占位导致整体视觉偏移 */
+}
+.informationmenu.collapsed .informationmenu-content::-webkit-scrollbar {
+  display: none;
 }
 .informationmenu.collapsed .informationmenu-section {
   width: 100%;
   display: flex;
   justify-content: center;
+  padding: 0;
 }
 .informationmenu.collapsed .informationmenu-section-title {
   justify-content: center;
@@ -436,9 +441,12 @@
   height: 40px;
   border-radius: 12px;
 }
+.informationmenu.collapsed .informationmenu-section-title .section-icon {
+  margin: 0 auto; /* 双保险：图标在方块内绝对居中 */
+}
 .informationmenu.collapsed .informationmenu-section-title:hover {
   background: #fff0e6;
-  transform: translateX(2px);
+  /* 收起时不位移（保持绝对居中） */
 }
 .informationmenu.collapsed .informationmenu-section-title.active {
   box-shadow: 0 3px 10px rgba(255, 92, 0, 0.3);
