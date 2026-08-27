@@ -1566,15 +1566,52 @@ export default function StockInout() {
                 </div>
               </div>
               <div className="product-summary-results">
-                <div className="product-summary-stat">
-                  <span className="product-summary-stat-label">进货总额</span>
-                  <span className="product-summary-stat-value" style={{ color: '#10b981' }}>{checkResult ? fmtNum(checkResult.in_total) : '-'}</span>
+                <div className="product-summary-stat stat-in">
+                  <span className="product-summary-stat-label"><i className="fas fa-arrow-down" /> 进货总额 (IN)</span>
+                  <span className="product-summary-stat-value">{checkResult ? fmtNum(checkResult.in_total) : '-'}</span>
                 </div>
-                <div className="product-summary-stat">
-                  <span className="product-summary-stat-label">出货总额</span>
-                  <span className="product-summary-stat-value" style={{ color: '#cf1322' }}>{checkResult ? fmtNum(checkResult.out_total) : '-'}</span>
+                <div className="product-summary-stat stat-out">
+                  <span className="product-summary-stat-label"><i className="fas fa-arrow-up" /> 出货总额 (OUT)</span>
+                  <span className="product-summary-stat-value">{checkResult ? fmtNum(checkResult.out_total) : '-'}</span>
+                </div>
+                <div className="product-summary-stat stat-net">
+                  <span className="product-summary-stat-label"><i className="fas fa-balance-scale" /> 净进出货 (IN - OUT)</span>
+                  <span className="product-summary-stat-value">
+                    {checkResult ? fmtNum(checkResult.total ?? ((checkResult.in_total || 0) - (checkResult.out_total || 0))) : '-'}
+                  </span>
                 </div>
               </div>
+              {checkResult && (checkResult.in_value || checkResult.out_value) && (
+                <div className="product-summary-values">
+                  <span>进货金额：<b className="val-in">RM {fmtMoney(checkResult.in_value)}</b></span>
+                  <span>出货金额：<b className="val-out">RM {fmtMoney(checkResult.out_value)}</b></span>
+                </div>
+              )}
+              {checkResult && checkResult.records && checkResult.records.length > 0 && (
+                <div className="product-summary-detail">
+                  <div className="product-summary-detail-title">进出明细（共 {checkResult.record_count} 条）</div>
+                  <div className="product-summary-detail-scroll">
+                    <table className="product-summary-detail-table">
+                      <thead>
+                        <tr><th>日期</th><th>类型</th><th>进货</th><th>出货</th><th>单价</th><th>收货单位/出货人</th><th>备注</th></tr>
+                      </thead>
+                      <tbody>
+                        {checkResult.records.map((r, i) => (
+                          <tr key={i}>
+                            <td className="nowrap">{r.date}{r.time ? ' ' + r.time : ''}</td>
+                            <td>{r.type || '-'}</td>
+                            <td className="num cell-in">{Number(r.in_quantity) > 0 ? fmtNum(r.in_quantity) : '-'}</td>
+                            <td className="num cell-out">{Number(r.out_quantity) > 0 ? fmtNum(r.out_quantity) : '-'}</td>
+                            <td className="num">{fmtMoney(r.price)}</td>
+                            <td>{r.receiver || '-'}</td>
+                            <td className="remark">{r.remark || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
               <div className="product-summary-meta" id="product-summary-meta">
                 {checkLoading ? '查询中...' : checkResult
                   ? (checkResult.record_count === 0

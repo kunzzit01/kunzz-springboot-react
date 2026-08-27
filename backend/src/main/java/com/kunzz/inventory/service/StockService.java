@@ -616,6 +616,7 @@ public class StockService {
         out.put("product_name", name);
         out.put("in_total", inTotal);
         out.put("out_total", outTotal);
+        out.put("total", inTotal.subtract(outTotal)); // 净进出货 = IN - OUT（对齐旧系统货品统计）
         out.put("in_value", inValue);
         out.put("out_value", outValue);
         out.put("record_count", records.size());

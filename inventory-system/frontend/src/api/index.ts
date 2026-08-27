@@ -120,6 +120,7 @@ export interface CheckInoutResult {
   product_name?: string
   in_total?: number
   out_total?: number
+  total?: number // 净进出货 = IN - OUT
   in_value?: number
   out_value?: number
   record_count?: number

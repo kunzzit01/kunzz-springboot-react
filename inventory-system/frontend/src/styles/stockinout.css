@@ -584,8 +584,8 @@
 
 /* 货品进出货统计弹窗（对齐 kunzztest product-summary-modal） */
 .product-summary-modal-content {
-    max-width: 480px;
-    width: 90vw;
+    max-width: 760px;
+    width: 92vw;
 }
 
 .product-summary-search {
@@ -611,7 +611,7 @@
 
 .product-summary-results {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
     margin-top: 8px;
 }
@@ -622,6 +622,85 @@
     border-radius: 8px;
     padding: 14px 12px;
     text-align: center;
+}
+
+.product-summary-stat .product-summary-stat-label i {
+    margin-right: 6px;
+}
+
+/* IN 绿 / OUT 红 / 净进出货 蓝突出 */
+.product-summary-stat.stat-in .product-summary-stat-value { color: #10b981; }
+.product-summary-stat.stat-out .product-summary-stat-value { color: #cf1322; }
+.product-summary-stat.stat-net {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+.product-summary-stat.stat-net .product-summary-stat-value { color: #2563eb; }
+
+/* 金额行 */
+.product-summary-values {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #4b5563;
+    background: #fff7ed;
+    border: 1px solid #fde68a;
+    border-radius: 8px;
+    padding: 8px 12px;
+}
+.product-summary-values b.val-in { color: #10b981; }
+.product-summary-values b.val-out { color: #cf1322; }
+
+/* 进出明细表 */
+.product-summary-detail {
+    margin-top: 12px;
+}
+.product-summary-detail-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #583e04;
+    margin-bottom: 6px;
+}
+.product-summary-detail-scroll {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+.product-summary-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.product-summary-detail-table thead th {
+    position: sticky;
+    top: 0;
+    background: #f3f4f6;
+    color: #374151;
+    font-weight: 600;
+    text-align: left;
+    padding: 7px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+    z-index: 1;
+}
+.product-summary-detail-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f3f4f6;
+    color: #374151;
+}
+.product-summary-detail-table tbody tr:hover { background: #f9fafb; }
+.product-summary-detail-table td.num { text-align: right; white-space: nowrap; }
+.product-summary-detail-table td.nowrap { white-space: nowrap; }
+.product-summary-detail-table td.cell-in { color: #10b981; font-weight: 600; }
+.product-summary-detail-table td.cell-out { color: #cf1322; font-weight: 600; }
+.product-summary-detail-table td.remark {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .product-summary-stat-label {
