@@ -1,7 +1,8 @@
 # 数据同步检查清单（拉取线上数据到本地后必做）
 
 > **快捷方式：直接运行 `sync-live-data.bat`**（把线上 dump 文件拖进去即可）——
-> 自动完成：备份 → 修复排序规则 → 重建库导入 → 清洗（本清单全部内容）→ 验证 → 重启后端。
+> 自动完成：备份 → 修复排序规则 → 重建库导入 → **补建新系统结构**（operation_logs/phone_records/stock_data.price/**stock_system**，
+> 见第 0.6 步）→ 清洗（本清单全部内容）→ 验证 → 重启后端。
 > 下方步骤保留作为手动执行/排错参考。
 
 > 目的：每次从线上（live / 生产）同步数据库到本地后，快速检查并修复已知的数据问题。
@@ -55,15 +56,23 @@ mysql -u root < add_new_tables.sql
 2. **手机记录表** `phone_records`（电话版功能）
 3. **货品种类默认单价列** `stock_data.price DECIMAL(10,3)`（2026-08-26 新增：货品种类页面维护的单价，
    进出货「进货」输入数量时自动抓取该单价；无单价显示 0.00。**不补该列会导致后端启动失败/保存报错**）
+4. **最低库存设置分系统独立** `stock_minimum_settings.stock_system`（2026-08-27 新增：中央/各分店各自维护最低库存，
+   中央设置不影响分店低库存通知；唯一键从 `(product_name)` 改为 `(stock_system, product_name)`）
+   - ⚠️ **线上库（kunzzgroup.com）还是旧结构**（无 stock_system），每次从线上导最新 dump 导入后都必须跑本脚本补第 4 步
+   - 数据迁移：旧设置行自动归入 `central`；各分店如需最低库存预警需在「最低库存设置」页按系统 Tab 重新设置
 
 验证：
 ```sql
 -- 表（应返回 2 行）
 SELECT table_name FROM information_schema.tables
 WHERE table_schema='u690174784_kunzz' AND table_name IN ('operation_logs','phone_records');
--- 列（应返回 1 行）
+-- 列（应各返回 1 行）
 SELECT column_name, column_type FROM information_schema.COLUMNS
 WHERE table_schema='u690174784_kunzz' AND table_name='stock_data' AND column_name='price';
+SELECT column_name, column_type FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz' AND table_name='stock_minimum_settings' AND column_name='stock_system';
+-- 索引（应含 unique_system_product，列为 stock_system,product_name）
+SHOW INDEX FROM stock_minimum_settings;
 ```
 
 ---

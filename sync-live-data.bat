@@ -62,6 +62,20 @@ if errorlevel 1 ( echo [错误] 导入失败，请检查 fixed_dump.sql & pause 
 
 echo.
 echo ============================================================
+echo  [4.5/6] 补建新系统结构 (operation_logs/phone_records/stock_data.price/stock_system)...
+echo ============================================================
+rem 最新线上 dump 不含新系统依赖的结构，导入后必须执行补丁（幂等）：
+rem  - stock_minimum_settings.stock_system（最低库存分系统独立，2026-08-27 新增；线上还是旧结构，每次都要补）
+if exist "%ROOT%add_new_tables.sql" (
+    "%MYSQL%" -u root --default-character-set=utf8mb4 < "%ROOT%add_new_tables.sql"
+    if errorlevel 1 ( echo [警告] 结构补丁有报错，请查看上方输出 & pause & exit /b 1 )
+    echo  [OK] 结构补丁已执行
+) else (
+    echo  [!!] 未找到 add_new_tables.sql，跳过结构补丁！最低库存分系统等结构将缺失
+)
+
+echo.
+echo ============================================================
 echo  [5/6] 清洗数据 (HTML实体/最低库存/gender)...
 echo ============================================================
 "%MYSQL%" -u root --default-character-set=utf8mb4 u690174784_kunzz < "%ROOT%sync_cleanup.sql"

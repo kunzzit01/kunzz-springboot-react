@@ -81,4 +81,7 @@ DEALLOCATE PREPARE stmt;
 --   2) 列：SELECT column_name, column_type FROM information_schema.COLUMNS
 --        WHERE table_schema='u690174784_kunzz' AND table_name='stock_data' AND column_name='price';
 --      应返回 1 行（decimal(10,3)）
+--   3) 列：SELECT column_name, column_type FROM information_schema.COLUMNS
+--        WHERE table_schema='u690174784_kunzz' AND table_name='stock_minimum_settings' AND column_name='stock_system';
+--      应返回 1 行（varchar(20)）；索引：SHOW INDEX FROM stock_minimum_settings → 应有 unique_system_product (stock_system, product_name)
 -- =============================================================================
