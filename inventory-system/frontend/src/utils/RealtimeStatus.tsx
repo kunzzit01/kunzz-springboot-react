@@ -45,7 +45,7 @@ export default function RealtimeStatus() {
 
   return (
     <div
-      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 14px', fontSize: 12, color: '#9ca3af', cursor: 'default' }}
+      className="realtime-status"
       title="全站实时更新：任意窗口做库存写入后，其他窗口约 1 秒自动刷新"
     >
       <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, boxShadow: '0 0 5px ' + cfg.dot, flexShrink: 0 }} />

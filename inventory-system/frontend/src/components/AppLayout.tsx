@@ -283,6 +283,7 @@ export default function AppLayout() {
   return (
     <>
       <aside className={'informationmenu' + (collapsed ? ' collapsed' : '')}>
+        <div className="informationmenu-realtime"><RealtimeStatus /></div>
         <div className="informationmenu-header">
           <div className="user-avatar-dropdown">
             <div id="user-avatar" className="user-avatar">{(user?.displayName || user?.username || 'U').charAt(0).toUpperCase()}</div>
@@ -291,8 +292,9 @@ export default function AppLayout() {
               <div className="user-position">{user?.position || 'User'}</div>
             </div>
           </div>
-          <div className="sidebar-menu-hamburger" id="sidebarToggle" onClick={() => setCollapsed(!collapsed)}>
-            <span></span><span></span><span></span>
+          <div className="sidebar-menu-hamburger" id="sidebarToggle" onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? '展开侧边栏' : '收起侧边栏'}>
+            <i className={'fas ' + (collapsed ? 'fa-angles-right' : 'fa-bars')}></i>
           </div>
         </div>
 
@@ -313,8 +315,7 @@ export default function AppLayout() {
         </div>
 
         <div className="informationmenu-footer">
-          <RealtimeStatus />
-          <button className="logout-btn" onClick={logout}>登出</button>
+          <button className="logout-btn" onClick={logout} title="登出">登出</button>
         </div>
       </aside>
       <main className="kz-main">
