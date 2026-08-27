@@ -151,7 +151,7 @@
 .informationmenu-section-title.active {
   background: #ff5c00;
   color: #ffffff;
-  margin: 0 4px;
+  margin: 0; /* 不内缩：icon 与其他组保持同一垂直对齐线 */
   border-radius: 10px;
   box-shadow: 0 2px 6px #ff7a2e;
 }
@@ -444,11 +444,18 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
+  position: relative;
 }
+/* 图标绝对定位到方块正中心：不受 flex/span 残留/vertical-align 任何干扰，百分百居中 */
 .informationmenu.collapsed .informationmenu-section-title .section-icon,
 .informationmenu.collapsed .informationmenu-section-title.active .section-icon {
-  display: block;
-  margin: 0 auto !important;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0 !important;
+  width: 20px;
+  height: 20px;
 }
 .informationmenu.collapsed .informationmenu-section-title:hover {
   background: #fff0e6;
