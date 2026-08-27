@@ -303,7 +303,7 @@ export default function AppLayout() {
             <div className="informationmenu-section" key={section.id}>
               <div className={'informationmenu-section-title' + (openGroups[section.id] ? ' active' : '')} data-target={section.id}
                 onClick={() => toggleGroup(section.id)}
-                title={collapsed ? section.label : undefined}>
+                data-label={section.label}>
                 <img src={ICONS[section.icon] || ''} alt="" className="section-icon" />
                 <span style={{ flex: 1, paddingLeft: 4 }}>{section.label}</span>
                 <span className="section-arrow">⮞</span>

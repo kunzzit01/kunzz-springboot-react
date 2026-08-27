@@ -448,7 +448,45 @@
   background: #fff0e6;
   /* 收起时不位移（保持绝对居中） */
 }
+
+/* 收起时：自定义悬浮提示（深色圆角卡片 + 左侧箭头，替代浏览器默认 title） */
+.informationmenu.collapsed .informationmenu-section-title[data-label]:hover::after {
+  content: attr(data-label);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(28, 28, 30, 0.94);
+  color: #fff;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.4;
+  letter-spacing: 0.3px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  z-index: 8000;
+  pointer-events: none;
+  animation: sidebarTipIn 0.16s cubic-bezier(0.34, 1.25, 0.4, 1);
+}
+.informationmenu.collapsed .informationmenu-section-title[data-label]:hover::before {
+  content: '';
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-right-color: rgba(28, 28, 30, 0.94);
+  z-index: 8000;
+  pointer-events: none;
+}
+@keyframes sidebarTipIn {
+  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
 .informationmenu.collapsed .informationmenu-section-title.active {
+  margin: 3px auto !important; /* 强制对齐：展开态 active 的 margin:0 4px 不残留 */
   box-shadow: 0 3px 10px rgba(255, 92, 0, 0.3);
   border-radius: 12px;
 }
