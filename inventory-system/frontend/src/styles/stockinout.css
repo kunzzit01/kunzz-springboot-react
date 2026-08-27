@@ -584,8 +584,8 @@
 
 /* 货品进出货统计弹窗（对齐 kunzztest product-summary-modal） */
 .product-summary-modal-content {
-    max-width: 760px;
-    width: 92vw;
+    max-width: 960px;
+    width: 95vw;
 }
 
 .product-summary-search {
@@ -664,7 +664,7 @@
     margin-bottom: 6px;
 }
 .product-summary-detail-scroll {
-    max-height: 220px;
+    max-height: 340px;
     overflow-y: auto;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
@@ -697,7 +697,13 @@
 .product-summary-detail-table td.cell-in { color: #10b981; font-weight: 600; }
 .product-summary-detail-table td.cell-out { color: #cf1322; font-weight: 600; }
 .product-summary-detail-table td.remark {
-    max-width: 160px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.product-summary-detail-table td:nth-child(6) {
+    max-width: 180px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
