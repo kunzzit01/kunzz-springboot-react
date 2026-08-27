@@ -690,6 +690,10 @@
     white-space: nowrap;
     z-index: 1;
 }
+/* 数字列表头右对齐，与数据列对齐 */
+.product-summary-detail-table thead th.num {
+    text-align: right;
+}
 .product-summary-detail-table tbody td {
     padding: 6px 8px;
     border-bottom: 1px solid #f3f4f6;

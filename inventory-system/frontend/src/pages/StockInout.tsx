@@ -1593,7 +1593,7 @@ export default function StockInout() {
                   <div className="product-summary-detail-scroll">
                     <table className="product-summary-detail-table">
                       <thead>
-                        <tr><th>日期</th><th>类型</th><th>进货</th><th>出货</th><th>单价</th><th>收货单位/出货人</th><th>备注</th></tr>
+                        <tr><th>日期</th><th>类型</th><th className="num">进货</th><th className="num">出货</th><th className="num">单价</th><th>收货单位/出货人</th><th>备注</th></tr>
                       </thead>
                       <tbody>
                         {checkResult.records.map((r, i) => (
