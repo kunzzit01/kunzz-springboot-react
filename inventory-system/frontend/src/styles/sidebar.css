@@ -76,7 +76,8 @@
 }
 
 
-/* 汉堡/折叠按钮（Font Awesome：展开=三条线，折叠=右箭头，可点展开） */
+/* 汉堡/折叠按钮（Font Awesome：展开=三条线，折叠=右箭头，可点展开）
+   注意：.informationmenu * 的 font-family 会盖掉 FA 字体，需显式恢复 */
 .sidebar-menu-hamburger {
   width: 34px;
   height: 34px;
@@ -89,6 +90,12 @@
   font-size: 16px;
   transition: background-color 0.25s ease, color 0.25s ease, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex-shrink: 0;
+}
+.informationmenu .sidebar-menu-hamburger i {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-style: normal;
+  font-size: 17px;
 }
 .sidebar-menu-hamburger:hover {
   background-color: #fff0e6;
@@ -422,6 +429,7 @@
 }
 .informationmenu.collapsed .informationmenu-section-title {
   justify-content: center;
+  gap: 0; /* 去掉 span(0宽) 的间距，图标完全居中 */
   padding: 0;
   margin: 3px auto;
   width: 40px;

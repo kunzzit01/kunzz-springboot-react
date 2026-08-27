@@ -302,7 +302,8 @@ export default function AppLayout() {
           {filteredMenu.map(section => (
             <div className="informationmenu-section" key={section.id}>
               <div className={'informationmenu-section-title' + (openGroups[section.id] ? ' active' : '')} data-target={section.id}
-                onClick={() => toggleGroup(section.id)}>
+                onClick={() => toggleGroup(section.id)}
+                title={collapsed ? section.label : undefined}>
                 <img src={ICONS[section.icon] || ''} alt="" className="section-icon" />
                 <span style={{ flex: 1, paddingLeft: 4 }}>{section.label}</span>
                 <span className="section-arrow">⮞</span>
