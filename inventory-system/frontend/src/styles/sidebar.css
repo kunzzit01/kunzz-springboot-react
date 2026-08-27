@@ -421,7 +421,8 @@
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  scrollbar-width: none; /* 收起时隐藏滚动条，避免占位导致整体视觉偏移 */
+  overflow: visible; /* 收起时图标少不需滚动；tooltip 悬浮在侧栏右侧，不能被 overflow 裁掉 */
+  scrollbar-width: none;
 }
 .informationmenu.collapsed .informationmenu-content::-webkit-scrollbar {
   display: none;
@@ -432,17 +433,22 @@
   justify-content: center;
   padding: 0;
 }
-.informationmenu.collapsed .informationmenu-section-title {
+.informationmenu.collapsed .informationmenu-section-title,
+.informationmenu.collapsed .informationmenu-section-title.active {
+  display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 0; /* 去掉 span(0宽) 的间距，图标完全居中 */
+  gap: 0;
   padding: 0;
   margin: 3px auto;
   width: 40px;
   height: 40px;
   border-radius: 12px;
 }
-.informationmenu.collapsed .informationmenu-section-title .section-icon {
-  margin: 0 auto; /* 双保险：图标在方块内绝对居中 */
+.informationmenu.collapsed .informationmenu-section-title .section-icon,
+.informationmenu.collapsed .informationmenu-section-title.active .section-icon {
+  display: block;
+  margin: 0 auto !important;
 }
 .informationmenu.collapsed .informationmenu-section-title:hover {
   background: #fff0e6;
@@ -486,7 +492,6 @@
   to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 .informationmenu.collapsed .informationmenu-section-title.active {
-  margin: 3px auto !important; /* 强制对齐：展开态 active 的 margin:0 4px 不残留 */
   box-shadow: 0 3px 10px rgba(255, 92, 0, 0.3);
   border-radius: 12px;
 }
