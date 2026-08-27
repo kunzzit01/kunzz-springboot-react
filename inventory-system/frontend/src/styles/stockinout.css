@@ -582,10 +582,12 @@
     display: none;
 }
 
-/* 货品进出货统计弹窗（对齐 kunzztest product-summary-modal） */
-.product-summary-modal-content {
-    max-width: 960px;
-    width: 95vw;
+/* 货品进出货统计弹窗（对齐 kunzztest product-summary-modal）
+   注意：需 .sio-root .modal-content 前缀提升特异性，否则被通用 width:min(460px,100%) 覆盖 */
+.sio-root .modal-content.product-summary-modal-content {
+    width: min(1100px, 95vw);
+    max-width: 1100px;
+    max-height: min(90vh, calc(100vh - 24px));
 }
 
 .product-summary-search {
@@ -664,8 +666,9 @@
     margin-bottom: 6px;
 }
 .product-summary-detail-scroll {
-    max-height: 340px;
+    max-height: min(340px, 42vh);
     overflow-y: auto;
+    overflow-x: auto; /* 小屏列多时可横向滚动 */
     border: 1px solid #e5e7eb;
     border-radius: 8px;
 }
@@ -673,6 +676,7 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 12px;
+    min-width: 660px; /* 小屏保证横向滚动，不挤压列 */
 }
 .product-summary-detail-table thead th {
     position: sticky;
@@ -772,4 +776,60 @@
     color: #aaa;
     font-size: 11px;
     margin-left: 5px;
+}
+
+/* ============ 货品进出货统计弹窗：响应式适配各种屏幕 ============ */
+/* 平板/手机：弹窗近全屏，明细横向滚动，内容超高内部滚动 */
+@media (max-width: 768px) {
+  .sio-root .modal-overlay { padding: 0; }
+  .sio-root .modal-content.product-summary-modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
+  .sio-root .modal-content.product-summary-modal-content .modal-header {
+    padding: 12px 14px;
+  }
+  .sio-root .modal-content.product-summary-modal-content .modal-body {
+    padding: 14px;
+  }
+  .sio-root .modal-content.product-summary-modal-content .modal-footer {
+    padding: 12px 14px;
+  }
+  .product-summary-detail-scroll {
+    max-height: 40vh;
+  }
+  .product-summary-values {
+    flex-wrap: wrap;
+    gap: 6px 20px;
+  }
+}
+
+/* 手机窄屏：统计卡片堆叠、日期选择单列、标题紧凑 */
+@media (max-width: 480px) {
+  .product-summary-results {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .product-summary-stat {
+    padding: 10px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .product-summary-stat-label {
+    font-size: 12px;
+    margin-bottom: 0;
+  }
+  .product-summary-stat-value {
+    font-size: 20px;
+  }
+  .product-summary-date-row {
+    grid-template-columns: 1fr;
+  }
+  .sio-root .modal-content.product-summary-modal-content .modal-header h3 {
+    font-size: 15px;
+  }
 }
