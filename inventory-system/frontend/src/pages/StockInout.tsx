@@ -1598,13 +1598,16 @@ export default function StockInout() {
                       <tbody>
                         {checkResult.records.map((r, i) => (
                           <tr key={i}>
-                            <td className="nowrap">{r.date}{r.time ? ' ' + r.time : ''}</td>
-                            <td>{r.type || '-'}</td>
-                            <td className="num cell-in">{Number(r.in_quantity) > 0 ? fmtNum(r.in_quantity) : '-'}</td>
-                            <td className="num cell-out">{Number(r.out_quantity) > 0 ? fmtNum(r.out_quantity) : '-'}</td>
+                            <td className="date-cell nowrap">
+                              <div className="detail-date">{r.date}</div>
+                              {r.time && <div className="detail-time">{r.time}</div>}
+                            </td>
+                            <td className="type-cell">{r.type || ''}</td>
+                            <td className="num cell-in">{Number(r.in_quantity) > 0 ? fmtNum(r.in_quantity) : ''}</td>
+                            <td className="num cell-out">{Number(r.out_quantity) > 0 ? fmtNum(r.out_quantity) : ''}</td>
                             <td className="num">{fmtMoney(r.price)}</td>
-                            <td>{r.receiver || '-'}</td>
-                            <td className="remark">{r.remark || '-'}</td>
+                            <td className="receiver-cell">{r.receiver || ''}</td>
+                            <td className="remark">{r.remark || ''}</td>
                           </tr>
                         ))}
                       </tbody>

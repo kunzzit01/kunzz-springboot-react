@@ -700,11 +700,35 @@
 .product-summary-detail-table td.nowrap { white-space: nowrap; }
 .product-summary-detail-table td.cell-in { color: #10b981; font-weight: 600; }
 .product-summary-detail-table td.cell-out { color: #cf1322; font-weight: 600; }
+/* 日期+时间两行：日期在上，时间小字浅灰在下 */
+.product-summary-detail-table td.date-cell .detail-date {
+    white-space: nowrap;
+    font-weight: 600;
+    color: #374151;
+}
+.product-summary-detail-table td.date-cell .detail-time {
+    font-size: 11px;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+/* 空值不占位（无 '-' 噪音），类型/收货单位列自动收窄 */
+.product-summary-detail-table td.type-cell,
+.product-summary-detail-table td.receiver-cell {
+    white-space: nowrap;
+}
+.product-summary-detail-table td.type-cell {
+    color: #6b7280;
+}
+.product-summary-detail-table td.receiver-cell {
+    font-weight: 500;
+    color: #4b5563;
+}
 .product-summary-detail-table td.remark {
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    color: #6b7280;
 }
 .product-summary-detail-table td:nth-child(6) {
     max-width: 180px;
