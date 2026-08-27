@@ -330,6 +330,7 @@ export default function Kpi() {
           tension: 0.4,
           pointBackgroundColor: ds.color,
           pointRadius: 0,
+          pointHitRadius: 14, // 命中检测半径（pointRadius=0 时默认命中区为 0，导致 tooltip 不触发）
           pointHoverRadius: 8,
           borderWidth: 2
         }))
@@ -337,6 +338,8 @@ export default function Kpi() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        // 鼠标在线/点附近滑动即显示 tooltip（intersect:false 无需精确命中点）
+        interaction: { mode: 'index', intersect: false },
         onClick: (evt: any, elems: any) => {
           if (elems.length > 0 && drill.mode === 'year') {
             const idx = elems[0].index
@@ -773,13 +776,13 @@ export default function Kpi() {
               <table className="table" id="dashboard-table">
                 <thead>
                   <tr id="table-header">
-                    <th>日期</th><th>总销售额</th><th>净销售额</th><th>人均消费</th><th>桌子总数</th><th>顾客总数</th><th>新客人数</th><th>常客人数</th><th>常客百分比</th>
+                    <th>{restaurant === 'total' ? '日期 (三店合计)' : '日期'}</th><th>总销售额</th><th>净销售额</th><th>人均消费</th><th>桌子总数</th><th>顾客总数</th><th>新客人数</th><th>常客人数</th><th>常客百分比</th>
                   </tr>
                 </thead>
                 <tbody>
                   {detailRows.map((p, i) => (
                     <tr key={i}>
-                      <td>{p.date}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{p.date}</td>
                       <td>{fmtMoney(p.totalSales)}</td>
                       <td>{fmtMoney(p.netSales)}</td>
                       <td>RM {p.avgSalesPerDiner.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>

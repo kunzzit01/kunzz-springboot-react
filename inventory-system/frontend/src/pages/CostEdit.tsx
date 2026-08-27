@@ -10,8 +10,9 @@ interface DayRow {
 const COST_FIELDS = ['cBeverage', 'cKitchen', 'cGrab', 'cFoodpanda', 'cShopee']
 const CURRENCY_FIELDS = ['cBeverage', 'cKitchen', 'cGrab', 'cFoodpanda', 'cShopee']
 
-// 有值判定（与线上 updateInputColors 一致：'' / '0' / '0.00' 都算无数据）
-const hasVal = (v?: string) => v !== undefined && v !== '' && v !== '0' && v !== '0.00'
+// 有值判定（对齐线上 updateInputColors：只有空值算无数据；'0'/'0.00' 视为有数据——
+// RM0.00 的成本也是真实记录，需变蓝显示并可保存）
+const hasVal = (v?: string) => v !== undefined && v !== ''
 
 // 货币显示：有值才显示两位小数
 const fmtCur = (v?: string) => {
@@ -189,7 +190,8 @@ export default function CostEdit() {
 
   const hasData = (day: number) => {
     const r = rows[day] || {}
-    return COST_FIELDS.some(f => (parseFloat(r[f] || '') || 0) > 0) || r._hasRecord === '1'
+    // 只要任意成本字段有值（含 0 / 0.00）即视为有数据，可保存（RM0 成本也需落库）
+    return COST_FIELDS.some(f => r[f] !== undefined && r[f] !== '') || r._hasRecord === '1'
   }
 
   // 保存单行
