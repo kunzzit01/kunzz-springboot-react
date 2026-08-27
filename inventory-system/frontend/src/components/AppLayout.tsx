@@ -124,6 +124,9 @@ export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  // 收起态悬浮提示（组名 + 页面列表）
+  const [tip, setTip] = useState<{ label: string; pages: string[]; x: number; y: number } | null>(null)
+  const tipTimer = useRef<any>(null)
   // 当前 hover 的品牌面板 key（鼠标在菜单项或面板上时保持打开）
   const [hoverPanel, setHoverPanel] = useState<string | null>(null)
   const hoverTimer = useRef<any>(null)
@@ -189,6 +192,25 @@ export default function AppLayout() {
       next[id] = !prev[id]
       return next
     })
+  }
+
+  // ---- 收起态悬浮提示：延迟出现（防误触），显示组名 + 页面列表 ----
+  const showTip = (e: React.MouseEvent, section: MenuSection) => {
+    if (!collapsed) return
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    if (tipTimer.current) clearTimeout(tipTimer.current)
+    tipTimer.current = setTimeout(() => {
+      setTip({
+        label: section.label,
+        pages: section.children.map(c => c.label).filter(Boolean),
+        x: rect.right + 14,
+        y: rect.top + rect.height / 2,
+      })
+    }, 130)
+  }
+  const hideTip = () => {
+    if (tipTimer.current) clearTimeout(tipTimer.current)
+    setTip(null)
   }
   const toggleExpand = (key: string) => setExpanded(prev => ({ ...prev, [key]: !prev[key] }))
 
@@ -303,7 +325,8 @@ export default function AppLayout() {
             <div className="informationmenu-section" key={section.id}>
               <div className={'informationmenu-section-title' + (openGroups[section.id] ? ' active' : '')} data-target={section.id}
                 onClick={() => toggleGroup(section.id)}
-                data-label={section.label}>
+                onMouseEnter={(e) => showTip(e, section)}
+                onMouseLeave={hideTip}>
                 <img src={ICONS[section.icon] || ''} alt="" className="section-icon" />
                 <span style={{ flex: 1, paddingLeft: 4 }}>{section.label}</span>
                 <span className="section-arrow">⮞</span>
@@ -319,6 +342,17 @@ export default function AppLayout() {
           <button className="logout-btn" onClick={logout} title="登出">登出</button>
         </div>
       </aside>
+      {/* 收起态悬浮提示浮层（fixed，不受侧栏 overflow 影响） */}
+      {tip && (
+        <div className="sidebar-tip" style={{ left: tip.x, top: tip.y }}>
+          <div className="sidebar-tip-title">{tip.label}</div>
+          <div className="sidebar-tip-pages">
+            {tip.pages.map((p, i) => (
+              <div key={i} className="sidebar-tip-page">{p}</div>
+            ))}
+          </div>
+        </div>
+      )}
       <main className="kz-main">
         <Outlet />
       </main>

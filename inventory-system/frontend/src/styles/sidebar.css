@@ -462,40 +462,83 @@
   /* 收起时不位移（保持绝对居中） */
 }
 
-/* 收起时：自定义悬浮提示（深色圆角卡片 + 左侧箭头，替代浏览器默认 title） */
-.informationmenu.collapsed .informationmenu-section-title[data-label]:hover::after {
-  content: attr(data-label);
-  position: absolute;
-  left: calc(100% + 12px);
-  top: 50%;
+/* 收起态悬浮提示浮层：白色卡片 + 橙色主题条 + 圆点列表 + 箭头 + 弹性动画 */
+.sidebar-tip {
+  position: fixed;
   transform: translateY(-50%);
-  background: rgba(28, 28, 30, 0.94);
-  color: #fff;
-  padding: 7px 13px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  line-height: 1.4;
-  letter-spacing: 0.3px;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
-  z-index: 8000;
+  z-index: 9000;
+  min-width: 160px;
+  max-width: 240px;
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid #ffe1c4;
+  border-radius: 12px;
+  box-shadow: 0 14px 36px rgba(120, 53, 15, 0.2), 0 3px 10px rgba(0, 0, 0, 0.08);
+  padding: 12px 14px;
   pointer-events: none;
-  animation: sidebarTipIn 0.16s cubic-bezier(0.34, 1.25, 0.4, 1);
+  animation: sidebarTipIn 0.18s cubic-bezier(0.34, 1.25, 0.4, 1);
 }
-.informationmenu.collapsed .informationmenu-section-title[data-label]:hover::before {
+.sidebar-tip::before {
   content: '';
   position: absolute;
-  left: calc(100% + 6px);
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 8px solid transparent;
+  border-right-color: #ffe1c4;
+}
+.sidebar-tip::after {
+  content: '';
+  position: absolute;
+  left: -6px;
   top: 50%;
   transform: translateY(-50%);
   border: 6px solid transparent;
-  border-right-color: rgba(28, 28, 30, 0.94);
-  z-index: 8000;
-  pointer-events: none;
+  border-right-color: rgba(255, 255, 255, 0.97);
+}
+.sidebar-tip-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #7c2d12;
+  padding-bottom: 7px;
+  margin-bottom: 7px;
+  border-bottom: 1px solid #fde8d0;
+  white-space: nowrap;
+}
+.sidebar-tip-title::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ff8019 0%, #ff5c00 100%);
+}
+.sidebar-tip-pages {
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-tip-page {
+  position: relative;
+  font-size: 12px;
+  color: #6b7280;
+  padding: 3px 0 3px 14px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-tip-page::before {
+  content: '•';
+  position: absolute;
+  left: 2px;
+  color: #ff8019;
+  font-weight: 700;
 }
 @keyframes sidebarTipIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
+  from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
   to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 .informationmenu.collapsed .informationmenu-section-title.active {
