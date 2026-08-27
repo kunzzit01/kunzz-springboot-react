@@ -776,7 +776,7 @@ export default function Kpi() {
               <table className="table" id="dashboard-table">
                 <thead>
                   <tr id="table-header">
-                    <th>{restaurant === 'total' ? '日期 (三店合计)' : '日期'}</th><th>总销售额</th><th>净销售额</th><th>人均消费</th><th>桌子总数</th><th>顾客总数</th><th>新客人数</th><th>常客人数</th><th>常客百分比</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>{restaurant === 'total' ? '日期 (三店合计)' : '日期'}</th><th>总销售额</th><th>净销售额</th><th>人均消费</th><th>桌子总数</th><th>顾客总数</th><th>新客人数</th><th>常客人数</th><th>常客百分比</th>
                   </tr>
                 </thead>
                 <tbody>

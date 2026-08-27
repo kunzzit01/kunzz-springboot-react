@@ -778,7 +778,7 @@ export default function Cost() {
               <table className="table" id="dashboard-table">
                 <thead>
                   <tr id="table-header">
-                    <th>{restaurant === 'total' ? '日期 (三店合计)' : '日期'}</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>{restaurant === 'total' ? '日期 (三店合计)' : '日期'}</th>
                     <th>销售额</th>
                     <th>饮料成本</th>
                     <th>厨房成本</th>
