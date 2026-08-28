@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getStockRemarkAnalysis } from '../api'
 import type { RemarkProduct, RemarkVariant } from '../api'
 import '../styles/stockremark.css'
+import { showToast } from '../utils/toast'
 
 /** 货品备注：对齐线上 stockremark?system=central（stockremark.php + stockremark.js + stockremark.css） */
 const VIEW_NAMES: Record<string, string> = { list: '总库存', records: '进出货', remark: '货品备注', product: '货品种类', sot: '货品异常' }
@@ -19,15 +20,11 @@ export default function RemarkAnalysis() {
   const [filtered, setFiltered] = useState<RemarkProduct[]>([])
   const [kw, setKw] = useState('')
   const [loading, setLoading] = useState(false)
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const [showTop, setShowTop] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 固定排序顺序（对齐线上 sortProducts）
   const sortProducts = useCallback((list: RemarkProduct[]) => {
@@ -287,13 +284,6 @@ export default function RemarkAnalysis() {
         <i className="fas fa-chevron-up" />
       </button>
 
-      {toast && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 10000,
-          background: toast.type === 'error' ? '#dc2626' : toast.type === 'info' ? '#2563eb' : '#059669',
-          color: '#fff', padding: '10px 20px', borderRadius: 8, boxShadow: '0 8px 32px rgba(0,0,0,.2)',
-        }}>{toast.msg}</div>
-      )}
     </div>
   )
 }

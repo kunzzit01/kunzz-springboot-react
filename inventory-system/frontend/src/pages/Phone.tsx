@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { deleteScheduleEmployee, getPhoneRecordsByDate, getScheduleEmployees, savePhoneRecordsByDate, saveScheduleEmployee } from '../api'
 import '../styles/phone.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 interface Emp { id: number; name: string; phone?: string; position?: string; workArea?: string; restaurant?: string; isActive?: boolean }
 interface PhoneRec { employeeId: number; name?: string; position?: string; workArea?: string; getChecked: boolean; startTime?: string; endTime?: string; returnChecked: boolean; hasRecord?: boolean }
@@ -35,7 +36,6 @@ export default function Phone() {
   const [loading, setLoading] = useState(true)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 员工管理面板
   const [panel, setPanel] = useState(false)
   const [empModal, setEmpModal] = useState(false)
@@ -45,10 +45,7 @@ export default function Phone() {
   const [empArea, setEmpArea] = useState('service_line')
   const [empPosition, setEmpPosition] = useState('')
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 餐厅切换：同步 URL
   useEffect(() => {
@@ -290,9 +287,6 @@ export default function Phone() {
         </div>
       </div>
 
-      {toast && (
-        <div className={'alert alert-' + toast.type} style={{ position: 'fixed', top: 20, right: 20, zIndex: 10000, minWidth: 250, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>{toast.msg}</div>
-      )}
 
       {/* 员工管理面板 */}
       {panel && (

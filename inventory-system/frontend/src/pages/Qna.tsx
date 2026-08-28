@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createQna, getMe, getMyQna } from '../api'
 import '../styles/qna.css'
+import { showToast } from '../utils/toast'
 
 /** 问卷题目（对齐线上 qna.php，10 题 + 示例） */
 const QUESTIONS: { q: string; e: string }[] = [
@@ -27,13 +28,9 @@ export default function Qna() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pdfBusy, setPdfBusy] = useState(false)
-  const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const userRef = useRef<{ name: string; position: string }>({ name: '', position: '' })
 
-  const showMsg = (text: string, type: 'success' | 'error' = 'success') => {
-    setMsg({ text, type })
-    setTimeout(() => setMsg(null), 3500)
-  }
+  const showMsg = (text: string, type: 'success' | 'error' = 'success') => showToast(text, type)
 
   const load = async () => {
     try {
@@ -200,9 +197,6 @@ export default function Qna() {
         </div>
       </div>
 
-      <div id="messageArea">
-        {msg && <div className={'message ' + (msg.type === 'error' ? 'error' : 'success')}>{msg.text}</div>}
-      </div>
 
       <div className="qna-content-container">
         <div className="qna-content-wrapper">

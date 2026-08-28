@@ -4,6 +4,7 @@ import { getStockProducts, createStockProduct, updateStockProduct, deleteStockPr
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stockproducts.css'
+import { showToast } from '../utils/toast'
 
 interface ProductRow {
   id?: number
@@ -19,6 +20,8 @@ interface ProductRow {
   approver?: string
   system_assign?: string
   freezer_category?: string
+  /** 总览打码行（真实分配超出员工权限，只显示交集；只读防覆盖） */
+  _assignMasked?: boolean
 }
 
 const SYSTEMS = [
@@ -113,7 +116,6 @@ export default function StockProducts() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const [currentUser, setCurrentUser] = useState('')
   const [showTop, setShowTop] = useState(false)
   // 页面权限（对齐旧系统 check_permissions.php：无记录时默认全部可用，兼容 demo）
@@ -121,13 +123,12 @@ export default function StockProducts() {
   const [canApprove, setCanApprove] = useState(true)
   const [allowedSystems, setAllowedSystems] = useState<string[]>([])
   const [allowedViews, setAllowedViews] = useState<string[]>([])
+  // 权限加载完成后重刷一次列表（总览需按员工系统权限过滤）
+  const [permsLoaded, setPermsLoaded] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 当前用户（对齐 CURRENT_USER_APPLICANT：nickname > username_cn > username）
   useEffect(() => {
@@ -142,14 +143,16 @@ export default function StockProducts() {
         setAllowedSystems(perms)
         setAllowedViews(p?.views || [])
         // 无权限的系统不展示：当前 system 不在权限内 → 自动切到第一个有权限的系统（按 SYSTEMS 顺序）
-        // 修复：未勾选总览的用户首次进入不应展示总览
+        // 总览始终可见（对齐旧系统 stockproductname.js rebuildProductSystemDropdown：
+        // 总览是跨店共用货品查阅功能，不受分店权限限制）
         setSystem(prev => {
           const allowedKeys = SYSTEMS
-            .filter(s => perms.includes(s.key) || perms.some((x: string) => x.toLowerCase() === s.value.toLowerCase()))
+            .filter(s => s.key === 'overview' || perms.includes(s.key) || perms.some((x: string) => x.toLowerCase() === s.value.toLowerCase()))
             .map(s => s.key)
           if (allowedKeys.includes(prev)) return prev
           return allowedKeys.length > 0 ? allowedKeys[0] : prev
         })
+        setPermsLoaded(true)
       }
     }).catch(() => {})
   }, [])
@@ -158,9 +161,25 @@ export default function StockProducts() {
     setLoading(true)
     try {
       const d = await getStockProducts(system === 'overview' ? '' : system, kw || undefined)
+      // 总览 = 全部货品总目录（不再按 ≥2 间过滤；单一间的也展示）
+      // 权限过滤：有权限配置的员工只看与自己系统权限有交集 ≥ 1 间的货品，
+      // 且「系统分配」列只展示交集部分（打码，如 Central,J1,J2,J3 → J2+J3 员工只看到 J2,J3）；
+      // 打码行只读（_assignMasked），防止保存时用打码值覆盖真实分配；无配置（admin/demo）显示真实分配
+      const allowed = allowedSystems.map((x: string) => String(x).toLowerCase())
+      const restricted = allowed.length > 0
+      const rawItems: any[] = []
+      for (const i of (d.items || [])) {
+        if (system !== 'overview') { rawItems.push(i); continue }
+        const assigned = String(i.system_assign || '').split(',').map((s: string) => s.trim()).filter(Boolean)
+        const visible = restricted ? assigned.filter((a: string) => allowed.includes(a.toLowerCase())) : assigned
+        if (visible.length >= 1) {
+          const masked = restricted && visible.length < assigned.length
+          rawItems.push(masked ? { ...i, system_assign: visible.join(','), _assignMasked: true } : i)
+        }
+      }
       // 待批准在前（按产品名）、已批准在后（按批准时间 updated_at 升序：最新批准的排最后）
-      const pending = (d.items || []).filter((i: any) => !i.approver)
-      const approved = (d.items || []).filter((i: any) => i.approver)
+      const pending = rawItems.filter((i: any) => !i.approver)
+      const approved = rawItems.filter((i: any) => i.approver)
       const sortByName = (a: any, b: any) => String(a.product_name || '').localeCompare(String(b.product_name || ''))
       const sortByApprovedTime = (a: any, b: any) => {
         const ta = String(a.updated_at || '')
@@ -172,7 +191,7 @@ export default function StockProducts() {
       setRows([...pending, ...approved])
       setEditing(new Set())
       setDrafts({})
-      showMsg(`库存数据加载成功，共找到 ${d.total} 条记录`, 'success')
+      showMsg(`库存数据加载成功，共找到 ${rawItems.length} 条记录`, 'success')
     } catch {
       setRows([])
       showMsg('库存数据加载失败', 'error')
@@ -182,6 +201,8 @@ export default function StockProducts() {
   }
 
   useEffect(() => { load() }, [system]) // eslint-disable-line react-hooks/exhaustive-deps
+  // 权限到达后重刷：总览按员工系统权限过滤（首次加载时权限尚未返回，先按无限制渲染）
+  useEffect(() => { if (permsLoaded) load() }, [permsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 实时：货品种类变更（新增/编辑/删除/批准）自动刷新；编辑/保存/批准中不打断，结束后补刷
   useRealtime('*', () => load(), 1000, 3000, () => saving || approvingId !== null || editing.size > 0 || newRows.length > 0)
@@ -369,6 +390,14 @@ export default function StockProducts() {
   }
 
   const currentSys = SYSTEMS.find(s => s.key === system)!
+  // 总览编辑权限（按行判断，见 load() 里 _assignMasked）：
+  // - 无权限配置（admin/demo）或行的分配完全在权限内 → 可编辑（编辑时系统分配只能在自己有权限的系统里选）
+  // - 行的分配超出权限（打码行）→ 只读，防止保存时用打码值覆盖真实分配
+  // 可分配的系统选项：有权限配置的员工只能在自己有权限的系统内勾选
+  const assignableOptions = useMemo(() => {
+    if (allowedSystems.length === 0) return SYSTEM_OPTIONS.map(o => o.value)
+    return SYSTEM_OPTIONS.filter(o => allowedSystems.some(x => String(x).toLowerCase() === o.value.toLowerCase())).map(o => o.value)
+  }, [allowedSystems])
   const pageTitle = system === 'overview' ? '库存货品管理后台' : `库存货品管理后台 - ${currentSys.label}`
   const statusColTitle = system === 'overview' ? '批准状态' : '状态'
 
@@ -401,7 +430,8 @@ export default function StockProducts() {
                 <i className="fas fa-chevron-down"></i>
               </button>
               <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
-                {SYSTEMS.filter(s => allowedSystems.length === 0 || allowedSystems.includes(s.key) || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
+                {/* 对齐旧系统：总览始终可见（跨店共用货品查阅，不受分店权限限制） */}
+                {SYSTEMS.filter(s => s.key === 'overview' || allowedSystems.length === 0 || allowedSystems.includes(s.key) || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
                   <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')} onClick={() => { setSysOpen(false); setSystem(s.key); window.history.replaceState(null, '', '/products?system=' + s.key) }}>{s.label}</div>
                 ))}
               </div>
@@ -429,6 +459,8 @@ export default function StockProducts() {
               </button>
             )}
             <div className="stats-info">
+              {/* 总览隐藏逻辑提示（普通员工无需知道过滤规则）；悬浮说明保留在代码注释：
+                  总览只显示系统分配 ≥ 2 间的货品；单一间的不在此页，只出现在所属系统页 */}
               <div className="stat-item"><i className="fas fa-boxes" /> <span>总记录数: <span className="stat-value">{stats.total}</span></span></div>
               <div className="stat-item"><i className="fas fa-check-circle" /> <span>已批准: <span className="stat-value" style={{ color: '#065f46' }}>{stats.approved}</span></span></div>
               <div className="stat-item"><i className="fas fa-clock" /> <span>待批准: <span className="stat-value" style={{ color: '#92400e' }}>{stats.pending}</span></span></div>
@@ -482,7 +514,7 @@ export default function StockProducts() {
                     <td><input className="excel-input text-input readonly" readOnly value={r.applicant || ''} placeholder="申请人" /></td>
                     <td>
                       {system === 'overview'
-                        ? <MultiSelect value={r.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setNew(idx, { system_assign: v })} />
+                        ? <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
                         : <input className="excel-input text-input readonly" readOnly value={currentSys.value} title="仅总览可设置系统分配" />}
                     </td>
                     <td><MultiSelect value={r.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
@@ -542,7 +574,7 @@ export default function StockProducts() {
                       <td>
                         {system === 'overview' ? (
                           isEditing
-                            ? <MultiSelect value={draft.system_assign || ''} options={SYSTEM_OPTIONS.map(o => o.value)} onChange={(v) => setDraft(id, { system_assign: v })} />
+                            ? <MultiSelect value={draft.system_assign || ''} options={assignableOptions} onChange={(v) => setDraft(id, { system_assign: v })} />
                             : <input className="excel-input" readOnly value={r.system_assign || ''} />
                         ) : (
                           <input className="excel-input" readOnly value={currentSys.value} title="仅总览可设置系统分配" />
@@ -565,7 +597,7 @@ export default function StockProducts() {
                         )}
                       </td>
                       <td className="action-cell">
-                        {canApply && (isEditing ? (
+                        {canApply && !(system === 'overview' && r._assignMasked) && (isEditing ? (
                           <>
                             <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存记录"><i className="fas fa-save" /></button>
                             <button className="delete-row-btn" onClick={() => cancelEdit(id)} title="取消"><i className="fas fa-times" /></button>
@@ -593,14 +625,6 @@ export default function StockProducts() {
         <i className="fas fa-chevron-up" />
       </button>
 
-      {toast && (
-        <div className="toast-container">
-          <div className={'toast toast-' + toast.type}>
-            <span className="toast-content">{toast.msg}</span>
-            <span className="toast-progress" />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

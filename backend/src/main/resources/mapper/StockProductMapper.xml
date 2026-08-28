@@ -2,7 +2,8 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.kunzz.inventory.mapper.StockProductMapper">
 
-    <!-- 货品种类列表：对齐旧系统 stockapi.php —— FIND_IN_SET 逗号精确匹配，未分配系统的记录只出现在总览 -->
+    <!-- 货品种类列表：对齐旧系统 stockapi.php —— FIND_IN_SET 逗号精确匹配 -->
+    <!-- 总览（systemAssign 为空）返回全部货品；总览的权限交集过滤/打码由前端按登录人做（见 StockProducts.tsx load()），后端 API 无用户上下文 -->
     <select id="listRows" resultType="java.util.LinkedHashMap">
         SELECT id, date, time, product_code, product_name, specification, price, category,
                supplier, applicant, approver, system_assign, freezer_category,

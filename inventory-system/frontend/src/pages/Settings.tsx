@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getMinimumProducts, saveMinimum, saveMinimumBatch } from '../api'
 import '../styles/settings.css'
+import { showToast } from '../utils/toast'
 
 /** 最低库存设置（对齐线上 stockminimum.php：按系统列出全部在库货品，行内/批量保存） */
 const SYSTEMS = [
@@ -34,14 +35,12 @@ export default function Settings() {
   const [filtered, setFiltered] = useState<MinProduct[]>([])
   // 未保存的变更：product_name -> minimum_quantity
   const [pending, setPending] = useState<Record<string, number>>({})
+  // ref 同步镜像：保证键盘快捷键/保存时读到最新未保存值
+  const pendingRef = useRef<Record<string, number>>({})
   const [saving, setSaving] = useState(false)
   const [savingRow, setSavingRow] = useState<string | null>(null)
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // ---- 加载某系统全部在库货品（带竞态保护：快速切换系统时丢弃过期响应） ----
   const loadSeq = useRef(0)
@@ -66,13 +65,16 @@ export default function Settings() {
   }
   useEffect(() => { load(system) }, [])
 
-  // ---- 实时搜索（防抖 200ms，对齐线上 setupRealTimeSearch） ----
+  // ---- 实时搜索（防抖 200ms，对齐线上 setupRealTimeSearch）----
+  // 注意：依赖里不放 allProducts（行内编辑提交时只刷新状态不重跑搜索）；最新数据从 ref 读
+  const allRef = useRef<MinProduct[]>([])
+  allRef.current = allProducts
   useEffect(() => {
     const t = setTimeout(() => {
-      setFiltered(applyFilter(allProducts, searchTerm))
+      setFiltered(applyFilter(allRef.current, searchTerm))
     }, 200)
     return () => clearTimeout(t)
-  }, [searchTerm, allProducts])
+  }, [searchTerm])
 
   // ---- 切换系统（Tab，对齐线上 switchSystem） ----
   const switchSystem = (sys: string) => {
@@ -89,15 +91,29 @@ export default function Settings() {
     load(sys)
   }
 
-  // ---- 修改最低库存：更新本地数据 + 标记未保存 ----
-  const onQtyChange = (name: string, v: string) => {
-    const qty = parseFloat(v) || 0
-    setAllProducts((prev) => prev.map((p) => (p.product_name === name ? { ...p, minimum_quantity: qty } : p)))
-    setPending((prev) => ({ ...prev, [name]: qty }))
+
+  /** 提交一行：更新本地数据 + 标记未保存；非法输入返回 false（由调用方恢复原值） */
+  const commitQty = (name: string, raw: string): boolean => {
+    const prev = allRef.current.find((p) => p.product_name === name)?.minimum_quantity ?? 0
+    let qty = parseFloat(raw)
+    if (isNaN(qty) || qty < 0) { return false }
+    if (Object.prototype.hasOwnProperty.call(pendingRef.current, name) || qty !== prev) {
+      pendingRef.current = { ...pendingRef.current, [name]: qty }
+      setPending(pendingRef.current)
+    }
+    if (qty !== prev) {
+      const upd = (p: MinProduct) => (p.product_name === name ? { ...p, minimum_quantity: qty } : p)
+      setAllProducts((cur) => cur.map(upd))
+      setFiltered((cur) => cur.map(upd)) // 同步过滤视图，否则低库存高亮不刷新
+    }
+    return true
   }
 
   // ---- 保存单条（行内保存按钮，对齐线上 saveIndividualSetting；各系统设置独立） ----
   const saveOne = async (name: string) => {
+    // 若焦点还在该行的输入框里（尚未 blur），先把值提交进来再保存
+    const active = document.activeElement as HTMLInputElement | null
+    if (active?.classList.contains('quantity-input') && active.dataset.name === name) commitQty(name, active.value)
     const qty = allProducts.find((p) => p.product_name === name)?.minimum_quantity ?? 0
     setSavingRow(name)
     try {
@@ -109,12 +125,24 @@ export default function Settings() {
   }
 
   // ---- 批量保存所有未保存变更（对齐线上 saveAllSettings；各系统设置独立） ----
+  // 若焦点还在某个输入框里（未 blur），先把那一行的值补收进来再保存
+  const collectFocusedInput = (): Record<string, number> => {
+    const map = { ...pendingRef.current }
+    const ae = document.activeElement as HTMLInputElement | null
+    if (ae && ae.classList.contains('quantity-input') && ae.dataset.name) {
+      const q = parseFloat(ae.value)
+      if (!isNaN(q) && q >= 0) map[ae.dataset.name] = q
+      ae.blur()
+    }
+    return map
+  }
   const saveAll = async () => {
-    const entries = Object.entries(pending)
+    const entries = Object.entries(collectFocusedInput())
     if (entries.length === 0) { showMsg('没有未保存的更改', 'info'); return }
     setSaving(true)
     try {
       await saveMinimumBatch(system, entries.map(([product_name, minimum_quantity]) => ({ product_name, minimum_quantity })))
+      pendingRef.current = {}
       setPending({})
       showMsg(`成功保存 ${entries.length} 个货品设置`)
     } catch { /* 拦截器已提示 */ }
@@ -218,8 +246,11 @@ export default function Settings() {
                   <td className="product-name-cell"><strong>{p.product_name}</strong></td>
                   <td className="text-center spec-cell">{p.specification || '-'}</td>
                   <td>
-                    <input type="number" className="quantity-input" value={p.minimum_quantity ?? 0} min={0} step="0.01" placeholder="0"
-                      onChange={(e) => onQtyChange(p.product_name || '', e.target.value)} />
+                    <input key={system + '|' + (p.product_name || '')} type="number" className="quantity-input" data-name={p.product_name || ''}
+                      defaultValue={p.minimum_quantity ?? 0} min={0} step="0.01" placeholder="0"
+                      onChange={(e) => { /* 打字时不重渲染：所有计算延迟到 blur/Enter */ }}
+                      onBlur={(e) => { if (!commitQty(p.product_name || '', e.target.value)) e.target.value = String(p.minimum_quantity ?? 0) }}
+                      onKeyDown={(e) => { if ((e as React.KeyboardEvent).key === 'Enter') (e.target as HTMLInputElement).blur() }} />
                   </td>
                   <td className="text-center">
                     <span className={low ? 'min-stock-low' : 'min-stock-ok'}>{Number(p.current_stock ?? 0).toFixed(3)}</span>
@@ -238,12 +269,6 @@ export default function Settings() {
         </div>
       </div>
 
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 10000, background: toast.type === 'error' ? '#fff2f0' : toast.type === 'info' ? '#e6f4ff' : '#f6ffed', border: '1px solid ' + (toast.type === 'error' ? '#ffccc7' : toast.type === 'info' ? '#91caff' : '#b7eb8f'), padding: '10px 16px', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.12)', fontSize: 13 }}>
-          <i className={'fas ' + (toast.type === 'error' ? 'fa-times-circle' : toast.type === 'info' ? 'fa-info-circle' : 'fa-check-circle')} style={{ marginRight: 6, color: toast.type === 'error' ? '#cf1322' : toast.type === 'info' ? '#1677ff' : '#389e0d' }} />
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

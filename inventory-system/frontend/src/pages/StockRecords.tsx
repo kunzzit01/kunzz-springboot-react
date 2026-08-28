@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { getStockSummary, getMinimums } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
+import { showToast } from '../utils/toast'
 
 interface SummaryItem {
   no?: number
@@ -20,7 +21,7 @@ interface SummaryItem {
   has_price_diff?: boolean
   /** 同货品多单价：合并展示（库存合并，单价变体明细） */
   price_count?: number
-  price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string }[]
+  price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; code_nos?: string[] }[]
 }
 interface SummaryData {
   summary: SummaryItem[]
@@ -75,6 +76,75 @@ const normalizeItemType = (type?: string) => {
   if (!type) return ''
   if (type === 'Drinks' || type === 'drinks') return 'Service Line'
   return type
+}
+
+// 无库存不展示（用户需求：凡是没库存的记录一律隐藏，Sake 同理）
+const hasStock = (item: SummaryItem) => (parseFloat(String(item.total_stock)) || 0) !== 0
+
+/**
+ * 同名货品合并（用户需求：不同编码但同名的记录合并为一行，只出现一个货品名称）
+ * - 分组键：product_name（trim + 忽略大小写）
+ * - 库存/总价：各行相加；编号去重后用 " / " 连接（保留追溯线索）
+ * - 规格一致则沿用，混合时置空（显示 '-'），小数位按是否全 Kilo 取 3/2 位
+ * - 多单价：合并所有变体后按价格归并（同价累加库存），重算 price_count
+ */
+const mergeSummaryItems = (items: SummaryItem[]): SummaryItem[] => {
+  const order: string[] = []
+  const map = new Map<string, SummaryItem[]>()
+  for (const it of items) {
+    const key = (it.product_name || '').trim().toLowerCase() || String(it.no)
+    if (!map.has(key)) { map.set(key, []); order.push(key) }
+    map.get(key)!.push(it)
+  }
+  const out: SummaryItem[] = []
+  for (const key of order) {
+    const arr = map.get(key)!
+    if (arr.length === 1) { out.push(arr[0]); continue }
+    const base: SummaryItem = { ...arr[0] }
+    // 编号合并（去重，保持出现顺序）
+    const codes: string[] = []
+    arr.forEach(a => { const c = (a.code_number || '').trim(); if (c && !codes.includes(c)) codes.push(c) })
+    base.code_number = codes.join(' / ')
+    // 规格：一致则沿用；混合置空（表格显示 '-'）
+    const specs = Array.from(new Set(arr.map(a => (a.specification || '').trim()).filter(Boolean)))
+    base.specification = specs.length === 1 ? specs[0] : ''
+    // 数量与金额汇总
+    base.total_stock = arr.reduce((s, a) => s + (parseFloat(String(a.total_stock)) || 0), 0)
+    base.total_price = arr.reduce((s, a) => s + (parseFloat(String(a.total_price)) || 0), 0)
+    const decimals = specs.length === 1 && specs[0].toLowerCase() === 'kilo' ? 3 : 2
+    base.formatted_stock = base.total_stock.toFixed(decimals)
+    base.formatted_total_price = base.total_price.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    // 价格变体归并（同价累加库存；保持首次出现顺序；记录每个价的编码来源）
+    const pmap = new Map<number, { price: number; stock: number; total_price: number; code_nos: string[] }>()
+    const porder: number[] = []
+    arr.forEach(a => {
+      const selfCode = (a.code_number || '').trim()
+      ;(a.price_variants || []).forEach(v => {
+        const p = Math.round((parseFloat(String(v.price)) || 0) * 100) / 100
+        if (!pmap.has(p)) { pmap.set(p, { price: p, stock: 0, total_price: 0, code_nos: [] }); porder.push(p) }
+        const e = pmap.get(p)!
+        e.stock += parseFloat(String(v.stock)) || 0
+        e.total_price += parseFloat(String(v.total_price)) || 0
+        if (selfCode && !e.code_nos.includes(selfCode)) e.code_nos.push(selfCode)
+      })
+    })
+    const variants = porder.map(p => {
+      const e = pmap.get(p)!
+      return {
+        price: e.price, stock: e.stock, total_price: e.total_price, code_nos: e.code_nos,
+        formatted_stock: e.stock.toFixed(decimals),
+        formatted_price: p.toFixed(2),
+        formatted_total_price: e.total_price.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      }
+    })
+    base.price_variants = variants
+    base.price_count = variants.length
+    base.has_price_diff = variants.length > 1
+    // 归并后只剩一个单价 → 直接显示该价（无差价悬浮）
+    if (variants.length === 1) { base.formatted_price = variants[0].formatted_price; base.has_price_diff = false; base.price_raw = undefined as unknown as number }
+    out.push(base)
+  }
+  return out
 }
 
 const formatStockQuantity = (item: SummaryItem) => {
@@ -162,9 +232,10 @@ export default function StockRecords() {
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [typeSel, setTypeSel] = useState<Record<string, Set<string>>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
+  // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
+  const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
   // 多单价展开（按行 no 记录展开状态）
   const [openVariants, setOpenVariants] = useState<Set<number>>(new Set())
   const toggleVariants = (no: number) => setOpenVariants(prev => {
@@ -177,10 +248,7 @@ export default function StockRecords() {
 
   useRawPriceTooltip()
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 加载某系统数据
   const load = async (sys: string) => {
@@ -283,16 +351,29 @@ export default function StockRecords() {
     })
   }
 
+  // 同名货品展示层合并（不同编码同名 → 一行）；type_stats 卡片计数仍用后端原始值
+  const mergedData = useMemo(() => {
+    const m: Record<string, SummaryData> = {}
+    Object.keys(data).forEach(k => {
+      const merged: SummaryData = { ...data[k], summary: mergeSummaryItems(data[k].summary) }
+      m[k] = merged
+    })
+    return m
+  }, [data])
+
   // 过滤后的行（搜索 + 类型）
   const filtered = useMemo(() => {
-    const d = data[system]
+    const d = mergedData[system]
     if (!d) return []
     const kw = (filters[system] || '').toLowerCase()
     const sel = typeSel[system] || new Set<string>()
     return d.summary.filter(item => {
+      if (!hasStock(item)) return false // 无库存不展示
       const itemType = normalizeItemType(item.type)
       if (sel.size > 0 && !sel.has(itemType)) return false
       if (!kw) return true
+      // 精确模式：只显示货品名称完全等于关键字的行（不区分大小写）
+      if (exactMatch[system]) return (item.product_name || '').toLowerCase() === kw.trim()
       return (
         String(item.no || '').includes(kw) ||
         (item.product_name || '').toLowerCase().includes(kw) ||
@@ -300,7 +381,7 @@ export default function StockRecords() {
         (item.specification || '').toLowerCase().includes(kw)
       )
     })
-  }, [data, system, filters, typeSel])
+  }, [mergedData, system, filters, typeSel, exactMatch])
 
   const cur = data[system]
   const curFiltered = filtered
@@ -315,7 +396,7 @@ export default function StockRecords() {
 
   // 导出 PDF（对齐线上 stocklistall.js exportData -> generatePDF：标题/时间/记录数/日期/表头/列宽/最低库存/总计行/页脚 完全一致）
   const exportPDF = async (sys: string) => {
-    let items = sys === system ? curFiltered : (data[sys]?.summary || [])
+    let items = sys === system ? curFiltered : (mergedData[sys]?.summary || []).filter(hasStock)
     if (items.length === 0) { showMsg('没有数据可导出', 'error'); return }
     // J2 导出过滤掉 Sake 类型（对齐线上 performExport）
     if (sys === 'j2') {
@@ -410,9 +491,11 @@ export default function StockRecords() {
 
 
   const renderSystemPage = (sys: string) => {
-    const d = data[sys]
+    const d = mergedData[sys]
     const isCentral = sys === 'central'
     const cards = typeCards[sys] || []
+    // 类型卡片隐藏规则：该类型在（同名合并+无库存隐藏后的）表格里已无任何行 → 卡片不展示
+    const typeHasStock = (t: string) => (d?.summary || []).some(it => normalizeItemType(it.type) === t && hasStock(it))
     const sel = typeSel[sys] || new Set<string>()
     // 8/24 修复：低库存按产品名汇总检测（名字不管价格），且各系统独立（只用本系统 summary 数据）
     const productTotals: Record<string, number> = {}
@@ -420,11 +503,11 @@ export default function StockRecords() {
       const name = (it.product_name || '').trim()
       productTotals[name] = (productTotals[name] || 0) + (parseFloat(String(it.total_stock)) || 0)
     })
-    const sysFiltered = sys === system ? curFiltered : (d ? d.summary.filter(it => {
+    const sysFiltered = sys === system ? curFiltered : (d ? d.summary.filter(it => hasStock(it) && (() => {
       const kw = (filters[sys] || '').toLowerCase()
       if (!kw) return true
       return (it.product_name || '').toLowerCase().includes(kw) || (it.code_number || '').toLowerCase().includes(kw)
-    }) : [])
+    })()) : [])
     return (
       <div key={sys} id={sys + '-page'} className={'page-section' + (sys === system ? ' active' : '')} style={sys === system ? undefined : { display: 'none' }}>
         <div className="unified-header-row">
@@ -458,7 +541,7 @@ export default function StockRecords() {
                   </div>
                 </div>
                 <div className="type-category-cards" style={showTypeCards ? { display: 'flex' } : { display: 'none' }}>
-                  {cards.filter(c => c.show).map(c => (
+                  {cards.filter(c => c.show && typeHasStock(c.type)).map(c => (
                     <div key={c.type} className={'type-grid-item is-filterable' + (sel.has(c.type) ? ' is-active' : '')}
                       data-type={c.type} role="button" tabIndex={0} aria-pressed={sel.has(c.type)}
                       onClick={(e) => { toggleType(sys, c.type); e.stopPropagation() }}>
@@ -474,7 +557,7 @@ export default function StockRecords() {
                 </div>
               </div>
             ) : (
-              cards.filter(c => c.show).map(c => (
+              cards.filter(c => c.show && typeHasStock(c.type)).map(c => (
                 <div key={c.type} className={'type-grid-item is-filterable' + (sel.has(c.type) ? ' is-active' : '')}
                   data-type={c.type} role="button" tabIndex={0} aria-pressed={sel.has(c.type)}
                   onClick={() => toggleType(sys, c.type)}>
@@ -491,7 +574,12 @@ export default function StockRecords() {
             <div className="header-search">
               <div className={'smartSearchWrapper' + (searchExpanded[sys] ? ' expanded' : '')}
                 onClick={(e) => { if (!searchExpanded[sys]) { e.stopPropagation(); setSearchExpanded(prev => ({ ...prev, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 200) } }}>
-                <i className="fas fa-search smartSearch-icon"></i>
+                {/* 左侧图标即搜索模式切换：放大镜=模糊 / 等号=精确（货品名完全等于关键字）；对齐进出货页 */}
+                <span className="smartSearch-icon"
+                  title={exactMatch[sys] ? '精确搜索：只显示货品名称完全等于关键字的行（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的行（点击切换为精确）'}
+                  onClick={(e) => { e.stopPropagation(); setExactMatch(prev => ({ ...prev, [sys]: !prev[sys] })); setSearchExpanded(p => ({ ...p, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 50) }}>
+                  <i className={'fas ' + (exactMatch[sys] ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch[sys] ? '#ff7b00' : '#9ca3af' }} />
+                </span>
                 <input ref={(el) => { searchRefs.current[sys] = el }} type="text" id={sys + '-unified-filter'} className="smartSearch-input"
                   placeholder={isCentral ? '输入关键字搜索...' : sys === 'j1' ? '搜索序号、货品编号、货品、库存数量、规格、单价、总价...' : '搜索货品名称、编号或规格单位...'}
                   value={filters[sys] || ''} onChange={(e) => setFilters(prev => ({ ...prev, [sys]: e.target.value }))} />
@@ -576,11 +664,11 @@ export default function StockRecords() {
                       <td className="text-center">{item.specification || '-'}</td>
                       <td className="price-cell">
                         {multi ? (
-                          <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <div className="multi-price-wrap">
                             <button className={'multi-price-btn' + (expanded ? ' expanded' : '')} onClick={() => toggleVariants(Number(item.no))}
-                              title="点击展开各单价明细">
-                              <span className="mpp-text">多个单价</span>
-                              <span className="mpp-count">({item.price_count})</span>
+                              title={expanded ? '点击收起各单价明细' : '点击展开各单价明细'}>
+                              <span className="mpp-text">{expanded ? '收起明细' : '多个单价'}</span>
+                              {!expanded && <span className="mpp-count">({item.price_count})</span>}
                               <i className={'fas fa-chevron-' + (expanded ? 'up' : 'down')} />
                             </button>
                           </div>
@@ -598,26 +686,40 @@ export default function StockRecords() {
                         </div>
                       </td>
                     </tr>
-                    {expanded && (
-                      <tr className="price-variants-expand-row">
-                        <td colSpan={8} style={{ padding: 0, border: 'none' }}>
-                          <div className="pv-expand-inner">
-                            <div className="pv-expand-list">
-                              {(item.price_variants || []).map((v, vi) => (
-                                <div key={vi} className="pv-expand-item">
-                                  <span className="pve-dot">●</span>
-                                  <span className="pve-price">RM {v.formatted_price || Number(v.price).toFixed(2)}</span>
-                                  <span className="pve-mid">×</span>
-                                  <span className="pve-stock">{v.formatted_stock || Number(v.stock).toFixed(2)}</span>
-                                  <span className="pve-eq">=</span>
-                                  <span className="pve-total">RM {v.formatted_total_price || Number(v.total_price).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
-                                </div>
-                              ))}
-                            </div>
+                    {expanded && (item.price_variants || []).map((v, vi) => {
+                      const vspec = (item.specification || '').trim().toLowerCase()
+                      const vraw = parseFloat(String(v.stock))
+                      const vStockStr = vspec === 'kilo'
+                        ? (!isNaN(vraw) ? vraw.toFixed(3) : (v.formatted_stock || '0.000'))
+                        : (v.formatted_stock || Number(v.stock).toFixed(2))
+                      return (
+                      <tr className="price-variant-subrow" key={'v' + vi}>
+                        <td className="text-center"></td>
+                        <td className="text-center pv-muted" title={(v.code_nos && v.code_nos.length > 1 ? '此单价由多个编号构成：' : '来源编号：') + ((v.code_nos && v.code_nos.join(' / ')) || '')}>{(v.code_nos && v.code_nos.length ? v.code_nos.join(' / ') : item.code_number) || '-'}</td>
+                        <td><span className="pv-caret">└</span> {item.product_name}</td>
+                        <td className="stock-cell"><span className="pv-muted">-</span></td>
+                        <td className="stock-cell">
+                          <div className={'currency-display ' + (parseFloat(String(v.stock)) > 0 ? 'positive-value' : 'zero-value')}>
+                            <span className="currency-symbol">&nbsp;</span>
+                            <span className="currency-amount">{vStockStr}</span>
+                          </div>
+                        </td>
+                        <td className="text-center pv-muted">{item.specification || '-'}</td>
+                        <td className="price-cell">
+                          <div className="currency-display">
+                            <span className="currency-symbol">RM</span>
+                            <span className="currency-amount">{v.formatted_price || Number(v.price).toFixed(2)}</span>
+                          </div>
+                        </td>
+                        <td className="price-cell">
+                          <div className={'currency-display ' + (parseFloat(String(v.total_price)) > 0 ? 'positive-value' : 'zero-value')}>
+                            <span className="currency-symbol">RM</span>
+                            <span className="currency-amount">{v.formatted_total_price || Number(v.total_price).toLocaleString('en-MY', { minimumFractionDigits: 2 })}</span>
                           </div>
                         </td>
                       </tr>
-                    )}
+                      )
+                    })}
                     </Fragment>
                   )
                 })}
@@ -678,15 +780,6 @@ export default function StockRecords() {
         {systems.map(s => renderSystemPage(s.key))}
       </div>
 
-      {toast && (
-        <div className="toast-container" style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 10000 }}>
-          <div className={'toast show toast-' + toast.type}>
-            <span className="toast-icon">{toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : toast.type === 'info' ? 'ℹ' : '⚠'}</span>
-            <span className="toast-content">{toast.msg}</span>
-            <span className="toast-progress"></span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

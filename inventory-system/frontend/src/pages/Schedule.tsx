@@ -5,6 +5,7 @@ import {
 } from '../api'
 import '../styles/schedule.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 interface Emp { id: number; name: string; phone?: string; position?: string; workArea?: string; restaurant?: string; isActive?: boolean }
 interface Shift { id: number; shiftCode: string; restaurant?: string; startTime?: string; endTime?: string }
@@ -96,7 +97,6 @@ export default function Schedule() {
   const [restaurantOpen, setRestaurantOpen] = useState(false)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [dateType, setDateType] = useState<'year' | 'month' | null>(null)
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
   // 排班模态框
@@ -127,7 +127,6 @@ export default function Schedule() {
   const [batchModal, setBatchModal] = useState(false)
   const [batchValue, setBatchValue] = useState('')
   const [editModeHint, setEditModeHint] = useState(false)
-  const toastTimer = useRef<any>(null)
   const cellRefs = useRef<Map<string, HTMLDivElement>>(new Map())
   const autoSaveTimers = useRef<Map<string, any>>(new Map())
   const selectionStartRef = useRef<string | null>(null)
@@ -137,11 +136,7 @@ export default function Schedule() {
   const modifiedRef = useRef<Map<string, { employeeId: number; dateStr: string; value: string }>>(new Map())
   const dirtyCellsRef = useRef<Map<string, string>>(new Map())
 
-  const showMsg = useCallback((msg: string, type = 'success') => {
-    setToast({ msg, type })
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 3000)
-  }, [])
+  const showMsg = useCallback((msg: string, type = 'success') => showToast(msg, type), [])
 
   useEffect(() => {
     const url = new URL(window.location.href)
@@ -1141,9 +1136,6 @@ export default function Schedule() {
         </div>
       </div>
 
-      {toast && (
-        <div className={'alert alert-' + toast.type} style={{ position: 'fixed', top: 20, right: 20, zIndex: 10000, minWidth: 250, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>{toast.msg}</div>
-      )}
 
       {/* 排班模态框 */}
       {cellSel && (

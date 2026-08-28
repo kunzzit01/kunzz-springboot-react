@@ -5,6 +5,7 @@ import type { DishwareBreak, DishwareStockVO } from '../types'
 import DishwareViewSelector from '../components/DishwareViewSelector'
 import '../styles/dishware.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 /**
  * 破损记录独立页面（http://localhost:5174/dishware_break）
@@ -17,13 +18,9 @@ export default function DishwareBreakPage() {
   const { flash, isHl } = useRowHighlight((b: any) =>
     String((rows.find((r) => r.dishwareId === b.dishwareId)?.codeNumber) || '#' + b.dishwareId))
   const [breaks, setBreaks] = useState<DishwareBreak[]>([])
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
   const load = async () => {
     try {
       const [s, b] = await Promise.all([getDishwareStock(), getDishwareBreaks()])
@@ -639,11 +636,6 @@ export default function DishwareBreakPage() {
       )}
 
       {/* toast */}
-      {toast && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 99999, background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', padding: '10px 18px', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.2)', fontSize: 14 }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

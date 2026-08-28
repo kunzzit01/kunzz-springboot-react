@@ -477,27 +477,17 @@
   color: #111827; font-size: inherit; font-weight: 600;
   cursor: pointer; white-space: nowrap; transition: color 0.15s;
 }
+/* 开关靠右摆放，与表格线留出呼吸空间 */
+.stl-root .price-cell .multi-price-wrap { display: flex; justify-content: flex-end; padding-right: 12px; }
 .stl-root .multi-price-btn:hover { color: #ff7b00; }
-.stl-root .multi-price-btn.expanded { color: #ff7b00; }
+/* 展开态降噪：灰色小字，把视觉重心还给下方的拆分明细行 */
+.stl-root .multi-price-btn.expanded { color: #9ca3af; font-weight: 400; font-size: 0.92em; }
+.stl-root .multi-price-btn.expanded:hover { color: #ff7b00; }
 .stl-root .multi-price-btn .mpp-count { color: #9ca3af; font-weight: 500; }
-.stl-root .multi-price-btn i { font-size: 10px; color: #9ca3af; }
-.stl-root .price-variants-expand-row td { background: #fffbf5; }
-.stl-root .pv-expand-inner {
-  margin: 4px 8px 10px; border: 1px solid #ffe3bd; border-radius: 10px;
-  background: linear-gradient(180deg, #fffdf8, #fff7ec); overflow: hidden;
-}
-.stl-root .pv-expand-list { padding: 4px 0; }
-.stl-root .pv-expand-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 7px 16px 7px 20px; font-size: clamp(8px, 0.74vw, 13px);
-  border-bottom: 1px dashed #f4e2c8; white-space: nowrap;
-}
-.stl-root .pv-expand-item:last-child { border-bottom: none; }
-.stl-root .pv-expand-item .pve-dot { color: #ff7b00; font-size: 8px; width: 10px; }
-.stl-root .pv-expand-item .pve-price { font-weight: 700; color: #111827; min-width: 74px; }
-.stl-root .pv-expand-item .pve-mid, .stl-root .pv-expand-item .pve-eq { color: #b8a892; }
-.stl-root .pv-expand-item .pve-stock { color: #6b7280; min-width: 56px; }
-.stl-root .pv-expand-item .pve-total { color: #065f46; font-weight: 600; }.stl-root .stock-table td.stock-cell{
+.stl-root .multi-price-btn i { font-size: 10px; color: #9ca3af; margin-left: 5px; }
+.stl-root .price-variant-subrow td { background: #fffbf5; }
+.stl-root .price-variant-subrow .pv-caret { color: #ff7b00; margin-right: 6px; font-weight: 700; }
+.stl-root .price-variant-subrow .pv-muted { color: #9ca3af; }.stl-root .stock-table td.stock-cell{
     padding: 0;
     text-align: center;
 }.stl-root .stock-cell .currency-display{
@@ -1176,7 +1166,9 @@
     font-size: 15px;
     color: #9ca3af;
     flex-shrink: 0;
-    pointer-events: none;
+    /* 精确/模糊搜索切换开关（对齐进出货页）：改为可点击 */
+    pointer-events: auto;
+    cursor: pointer;
     transition: color 0.25s ease;
     line-height: 1;
 }

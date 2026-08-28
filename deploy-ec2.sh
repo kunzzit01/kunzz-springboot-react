@@ -2,7 +2,7 @@
 # =============================================================================
 # Kunzz Inventory System - EC2 一键部署脚本
 # 用法：
-#   1) 先按 DEPLOY.md 在 EC2 装好 MariaDB / Java 21 / Nginx，并用 DBeaver 迁移数据库
+#   1) 先按 docs/OPS.md 在 EC2 装好 MariaDB / Java 21 / Nginx，并用 DBeaver 迁移数据库
 #   2) 修改下方「配置区」变量
 #   3) 在本地（Git Bash / Linux / macOS）运行：  bash deploy-ec2.sh
 #
@@ -20,7 +20,7 @@ APP_DIR="/opt/inventory"          # EC2 上后端部署目录
 WEB_ADMIN_DIR="/var/www/admin"    # EC2 上后台前端目录
 WEB_SITE_DIR="/var/www/website"   # EC2 上官网目录
 
-# 数据库（与 DEPLOY.md 一致，脚本会写入 EC2 的环境文件）
+# 数据库（与 docs/OPS.md 一致，脚本会写入 EC2 的环境文件）
 DB_URL="jdbc:mysql://127.0.0.1:3306/u690174784_kunzz?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true"
 DB_USERNAME="inventory_app"
 DB_PASSWORD="换成强密码"

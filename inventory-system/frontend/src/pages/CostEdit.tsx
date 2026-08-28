@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getKpiReport, saveKpiCost, getKpiMonthStock, saveKpiMonthStock } from '../api'
 import '../styles/kpiedit.css'
+import { showToast } from '../utils/toast'
 
 interface DayRow {
   [field: string]: string | undefined
@@ -32,15 +33,9 @@ export default function CostEdit() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [stockInput, setStockInput] = useState('')
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const preservedRef = useRef<Record<number, DayRow>>({})
-  const toastTimer = useRef<any>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    if (toastTimer.current) clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   const daysInMonth = new Date(year, month, 0).getDate()
   const yearMonth = year + '-' + String(month).padStart(2, '0')
@@ -572,9 +567,6 @@ export default function CostEdit() {
         </div>
       </div>
 
-      {toast && (
-        <div className={'alert alert-' + toast.type} style={{ position: 'fixed', top: 20, right: 20, zIndex: 10000, minWidth: 250, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>{toast.msg}</div>
-      )}
     </div>
   )
 }

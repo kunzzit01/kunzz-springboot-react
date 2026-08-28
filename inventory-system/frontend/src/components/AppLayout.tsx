@@ -122,6 +122,14 @@ export default function AppLayout() {
   const [perms, setPerms] = useState<Permissions | null>(null)
   const [pending, setPending] = useState(0)
   const [collapsed, setCollapsed] = useState(false)
+  // 窗屏（≤768px）自动收起侧边栏：给主内容留足宽度展示多列表格；用户仍可点汉堡按钮展开
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const apply = () => { if (mq.matches) setCollapsed(true) }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   // 收起态悬浮提示（组名 + 页面列表）

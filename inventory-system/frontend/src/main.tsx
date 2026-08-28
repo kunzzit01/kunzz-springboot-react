@@ -7,6 +7,7 @@ import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import App from './App'
 import './index.css'
+import './styles/toast.css' // 全局 toast：1:1 对齐旧 live 系统（backend/css/toast.css）
 
 dayjs.locale('zh-cn')
 

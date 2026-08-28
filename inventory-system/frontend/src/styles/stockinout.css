@@ -88,8 +88,20 @@
   border: 2px solid #000; display: flex; flex-direction: column;
   flex: 1; min-height: 0; overflow: hidden;
 }
-.sio-root .table-scroll-container { overflow-x: auto; overflow-y: auto; flex: 1; position: relative; }
+.sio-root .table-scroll-container { overflow-x: hidden; overflow-y: auto; flex: 1; position: relative; }
 .sio-root .stock-table { table-layout: fixed; width: 100%; border-collapse: collapse; font-size: 14px; }
+/* 全列自适应（不横向滚动）：单元格内容超出时省略号截断；编辑控件在自身列内弹性收缩 */
+.sio-root .stock-table tbody td { overflow: hidden; }
+/* 编辑/新增行同样裁剪：确保控件在任何屏宽下都不穿透相邻列 */
+.sio-root .stock-table tr.editing-row > td,
+.sio-root .stock-table tr.new-row > td { overflow: hidden; }
+.sio-root .stock-table tbody tr:not(.editing-row):not(.new-row) > td { white-space: nowrap; text-overflow: ellipsis; }
+/* 手机窄屏：编辑态隐藏单价/总价列的 RM 前缀，把宽度还给输入框，避免溢出 */
+@media (max-width: 480px) {
+  .sio-root .stock-table .editing-row .currency-display > .currency-symbol { display: none; }
+  .sio-root .stock-table .editing-row input.table-input,
+  .sio-root .stock-table .editing-row select.table-select { min-width: 0; max-width: 100%; box-sizing: border-box; }
+}
 .sio-root .stock-table th {
   background: #636363; color: white;
   padding: clamp(4px, 0.42vw, 8px) 0;
@@ -654,6 +666,8 @@
 }
 .product-summary-values b.val-in { color: #10b981; }
 .product-summary-values b.val-out { color: #cf1322; }
+.product-summary-values b.val-total { color: #d97706; }
+.product-summary-values b.val-total.neg { color: #cf1322; }
 
 /* 进出明细表 */
 .product-summary-detail {

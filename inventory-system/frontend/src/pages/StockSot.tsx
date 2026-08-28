@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { createSot, deleteSot, getCodeNumbers, getPriceStock, getProducts, getSots, updateSot } from '../api'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stocksot.css'
+import { showToast } from '../utils/toast'
 
 /** 货品异常：对齐线上 stocksot.php（Excel 模式，算式：total_price = quantity × price） */
 const VIEW_NAMES: Record<string, string> = { list: '总库存', records: '进出货', remark: '货品备注', product: '货品种类', sot: '货品异常' }
@@ -235,7 +236,6 @@ export default function StockSot() {
   const [showTop, setShowTop] = useState(false)
   // 每行价格选项（对齐线上 updatePriceOptions）
   const [priceLists, setPriceLists] = useState<Record<string, { price: string; available_stock: number }[]>>({})
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const [productOptions, setProductOptions] = useState<{ label: string; value: string }[]>([])
@@ -244,10 +244,7 @@ export default function StockSot() {
   // 新增保存后定位高亮（按货品名）
   const { flash, isHl } = useRowHighlight((r: any) => String(r.productName))
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   const load = () =>
     getSots()
@@ -692,14 +689,6 @@ export default function StockSot() {
         <i className="fas fa-chevron-up" />
       </button>
 
-      {toast && (
-        <div className="toast-container">
-          <div className={'toast toast-' + toast.type}>
-            <span className="toast-content">{toast.msg}</span>
-            <span className="toast-progress" />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

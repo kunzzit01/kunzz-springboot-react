@@ -6,6 +6,7 @@ import type { DishwareStockVO, DishwareTransfer } from '../types'
 import DishwareViewSelector from '../components/DishwareViewSelector'
 import '../styles/dishware.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 /** J 餐厅（对齐旧系统：J 开头餐厅，排除中央/文化楼） */
 const J_SHOPS = ['j1', 'j2', 'j3']
@@ -21,11 +22,7 @@ export default function DishwareTransferPage() {
   const { flash, isHl } = useRowHighlight((t: any) =>
     String(t.codeNumber || rows.find((r) => r.dishwareId === t.dishwareId)?.codeNumber || '#' + t.dishwareId))
   const [transfers, setTransfers] = useState<DishwareTransfer[]>([])
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
   const load = async () => {
     try {
       const [s, t] = await Promise.all([getDishwareStock(), getDishwareTransfers()])
@@ -687,11 +684,6 @@ export default function DishwareTransferPage() {
       )}
 
       {/* toast */}
-      {toast && (
-        <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 99999, background: toast.type === 'error' ? '#ef4444' : '#10b981', color: '#fff', padding: '10px 18px', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.2)', fontSize: 14 }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

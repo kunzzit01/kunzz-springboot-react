@@ -6,6 +6,7 @@ import {
 } from '../api'
 import type { PriceCompareData, PriceCompareRow } from '../api'
 import '../styles/supply.css'
+import { showToast } from '../utils/toast'
 
 /** 批量新增的可编辑行 */
 interface NewRow { name: string; type: string; prices: Record<string, string> }
@@ -44,13 +45,9 @@ export default function Suppliers() {
   const [highlightName, setHighlightName] = useState<string | null>(null)
   const highlightTimer = useRef<any>(null)
 
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
-  const showMsg = (msg: string, type: 'success' | 'error' = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type: 'success' | 'error' = 'success') => showToast(msg, type)
 
   // ---------- 数据加载 ----------
   const load = () => {
@@ -540,14 +537,6 @@ export default function Suppliers() {
       )}
 
       {/* Toast */}
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 10001 }}>
-          <div className={'toast toast-' + toast.type}>
-            <i className={'fas ' + (toast.type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle')}></i>
-            <span>{toast.msg}</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

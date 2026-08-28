@@ -5,6 +5,7 @@ import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/staff.css'
 import '../styles/perm-tree.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 // ---------- 账号类型 → 职位 ----------
 export const positionsByAccountType: Record<string, string[]> = {
@@ -343,7 +344,8 @@ export function PermTree({ value, onChange, compact }: { value: PermState; onCha
           </div>
           <div className="perm-level-3-section">
             <div className="perm-section-title">系统选项</div>
-            {[['overview', '总览'], ['central', '中央'], ['j1', 'J1'], ['j2', 'J2'], ['j3', 'J3']].map(([v, l]) => (
+            {/* 对齐旧系统 add_employee.php：总览不受权限控制（跨店共用货品查阅），不提供勾选项 */}
+            {[['central', '中央'], ['j1', 'J1'], ['j2', 'J2'], ['j3', 'J3']].map(([v, l]) => (
               <label key={v}><input type="checkbox" className="perm-stock-system" value={v}
                 checked={(value.page.stock_inventory?.system || []).includes(v)}
                 onChange={(e) => setPage('stock_inventory', 'system', v, e.target.checked)} /> {l}</label>
@@ -428,7 +430,7 @@ export const defaultPerms = (): PermState => ({
   },
   page: {
     kpi_upload: { system: ['j1', 'j2', 'j3'], type: ['kpi', 'cost'] },
-    stock_inventory: { system: ['overview', 'central', 'j1', 'j2', 'j3'], views: ['list', 'records', 'remark', 'product', 'apply', 'approve', 'sot'], is_shipper: true }
+    stock_inventory: { system: ['central', 'j1', 'j2', 'j3'], views: ['list', 'records', 'remark', 'product', 'apply', 'approve', 'sot'], is_shipper: true }
   },
   brand: {
     kunzz_holdings: { blueprint: ['blueprint'] },
@@ -465,17 +467,13 @@ export default function Staff() {
   const [editUser, setEditUser] = useState<StaffUser | null>(null)
   const [permUser, setPermUser] = useState<StaffUser | null>(null)
   const [permState, setPermState] = useState<PermState>(defaultPerms())
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   const [addForm, setAddForm] = useState<Record<string, string>>({})
   const [addBranches, setAddBranches] = useState<string[]>([])
   const [addPerms, setAddPerms] = useState<PermState>(emptyPerms())
   const [editForm, setEditForm] = useState<Record<string, string>>({})
   const [editBranches, setEditBranches] = useState<string[]>([])
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   const load = async () => {
     try {
@@ -1121,11 +1119,6 @@ export default function Staff() {
         </div>
       )}
 
-      {toast && (
-        <div className="toast" style={{ position: 'fixed', top: 20, right: 20, zIndex: 99999, background: toast.type === 'error' ? '#dc2626' : '#10b981', color: '#fff', padding: '12px 20px', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

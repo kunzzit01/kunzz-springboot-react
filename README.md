@@ -151,6 +151,7 @@ npm run dev                # 打开 http://localhost:5175
 | 分店库存 | J1/J2/J3 合并汇总、单店调整库存、每日经营数据、每日成本；**中央出货改目标单位自动同步分店入库** |
 | 供应商 | 20 家供应商 + 266 种物料管理 |
 | 预警与异常 | 最低库存设置（分系统独立：中央/各分店各自维护，互不影响）、低库存比对、异常扣除记录 |
+| 货品种类 | 货品主数据（编号/规格/单价/类型/供应商）+ **系统分配多选（Central/J1/J2/J3）+ 总览/分店页联动，规则见下文「货品种类总览逻辑」**；货品单价作为进货默认单价来源；批准流（申请人/批准人） |
 | 餐具管理 | 342 件碗碟信息/五地库存调整/套装及明细/破损/调拨 |
 | 实时推送 | WebSocket 实时状态条（后端 realtime/ + 前端 useRealtime） |
 | 票据/表单 | jspdf 发票导出、OpenPDF 后端 PDF 表单（backend/static/form/*.pdf） |
@@ -172,6 +173,23 @@ npm run dev                # 打开 http://localhost:5175
 | 视觉管理 | 背景音乐/页面图片 | 文件上传管理、首页/关于/品牌/加入我们 10 个页面上传 |
 | 视觉管理 | 菜单管理 | menu_categories/menus 分类菜单 + 菜单成本（配料/成本数据） |
 | 权限系统 | user_sidebar_permissions / user_page_permissions | JSON 权限驱动侧边栏渲染与页面访问 |
+
+### 货品种类总览逻辑（重要，改前先读）
+
+总览（`/products?system=overview`）= **完整货品总目录**，与分店页面的分工：
+
+- **分店页面**（中央/J1/J2/J3）：只显示分配给自己系统的货品（SQL `FIND_IN_SET(system_assign)`）
+- **总览**：
+  - 无权限配置（admin/demo）：显示**全部货品**、**真实**系统分配，可新增/编辑/删除/批准
+  - 有权限配置（员工）：只显示「系统分配与自己权限**交集 ≥ 1 间**」的货品；系统分配列**只展示交集**（打码，如 `Central,J1,J2,J3` → J2+J3 员工只看到 `J2,J3`）；**打码行只读**（`_assignMasked`，防用打码值保存覆盖真实分配）；分配完全在权限内的行可编辑，且只能勾选自己有权限的系统
+  - 总览入口**始终可见**（对齐旧系统，不受分店权限限制；员工权限面板无「总览」勾选项）
+- 过滤/打码在前端做（`StockProducts.tsx` `load()`，后端 API 无用户上下文）；打码行的只读保护不可移除，否则会用打码值覆盖真实分配（数据丢失）
+
+### 全局 Toast（对齐旧 live 系统）
+
+- 共享模块：`frontend/src/utils/toast.ts` + `src/styles/toast.css`（逐字对齐旧系统 `backend/{js,css}/toast.*`）
+- API：`showToast(message, type, duration)` / `showAlert` / `closeToast`；type = success/error/warning/info；默认 4000ms、最多 5 条、右下角
+- **页面内不要再自绘 toast/alert**，统一调 `showToast`（旧系统语义：操作成功=success、校验失败=error、提示=info、警告=warning）
 
 ## 🔌 API 概览（前缀 /api，除登录外需 Bearer Token）
 
@@ -200,8 +218,11 @@ npm run dev                # 打开 http://localhost:5175
 
 ## 📚 运维文档（上 live / 同步数据 / 排查问题前必读）
 
-- **`LIVE_OPS.md`** — live 运维与数据同步手册：时区规范（统一 UTC+8）、同步脚本用法、静态 dump 分发的坑（导出后新增会漏）、检查清单
-- **`DATA_SYNC_CHECKLIST.md`** — 数据清洗检查清单：HTML 编码产品名、gender 空串、负数库存
+- **`docs/OPS.md`** — 运维手册（三合一，原 DEPLOY / LIVE_OPS / DATA_SYNC_CHECKLIST 已并入）：
+  - 一、EC2 部署（架构、安全必改、systemd、nginx）
+  - 二、live 运维与数据同步（时区规范统一 UTC+8、同步脚本用法、静态 dump 分发的坑）
+  - 三、数据同步检查清单（HTML 编码产品名、gender 空串、负数库存）
+- **`CHANGELOG.md`** — 工作日志（原 4 份按日期的 CHANGELOG 已并入，新在前）
 - **`sync-live-stock.cjs`** — 从 live API 同步最新进出货到本地（`inventory-system/frontend/` 下运行，凭证在 `live-credentials.json`，勿推 git）
 
 ## ⚙️ 配置（backend/src/main/resources/application.yml）

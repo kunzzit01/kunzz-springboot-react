@@ -7,6 +7,7 @@ import '../styles/staff.css'
 import '../styles/add.css'
 import '../styles/perm-tree.css'
 import '../styles/form-ui.css'
+import { showToast } from '../utils/toast'
 
 export default function AddEmployee() {
   const navigate = useNavigate()
@@ -17,12 +18,8 @@ export default function AddEmployee() {
   const [permWarning, setPermWarning] = useState(false)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, boolean>>({})
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 输入过滤（对齐线上 formatAndFilterInput）
   const filterInput = (field: string, raw: string) => {
@@ -284,11 +281,6 @@ export default function AddEmployee() {
         </div>
       </div>
 
-      {toast && (
-        <div className="toast" style={{ position: 'fixed', top: 20, right: 20, zIndex: 99999, background: toast.type === 'error' ? '#dc2626' : '#10b981', color: '#fff', padding: '12px 20px', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   )
 }

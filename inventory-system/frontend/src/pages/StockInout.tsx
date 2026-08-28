@@ -9,6 +9,7 @@ import { useRealtime } from '../utils/useRealtime'
 import type { StockInout } from '../types'
 import '../styles/stockinout.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 /** 进出货管理：完整对齐 stockeditall.php（unified-header-row + 日历 + 行内新增 + HIFO + 批量操作 + 导出弹窗） */
 const SYSTEMS = [
@@ -264,8 +265,10 @@ export default function StockInout() {
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 默认日期范围 = 今天（对齐线上：默认加载今日记录）
   const [dateRange, setDateRange] = useState({ start: fmtDate(new Date()), end: fmtDate(new Date()) })
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const [editDraft, setEditDraft] = useState<Record<string, string>>({})
+  // 多行编辑：同时可编辑多行，每行独立的草稿与价格选项（互不覆盖）
+  const [editingIds, setEditingIds] = useState<Set<number>>(new Set())
+  const [editDrafts, setEditDrafts] = useState<Record<number, Record<string, string>>>({})
+  const [editPriceOptions, setEditPriceOptions] = useState<Record<number, { price: string; available_stock: number }[]>>({})
   const [batchMode, setBatchMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   // 进出货检查弹窗（8/24 新增：Search Bar + 日期 + IN/OUT 总额）
@@ -274,7 +277,6 @@ export default function StockInout() {
   const [checkResult, setCheckResult] = useState<CheckInoutResult | null>(null)
   const [checkLoading, setCheckLoading] = useState(false)
   const [newRows, setNewRows] = useState<NewRow[]>([])
-  const [priceStock, setPriceStock] = useState<{ price: string; available_stock: number }[]>([])
   // 弹窗
   const [calOpen, setCalOpen] = useState(false)
   const [quickOpen, setQuickOpen] = useState(false)
@@ -283,7 +285,6 @@ export default function StockInout() {
   const [rowsForm, setRowsForm] = useState({ date: fmtDate(new Date()), count: '1', remark: '' })
   const [exportOpen, setExportOpen] = useState(false)
   const [exportForm, setExportForm] = useState({ start: '', end: '', system: '', invoiceDate: '', invoiceSuffix: '', includeIn: true, includeOut: true })
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 保存中标志（防连点/防重复提交，对齐旧系统 batchSaveNewRows 的 disabled + spinner）
   const [saving, setSaving] = useState(false)
   // 删除撤销（对齐旧系统 undoDelete：删除后 10 秒内可撤销，Ctrl+Shift+Z）
@@ -313,10 +314,7 @@ export default function StockInout() {
   const [calEnd, setCalEnd] = useState<Date | null>(null)
   const [calPreview, setCalPreview] = useState<Date | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   // 实时搜索（对齐旧系统 setupRealTimeSearch：300ms 防抖 + 搜索后回到第一页）
   const onSearchInput = (v: string) => {
@@ -343,7 +341,7 @@ export default function StockInout() {
 
   // 全站实时更新：收到当前系统变更信号自动刷新（节流 3s + 尾部补刷；编辑行/弹窗打开时暂停）
   useRealtime(system, () => load(page), 1000, 3000, () =>
-    editingId !== null || viewOpen || checkOpen || rowsModal || exportOpen || sysOpen)
+    editingIds.size > 0 || viewOpen || checkOpen || rowsModal || exportOpen || sysOpen)
 
   useEffect(() => {
     // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统 generateComboboxOptions）
@@ -426,10 +424,10 @@ export default function StockInout() {
         }
         return
       }
-      // B. 保存 (Ctrl+S)：编辑中→保存当前行；有待保存新增行→批量保存
+      // B. 保存 (Ctrl+S)：有编辑中行→逐行保存全部；有待保存新增行→批量保存
       if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
         e.preventDefault()
-        if (editingId !== null) { saveEdit(editingId); return }
+        if (editingIds.size > 0) { saveAllEdits(); return }
         if (newRows.length > 0) saveNewRows()
       }
     }
@@ -567,6 +565,8 @@ export default function StockInout() {
     }
     setNewRows(prev => [...prev, ...newOnes])
     setRowsModal(false)
+    // 对齐旧系统 createMultipleRows：成功创建 N 行 toast
+    showMsg(`成功创建 ${n} 行记录`)
     // 创建空行后自动滚动到待填写位置
     setTimeout(() => {
       const sc = scrollRef.current
@@ -615,7 +615,6 @@ export default function StockInout() {
       const reqQty = row && parseFloat(row.outQty) > 0 ? parseFloat(row.outQty) : 0
       const priceList = await getPriceStock(name, autoCode || undefined, reqQty || undefined, system)
       // 每行独立保存价格/库存选项（避免多行新增时互相覆盖）
-      setPriceStock(priceList || [])
       // 对齐旧系统 handleProductChange：选货品后自动补全编号/规格/类型/价格
       const spec = (hit && hit.specification) ? hit.specification : (row?.specification || '')
       let cat = (hit && hit.category) ? hit.category : (row?.type || '')
@@ -658,7 +657,6 @@ export default function StockInout() {
       // 与 onPickProduct 同款：按出库数量加载价格+库存
       const reqQty = row && parseFloat(row.outQty) > 0 ? parseFloat(row.outQty) : 0
       const priceList = await getPriceStock(name, code || undefined, reqQty || undefined, system)
-      setPriceStock(priceList || [])
       const spec = hit?.specification ? String(hit.specification) : (row?.specification || '')
       let cat = hit?.category ? String(hit.category) : (row?.type || '')
       if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
@@ -694,33 +692,76 @@ export default function StockInout() {
       }
     } catch { /* ignore */ }
   }
-  /** 编辑模式：选择编号 → 回填货品名/规格/类型（对齐旧系统编辑态 handleCodeNumberChange） */
-  const onEditPickCode = async (code: string) => {
+  /** 编辑行：按货品种类（第一次新增创建货品保存的资料）自动回填 —— 与新增行 onPickProduct/onPickCode 同一套逻辑：
+   *  编号、规格、类型、供应商；进货 → 抓取货品默认单价（无则 0.00）并把收货单位锁为供应商；
+   *  出货 → 清空单价进入价格批次下拉模式，并按出货数量加载价格+库存选项 */
+  const applyProductToEdit = async (id: number, hit: any, name: string, code: string) => {
+    const draft = editDrafts[id] || {}
+    let cat = String(hit.category || '')
+    if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
+    const sup = hit.supplier ? String(hit.supplier) : ''
+    const outQ = parseFloat(draft.outQuantity || '0') || 0
+    const inQ = parseFloat(draft.inQuantity || '0') || 0
+    const patch: Record<string, string> = {
+      productName: name,
+      codeNumber: code,
+      specification: hit.specification ? String(hit.specification) : (draft.specification || ''),
+      type: cat || draft.type || '',
+      supplier: sup,
+    }
+    if (inQ > 0) {
+      // 进货：单价抓取货品种类默认单价（8/23 同款），收货单位自动填入供应商（锁死）
+      const dp = await fetchDefaultPrice(name, code || undefined)
+      patch.price = dp !== null ? dp : '0.00'
+      patch.priceMode = 'manual'
+      if (sup) patch.receiver = sup
+    } else if (outQ > 0) {
+      // 出货：切换货品后旧单价失效 → 清空进入价格批次下拉（无库存显示「暂无库存价格」+ 手动输入）
+      patch.price = ''
+      patch.priceMode = 'batch'
+      try {
+        const list = await getPriceStock(name, code || undefined, outQ, system)
+        setEditPriceOptions(prev => ({ ...prev, [id]: list || [] }))
+      } catch { setEditPriceOptions(prev => ({ ...prev, [id]: [] })) }
+    }
+    setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+  }
+  /** 编辑模式：选择货品 → 按货品种类自动回填（对齐新增行 onPickProduct） */
+  const onEditPickProduct = async (id: number, name: string) => {
+    if (!name) return
+    try {
+      const list = await getProducts()
+      const hit = (list || []).find((p: any) => p.product_name === name)
+      if (!hit) return
+      await applyProductToEdit(id, hit, name, hit.product_code || (editDrafts[id] || {}).codeNumber || '')
+    } catch { /* ignore */ }
+  }
+  /** 编辑模式：选择编号 → 按货品种类自动回填货品名及全部关联资料（对齐新增行 onPickCode） */
+  const onEditPickCode = async (id: number, code: string) => {
     if (!code) return
     try {
       const list = await getProducts()
       const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
       if (!hit?.product_name) return
-      let cat = String(hit.category || '')
-      if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
-      setEditDraft(prev => ({
-        ...prev,
-        productName: String(hit.product_name),
-        specification: hit.specification ? String(hit.specification) : prev.specification,
-        type: cat || prev.type,
-      }))
+      await applyProductToEdit(id, hit, String(hit.product_name), code)
     } catch { /* ignore */ }
   }
   /** 编辑行：进货数量变化 → 单价自动抓取：优先货品种类默认单价，无则回退 HIFO 最高单价 */
-  const handleEditInQty = async (v: string) => {
-    setEditDraft(prev => ({
+  const handleEditInQty = async (id: number, v: string) => {
+    const draft = editDrafts[id] || {}
+    setEditDrafts(prev => ({
       ...prev,
-      inQuantity: v,
-      outQuantity: parseFloat(v) > 0 ? '0' : prev.outQuantity,
+      [id]: {
+        ...prev[id],
+        inQuantity: v,
+        outQuantity: parseFloat(v) > 0 ? '0' : prev[id].outQuantity,
+        // 进货 → 收货单位（供应商列）自动填入货品供应商（对齐新增行 handleInQty）
+        receiver: parseFloat(v) > 0 && prev[id].supplier ? prev[id].supplier : prev[id].receiver,
+      },
     }))
-    if (editDraft.productName && parseFloat(v) > 0) {
-      const dp = await fetchDefaultPrice(editDraft.productName, editDraft.codeNumber || undefined)
-      setEditDraft(prev => ({ ...prev, price: dp !== null ? dp : '0.00' }))
+    if (draft.productName && parseFloat(v) > 0) {
+      const dp = await fetchDefaultPrice(draft.productName, draft.codeNumber || undefined)
+      setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], price: dp !== null ? dp : '0.00' } }))
     }
   }
   /** HIFO 拆行（对齐 hifoAutoSplit） */
@@ -734,6 +775,24 @@ export default function StockInout() {
     return null
   }
   /** 进货数量变化（互斥 + 单价自动抓取：货品种类有单价则抓取，无单价则 0.00） */
+  /** 编辑行：出货数量变化 → 互斥 + 按该数量重新加载价格+库存选项（对齐新增行 handleOutQty，不拆行） */
+  const handleEditOutQty = (id: number, v: string) => {
+    const draft = editDrafts[id] || {}
+    setEditDrafts(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        outQuantity: v,
+        inQuantity: parseFloat(v) > 0 ? '0' : prev[id].inQuantity,
+        priceMode: parseFloat(v) > 0 ? 'batch' : prev[id].priceMode,
+      },
+    }))
+    if (draft.productName && parseFloat(v) > 0) {
+      getPriceStock(draft.productName, draft.codeNumber || undefined, parseFloat(v), system)
+        .then((list) => { if (list && list.length) setEditPriceOptions(prev => ({ ...prev, [id]: list })) })
+        .catch(() => {})
+    }
+  }
   const handleInQty = async (key: string, v: string) => {
     const row = newRows.find(r => r.key === key)
     patchNew(key, {
@@ -763,7 +822,7 @@ export default function StockInout() {
     // 出库数量变化 → 用该数量重新加载价格+库存列表（对齐旧系统 loadNewRowProductPricesWithStock，所有系统生效）
     if (row && row.productName && parseFloat(v) > 0) {
       getPriceStock(row.productName, row.codeNumber || undefined, parseFloat(v), system)
-        .then((list) => { if (list && list.length) { setPriceStock(list); patchNew(key, { stockOptions: list }) } })
+        .then((list) => { if (list && list.length) patchNew(key, { stockOptions: list }) })
         .catch(() => {})
     }
     if (!row || parseFloat(v) <= 0) return
@@ -806,10 +865,41 @@ export default function StockInout() {
   /** 批量保存新增行（对齐 batchSaveNewRows） */
   const saveNewRows = async () => {
     if (saving) return // 防连点/重复提交
-    const valid = newRows.filter(r => r.productName)
-    if (valid.length === 0) { showMsg('没有可保存的新增行', 'error'); return }
+    if (newRows.length === 0) { showMsg('没有需要保存的新记录', 'info'); return }
     setSaving(true)
     try {
+      // ====== 校验（对齐旧系统 batchSaveNewRows）======
+      // 完全空行跳过；有内容的行必须：货品/规格/收货人齐全、数量非负且至少一项>0、
+      // 货品与编号必须存在于货品种类、中央出货必须选择目标单位、单价合法
+      const valid: NewRow[] = []
+      for (const row of newRows) {
+        const inQ0 = parseFloat(row.inQty || '0') || 0
+        const outQ0 = parseFloat(row.outQty || '0') || 0
+        const priceStr0 = (row.price ?? '').toString().trim()
+        const completelyEmpty = !row.productName && inQ0 === 0 && outQ0 === 0 && !row.specification && !row.receiver
+          && priceStr0 === '' && !row.remark && !row.remarkChecked
+        if (completelyEmpty) continue
+        if (!row.productName || !row.specification || !row.receiver) {
+          showMsg('请确保所有行都填写了货品名称、规格单位和收货人', 'error'); return
+        }
+        if (inQ0 < 0 || outQ0 < 0) { showMsg('行记录中存在负数数量', 'error'); return }
+        if (inQ0 <= 0 && outQ0 <= 0) { showMsg('每行记录必须至少填入一项进货或出货数量', 'error'); return }
+        // 下拉可手输，防手输不存在的货品/编号（对齐旧系统 saveNewRecord 存在性校验）
+        if (productOptions.length > 0 && !productOptions.some(o => o.value === row.productName)) {
+          showMsg('货品名称不存在，请从下拉列表中选择有效的货品', 'error'); return
+        }
+        if (row.codeNumber && codeOptions.length > 0 && !codeOptions.some(o => o.value === row.codeNumber)) {
+          showMsg('货品编号不存在，请从下拉列表中选择有效的编号', 'error'); return
+        }
+        if (outQ0 > 0 && system === 'central' && !row.target) {
+          showMsg('当有出库数量时，请选择目标系统（J1、J2或J3）', 'error'); return
+        }
+        if (priceStr0 === '' || isNaN(parseFloat(priceStr0)) || parseFloat(priceStr0) < 0) {
+          showMsg(`货品 [${row.productName}] 单价不能为空且不能小于0`, 'error'); return
+        }
+        valid.push(row)
+      }
+      if (valid.length === 0) { showMsg('没有需要保存的新记录', 'info'); return }
       // 8/23 修复：库存校验已由后端在事务内完成，前端不再逐个请求 getPriceStock，
       // 避免保存时产生大量请求（请求风暴）。
       // 备注码查询缓存（同一产品只查一次，避免重复请求）
@@ -876,49 +966,59 @@ export default function StockInout() {
           }
         }
       }, 100)
-      showMsg(`已保存 ${valid.length} 条记录`)
+      showMsg(`成功保存 ${valid.length} 条记录`)
     } catch (e: any) { showMsg(e?.response?.data?.message || e?.message || '保存失败', 'error') }
     finally { setSaving(false) }
   }
   const removeNew = (key: string) => setNewRows(prev => prev.filter(r => r.key !== key))
 
-  // ---- 编辑 ----
+  // ---- 编辑（支持多行同时编辑：每行独立草稿/价格选项） ----
+  const cancelEdit = (id: number) => {
+    setEditingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+    setEditDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
+    setEditPriceOptions(prev => { const n = { ...prev }; delete n[id]; return n })
+  }
   const startEdit = (r: StockInout) => {
-    setEditingId(Number(r.id))
+    const id = Number(r.id)
+    if (editingIds.has(id)) return // 已在编辑中
     const isOut = parseFloat(String(r.outQuantity ?? 0)) > 0
-    setEditDraft({
+    const draft: Record<string, string> = {
       date: String(r.date || ''), time: String(r.time || ''), codeNumber: String(r.codeNumber || ''), productName: String(r.productName || ''),
       inQuantity: String(r.inQuantity ?? ''), outQuantity: String(r.outQuantity ?? ''), specification: String(r.specification || ''),
       price: String(r.price ?? ''), receiver: String(r.receiver || ''), remark: String(r.remark || ''), type: String(r.type || ''),
       targetSystem: String(r.targetSystem || ''), remarkNumber: String(r.remarkNumber || ''), productRemarkChecked: r.productRemarkChecked ? '1' : '0',
       // 出库行先按批量价格模式，价格选项加载后按是否匹配修正（匹配→batch 下拉；否则→manual 输入框显示手输价）
       priceMode: isOut ? 'batch' : 'manual',
-    })
+    }
+    setEditingIds(prev => new Set(prev).add(id))
+    setEditDrafts(prev => ({ ...prev, [id]: draft }))
     // 编辑模式下出库：加载 HIFO 价格批次（对齐 createNewRowPriceSelectWithStock）
     if (isOut && r.productName) {
       getPriceStock(r.productName, r.codeNumber || undefined, 1, system)
         .then((list) => {
           const l = list || []
-          setPriceStock(l)
-          setEditDraft(prev => ({
-            ...prev,
-            priceMode: l.some(p => parseFloat(String(p.price)) === parseFloat(String(prev.price))) ? 'batch' : 'manual',
-          }))
+          setEditPriceOptions(prev => ({ ...prev, [id]: l }))
+          setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], priceMode: l.some(p => parseFloat(String(p.price)) === parseFloat(String(prev[id].price))) ? 'batch' : 'manual' } }))
         })
-        .catch(() => setPriceStock([]))
+        .catch(() => setEditPriceOptions(prev => ({ ...prev, [id]: [] })))
     } else {
-      setPriceStock([])
+      setEditPriceOptions(prev => ({ ...prev, [id]: [] }))
     }
   }
-  const saveEdit = async (id: number) => {
-    if (saving) return // 防连点/重复提交
-    setSaving(true)
+  /** 保存单行编辑（无防连点守卫，供 saveEdit / saveAllEdits 调用） */
+  const doSaveEdit = async (id: number) => {
+    const editDraft = editDrafts[id]
+    if (!editDraft) return
     try {
       const outQ = parseFloat(editDraft.outQuantity || '0') || 0
       // 验证单价：不能为空且不能小于0（对齐旧系统；0 合法，RM0 需要记录）
       const editPriceStr = (editDraft.price ?? '').toString().trim()
       if (editPriceStr === '' || isNaN(parseFloat(editPriceStr)) || parseFloat(editPriceStr) < 0) {
         showMsg('单价不能为空且不能小于0', 'error'); return
+      }
+      // 货品备注校验（对齐旧系统 saveRecord：勾选货品备注时必须填写备注编号）
+      if (editDraft.productRemarkChecked === '1' && !(editDraft.remarkNumber || '').trim()) {
+        showMsg('货品备注已勾选时，请填写备注编号', 'error'); return
       }
       // 原记录的备注编号（用于判断是否保持原编号；保持时跳过「在库」校验——
       // 该编号可能已被本记录自身消耗，对齐后端 updateInout 与旧系统编辑行为）
@@ -939,6 +1039,35 @@ export default function StockInout() {
           }
         }
       }
+      // ====== 数量/存在性/目标单位校验（对齐旧系统 saveRecord）======
+      const inQ = parseFloat(editDraft.inQuantity || '0') || 0
+      if (inQ < 0 || outQ < 0) { showMsg('数量不能为负数', 'error'); return }
+      if (inQ <= 0 && outQ <= 0) { showMsg('进货或出货数量必须至少填入一项大于 0', 'error'); return }
+      if (editDraft.productName && productOptions.length > 0 && !productOptions.some(o => o.value === editDraft.productName)) {
+        showMsg('货品名称不存在，请从下拉列表中选择有效的货品', 'error'); return
+      }
+      if (editDraft.codeNumber && codeOptions.length > 0 && !codeOptions.some(o => o.value === editDraft.codeNumber)) {
+        showMsg('货品编号不存在，请从下拉列表中选择有效的编号', 'error'); return
+      }
+      if (outQ > 0 && system === 'central' && !(editDraft.targetSystem || '').trim()) {
+        showMsg('当有出库数量时，请选择目标系统（J1、J2或J3）', 'error'); return
+      }
+      // 编辑出货库存校验（对齐旧系统 saveRecord）：可用库存 = 现有库存 + 原本该记录的出库数量
+      // （仅当货品名称和价格都未变时才归还原出库数量；RM0 单价出货跳过校验，对齐旧系统）
+      if (outQ > 0 && parseFloat(editDraft.price) > 0 && editDraft.productName) {
+        try {
+          const batches = await getPriceBatches(editDraft.productName, editDraft.codeNumber || undefined, system)
+          const totalStock = (batches || []).reduce((s, b) => s + b.available_stock, 0)
+          const sameProductPrice = !!origRow && origRow.productName === editDraft.productName
+            && parseFloat(String(origRow.price ?? 0)) === parseFloat(editDraft.price)
+          const actualAvailable = totalStock + (sameProductPrice ? (parseFloat(String(origRow!.outQuantity ?? 0)) || 0) : 0)
+          if (outQ > actualAvailable) {
+            showMsg(['j1', 'j2', 'j3'].includes(system)
+              ? '库存显示不足'
+              : `库存不足！当前可用库存 (修改前): ${actualAvailable}，请求修改为出库: ${outQ}`, 'error'); return
+          }
+        } catch { /* 库存查询失败不拦截保存，避免误拦 */ }
+      }
       await updateStockInout(id, {
         date: editDraft.date || undefined,
         time: editDraft.time || new Date().toTimeString().slice(0, 5), // time 非空（jXstockedit_data 表 time NOT NULL）
@@ -952,9 +1081,24 @@ export default function StockInout() {
         targetSystem: outQ > 0 ? (editDraft.targetSystem || undefined) : 'central',
         productRemarkChecked: editDraft.productRemarkChecked === '1',
       }, system === 'central' ? undefined : system)
-      setEditingId(null); load(page); showMsg('保存成功')
+      setEditingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+      setEditDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
+      setEditPriceOptions(prev => { const n = { ...prev }; delete n[id]; return n })
+      load(page); showMsg('记录更新成功')
     } catch (e: any) { showMsg(e?.response?.data?.message || e?.message || '保存失败', 'error') }
-    finally { setSaving(false) }
+  }
+  /** 保存单行（带防连点守卫，供行内保存按钮使用） */
+  const saveEdit = async (id: number) => {
+    if (saving) return
+    if (!editDrafts[id]) return
+    setSaving(true)
+    try { await doSaveEdit(id) } finally { setSaving(false) }
+  }
+  /** 保存全部编辑中行（Ctrl+S，逐行调用；任一行校验失败只拦截该行，不影响其他行） */
+  const saveAllEdits = async () => {
+    if (saving || editingIds.size === 0) return
+    setSaving(true)
+    try { for (const id of Array.from(editingIds)) await doSaveEdit(id) } finally { setSaving(false) }
   }
   const remove = async (r: StockInout) => {
     if (!window.confirm(`确定删除记录：${r.productName}（${r.date}）？`)) return
@@ -1190,6 +1334,14 @@ export default function StockInout() {
         <div className="table-container">
           <div className="table-scroll-container" ref={scrollRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
             <table className="stock-table" id="stock-table">
+              {/* 全列自适应：按百分比锁列宽（不横向滚动）；小屏字体经 clamp 自动缩小 */}
+              <colgroup>
+                <col style={{ width: '7%' }} /><col style={{ width: '7%' }} /><col style={{ width: '11%' }} />
+                <col style={{ width: '6%' }} /><col style={{ width: '6%' }} /><col style={{ width: '7%' }} />
+                <col style={{ width: '6%' }} /><col style={{ width: '7%' }} /><col style={{ width: '7%' }} />
+                <col style={{ width: '5%' }} /><col style={{ width: '5%' }} /><col style={{ width: '7%' }} />
+                <col style={{ width: '8%' }} /><col style={{ width: '9%' }} /><col style={{ width: '4%' }} /><col style={{ width: '5%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th style={{ minWidth: 100 }}>日期</th>
@@ -1221,41 +1373,44 @@ export default function StockInout() {
                   const outQ = parseFloat(String(r.outQuantity ?? 0)) || 0
                   const price = parseFloat(String(r.price ?? 0)) || 0
                   const totalV = (inQ - outQ) * price
-                  const isEditing = editingId === Number(r.id)
+                  const isEditing = editingIds.has(Number(r.id))
+                  const editDraft = editDrafts[Number(r.id)] || {}
+                  const rowPriceOptions = editPriceOptions[Number(r.id)] || []
                   // 编辑出库时：把当前价格数值匹配到价格下拉的某个 option（对齐旧系统 refreshEditPriceSelect）
-                  const editPriceMatch = priceStock.find(p => parseFloat(String(p.price)) === parseFloat(String(editDraft.price)))
+                  const editPriceMatch = rowPriceOptions.find(p => parseFloat(String(p.price)) === parseFloat(String(editDraft.price)))
                   const editPriceValue = editPriceMatch ? editPriceMatch.price : editDraft.price
+                  const patchEdit = (patch: Record<string, string>) => setEditDrafts(prev => ({ ...prev, [Number(r.id)]: { ...prev[Number(r.id)], ...patch } }))
                   return (
                     <tr key={r.id} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
-                      <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => setEditDraft({ ...editDraft, date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
+                      <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => patchEdit({ date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
                       <td>{isEditing
-                        ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => setEditDraft({ ...editDraft, codeNumber: v })} onSelect={(v) => onEditPickCode(v)} style={{ minWidth: 90 }} />
+                        ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : (r.codeNumber || '-')}</td>
                       <td>{isEditing
-                        ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => setEditDraft({ ...editDraft, productName: v })} style={{ minWidth: 150 }} />
+                        ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v) => onEditPickProduct(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : <b>{r.productName}</b>}</td>
                       <td>{isEditing
                         ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.inQuantity || ''}
                             disabled={parseFloat(editDraft.outQuantity || '0') > 0} /* 对齐旧系统 enforceQuantityMutex */
-                            onChange={(e) => handleEditInQty(e.target.value)} />
+                            onChange={(e) => handleEditInQty(Number(r.id), e.target.value)} />
                         : <span style={{ color: inQ > 0 ? '#10b981' : '#6b7280', fontWeight: inQ > 0 ? 600 : 400 }}>{fmtNum(inQ)}</span>}</td>
                       <td>{isEditing
                         ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.outQuantity || ''}
                             disabled={parseFloat(editDraft.inQuantity || '0') > 0} /* 对齐旧系统 enforceQuantityMutex */
-                            onChange={(e) => setEditDraft({ ...editDraft, outQuantity: e.target.value, inQuantity: parseFloat(e.target.value) > 0 ? '0' : editDraft.inQuantity })} />
+                            onChange={(e) => handleEditOutQty(Number(r.id), e.target.value)} />
                         : <span className={outQ > 0 ? 'negative-value' : ''}>{outQ > 0 ? fmtNum(outQ) : fmtNum(0)}</span>}</td>
                       <td>{isEditing
                         ? (system === 'central' ? (
                             <select className="table-select" value={parseFloat(editDraft.outQuantity || '0') > 0 ? (editDraft.targetSystem || '') : 'central'}
                               disabled={parseFloat(editDraft.outQuantity || '0') <= 0}
-                              onChange={(e) => setEditDraft({ ...editDraft, targetSystem: e.target.value })}>
+                              onChange={(e) => patchEdit({ targetSystem: e.target.value })}>
                               <option value="">请选择</option>
                               <option value="j1">J1</option><option value="j2">J2</option><option value="j3">J3</option><option value="central">中央</option>
                             </select>
                           ) : <span>{system.toUpperCase()}</span>)
                         : (r.targetSystem ? r.targetSystem.toUpperCase() : '-')}</td>
                       <td>{isEditing
-                        ? <select className="table-select" value={editDraft.specification || ''} onChange={(e) => setEditDraft({ ...editDraft, specification: e.target.value })}>
+                        ? <select className="table-select" value={editDraft.specification || ''} onChange={(e) => patchEdit({ specification: e.target.value })}>
                             <option value="">-</option>{SPEC_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                           </select>
                         : (r.specification || '-')}</td>
@@ -1263,21 +1418,21 @@ export default function StockInout() {
                         <div className="currency-display">
                           <span className="currency-symbol">RM</span>
                           {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.priceMode !== 'manual' ? (
-                            <select className="table-select" style={{ width: 110 }} value={editPriceValue}
-                              onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
+                            <select className="table-select" style={{ width: '100%' }} value={editPriceValue}
+                              onChange={(e) => patchEdit({ price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
                               {/* 对齐旧系统：显示所有价格选项，库存不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
-                              <option value="">{priceStock.length ? '请选择价格' : '暂无库存价格'}</option>
+                              <option value="">{rowPriceOptions.length ? '请选择价格' : '暂无库存价格'}</option>
                               <option value="manual">手动输入价格</option>
-                              {priceStock.map(p => {
+                              {rowPriceOptions.map(p => {
                                 const enough = (parseFloat(editDraft.outQuantity || '0') || 0) <= 0 || p.available_stock >= (parseFloat(editDraft.outQuantity || '0') || 0)
                                 return <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock}{enough ? '' : ', 不足'})</option>
                               })}
                             </select>
                           ) : isEditing ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                              <input type="number" className="table-input" style={{ width: 90 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => setEditDraft({ ...editDraft, price: e.target.value, priceMode: 'manual' })} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
+                              <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 60, minWidth: 0 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => patchEdit({ price: e.target.value, priceMode: 'manual' })} />
                               {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
-                              {parseFloat(editDraft.outQuantity || '0') > 0 && !priceStock.length && (
+                              {parseFloat(editDraft.outQuantity || '0') > 0 && !rowPriceOptions.length && (
                                 <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
                               )}
                             </div>
@@ -1293,19 +1448,19 @@ export default function StockInout() {
                         </div>
                       </td>
                       <td className="type-cell">{isEditing
-                        ? <select className="table-select" value={editDraft.type || ''} onChange={(e) => setEditDraft({ ...editDraft, type: e.target.value })}>
+                        ? <select className="table-select" value={editDraft.type || ''} onChange={(e) => patchEdit({ type: e.target.value })}>
                             <option value="">-</option>{TYPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                           </select>
                         : typeLabel(r.type)}</td>
                       <td>{isEditing
-                        ? <input type="checkbox" className="remark-checkbox" checked={editDraft.productRemarkChecked === '1'} onChange={(e) => setEditDraft({ ...editDraft, productRemarkChecked: e.target.checked ? '1' : '0' })} />
+                        ? <input type="checkbox" className="remark-checkbox" checked={editDraft.productRemarkChecked === '1'} onChange={(e) => patchEdit({ productRemarkChecked: e.target.checked ? '1' : '0' })} />
                         : <input type="checkbox" className="remark-checkbox" checked={!!r.productRemarkChecked} disabled />}</td>
-                      <td>{isEditing ? <input className="table-input" style={{ width: 80 }} value={editDraft.remarkNumber || ''} onChange={(e) => setEditDraft({ ...editDraft, remarkNumber: e.target.value })} /> : (r.remarkNumber || '-')}</td>
+                      <td>{isEditing ? <input className="table-input" style={{ width: '100%' }} value={editDraft.remarkNumber || ''} onChange={(e) => patchEdit({ remarkNumber: e.target.value })} /> : (r.remarkNumber || '-')}</td>
                       <td>{isEditing
-                        ? <Combobox options={shipperOptions} value={editDraft.receiver || ''} onChange={(v) => setEditDraft({ ...editDraft, receiver: v })}
-                            disabled={parseFloat(editDraft.inQuantity || '0') > 0} style={{ minWidth: 100 }} />
+                        ? <Combobox options={shipperOptions} value={editDraft.receiver || ''} onChange={(v) => patchEdit({ receiver: v })}
+                            disabled={parseFloat(editDraft.inQuantity || '0') > 0} style={{ width: '100%', minWidth: 0 }} />
                         : (r.receiver || '-')}</td>
-                      <td>{isEditing ? <input className="table-input" value={editDraft.remark || ''} onChange={(e) => setEditDraft({ ...editDraft, remark: e.target.value })} /> : (r.remark || '-')}</td>
+                      <td>{isEditing ? <input className="table-input" value={editDraft.remark || ''} onChange={(e) => patchEdit({ remark: e.target.value })} /> : (r.remark || '-')}</td>
                       <td className="created-user" title={`${r.createdBy || '-'}\n创建时间: ${r.createdAt ? String(r.createdAt).replace('T', ' ').substring(0, 19) : '-'}`}>{nickOf(r.createdBy)}</td>
                       <td>
                         {batchMode ? (
@@ -1319,7 +1474,7 @@ export default function StockInout() {
                         ) : isEditing ? (
                           <>
                             <button className="action-btn save-btn" onClick={() => saveEdit(Number(r.id))} title={saving ? '保存中...' : '保存'} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
-                            <button className="action-btn delete-btn" onClick={() => setEditingId(null)} title="取消"><i className="fas fa-times" /></button>
+                            <button className="action-btn delete-btn" onClick={() => cancelEdit(Number(r.id))} title="取消"><i className="fas fa-times" /></button>
                           </>
                         ) : (
                           <>
@@ -1371,7 +1526,7 @@ export default function StockInout() {
                       <div className="currency-display">
                         <span className="currency-symbol">RM</span>
                         {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode !== 'manual' ? (
-                          <select className="table-select" style={{ width: 110 }} value={nr.price}
+                          <select className="table-select" style={{ width: '100%' }} value={nr.price}
                             onChange={(e) => patchNew(nr.key, { price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
                             {/* 对齐旧系统：显示所有价格选项，不管库存是否足够；不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
                             <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无库存价格'}</option>
@@ -1382,8 +1537,8 @@ export default function StockInout() {
                             })}
                           </select>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <input type="number" className="table-input" style={{ width: 80 }} step="0.00001" placeholder="0.00"
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
+                            <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="0.00"
                               value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
                             {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
                             {nr.productName && parseFloat(nr.outQty) > 0 && !(nr.stockOptions || []).length && (
@@ -1585,6 +1740,7 @@ export default function StockInout() {
                 <div className="product-summary-values">
                   <span>进货金额：<b className="val-in">RM {fmtMoney(checkResult.in_value)}</b></span>
                   <span>出货金额：<b className="val-out">RM {fmtMoney(checkResult.out_value)}</b></span>
+                  <span>总价（进货 - 出货）：<b className={'val-total' + (((parseFloat(String(checkResult.in_value)) || 0) - (parseFloat(String(checkResult.out_value)) || 0)) < 0 ? ' neg' : '')}>RM {fmtMoney((parseFloat(String(checkResult.in_value)) || 0) - (parseFloat(String(checkResult.out_value)) || 0))}</b></span>
                 </div>
               )}
               {checkResult && checkResult.records && checkResult.records.length > 0 && (
@@ -1686,14 +1842,6 @@ export default function StockInout() {
         </div>
       )}
 
-      {toast && (
-        <div className="toast-container">
-          <div className={'toast toast-' + toast.type}>
-            <span className="toast-content">{toast.msg}</span>
-            <span className="toast-progress" />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

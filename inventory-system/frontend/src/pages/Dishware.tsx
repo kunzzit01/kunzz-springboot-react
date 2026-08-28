@@ -9,6 +9,7 @@ import type { DishwareInfo, DishwareSet, DishwareStockVO } from '../types'
 import DishwareViewSelector from '../components/DishwareViewSelector'
 import '../styles/dishware.css'
 import ModalClose from '../components/ModalClose'
+import { showToast } from '../utils/toast'
 
 /** 碗碟库存：对齐线上 dishware_stock.php（总库存/破损记录/碗碟转卖 + 照片上传） */
 const categories = ['AG','CU','DN','DR','IP','MA','ME','MU','OM','OT','SA','SK','SU','SAR','SER','SET','TA','TE','WAN','YA','用具']
@@ -37,7 +38,6 @@ export default function Dishware() {
   const [rows, setRows] = useState<DishwareStockVO[]>([])
   const [sets, setSets] = useState<DishwareSet[]>([])
   const [setItems, setSetItems] = useState<Record<number, { productName: string; quantityInSet: number }[]>>({})
-  const [toast, setToast] = useState<{ msg: string; type: string } | null>(null)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
 
@@ -60,10 +60,7 @@ export default function Dishware() {
   const [setMemberSel, setSetMemberSel] = useState('')
   // 编辑弹窗：库存数量原始值（用于变化高亮）
   const [origQtys, setOrigQtys] = useState<Record<string, number>>({})
-  const showMsg = (msg: string, type = 'success') => {
-    setToast({ msg, type })
-    setTimeout(() => setToast(null), 3000)
-  }
+  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
   const load = async () => {
     try {
@@ -847,11 +844,6 @@ export default function Dishware() {
         </div>
       )}
 
-      {toast && (
-        <div className="toast-container">
-          <div className={'toast toast-' + toast.type}><span>{toast.msg}</span></div>
-        </div>
-      )}
     </div>
   )
 }
