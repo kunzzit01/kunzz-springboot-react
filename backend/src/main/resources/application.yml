@@ -22,7 +22,8 @@ spring:
     host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}
     username: ${SMTP_USER:kunzzsup@gmail.com}
-    password: ${SMTP_PASS:pobc jkvr yygb dhyk}
+    # 安全起见，应用密码不写入源码；需要邮件功能时通过环境变量 SMTP_PASS 注入
+    password: ${SMTP_PASS:}
     properties:
       mail:
         smtp:

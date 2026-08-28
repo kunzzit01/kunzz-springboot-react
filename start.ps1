@@ -236,8 +236,9 @@ function Start-Backend {
         # 从 GitHub 源码包下载时没有 target/，自动下载 Release 中的 jar
         New-Item -ItemType Directory -Path (Split-Path $JAR) -Force | Out-Null
         Write-Host "  [..] 未找到后端程序，正在从 GitHub Release 下载 (约 71MB，仅首次)..."
-        curl.exe -L --progress-bar -o $JAR "https://github.com/kunzzit01/kunzz-springboot-react/releases/download/v1.0.1/inventory-backend-1.0.0.jar"
-        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $JAR)) {
+        # --fail: HTTP 404/500 时不把错误页存成文件
+        curl.exe --fail -L --progress-bar -o $JAR "https://github.com/kunzzit01/kunzz-springboot-react/releases/download/v1.0.1/inventory-backend-1.0.0.jar"
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $JAR) -or (Get-Item $JAR).Length -lt 1MB) {
             Write-Host "  [!!] jar 下载失败，请检查网络后重试" -ForegroundColor Red
             Write-Host "       也可手动下载后放入: $JAR" -ForegroundColor Yellow
             Write-Host "       https://github.com/kunzzit01/kunzz-springboot-react/releases/tag/v1.0.1" -ForegroundColor Yellow
