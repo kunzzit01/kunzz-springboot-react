@@ -107,17 +107,20 @@ public class StockProductService {
     /** 更新记录（对齐 PUT stockapi.php；approver 由前端传，系统页编辑时清空重新批准） */
     @Transactional
     public Map<String, Object> update(Integer id, Map<String, Object> body) {
+        // 部分字段安全：只更新请求里实际携带的字段（未携带的不动），
+        // 防止部分字段的 PUT 把其余列清空（数据丢失风险；前端全量发送时行为不变）
         Map<String, Object> r = new LinkedHashMap<>();
-        r.put("productCode", body.getOrDefault("product_code", ""));
-        r.put("productName", body.getOrDefault("product_name", ""));
-        r.put("specification", body.getOrDefault("specification", ""));
-        r.put("price", cleanPrice(body.get("price")));
-        r.put("category", body.getOrDefault("category", ""));
-        r.put("supplier", body.getOrDefault("supplier", ""));
-        r.put("applicant", body.getOrDefault("applicant", ""));
-        r.put("approver", body.getOrDefault("approver", ""));
-        r.put("systemAssign", body.getOrDefault("system_assign", ""));
-        r.put("freezerCategory", body.getOrDefault("freezer_category", ""));
+        if (body.containsKey("product_code"))  r.put("productCode", str(body.get("product_code")));
+        if (body.containsKey("product_name"))  r.put("productName", str(body.get("product_name")));
+        if (body.containsKey("specification")) r.put("specification", str(body.get("specification")));
+        if (body.containsKey("price"))         r.put("price", cleanPrice(body.get("price")));
+        if (body.containsKey("category"))      r.put("category", str(body.get("category")));
+        if (body.containsKey("supplier"))      r.put("supplier", str(body.get("supplier")));
+        if (body.containsKey("applicant"))     r.put("applicant", str(body.get("applicant")));
+        if (body.containsKey("approver"))      r.put("approver", str(body.get("approver")));
+        if (body.containsKey("system_assign")) r.put("systemAssign", str(body.get("system_assign")));
+        if (body.containsKey("freezer_category")) r.put("freezerCategory", str(body.get("freezer_category")));
+        if (r.isEmpty()) return Map.of("success", true);
         int n = stockProductMapper.updateRow(id, r);
         if (n == 0) throw new BusinessException(404, "记录不存在");
         return Map.of("success", true);

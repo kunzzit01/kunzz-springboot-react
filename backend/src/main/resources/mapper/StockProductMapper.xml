@@ -29,18 +29,21 @@
              #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory})
     </insert>
 
+    <!-- 部分字段安全更新：service 只放行请求里实际携带的字段，null 的列不动 -->
     <update id="updateRow" parameterType="map">
         UPDATE stock_data
-        SET product_code = #{r.productCode},
-            product_name = #{r.productName},
-            specification = #{r.specification},
-            price = #{r.price},
-            category = #{r.category},
-            supplier = #{r.supplier},
-            applicant = #{r.applicant},
-            approver = #{r.approver},
-            system_assign = #{r.systemAssign},
-            freezer_category = #{r.freezerCategory}
+        <set>
+            <if test="r.productCode != null">product_code = #{r.productCode},</if>
+            <if test="r.productName != null">product_name = #{r.productName},</if>
+            <if test="r.specification != null">specification = #{r.specification},</if>
+            <if test="r.price != null">price = #{r.price},</if>
+            <if test="r.category != null">category = #{r.category},</if>
+            <if test="r.supplier != null">supplier = #{r.supplier},</if>
+            <if test="r.applicant != null">applicant = #{r.applicant},</if>
+            <if test="r.approver != null">approver = #{r.approver},</if>
+            <if test="r.systemAssign != null">system_assign = #{r.systemAssign},</if>
+            <if test="r.freezerCategory != null">freezer_category = #{r.freezerCategory},</if>
+        </set>
         WHERE id = #{id}
     </update>
 
