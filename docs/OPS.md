@@ -2,6 +2,7 @@
 
 > 合并自原 DEPLOY.md（部署）、LIVE_OPS.md（live 运维）、DATA_SYNC_CHECKLIST.md（数据同步清单），2026-08-28 整理。
 > 目录：① EC2 部署 ② live 运维与数据同步 ③ 数据同步检查清单
+> 相关：本地导入最新 dump 标准流程见 [DB_IMPORT.md](DB_IMPORT.md)
 
 ---
 ## 一、EC2 部署（DEPLOY）
