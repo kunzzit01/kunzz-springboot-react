@@ -44,3 +44,6 @@ sync-live-stock*.log
 Thumbs.db
 .DS_Store
 desktop.ini
+
+# ---------- Maven 本地仓库（误建清理） ----------
+.m2/

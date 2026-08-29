@@ -9,6 +9,7 @@ import { useRealtime } from '../utils/useRealtime'
 import type { StockInout } from '../types'
 import '../styles/stockinout.css'
 import ModalClose from '../components/ModalClose'
+import AiAssistant from '../components/AiAssistant'
 import { showToast } from '../utils/toast'
 
 /** 进出货管理：完整对齐 stockeditall.php（unified-header-row + 日历 + 行内新增 + HIFO + 批量操作 + 导出弹窗） */
@@ -1841,6 +1842,9 @@ export default function StockInout() {
           <button type="button" onClick={undoDelete}>撤销 <span className="sio-undo-shortcut">(Ctrl+Shift+Z)</span></button>
         </div>
       )}
+
+      {/* 本地 AI 助手聊天球（查询问答 + 进出货草稿确认） */}
+      <AiAssistant system={system} onSaved={() => { load(page) }} />
 
     </div>
   )

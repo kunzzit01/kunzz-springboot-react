@@ -37,4 +37,29 @@
           AND date BETWEEN #{start} AND #{end}
     </select>
 
+    <!-- 最新一条匹配货品流水的货品信息（AI 助手用：取最新价格；分词 AND 模糊，精确名优先；零库存也能查到） -->
+    <select id="latestProductInfo" resultType="java.util.LinkedHashMap">
+        SELECT product_name, code_number, specification, type, ROUND(price, 2) AS price
+        FROM ${table}
+        WHERE deleted_at IS NULL
+          AND product_name IS NOT NULL AND product_name != ''
+          AND <foreach collection="words" item="w" separator=" AND ">
+              LOWER(product_name) LIKE CONCAT('%', LOWER(#{w}), '%')
+          </foreach>
+        ORDER BY (LOWER(product_name) = LOWER(#{full})) DESC, date DESC, id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 台账（货品主表）：流水全被软删/从无流水的新货品也能匹配到（价格可能为 NULL，由 AI 向用户追问） -->
+    <select id="stockDataProductInfo" resultType="java.util.LinkedHashMap">
+        SELECT product_name, product_code AS code_number, specification, category AS type, price
+        FROM stock_data
+        WHERE product_name IS NOT NULL AND product_name != ''
+          AND <foreach collection="words" item="w" separator=" AND ">
+              LOWER(product_name) LIKE CONCAT('%', LOWER(#{w}), '%')
+          </foreach>
+        ORDER BY (LOWER(product_name) = LOWER(#{full})) DESC, id DESC
+        LIMIT 1
+    </select>
+
 </mapper>

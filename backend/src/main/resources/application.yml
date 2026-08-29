@@ -54,3 +54,8 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
   mapper-locations: classpath:mapper/*.xml
+
+# 本地 AI 助手（Ollama，零费用；模型经 Modelfile 导入为 kunzz-ai）
+ollama:
+  base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+  model: ${OLLAMA_MODEL:kunzz-ai}

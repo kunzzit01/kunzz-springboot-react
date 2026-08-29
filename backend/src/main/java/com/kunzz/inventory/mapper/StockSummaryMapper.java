@@ -20,4 +20,13 @@ public interface StockSummaryMapper {
     List<Map<String, Object>> supplyValue(@Param("table") String table,
                                           @Param("start") String start,
                                           @Param("end") String end);
+
+    /** 最新一条匹配货品流水的货品信息（AI 助手用：取最新价格；分词 AND 模糊，精确名优先；零库存也能查到） */
+    Map<String, Object> latestProductInfo(@Param("table") String table,
+                                          @Param("words") List<String> words,
+                                          @Param("full") String full);
+
+    /** 台账（货品主表，仅中央 stock_data）：流水/汇总都没有时的最后兑底 */
+    Map<String, Object> stockDataProductInfo(@Param("words") List<String> words,
+                                             @Param("full") String full);
 }

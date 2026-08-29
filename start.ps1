@@ -18,6 +18,8 @@ $JAR      = Join-Path $ROOT 'backend\target\inventory-backend-1.0.0.jar'
 $DUMP     = Join-Path $ROOT 'database\u690174784_kunzz.sql'
 $DB_NAME  = 'u690174784_kunzz'
 $PORT_DB  = 3306
+$OLLAMA   = Join-Path $ROOT 'runtime\ollama\ollama.exe'
+$PORT_AI  = 11434
 $PORT_API = 8081
 
 $script:startedMdb = $false
@@ -39,6 +41,31 @@ function Wait-Port([int]$port, [int]$seconds, [string]$what) {
         Start-Sleep -Seconds 1
     }
     return $false
+}
+
+# 启动本地 AI 服务（Ollama，若已在跑则跳过；模型未导入时仅提示不阻断）
+function Start-Ollama {
+    if (-not (Test-Path $OLLAMA)) {
+        Write-Host "  [AI] 未找到 runtime\ollama\ollama.exe，AI 助手不可用（不影响其他功能）" -ForegroundColor Yellow
+        return
+    }
+    if (Test-PortOpen $PORT_AI) {
+        Write-Host "  [OK] AI 服务(Ollama)已在运行" -ForegroundColor Green
+        return
+    }
+    Write-Host "  [..] 启动本地 AI 服务 (Ollama, 端口 $PORT_AI)..."
+    $p = Start-Process $OLLAMA `
+         -ArgumentList "serve" `
+         -WorkingDirectory (Join-Path $ROOT 'runtime\ollama') `
+         -WindowStyle Hidden `
+         -PassThru
+    $script:ollamaPid = $p.Id
+    if (Wait-Port $PORT_AI 30 "AI 服务(Ollama)") {
+        $models = & $OLLAMA list 2>$null
+        if ($models -notmatch 'kunzz-ai') {
+            Write-Host "  [AI] 提示：模型 kunzz-ai 未导入，聊天球会提示连接失败（导入方法见 docs/ai-assistant-progress.md）" -ForegroundColor Yellow
+        }
+    }
 }
 
 function Wait-Enter([string]$msg = '') {
@@ -229,8 +256,20 @@ function Start-Backend {
                 return
             }
         } catch {}
-        Write-Host "  [!!] 端口 $PORT_API 被其他程序占用，无法启动本系统后端" -ForegroundColor Red
-        Wait-Enter "按回车退出"; exit 1
+        # 端口被占用：若占用方是本系统的旧后端进程（java + inventory-backend jar），自动终止后重启
+        $stale = Get-CimInstance Win32_Process -Filter "Name='java.exe'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match 'inventory-backend.*\.jar' }
+        if ($stale) {
+            $stale | ForEach-Object {
+                Write-Host "  [..] 检测到旧的后端进程 (PID $($_.ProcessId))，自动重启以加载最新版本..."
+                Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+            Start-Sleep -Seconds 2
+        }
+        if (Test-PortOpen $PORT_API) {
+            Write-Host "  [!!] 端口 $PORT_API 被其他程序占用，无法启动本系统后端" -ForegroundColor Red
+            Wait-Enter "按回车退出"; exit 1
+        }
     }
     if (-not (Test-Path $JAR)) {
         # 从 GitHub 源码包下载时没有 target/，自动下载 Release 中的 jar
@@ -283,6 +322,7 @@ try {
     Ensure-NewTables
     Write-Host ""
     Write-Host "  [3/3] 启动系统..."
+    Start-Ollama
     Start-Backend
 } catch {
     Write-Host "  [!!] 启动失败: $($_.Exception.Message)" -ForegroundColor Red
@@ -304,6 +344,10 @@ Wait-Enter
 
 # ---------- 退出清理 ----------
 Write-Host "  正在停止服务..."
+if ($script:ollamaPid) {
+    Stop-Process -Id $script:ollamaPid -Force -ErrorAction SilentlyContinue
+    Write-Host "  [OK] AI 服务已停止"
+}
 if ($script:backendPid) {
     Stop-Process -Id $script:backendPid -Force -ErrorAction SilentlyContinue
     Write-Host "  [OK] 后端已停止"
