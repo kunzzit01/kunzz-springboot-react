@@ -20,6 +20,10 @@ $DB_NAME  = 'u690174784_kunzz'
 $PORT_DB  = 3306
 $OLLAMA   = Join-Path $ROOT 'runtime\ollama\ollama.exe'
 $PORT_AI  = 11434
+$OLLAMA_ZIP_URL = 'https://github.com/ollama/ollama/releases/download/v0.33.1/ollama-windows-amd64.zip'
+$GGUF_URL       = 'https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q4_K_M.gguf'
+$GGUF_LOCAL     = Join-Path $ROOT 'runtime\ollama\Qwen_Qwen3-4B-Q4_K_M.gguf'
+$MODELFILE      = Join-Path $ROOT 'runtime\ollama\Modelfile'
 $PORT_API = 8081
 
 $script:startedMdb = $false
@@ -41,6 +45,90 @@ function Wait-Port([int]$port, [int]$seconds, [string]$what) {
         Start-Sleep -Seconds 1
     }
     return $false
+}
+
+function Get-UrlSize([string]$url) {
+    $h = curl.exe -sIL --max-time 30 $url 2>$null
+    foreach ($line in $h) { if ($line -match '(?i)^content-length:\s*(\d+)') { return [long]$Matches[1] } }
+    return 0
+}
+
+# 并行分块下载（多线程叠加脱脱速网络；断点续传：未完块保留，重跑继续）
+function Download-Parallel([string]$url, [string]$out, [int]$parts = 8) {
+    $size = Get-UrlSize $url
+    if ($size -le 0) { throw "无法获取文件大小: $url" }
+    $dir = "$out.parts"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    $chunk = [Math]::Ceiling($size / $parts)
+    for ($pass = 1; $pass -le 3; $pass++) {
+        $procs = @()
+        for ($i = 0; $i -lt $parts; $i++) {
+            $p = Join-Path $dir ("{0:D3}" -f $i)
+            $start = $i * $chunk
+            $end = [Math]::Min($start + $chunk - 1, $size - 1)
+            if ($start -gt $end) { continue }
+            $want = $end - $start + 1
+            if ((Test-Path $p) -and ((Get-Item $p).Length -eq $want)) { continue }
+            $procs += Start-Process curl.exe -ArgumentList @('-sL','--fail','--max-time','1800','-r',"$start-$end",'-o',"`"$p`"",$url) -PassThru -WindowStyle Hidden
+        }
+        if ($procs.Count -gt 0) { $procs | ForEach-Object { $_.WaitForExit() } }
+        $missing = $false
+        for ($i = 0; $i -lt $parts; $i++) {
+            $p = Join-Path $dir ("{0:D3}" -f $i)
+            $start = $i * $chunk
+            $end = [Math]::Min($start + $chunk - 1, $size - 1)
+            if ($start -gt $end) { continue }
+            if (-not (Test-Path $p) -or (Get-Item $p).Length -ne ($end - $start + 1)) { $missing = $true }
+        }
+        if (-not $missing) { break }
+        if ($pass -eq 3) { throw "分块下载失败（已重试 3 次）: $url（重跑脚本可断点续传）" }
+    }
+    $fs = [System.IO.File]::Open($out, 'Create')
+    Get-ChildItem $dir | Sort-Object Name | ForEach-Object {
+        $bytes = [System.IO.File]::ReadAllBytes($_.FullName)
+        $fs.Write($bytes, 0, $bytes.Length)
+    }
+    $fs.Close()
+    if ((Get-Item $out).Length -ne $size) { throw "合并后大小不符: $out" }
+    Remove-Item $dir -Recurse -Force
+}
+
+# 确保 Ollama 程序存在（缺失则并行下载 + 解压，约 1.4GB）
+function Ensure-Ollama {
+    if ($script:skipAi) { return }
+    if (Test-Path $OLLAMA) { return }
+    Write-Host "  [AI] 并行下载 Ollama (1.4GB, 8 线程)..."
+    $zip = Join-Path $env:TEMP 'ollama-windows-amd64.zip'
+    Download-Parallel $OLLAMA_ZIP_URL $zip 8
+    Write-Host "  [AI] 解压到 runtime\ollama ..."
+    Expand-Archive -Path $zip -DestinationPath (Join-Path $ROOT 'runtime\ollama') -Force
+    Remove-Item $zip -Force
+    if (-not (Test-Path $OLLAMA)) { throw "Ollama 解压失败" }
+}
+
+# 确保 kunzz-ai 模型已导入（缺失则并行下载 gguf 2.4GB + ollama create）
+function Ensure-AiModel {
+    if ($script:skipAi) { return }
+    if (-not (Test-Path $OLLAMA)) { return }
+    if (-not (Test-PortOpen $PORT_AI)) { return }  # 需 serve 已运行（Start-Ollama 在前）
+    $models = (& $OLLAMA list 2>$null | Out-String)
+    if ($models -match 'kunzz-ai') { return }
+    Write-Host "  [AI] 并行下载 Qwen3-4B 模型 (2.4GB, 8 线程)..."
+    Download-Parallel $GGUF_URL $GGUF_LOCAL 8
+    Write-Host "  [AI] 导入模型 kunzz-ai ..."
+    @"
+FROM $($GGUF_LOCAL -replace '\\', '/')
+PARAMETER temperature 0.6
+PARAMETER top_p 0.95
+PARAMETER top_k 20
+PARAMETER num_ctx 3072
+PARAMETER repeat_penalty 1.05
+"@ | Set-Content -Path $MODELFILE -Encoding UTF8
+    & $OLLAMA create kunzz-ai -f $MODELFILE 2>&1 | Out-Null
+    Remove-Item $GGUF_LOCAL -Force  # 已导入 ollama 内部存储，释放 2.4GB
+    $check = (& $OLLAMA list 2>$null | Out-String)
+    if ($check -notmatch 'kunzz-ai') { throw "模型导入失败" }
+    Write-Host "  [OK] AI 模型 kunzz-ai 已就绪" -ForegroundColor Green
 }
 
 # 启动本地 AI 服务（Ollama，若已在跑则跳过；模型未导入时仅提示不阻断）
@@ -322,7 +410,17 @@ try {
     Ensure-NewTables
     Write-Host ""
     Write-Host "  [3/3] 启动系统..."
+    # AI 服务可选：首次需下载约 3.9GB（Ollama 1.4GB + 模型 2.4GB）
+    $script:skipAi = ($env:KUNZZ_SKIP_AI -eq '1')
+    if (-not $script:skipAi -and -not (Test-Path $OLLAMA)) {
+        Write-Host ""
+        Write-Host "  [AI] 首次使用 AI 助手需下载 Ollama(1.4GB) + 模型(2.4GB)，约 5-30 分钟（视网速）" -ForegroundColor Cyan
+        $ans = Read-Host "       现在下载吗？(Y=下载 / S=本次跳过，AI 助手不可用)"
+        if ($ans -match '^[sS]') { $script:skipAi = $true }
+    }
+    Ensure-Ollama
     Start-Ollama
+    Ensure-AiModel
     Start-Backend
 } catch {
     Write-Host "  [!!] 启动失败: $($_.Exception.Message)" -ForegroundColor Red
