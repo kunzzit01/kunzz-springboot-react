@@ -157,13 +157,26 @@ function Ensure-AiModel {
     Write-Host "  [AI] 需下载模型 Qwen3-4B (2.4GB，8 线程约 25 分钟)" -ForegroundColor Cyan
     $ans = Read-Host "       继续吗？(Y=继续 / S=跳过 AI)"
     if ($ans -match '^[sS]') { $script:skipAi = $true; return }
-    # 损坏 gguf 自动清理（上一版本可能因大小误判下载到截断文件）
+    # 损坏 gguf 自动清理（仅查魔数不够：截断文件的头部也是合法 GGUF，还须比对远端大小）
     if (Test-Path $GGUF_LOCAL) {
-        $fs2 = [System.IO.File]::OpenRead($GGUF_LOCAL)
-        $b4 = New-Object byte[] 4
-        [void]$fs2.Read($b4, 0, 4)
-        $fs2.Close()
-        if ([System.Text.Encoding]::ASCII.GetString($b4) -notlike 'GGUF*') {
+        $bad = $false
+        try {
+            $fs2 = [System.IO.File]::OpenRead($GGUF_LOCAL)
+            $b4 = New-Object byte[] 4
+            [void]$fs2.Read($b4, 0, 4)
+            $fs2.Close()
+            if ([System.Text.Encoding]::ASCII.GetString($b4) -notlike 'GGUF*') { $bad = $true }
+        } catch { $bad = $true }
+        if (-not $bad) {
+            $remote = 0
+            foreach ($u in @($GGUF_URL, $GGUF_URL_MIRROR)) { $remote = Get-UrlSize $u; if ($remote -gt 0) { break } }
+            if ($remote -gt 0) {
+                if ((Get-Item $GGUF_LOCAL).Length -ne $remote) { $bad = $true }   # 大小与远端不符 = 截断文件
+            } elseif ((Get-Item $GGUF_LOCAL).Length -lt 1GB) {
+                $bad = $true   # 拿不到远端大小（离线/手动放置场景）时，至少要求 >1GB
+            }
+        }
+        if ($bad) {
             Write-Host "  [AI] 检测到损坏/不完整的 gguf，已删除重新下载" -ForegroundColor Yellow
             Remove-Item $GGUF_LOCAL -Force
         }
@@ -177,6 +190,12 @@ function Ensure-AiModel {
             catch { Write-Host "  [AI] 源不可用：$u" -ForegroundColor Yellow }
         }
         if (-not $done) { throw "模型下载失败（两个源都不可用）。可手动下载 gguf 放到 $GGUF_LOCAL 后重跑" }
+        # 下载后复核：本地大小必须等于远端大小（防 CDN/代理返回错误大小导致截断导入失败）
+        $remote2 = Get-UrlSize $GGUF_URL
+        if ($remote2 -gt 0 -and (Get-Item $GGUF_LOCAL).Length -ne $remote2) {
+            Remove-Item $GGUF_LOCAL -Force
+            throw "下载结果大小不符，已删除。请重跑脚本重新下载"
+        }
     }
     # 磁盘空间检查：模型下载+导入约需 6GB
     $free = [long]((Get-PSDrive -Name $ROOT.Substring(0,1)).Free)
