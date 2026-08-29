@@ -55,6 +55,7 @@
 > 将整个项目文件夹（含 `runtime/`、`database/`、`backend/target/`）复制到新电脑，双击根目录 **`一键启动.bat`** 即可。
 > 无需安装 Java / Node / Maven / XAMPP。
 > 首次运行自动完成：初始化内置 MariaDB → 导入 `database/` 数据包 → 启动后端（官网已内嵌在后端中）。
+> 已装过的用户更新：双击 **`更新系统.bat`**，自动从 GitHub 拉取最新 start.ps1 / 后端 jar / 文档（无需安装 git）。
 
 - 访问：**http://localhost:8081** （演示账号 demo / demo123）
 - 退出：按回车或关闭窗口，自动停止后端和数据库
