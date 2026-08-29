@@ -1,4 +1,4 @@
-# Kunzz 系统更新脚本：无需 git，直接从 GitHub main 分支拉取最新文件
+﻿# Kunzz 系统更新脚本：无需 git，直接从 GitHub main 分支拉取最新文件
 $ErrorActionPreference = 'Stop'
 $ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ROOT
