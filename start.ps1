@@ -71,6 +71,7 @@ function Download-Simple([string]$url, [string]$out) {
 
 # 并行分块下载（多线程叠加脱脱速网络；断点续传：未完块保留，重跑继续）
 function Download-Parallel([string]$url, [string]$out, [int]$parts = 8) {
+    New-Item -ItemType Directory -Path (Split-Path $out -Parent) -Force | Out-Null  # 确保目标目录存在（curl 不会自建）
     $size = Get-UrlSize $url
     if ($size -le 0) { Download-Simple $url $out; return }  # 拿不到大小也能单线程硬下
     $dir = "$out.parts"
