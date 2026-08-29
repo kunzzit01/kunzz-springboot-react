@@ -113,17 +113,22 @@ function Ensure-AiModel {
     if (-not (Test-PortOpen $PORT_AI)) { return }  # 需 serve 已运行（Start-Ollama 在前）
     $models = (& $OLLAMA list 2>$null | Out-String)
     if ($models -match 'kunzz-ai') { return }
+    Write-Host ""
+    Write-Host "  [AI] 需下载模型 Qwen3-4B (2.4GB，8 线程约 25 分钟)" -ForegroundColor Cyan
+    $ans = Read-Host "       继续吗？(Y=继续 / S=跳过 AI)"
+    if ($ans -match '^[sS]') { $script:skipAi = $true; return }
     Write-Host "  [AI] 并行下载 Qwen3-4B 模型 (2.4GB, 8 线程)..."
     Download-Parallel $GGUF_URL $GGUF_LOCAL 8
     Write-Host "  [AI] 导入模型 kunzz-ai ..."
-    @"
+    $mf = @"
 FROM $($GGUF_LOCAL -replace '\\', '/')
 PARAMETER temperature 0.6
 PARAMETER top_p 0.95
 PARAMETER top_k 20
 PARAMETER num_ctx 3072
 PARAMETER repeat_penalty 1.05
-"@ | Set-Content -Path $MODELFILE -Encoding UTF8
+"@
+    [System.IO.File]::WriteAllText($MODELFILE, $mf, (New-Object System.Text.UTF8Encoding($false)))  # 无 BOM，防 ollama 解析失败
     & $OLLAMA create kunzz-ai -f $MODELFILE 2>&1 | Out-Null
     Remove-Item $GGUF_LOCAL -Force  # 已导入 ollama 内部存储，释放 2.4GB
     $check = (& $OLLAMA list 2>$null | Out-String)
@@ -182,6 +187,10 @@ function Import-Dump {
     & cmd /c "`"$MDB\bin\mysql.exe`" --ssl=0 -h 127.0.0.1 -P $PORT_DB -u root --default-character-set=utf8mb4 $DB_NAME < `"$DUMP`" 2>nul"
     if ($LASTEXITCODE -ne 0) { throw "导入数据失败" }
     Write-Host "  [OK] 数据导入完成" -ForegroundColor Green
+    # 清洗老系统 HTML 实体货品名（&amp;→& 等，幂等可重复执行；与 sync_cleanup.sql 同源）
+    Write-Host "  [..] 清洗历史 HTML 实体货品名..."
+    & cmd /c "`"$MDB\bin\mysql.exe`" --default-character-set=utf8 -h 127.0.0.1 -P $PORT_DB -u root $DB_NAME < `"$ROOT\sync_cleanup.sql`" 2>nul"
+    Write-Host "  [OK] 数据就绪" -ForegroundColor Green
 }
 
 function Get-JRE {

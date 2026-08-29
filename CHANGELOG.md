@@ -4,6 +4,42 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-08-29
+
+## 1. 本地 AI 助手（Ollama + Qwen3-4B）：库存问答 / 进出货草稿 / 订单秒级解析
+
+**背景**：进出货页面需要一个零费用 AI 助手帮用户查库存、录入出货单。选型本地 Ollama + Qwen3-4B Q4_K_M（GTX 1650 4GB 可装下）。安全设计：**AI 只生成草稿，用户确认后才写库**（走原有验证/HIFO/备注码流程）。
+
+**后端**：
+- 新增 `AiController`（POST `/api/ai/chat`、`/api/ai/parse-order`，受全局 JWT 保护）与 `AiService`（RestClient 调 Ollama `/api/chat`，think=false，工具循环 ≤6 轮）
+- 6 个工具：`search_products` / `get_stock_summary` / `get_stock_records` / `get_minimum_alerts`（只读查询）；`draft_stock_inout`（单条草稿）/ `draft_order_batch`（批量草稿）
+- **StockSummaryMapper 新增两条货品匹配查询**（草稿自动补全编号/规格/单价用）：
+  - `latestProductInfo(table, words, full)`：最新一笔流水的货品信息（**取最新真实单价**，避免历史异常价；分词 AND 模糊 + 精确名优先；零库存/已售罄也能查到）
+  - `stockDataProductInfo(words, full)`：台账 stock_data 兜底（从无流水的新品；无价时 AI 向用户追问）
+  - 货品匹配三级兑底链：库存汇总（有净库存）→ 最新流水价 → 台账主表；**分词 AND 匹配**解决词序差异（"tanaka sake" → TANAKA VIET SAKE）
+- 订单确定性解析 `/api/ai/parse-order`：正则解析 "udon-2 / nama panko -2 / 1. 2 kg XX"（单行多行通吃），跳过 Date/Kitchen 等表头，识别订单日期（D/M/Y）与送达分店（J1/J2/J3），**不走模型 → 11 条订单 1.5 秒全匹配**（纯模型路径曾需 89~234 秒且漏配）
+- `application.yml` 新增 `ollama.base-url` / `ollama.model`（环境变量 OLLAMA_BASE_URL / OLLAMA_MODEL 可覆盖）
+
+**前端**：
+- 新增 `components/AiAssistant.tsx`：进出货页右下角聊天球（问答 / 单条草稿卡 / 批量订单草稿卡 + 送往分店下拉可改 / 对话内发「确认执行」直接触发批量执行）；`api/ai.ts`
+- 多行或分段订单自动走确定性解析；确认后逐条调用原有 `createStockInout` 并汇总成功/失败，页面自动刷新
+
+**性能调优**：模型上下文 8192→3072 + KV 缓存 q8_0（GPU 占比 70%→87%）；工具结果只回喂摘要给模型（大 JSON 直走内存给前端）
+
+**数据修复**：执行 `sync_cleanup.sql` 清洗 HTML 实体货品名（F&amp;N→F&N、&#039;→' 等），流水/台账残留 0，总库存重复行合并（F&N SWEET CREAMER 净库存 12、S&B CURRY KO 6）
+
+**升级路径**：无表结构变更；拉取后重跑 `一键启动.bat` 即可（后端 jar 已内置仓库）
+
+---
+
+## 2. 一键启动集成 AI 服务（新用户开箱即用）
+
+- `start.ps1` 新增 `Ensure-Ollama` / `Ensure-AiModel` / `Download-Parallel`（8 线程分块 + 断点续传 + 校验重试）：Ollama(1.4GB, GitHub) 与 Qwen3-4B(2.4GB, HuggingFace) 缺失时自动下载、解压、`ollama create kunzz-ai` 导入后删除 gguf 释放空间
+- 首次运行可选跳过（Y/S）；环境变量 `KUNZZ_SKIP_AI=1` 永久跳过；退出时自动停止 AI 服务
+- 修复：8081 被自家旧后端进程占用时误报"端口被占" → 现自动终止旧实例重启
+- README 新增「🤖 本地 AI 助手」章节；`backend/target/inventory-backend-1.0.0.jar`（含 AI 接口）首次纳入仓库，新克隆/下载 zip 的用户开箱即用
+
+---
 ## 🗓️ 2026-08-27
 
 ## 1. 最低库存设置：从「全局唯一」改为「分系统独立」
