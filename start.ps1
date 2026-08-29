@@ -22,6 +22,7 @@ $OLLAMA   = Join-Path $ROOT 'runtime\ollama\ollama.exe'
 $PORT_AI  = 11434
 $OLLAMA_ZIP_URL = 'https://github.com/ollama/ollama/releases/download/v0.33.1/ollama-windows-amd64.zip'
 $GGUF_URL       = 'https://huggingface.co/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q4_K_M.gguf'
+$GGUF_URL_MIRROR = 'https://hf-mirror.com/bartowski/Qwen_Qwen3-4B-GGUF/resolve/main/Qwen_Qwen3-4B-Q4_K_M.gguf'
 $GGUF_LOCAL     = Join-Path $ROOT 'runtime\ollama\Qwen_Qwen3-4B-Q4_K_M.gguf'
 $MODELFILE      = Join-Path $ROOT 'runtime\ollama\Modelfile'
 $PORT_API = 8081
@@ -48,15 +49,30 @@ function Wait-Port([int]$port, [int]$seconds, [string]$what) {
 }
 
 function Get-UrlSize([string]$url) {
-    $h = curl.exe -sIL --max-time 30 $url 2>$null
-    foreach ($line in $h) { if ($line -match '(?i)^content-length:\s*(\d+)') { return [long]$Matches[1] } }
+    # HEAD 两次（网络抖动重试）
+    foreach ($try in 1..2) {
+        $h = curl.exe -sIL --max-time 60 --retry 2 $url 2>$null
+        foreach ($line in $h) { if ($line -match '(?i)^content-length:\s*(\d+)') { return [long]$Matches[1] } }
+        Start-Sleep -Seconds 2
+    }
+    # 兑底：Range GET 读 content-range（部分服务器对 HEAD 不回长度）
+    $r = curl.exe -sL --max-time 60 -r 0-0 -D - -o NUL $url 2>$null
+    foreach ($line in $r) { if ($line -match '(?i)^content-range:\s*bytes\s+\d+-\d+/(\d+)') { return [long]$Matches[1] } }
     return 0
+}
+
+# 兑底：单线程直下（无大小校验，仅验证退出码与文件存在）
+function Download-Simple([string]$url, [string]$out) {
+    Write-Host "       （并行不可用，改用单线程直下，较慢但能完成）" -ForegroundColor Yellow
+    curl.exe -L --fail --retry 3 --retry-delay 2 --max-time 7200 --progress-bar -o $out $url
+    if ($LASTEXITCODE -ne 0) { throw "下载失败: $url" }
+    if (-not (Test-Path $out) -or (Get-Item $out).Length -lt 1MB) { throw "下载结果异常: $out" }
 }
 
 # 并行分块下载（多线程叠加脱脱速网络；断点续传：未完块保留，重跑继续）
 function Download-Parallel([string]$url, [string]$out, [int]$parts = 8) {
     $size = Get-UrlSize $url
-    if ($size -le 0) { throw "无法获取文件大小: $url" }
+    if ($size -le 0) { Download-Simple $url $out; return }  # 拿不到大小也能单线程硬下
     $dir = "$out.parts"
     New-Item -ItemType Directory -Path $dir -Force | Out-Null
     $chunk = [Math]::Ceiling($size / $parts)
@@ -97,13 +113,17 @@ function Download-Parallel([string]$url, [string]$out, [int]$parts = 8) {
 function Ensure-Ollama {
     if ($script:skipAi) { return }
     if (Test-Path $OLLAMA) { return }
-    Write-Host "  [AI] 并行下载 Ollama (1.4GB, 8 线程)..."
-    $zip = Join-Path $env:TEMP 'ollama-windows-amd64.zip'
-    Download-Parallel $OLLAMA_ZIP_URL $zip 8
+    # 手动放置支持：用户自备 zip 放到 runtime\ollama\ollama-windows-amd64.zip 即离线安装
+    $zip = Join-Path $ROOT 'runtime\ollama\ollama-windows-amd64.zip'
+    if (-not (Test-Path $zip)) {
+        Write-Host "  [AI] 并行下载 Ollama (1.4GB, 8 线程)..."
+        try { Download-Parallel $OLLAMA_ZIP_URL $zip 8 }
+        catch { throw "Ollama 下载失败（GitHub 可能无法访问）。可手动下载 $OLLAMA_ZIP_URL 并放到 $zip 后重跑" }
+    }
     Write-Host "  [AI] 解压到 runtime\ollama ..."
     Expand-Archive -Path $zip -DestinationPath (Join-Path $ROOT 'runtime\ollama') -Force
-    Remove-Item $zip -Force
     if (-not (Test-Path $OLLAMA)) { throw "Ollama 解压失败" }
+    Remove-Item $zip -Force  # 解压成功，释放 1.4GB
 }
 
 # 确保 kunzz-ai 模型已导入（缺失则并行下载 gguf 2.4GB + ollama create）
@@ -117,8 +137,16 @@ function Ensure-AiModel {
     Write-Host "  [AI] 需下载模型 Qwen3-4B (2.4GB，8 线程约 25 分钟)" -ForegroundColor Cyan
     $ans = Read-Host "       继续吗？(Y=继续 / S=跳过 AI)"
     if ($ans -match '^[sS]') { $script:skipAi = $true; return }
-    Write-Host "  [AI] 并行下载 Qwen3-4B 模型 (2.4GB, 8 线程)..."
-    Download-Parallel $GGUF_URL $GGUF_LOCAL 8
+    # 手动放置支持：自备 gguf 放 runtime\ollama\Qwen_Qwen3-4B-Q4_K_M.gguf 即离线导入
+    if (-not (Test-Path $GGUF_LOCAL)) {
+        Write-Host "  [AI] 并行下载 Qwen3-4B 模型 (2.4GB, 8 线程)..."
+        $done = $false
+        foreach ($u in @($GGUF_URL, $GGUF_URL_MIRROR)) {   # HF 主站 → hf-mirror 镜像
+            try { Download-Parallel $u $GGUF_LOCAL 8; $done = $true; break }
+            catch { Write-Host "  [AI] 源不可用：$u" -ForegroundColor Yellow }
+        }
+        if (-not $done) { throw "模型下载失败（两个源都不可用）。可手动下载 gguf 放到 $GGUF_LOCAL 后重跑" }
+    }
     Write-Host "  [AI] 导入模型 kunzz-ai ..."
     $mf = @"
 FROM $($GGUF_LOCAL -replace '\\', '/')
