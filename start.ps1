@@ -49,15 +49,17 @@ function Wait-Port([int]$port, [int]$seconds, [string]$what) {
 }
 
 function Get-UrlSize([string]$url) {
-    # HEAD 两次（网络抖动重试）
-    foreach ($try in 1..2) {
-        $h = curl.exe -sIL --max-time 60 --retry 2 $url 2>$null
-        foreach ($line in $h) { if ($line -match '(?i)^content-length:\s*(\d+)') { return [long]$Matches[1] } }
-        Start-Sleep -Seconds 2
-    }
-    # 兑底：Range GET 读 content-range（部分服务器对 HEAD 不回长度）
+    # 首选 Range GET：content-range 来自最终响应，比重定向链里的 content-length 可靠
     $r = curl.exe -sL --max-time 60 -r 0-0 -D - -o NUL $url 2>$null
     foreach ($line in $r) { if ($line -match '(?i)^content-range:\s*bytes\s+\d+-\d+/(\d+)') { return [long]$Matches[1] } }
+    # 兑底 HEAD：重定向链可能有多个响应，必须取最后一个 content-length（取第一个会拿到跳转页的假大小）
+    foreach ($try in 1..2) {
+        $h = curl.exe -sIL --max-time 60 --retry 2 $url 2>$null
+        $len = 0
+        foreach ($line in $h) { if ($line -match '(?i)^content-length:\s*(\d+)') { $len = [long]$Matches[1] } }
+        if ($len -gt 0) { return $len }
+        Start-Sleep -Seconds 2
+    }
     return 0
 }
 
@@ -106,7 +108,24 @@ function Download-Parallel([string]$url, [string]$out, [int]$parts = 8) {
         $fs.Write($bytes, 0, $bytes.Length)
     }
     $fs.Close()
-    if ((Get-Item $out).Length -ne $size) { throw "合并后大小不符: $out" }
+    if ((Get-Item $out).Length -ne $size) {
+        Remove-Item $dir -Recurse -Force   # 旧分块与新大小不符，清掉防污染
+        throw "合并后大小不符: $out（已清空分块，重跑将重新下载）"
+    }
+    # 文件头魔数校验（防重定向劫持/错误内容混入）
+    $fs2 = [System.IO.File]::OpenRead($out)
+    $b4 = New-Object byte[] 4
+    [void]$fs2.Read($b4, 0, 4)
+    $fs2.Close()
+    $sig = [System.Text.Encoding]::ASCII.GetString($b4)
+    if (($out -match '\.gguf$') -and -not $sig.StartsWith('GGUF')) {
+        Remove-Item $out -Force; Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+        throw "下载内容校验失败（非 GGUF 文件，已清除），请重跑重试: $out"
+    }
+    if (($out -match '\.zip$') -and -not $sig.StartsWith('PK')) {
+        Remove-Item $out -Force; Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+        throw "下载内容校验失败（非 ZIP 文件，已清除），请重跑重试: $out"
+    }
     Remove-Item $dir -Recurse -Force
 }
 
@@ -138,6 +157,17 @@ function Ensure-AiModel {
     Write-Host "  [AI] 需下载模型 Qwen3-4B (2.4GB，8 线程约 25 分钟)" -ForegroundColor Cyan
     $ans = Read-Host "       继续吗？(Y=继续 / S=跳过 AI)"
     if ($ans -match '^[sS]') { $script:skipAi = $true; return }
+    # 损坏 gguf 自动清理（上一版本可能因大小误判下载到截断文件）
+    if (Test-Path $GGUF_LOCAL) {
+        $fs2 = [System.IO.File]::OpenRead($GGUF_LOCAL)
+        $b4 = New-Object byte[] 4
+        [void]$fs2.Read($b4, 0, 4)
+        $fs2.Close()
+        if ([System.Text.Encoding]::ASCII.GetString($b4) -notlike 'GGUF*') {
+            Write-Host "  [AI] 检测到损坏/不完整的 gguf，已删除重新下载" -ForegroundColor Yellow
+            Remove-Item $GGUF_LOCAL -Force
+        }
+    }
     # 手动放置支持：自备 gguf 放 runtime\ollama\Qwen_Qwen3-4B-Q4_K_M.gguf 即离线导入
     if (-not (Test-Path $GGUF_LOCAL)) {
         Write-Host "  [AI] 并行下载 Qwen3-4B 模型 (2.4GB, 8 线程)..."
