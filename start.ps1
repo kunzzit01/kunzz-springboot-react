@@ -148,7 +148,10 @@ function Ensure-AiModel {
         }
         if (-not $done) { throw "模型下载失败（两个源都不可用）。可手动下载 gguf 放到 $GGUF_LOCAL 后重跑" }
     }
-    Write-Host "  [AI] 导入模型 kunzz-ai ..."
+    # 磁盘空间检查：模型下载+导入约需 6GB
+    $free = [long]((Get-PSDrive -Name $ROOT.Substring(0,1)).Free)
+    if ($free -lt 8GB) { throw "磁盘剩余空间不足 8GB（当前 $([math]::Round($free/1GB,1))GB），模型下载+导入需要约 6GB" }
+    Write-Host "  [AI] 导入模型 kunzz-ai （请等待，约 1~3 分钟）..."
     $mf = @"
 FROM $($GGUF_LOCAL -replace '\\', '/')
 PARAMETER temperature 0.6
@@ -158,10 +161,13 @@ PARAMETER num_ctx 3072
 PARAMETER repeat_penalty 1.05
 "@
     [System.IO.File]::WriteAllText($MODELFILE, $mf, (New-Object System.Text.UTF8Encoding($false)))  # 无 BOM，防 ollama 解析失败
-    & $OLLAMA create kunzz-ai -f $MODELFILE 2>&1 | Out-Null
-    Remove-Item $GGUF_LOCAL -Force  # 已导入 ollama 内部存储，释放 2.4GB
+    & $OLLAMA create kunzz-ai -f $MODELFILE   # 实时显示进度与错误，不吞输出
     $check = (& $OLLAMA list 2>$null | Out-String)
-    if ($check -notmatch 'kunzz-ai') { throw "模型导入失败" }
+    if ($check -notmatch 'kunzz-ai') {
+        Write-Host "  [!!] gguf 已保留在 $GGUF_LOCAL 以便排查（请勿删除）" -ForegroundColor Yellow
+        throw "模型导入失败（上方 ollama 输出为原因；常见：文件损坏需重新下载 / 磁盘空间不足）"
+    }
+    Remove-Item $GGUF_LOCAL -Force  # 确认导入成功后才释放 2.4GB
     Write-Host "  [OK] AI 模型 kunzz-ai 已就绪" -ForegroundColor Green
 }
 
