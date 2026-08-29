@@ -27,8 +27,11 @@
 | 启动集成 | `start.ps1`：第 3 步自动起 Ollama（已运行则跳过）；检测到自家旧后端占 8081 时自动重启；退出时停 AI 服务 |
 
 ## 运维备忘
-- 模型已导入 ollama（ollama list 可见 kunzz-ai:latest）；gguf 原件在 `C:/Users/donho/Downloads/Qwen_Qwen3-4B-Q4_K_M.gguf`，可删可归档
-- 下载器：`C:/Users/donho/Downloads/pdownload.sh`（多线程断点续传，HF 全速 ~1.7MB/s，GitHub 仅 ~350KB/s）
+- 模型已导入 ollama（ollama list 可见 kunzz-ai:latest）；gguf 原件已归档至 `C:/Users/donho/Downloads/_ai-model-backup/`（Modelfile 已同步指向）
+- 下载器：`C:/Users/donho/Downloads/_ai-model-backup/pdownload.sh`（多线程断点续传，HF 全速 ~1.7MB/s，GitHub 仅 ~350KB/s）
 - 若浏览器问 AI 报"无法连接"：先查 `curl http://localhost:11434/api/version`；Ollama 活着但报这个错多半是模型没导入（ollama list 看 kunzz-ai）
 - jar 需重新 package 才会内嵌最新前端产物；**先杀后端进程再打包**（jar 被锁）
 - 小模型（4B）工具传参不稳定（偶漏 deliver_to/price）：已用卡片段落选择+追问自愈兑底；若要更稳可升级 Qwen3-8B（显存不够可量化）或 Qwen3-4B 换更大 num_ctx
+
+## Git 记录
+- 2026-08-29 推送 `9bc38d2` feat: 本地 AI 助手完整实现（后端+前端+start.ps1 集成+文档）
