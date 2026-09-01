@@ -1232,14 +1232,9 @@ export default function StockInout() {
         <div className="header">
           <div><h1>进出货 - {SYSTEMS.find(s => s.key === system)?.label}</h1></div>
           <div className="controls">
-            <div className="mobile-selector" style={{ display: system === 'j3' ? 'inline-flex' : 'none' }}>
-              <a className="selector-button" href="#" onClick={(e) => { e.preventDefault(); showMsg('手机版页面未接入本地') }}>手机版</a>
-            </div>
-            <div className="mobile-selector" style={{ display: system === 'j1' ? 'inline-flex' : 'none' }}>
-              <a className="selector-button" href="#" onClick={(e) => { e.preventDefault(); showMsg('手机版页面未接入本地') }}>手机版</a>
-            </div>
-            <div className="mobile-selector" style={{ display: system === 'j2' ? 'inline-flex' : 'none' }}>
-              <a className="selector-button" href="#" onClick={(e) => { e.preventDefault(); showMsg('手机版页面未接入本地') }}>手机版</a>
+            <div className="mobile-selector" style={{ display: system === 'central' ? 'none' : 'inline-flex' }}>
+              <a className="selector-button" href={`/m/inout?system=${system}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/m/inout?system=${system}`) }}>手机版</a>
             </div>
             <div className="view-selector">
               <button className="selector-button" onClick={() => setViewOpen(!viewOpen)}>

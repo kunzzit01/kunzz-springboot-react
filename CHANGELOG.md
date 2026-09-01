@@ -83,6 +83,17 @@
   sync 脚本需设 `MYSQL_CMD`/`MYSQLDUMP_CMD`）+「总库存与 live 对不上标准排查流程」三步法；DB_IMPORT.md 验证清单加提醒 + 踩坑 #6
 - 当天附带修复：XAMPP 数据目录损坏导致 MariaDB 起不来（孤儿表空间 + Aria 系统表损坏），改用内置库全新导入最新 dump (3).sql，全量验证通过后由 start.ps1 接管
 
+### 13. 手机版进出货对齐旧 live（新模块：/m/inout + /api/stock/mobile/*）
+
+- **后端** `MobileStockController`/`MobileStockService`/`MobileStockMapper`：完整复刻旧四步数据流（事务内）——
+  ① jXstockeditmobile_data 主写 ② jXstocklist_total 缓存增减 ③ jXstockedit_data 镜像同步（receiver='Mobile' + mobile_ref_id）
+  ④ 出货 HIFO 跨价格组拆行（FOR UPDATE）；指定价格层则单行直写并预检该层可用量
+- 更新=关键字段变更撤旧加新/否则差值回补 + 桌面镜像删旧重同步；删除=mobile 硬删 + total 反冲 + mobile_ref_id 级联删桌面行
+- 端点：records(CRUD) / price-tiers / options / totals；动态表名由 service 白名单映射
+- **前端** `MobileInout.tsx`（路由 /m/inout?system=jX，独立布局无侧边栏）：日视图记录 + 前后翻日/今天、
+  新增/编辑底部抽屉（类型分段、货品搜索下拉、出货价格层选择带可用量提示）、删除确认、总库存视图（读缓存表，带搜索）；桌面进出货页「手机版」按钮接通（原占位提示移除）
+- 冒烟验证：创建进货→镜像+缓存 ✓；出货指定层→单行 @层价 ✓；PUT→镜像重写 ✓；DELETE→级联还原 ✓（测试数据已清理）
+
 ---
 
 ## 🗓️ 2026-08-29

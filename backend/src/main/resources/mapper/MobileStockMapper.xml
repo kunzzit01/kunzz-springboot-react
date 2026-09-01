@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.MobileStockMapper">
+
+    <!-- 手机台账：按日期范围列表（对齐旧 action=list：deleted_at IS NULL，可选日期/货品过滤） -->
+    <select id="listRecords" resultType="java.util.LinkedHashMap">
+        SELECT * FROM ${table}
+        WHERE deleted_at IS NULL
+        <if test="start != null">AND date &gt;= #{start}</if>
+        <if test="end != null">AND date &lt;= #{end}</if>
+        <if test="productName != null and productName != ''">AND product_name = #{productName}</if>
+        ORDER BY date DESC, time DESC, id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="getRecord" resultType="java.util.LinkedHashMap">
+        SELECT * FROM ${table} WHERE id = #{id}
+    </select>
+
+    <insert id="insertRecord" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
+        INSERT INTO ${table}
+            (date, time, product_name, code_number, specification, type,
+             in_quantity, out_quantity, receiver)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.specification}, #{r.type},
+             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver})
+    </insert>
+
+    <update id="updateRecord" parameterType="map">
+        UPDATE ${table}
+        SET date = #{r.date}, time = #{r.time},
+            product_name = #{r.productName}, code_number = #{r.codeNumber},
+            specification = #{r.specification}, type = #{r.type},
+            in_quantity = #{r.inQuantity}, out_quantity = #{r.outQuantity},
+            receiver = #{r.receiver}
+        WHERE id = #{r.id}
+    </update>
+
+    <delete id="deleteRecord">
+        DELETE FROM ${table} WHERE id = #{id}
+    </delete>
+
+    <!-- 最近一条非 Mobile 来源记录（匹配 specification/price/type；对齐旧 syncToJ1StockEditData） -->
+    <select id="latestMatchInfo" resultType="java.util.LinkedHashMap">
+        SELECT specification, price, type
+        FROM ${table}
+        WHERE product_name = #{productName}
+          AND (receiver IS NULL OR receiver NOT IN ('Mobile','mobile'))
+          AND price IS NOT NULL
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 台账主数据兜底 -->
+    <select id="masterInfo" resultType="java.util.LinkedHashMap">
+        SELECT product_code, specification, price, category AS type
+        FROM stock_data
+        WHERE product_name = #{productName}
+        LIMIT 1
+    </select>
+
+    <select id="masterCategory" resultType="java.lang.String">
+        SELECT category FROM stock_data WHERE product_name = #{productName} LIMIT 1
+    </select>
+
+    <!-- HIFO 分层：价格从高到低、仅可用 &gt; 0、FOR UPDATE（与旧版 tier 查询逐字对齐） -->
+    <select id="hifoTiers" resultType="java.util.LinkedHashMap">
+        SELECT specification, COALESCE(price, 0) AS price, type,
+               (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) AS available
+        FROM ${table}
+        WHERE product_name = #{productName}
+          AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+        <choose>
+            <when test="specification == null or specification == '' or specification == 'none'">
+                AND (specification IS NULL OR specification = '' OR specification = 'none')
+            </when>
+            <otherwise>
+                AND specification = #{specification}
+            </otherwise>
+        </choose>
+        GROUP BY COALESCE(price, 0), specification
+        HAVING available &gt; 0
+        ORDER BY price DESC
+        FOR UPDATE
+    </select>
+
+    <!-- 价格层展示（含可用量/超扣负数，价格从高到低；手机出货选层用） -->
+    <select id="tiersDisplay" resultType="java.util.LinkedHashMap">
+        SELECT COALESCE(price, 0) AS price,
+               (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) AS available
+        FROM ${table}
+        WHERE (product_name = #{productName}
+               OR TRIM(REPLACE(product_name, '&amp;amp;', '&amp;')) = TRIM(REPLACE(#{productName}, '&amp;amp;', '&amp;')))
+          AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+        GROUP BY COALESCE(price, 0)
+        ORDER BY price DESC
+    </select>
+
+    <!-- 指定价格的可用库存（跨规格汇总；对齐旧 batch 预检口径） -->
+    <select id="availableAtPrice" resultType="java.math.BigDecimal">
+        SELECT
+          COALESCE(SUM(CASE WHEN in_quantity &gt; 0 THEN in_quantity ELSE 0 END), 0) -
+          COALESCE(SUM(CASE WHEN out_quantity &gt; 0 THEN out_quantity ELSE 0 END), 0)
+        FROM ${table}
+        WHERE (product_name = #{productName}
+               OR TRIM(REPLACE(product_name, '&amp;amp;', '&amp;')) = TRIM(REPLACE(#{productName}, '&amp;amp;', '&amp;')))
+          AND CAST(COALESCE(price, 0) AS DECIMAL(15,6)) = CAST(#{price} AS DECIMAL(15,6))
+          AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+    </select>
+
+    <!-- 该价格层实际使用的 specification（确保出货写入同一库存桶） -->
+    <select id="resolveInboundSpecForPrice" resultType="java.lang.String">
+        SELECT specification
+        FROM ${table}
+        WHERE (product_name = #{productName}
+               OR TRIM(REPLACE(product_name, '&amp;amp;', '&amp;')) = TRIM(REPLACE(#{productName}, '&amp;amp;', '&amp;')))
+          AND CAST(COALESCE(price, 0) AS DECIMAL(15,6)) = CAST(#{price} AS DECIMAL(15,6))
+          AND deleted_at IS NULL
+        <if test="codeNumber != null and codeNumber != ''">
+            AND code_number = #{codeNumber}
+        </if>
+        GROUP BY specification
+        HAVING (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) &gt; 0
+        ORDER BY (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) DESC
+        LIMIT 1
+    </select>
+
+    <!-- 桌面表镜像单行（receiver='Mobile' 固定，mobile_ref_id 关联手机记录） -->
+    <insert id="insertDesktopRow" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
+        INSERT INTO ${table}
+            (date, time, code_number, product_name, in_quantity, out_quantity,
+             specification, price, receiver, remark, target_system, type, mobile_ref_id)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.codeNumber}, #{r.productName}, #{r.inQuantity}, #{r.outQuantity},
+             #{r.specification}, #{r.price}, 'Mobile', NULL, #{r.targetSystem}, #{r.type}, #{r.mobileRefId})
+    </insert>
+
+    <delete id="deleteDesktopByRef">
+        DELETE FROM ${table}
+        WHERE mobile_ref_id = #{refId}
+          AND receiver = 'Mobile'
+          AND target_system = #{system}
+    </delete>
+
+    <!-- 库存总数缓存：定位（specification 空值口径与旧版一致） -->
+    <sql id="totalMatch">
+        WHERE product_name = #{productName}
+          AND code_number &lt;=&gt; #{codeNumber}
+        <choose>
+            <when test="specification == null or specification == '' or specification == 'none'">
+                AND (specification IS NULL OR specification = '' OR specification = 'none')
+            </when>
+            <otherwise>
+                AND specification = #{specification}
+            </otherwise>
+        </choose>
+    </sql>
+
+    <select id="findTotal" resultType="java.util.LinkedHashMap">
+        SELECT id, total_qty FROM ${table}
+        <include refid="totalMatch"/>
+        LIMIT 1
+    </select>
+
+    <update id="adjustTotal">
+        UPDATE ${table}
+        SET total_qty = total_qty + #{deltaIn} - #{deltaOut}
+        <include refid="totalMatch"/>
+    </update>
+
+    <insert id="insertTotal" parameterType="map">
+        INSERT INTO ${table} (product_name, code_number, specification, total_qty)
+        VALUES (#{productName}, #{codeNumber}, #{specification}, #{qty})
+    </insert>
+
+    <select id="listTotals" resultType="java.util.LinkedHashMap">
+        SELECT * FROM ${table} ORDER BY product_name ASC
+    </select>
+</mapper>
