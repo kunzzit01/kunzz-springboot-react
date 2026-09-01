@@ -177,7 +177,11 @@ export default function AppLayout() {
   const go = (path: string) => {
     setHoverPanel(null)
     setFlyout(null)
-    setOpenGroups({}) // 导航后清除组展开/active 残留（active 跟随页面，见 activeSection）
+    // 直接定位到目标分组的最终展开态（其他组收起）：
+    // 旧写法 setOpenGroups({}) 会先收起→等 location effect 再展开，两次渲染之间
+    // 菜单塔一下再弹回（max-height 收起动画 + 淡入动画重放）→ 同组导航可见闪烁
+    const g = groupOf(path.split('?')[0])
+    setOpenGroups(g ? { [g]: true } : {})
     if (flyoutTimer.current) clearTimeout(flyoutTimer.current)
     navigate(path)
   }
