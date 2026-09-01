@@ -648,3 +648,46 @@ body.sidebar-collapsed .kz-main {
 body.sidebar-collapsed .menu-item-wrapper .submenu {
   left: min(352px, 46vw);
 }
+
+/* ---------- AI 助手显示开关（footer 内，登出上方） ---------- */
+.footer-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+.ai-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  color: #444;
+  background: #f7f8fa;
+  transition: background .2s ease;
+  box-sizing: border-box;
+}
+.ai-toggle-row:hover { background: #eef3ff; }
+.ai-toggle-icon { font-size: 15px; }
+.ai-toggle-label { flex: 1; text-align: left; white-space: nowrap; }
+.ai-toggle-switch {
+  width: 34px; height: 18px; border-radius: 10px; background: #ccc;
+  position: relative; transition: background .2s ease; flex-shrink: 0;
+}
+.ai-toggle-switch i {
+  position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+  border-radius: 50%; background: #fff; transition: left .2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.ai-toggle-switch.on { background: #1677ff; }
+.ai-toggle-switch.on i { left: 18px; }
+/* 收起态：只显示 🤖 图标 */
+.informationmenu.collapsed .footer-stack { width: auto; }
+.informationmenu.collapsed .ai-toggle-row { width: auto; padding: 6px 8px; }
+.informationmenu.collapsed .ai-toggle-label,
+.informationmenu.collapsed .ai-toggle-switch { display: none; }

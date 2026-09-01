@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { askAi, parseOrder, type AiDraft } from '../api/ai'
 import { createStockInout } from '../api'
+import { isAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
 
 interface Msg {
   role: 'user' | 'assistant'
@@ -87,6 +88,10 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
       setOpen(true) // 未拖动 = 点击 → 打开面板
     }
   }
+
+  // 显示开关（侧边栏底部可切换；关掉后整个组件不渲染）
+  const [visible, setVisible] = useState(isAiVisible)
+  useEffect(() => onAiVisibleChange(setVisible), [])
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
@@ -197,6 +202,9 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
     onSaved?.()
     setDraftBusy(false)
   }
+
+  // 被侧边栏开关隐藏 → 不渲染（ hook 已全部执行完毕，符合规则）
+  if (!visible) return null
 
   // 面板贴合聊天球：球在右半屏→面板在球左侧；球靠下半屏→向上展开；始终完整在视口内
   const panelStyle = (() => {
@@ -310,14 +318,14 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
 const S: Record<string, React.CSSProperties> = {
   ball: {
     position: 'fixed', width: 56, height: 56,
-    borderRadius: '50%', border: 'none', zIndex: 1200,
+    borderRadius: '50%', border: 'none', zIndex: 5100,
     fontSize: 26, lineHeight: '56px', textAlign: 'center', padding: 0,
     background: 'linear-gradient(135deg, #1677ff, #36cfc9)', color: '#fff',
     boxShadow: '0 4px 14px rgba(22,119,255,.45)',
   },
   panel: {
     position: 'fixed', width: 380, height: 520,
-    background: '#fff', borderRadius: 12, zIndex: 1200, display: 'flex',
+    background: '#fff', borderRadius: 12, zIndex: 5100, display: 'flex',
     flexDirection: 'column', boxShadow: '0 8px 30px rgba(0,0,0,.22)', overflow: 'hidden',
   },
   head: {

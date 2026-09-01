@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { getMe, getMyPermissions, getPendingCount } from '../api'
 import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
+import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
 import '../styles/sidebar.css'
 
 interface LinkItem { label: string; path: string }
@@ -121,6 +122,9 @@ export default function AppLayout() {
   const [user, setUser] = useState<UserInfo | null>(null)
   const [perms, setPerms] = useState<Permissions | null>(null)
   const [pending, setPending] = useState(0)
+  // AI 助手显示开关（侧边栏底部切换，实时同步到聊天球组件）
+  const [aiVisible, setAiVisibleState] = useState(isAiVisible)
+  useEffect(() => onAiVisibleChange(setAiVisibleState), [])
   const [collapsed, setCollapsed] = useState(false)
   // 窗屏（≤768px）自动收起侧边栏：给主内容留足宽度展示多列表格；用户仍可点汉堡按钮展开
   useEffect(() => {
@@ -432,7 +436,15 @@ export default function AppLayout() {
         </div>
 
         <div className="informationmenu-footer">
-          <button className="logout-btn" onClick={logout} title="登出">登出</button>
+          <div className="footer-stack">
+            <div className="ai-toggle-row" onClick={() => setAiVisible(!aiVisible)}
+              title="显示/隐藏进出货页面的 AI 聊天球">
+              <span className="ai-toggle-icon">🤖</span>
+              <span className="ai-toggle-label">AI 助手</span>
+              <span className={'ai-toggle-switch' + (aiVisible ? ' on' : '')}><i /></span>
+            </div>
+            <button className="logout-btn" onClick={logout} title="登出">登出</button>
+          </div>
         </div>
       </aside>
       {/* 收起态悬浮 flyout：白色手风琴面板，单面板内逐级展开直达 */}
