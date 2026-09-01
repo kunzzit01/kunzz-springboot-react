@@ -13,7 +13,9 @@
                ROUND(price, 2) AS price,
                MIN(price) AS price_raw,
                MAX(price) AS price_raw_max,
-               MAX(type) AS type,
+               <!-- type 归属对齐旧系统（合并 key 内取 price 最小一条的 type，而非 MAX 字典序）：
+                    同货品不同原始价可能属于不同类型（Kitchen/Service Line），MAX 会把整组归错类型 -->
+               SUBSTRING_INDEX(GROUP_CONCAT(COALESCE(type, '') ORDER BY price ASC SEPARATOR '|||'), '|||', 1) AS type,
                COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS total_stock,
                SUM((COALESCE(in_quantity, 0) - COALESCE(out_quantity, 0)) * ROUND(price, 2)) AS total_price
         FROM ${table}

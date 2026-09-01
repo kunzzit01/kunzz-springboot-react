@@ -1,24 +1,22 @@
-﻿# Kunzz 系统更新脚本：无需 git，直接从 GitHub main 分支拉取最新文件
+# Kunzz 系统更新脚本 v2：无需 git，从 GitHub main 分支 zip 包一次性更新
+# 覆盖：代码产物(jar/前端 static) + 数据包 + 启动脚本 + 全部文档
+# 安全：白名单更新——绝不触碰本地数据库文件(runtime/)、上传文件(backend/data、uploads)、live 凭证
 $ErrorActionPreference = 'Stop'
 $ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ROOT
-$RAW = 'https://raw.githubusercontent.com/kunzzit01/kunzz-springboot-react/main'
-
-# 需要更新的文件清单（按需增减）
-$files = @(
-    'start.ps1',
-    'backend/target/inventory-backend-1.0.0.jar',
-    'docs/AI_ASSISTANT.md',
-    'docs/ai-assistant-progress.md'
-)
+$ZIP_URL = 'https://codeload.github.com/kunzzit01/kunzz-springboot-react/zip/refs/heads/main'
+$TMP = Join-Path $env:TEMP ('kunzz_update_' + (Get-Date -Format 'yyyyMMdd_HHmmss'))
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor Cyan
 Write-Host "    Kunzz 系统更新（无需 git）" -ForegroundColor Cyan
 Write-Host "  ============================================" -ForegroundColor Cyan
 Write-Host ""
+Write-Host "  说明：整包下载（约 90MB，含最新 jar + 前端页面 + 数据包 + 全部文档）" -ForegroundColor Gray
+Write-Host "        数据包仅用于新装/重装自动导入；已装机器的业务数据请用 sync-live-stock.cjs 同步" -ForegroundColor Gray
+Write-Host ""
 
-# 提醒：更新前最好关闭正在运行的系统
+# ---------- 更新前关闭正在运行的系统 ----------
 $pid8081 = $null
 try {
     $conns = Get-NetTCPConnection -LocalPort 8081 -State Listen -ErrorAction SilentlyContinue
@@ -30,30 +28,69 @@ if ($pid8081) {
     Start-Sleep -Seconds 2
 }
 
-$updated = 0
-$failed = 0
-foreach ($f in $files) {
-    $dest = Join-Path $ROOT ($f -replace '/', '\')
-    $url  = "$RAW/$f"
-    Write-Host "  [..] 拉取 $f ..."
-    if (Test-Path $dest) { Copy-Item $dest "$dest.bak" -Force }
-    curl.exe -sL --fail --retry 3 --retry-delay 2 --max-time 3600 -o $dest $url
-    if ($LASTEXITCODE -eq 0 -and (Test-Path $dest) -and (Get-Item $dest).Length -gt 10) {
-        if (Test-Path "$dest.bak") { Remove-Item "$dest.bak" -Force }
-        Write-Host "  [OK] $f" -ForegroundColor Green
-        $updated++
-    } else {
-        if (Test-Path "$dest.bak") { Copy-Item "$dest.bak" $dest -Force; Remove-Item "$dest.bak" -Force }
-        Write-Host "  [!!] $f 更新失败（网络问题），已保留原文件" -ForegroundColor Red
-        $failed++
+try {
+    # ---------- 1. 下载整包 ----------
+    Write-Host "  [1/4] 下载最新代码包..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Path $TMP -Force | Out-Null
+    $zip = Join-Path $TMP 'main.zip'
+    curl.exe -sL --fail --retry 3 --retry-delay 2 --max-time 3600 -o $zip $ZIP_URL
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $zip) -or (Get-Item $zip).Length -lt 1MB) {
+        throw "下载失败（网络问题），本地文件未做任何改动"
     }
-}
 
-Write-Host ""
-if ($failed -eq 0) {
-    Write-Host "  ✨ 更新完成（$updated 个文件）。请重新运行 一键启动.bat 使其生效。" -ForegroundColor Green
-} else {
-    Write-Host "  ⚠️ 完成，但 $failed 个文件失败。请检查网络后重跑本脚本。" -ForegroundColor Yellow
+    # ---------- 2. 解压 ----------
+    Write-Host "  [2/4] 解压..." -ForegroundColor Cyan
+    tar.exe -xf $zip -C $TMP
+    $src = Get-ChildItem $TMP -Directory | Select-Object -First 1
+    if (-not $src) { throw "解压失败" }
+
+    # ---------- 3. 白名单更新 ----------
+    Write-Host "  [3/4] 更新文件..." -ForegroundColor Cyan
+    $updated = 0
+    function Copy-In([string]$rel) {
+        $from = Join-Path $src.FullName $rel
+        $to   = Join-Path $ROOT ($rel -replace '/', '\')
+        if (Test-Path $from) {
+            New-Item -ItemType Directory -Path (Split-Path $to -Parent) -Force | Out-Null
+            Copy-Item $from $to -Recurse -Force
+            $script:updated++
+            Write-Host "    [OK] $rel" -ForegroundColor Green
+        }
+    }
+    # 启动脚本
+    Copy-In 'start.ps1'; Copy-In 'update.ps1'; Copy-In '一键启动.bat'; Copy-In '更新系统.bat'
+    # 数据库补丁 + 数据包（新装/重装用；已装机器业务数据不受影响）
+    Copy-In 'add_new_tables.sql'; Copy-In 'sync_cleanup.sql'
+    Copy-In 'database/u690174784_kunzz.sql'
+    # 文档
+    Copy-In 'CHANGELOG.md'; Copy-In 'README.md'
+    Copy-In 'docs'
+    # 后端程序（含内嵌依赖，最新构建）
+    Copy-In 'backend/target/inventory-backend-1.0.0.jar'
+    # 前端页面（后端从磁盘伺服 backend/static，必须随更新走）
+    $staticFrom = Join-Path $src.FullName 'backend/static'
+    if (Test-Path $staticFrom) {
+        $staticTo = Join-Path $ROOT 'backend/static'
+        if (Test-Path $staticTo) { Remove-Item $staticTo -Recurse -Force }
+        Copy-Item $staticFrom $staticTo -Recurse -Force
+        $script:updated++
+        Write-Host "    [OK] backend/static（前端页面）" -ForegroundColor Green
+    }
+
+    # ---------- 4. 收尾 ----------
+    Write-Host "  [4/4] 清理临时文件..." -ForegroundColor Cyan
+    Remove-Item $TMP -Recurse -Force -ErrorAction SilentlyContinue
+
+    Write-Host ""
+    if ($updated -gt 0) {
+        Write-Host "  ✨ 更新完成（$updated 项）。请重新运行 一键启动.bat 使其生效。" -ForegroundColor Green
+        Write-Host "     提醒：本次更新内容见 CHANGELOG.md 顶部日志。" -ForegroundColor Gray
+    } else {
+        Write-Host "  ⚠️ 没有任何文件被更新，请检查网络后重试。" -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "  [!!] 更新失败: $($_.Exception.Message)" -ForegroundColor Red
+    Remove-Item $TMP -Recurse -Force -ErrorAction SilentlyContinue
 }
 Write-Host ""
 Write-Host "  按回车键退出..."

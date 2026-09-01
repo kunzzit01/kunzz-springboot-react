@@ -915,42 +915,43 @@ export default function StockRecords() {
       </Modal>
 
       {/* 导出日期范围弹窗（对齐旧 live 系统：默认本月 + 快捷按钮 + 结束日期必填） */}
-      <Modal open={!!exportModal} onCancel={() => setExportModal(null)} footer={null} width={340}
-        title={<span>选择导出日期范围</span>}>
-        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+      <Modal open={!!exportModal} onCancel={() => setExportModal(null)} footer={null} width={460} centered
+        title={<span style={{ fontSize: 16 }}>选择导出日期范围</span>}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           {[['today', '今天'], ['this_month', '本月'], ['last_month', '上月'], ['all', '全部']].map(([k, label]) => (
             <button key={k} onClick={() => quickSetDate(k)}
               style={{
-                flex: 1, padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontSize: 12.5,
-                border: '1px solid ' + (expQuick === k ? '#ff5c00' : '#d1d5db'),
+                flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer', fontSize: 14,
+                border: '1.5px solid ' + (expQuick === k ? '#ff5c00' : '#d1d5db'),
                 background: expQuick === k ? '#fff0e6' : '#fff',
                 color: expQuick === k ? '#c2410c' : '#374151',
                 fontWeight: expQuick === k ? 700 : 500,
+                transition: 'all 0.15s',
               }}>{label}</button>
           ))}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#374151' }}>
-            <span style={{ width: 58 }}>开始日期</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#374151' }}>
+            <span style={{ width: 64 }}>开始日期</span>
             <input type="date" max={isoToday()} value={expStart}
               onChange={(e) => { setExpStart(e.target.value); setExpQuick('') }}
-              style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+              style={{ flex: 1, padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#374151' }}>
-            <span style={{ width: 58 }}>结束日期</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#374151' }}>
+            <span style={{ width: 64 }}>结束日期</span>
             <input type="date" max={isoToday()} value={expEnd}
               onChange={(e) => { setExpEnd(e.target.value); setExpQuick('') }}
-              style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+              style={{ flex: 1, padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
           </label>
         </div>
-        <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>
           库存为累积计算：导出的是截至结束日期的库存余额；选开始日期时 PDF 会标注日期范围
         </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button onClick={() => setExportModal(null)}
-            style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 13 }}>取消</button>
+            style={{ padding: '9px 20px', borderRadius: 10, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>取消</button>
           <button disabled={exporting} onClick={confirmExport}
-            style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: '#ff5c00', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            style={{ padding: '9px 24px', borderRadius: 10, border: 'none', background: '#ff5c00', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}>
             {exporting ? '导出中...' : '确认导出'}
           </button>
         </div>

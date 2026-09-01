@@ -247,6 +247,14 @@ mysqldump -u inventory_app -p u690174784_kunzz | gzip > /backup/db_$(date +%F).s
 > 记录 2026-08-25 两次线上问题（进出货数据缺失 + 时间显示混乱）的根因与预防措施。
 > **上线 / 同步数据 / 排查问题前必读。**
 
+> ⚠️ **本机环境状态（2026-09-01 起）**：XAMPP 的 MariaDB 数据目录已损坏弃用，
+> 本机系统改跑**内置绿色库** `runtime/mariadb`（数据目录 `runtime/mariadb-data`，端口 3306，
+> 由 `一键启动.bat` / start.ps1 管理）。
+> 凡是文档里写 `C:/xampp/mysql/bin/mysql.exe` 的地方，本机一律改用
+> `C:/Users/kunzz/OneDrive/Desktop/inventory-system/runtime/mariadb/bin/mysql.exe`
+> （跑 `sync-live-stock.cjs` 前记得设 `MYSQL_CMD` / `MYSQLDUMP_CMD` 环境变量指向 runtime，
+> 脚本默认值还指向 XAMPP）。
+
 ---
 
 ## 一、2026-08-25 事故回顾（两个问题）
@@ -343,10 +351,62 @@ grep -c "uca1400" database/u690174784_kunzz.sql      # 应为 0（排序规则�
 
 | 现象 | 真实原因 | 不要 |
 |---|---|---|
-| 本地库存与 live"不一样" | live 按**价格分组**（幽灵组），本地按产品合并——总数一致 | 不要当数据缺失去"补" |
+| 本地库存与 live"不一样" | live 按**价格分组**（幽灵组），新系统按产品**合并成一行**——总数一致（详见第 5 节标准排查流程） | 不要当数据缺失去"补" |
 | 本地 8/24 比 live 少 11 条 | dump 导出早于补录时间 | 不要重导 dump，用同步脚本补 |
 | live 显示时间"在未来" | live `formatCreatedAt` 重复 +8 的 bug | 不要改数据库，数据库是对的 |
 | 本地新记录 created_at 漂移 | 用户设备时区 ≠ +8 | 检查 start.ps1 三道时区防线是否生效 |
+
+### 5. 总库存与 live「对不上」标准排查流程（2026-09-01 实战沉淀）
+
+> **一句话结论：数据从来是准的。** 同一货品有多个进价时，live 拆成多行（幽灵组）、
+> 新系统合并成一行，**行数不同、总数相同**。先跑下面三步再下结论，别急着重导数据。
+
+**根因（两边代码位置）**
+
+| 系统 | 分组方式 | 代码位置 |
+|---|---|---|
+| live 旧系统 | `产品+编号+规格+价格` 拆行（同货品不同价 = 多行，JSON 带 `has_price_diff: true`） | `backend/stocklistapi.php?action=summary` |
+| 新系统 | 同口径聚合后**再合并**：同产品+编号+规格 → 一行（库存相加，价格变体存 `price_variants`） | 后端 `StockSummaryService.summary`（merge 段）；前端 `StockRecords.tsx` 的 `mergeSummaryItems` |
+
+例：100 PLUS 在 live = 两行（51@1.14 + 31@1.45），新系统 = 一行（82）。**两边实际库存都是 82。**
+
+**排查三步（照做即可，约 5 分钟）**
+
+```bash
+# 第 1 步：流水全量对账（2025 年至今，报告模式不写库）
+#   ⚠️ 本机先设环境变量指向内置库（见本文档「本机环境状态」）
+cd inventory-system/frontend
+export MYSQL_CMD="<runtime>/mariadb/bin/mysql.exe"
+export MYSQLDUMP_CMD="<runtime>/mariadb/bin/mysqldump.exe"
+node sync-live-stock.cjs --full
+# → 三店「待新增 0 / 待更新 0 / 本地独有 0」= 流水 100% 对齐，数据没问题
+#   （本地独有里有 deleted_at 的行是已删记录，live 列表 API 不返回，正常）
+```
+
+```javascript
+// 第 2 步：总库存对账 —— 用 puppeteer 登录 live 后拉汇总 JSON（凭证在 live-credentials.json）
+// fetch(`${CFG.baseUrl}/backend/stocklistapi.php?action=summary&system=j1`) → 存成 live_summary_j1.json
+```
+
+```sql
+-- 第 3 步：本地按 live 同口径聚合，逐行对比 JSON 里的 summary
+-- 口径：产品+编号+规格+ROUND(price,2)；只看未删、净库存≠0 的行
+SELECT CONCAT(product_name,'|',IFNULL(code_number,''),'|',IFNULL(specification,''),'|',ROUND(price,2)) AS k,
+       SUM(in_quantity)-SUM(out_quantity) AS net
+FROM u690174784_kunzz.j1stockedit_data
+WHERE deleted_at IS NULL
+GROUP BY product_name, code_number, specification, ROUND(price,2)
+HAVING SUM(in_quantity)-SUM(out_quantity) <> 0;
+-- 判定：行数可以不同（幽灵组）；**每行数量、库存合计、库存总值必须相等**。
+--      相等 = 对齐完毕，剩下的都是显示口径问题；不相等才是真数据问题，再回头查流水。
+```
+
+**两个「看着不同但不是错误」的点（2026-09-01 对账实测）**
+
+| 差异 | 实际情况 |
+|---|---|
+| `SUNTORY THE PREMIUM MALT'S` 两边名字不同 | live 还带 HTML 实体 `&#039;`，本地已按第 1 步清洗成正常撇号——**本地更干净**，是文档规定的处理 |
+| `SURUME IKA P` 名字里的空格怪怪的 | live 脏数据：名字里混了一个制表符（TAB），两边同款同数量，不影响库存 |
 
 ---
 

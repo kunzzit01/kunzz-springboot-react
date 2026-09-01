@@ -112,6 +112,11 @@ SHOW VARIABLES LIKE 'time_zone';
 
 全部通过后重启后端（`一键启动.bat`），打开库存汇总页抽查一条数据即可。
 
+> ⚠️ **导入后总库存和 live "对不上"？** 九成不是导入问题——是显示口径差异
+> （live 按价格拆行 / 新系统合并成一行，总数相同）。先照 OPS.md 第二节
+> 「总库存与 live「对不上」标准排查流程」三步对账，确认流水 0 差异后再怀疑导入。
+> 另：本机现在用内置库 runtime/mariadb（XAMPP 已弃用），别照旧用 C:/xampp 路径。
+
 ---
 
 ## 五、历史踩坑记录（2026-08-28 实战）
@@ -123,6 +128,7 @@ SHOW VARIABLES LIKE 'time_zone';
 | 3 | 导入报 `Data truncated for column 'target_system'` | live 库有枚举列存空字符串 `''`（Hostinger 宽松 sql_mode），本地严格模式拒绝 | 属 live 真实数据，勿改数据；导入时统一宽松模式即可（phpMyAdmin dump 头部自带 `SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO"` 覆盖，通常不会再遇到） |
 | 4 | `uca1400` 排序规则导入报错 | Hostinger MariaDB 11.x 的 collation，本地 10.4 不支持 | 见导入前检查 #1，sed 替换后导入 |
 | 5 | dump 无普通表的 DROP 语句，直接导入报"表已存在"/主键冲突 | phpMyAdmin 导出默认不 DROP 普通表 | 不要往现有库导，必须走重建库流程 |
+| 6 | 导入后总库存和 live"对不上"（行数不同/数量看起来不一样） | 不是数据问题：live 按价格拆多行（幽灵组），新系统合并成一行，总数相同 | 不要重导数据；照 OPS.md 第二节第 5 节三步对账，流水 0 差异即结论 |
 
 ---
 

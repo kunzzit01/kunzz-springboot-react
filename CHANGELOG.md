@@ -73,6 +73,16 @@
 - PDF 日期行：有开始 → `Date Range: MM/DD/YYYY - MM/DD/YYYY`；否则 `As of Date`；J2 排除 Sake / 最低库存列 / 总计行等原有行为保留
 - 后端：`StockSummaryMapper.summaryRows` 加可选 endDate 参数 + XML 条件；`StockSummaryService.summary(system, endDate)` 重载；`StockController` 加 endDate 入参
 
+### 12. 总库存与 live「对不上」排查结论 + 文档沉淀（虚惊一场实录）
+
+- **现象**：本地 `/records?system=j1` 总库存和 live `stocklistall?system=j1` 看起来对不上
+- **排查**：`sync-live-stock.cjs --full` 全量流水对账（2025 至今三店 0 差异）→ 抓 live `stocklistapi.php?action=summary` JSON vs 本地同口径 SQL 逐行对账（行数/每行数量/库存合计/库存总值全部相等）
+- **结论**：数据 100% 对齐，纯属**显示口径差异**：live 同货品不同进价拆多行（幽灵组，如 100 PLUS = 51@1.14 + 31@1.45 两行），新系统 `StockSummaryService`/前端 `mergeSummaryItems` 合并成一行（82，变体价存 `price_variants`）——总数一致，别当数据缺失去"补"
+- 顺带确认两个非错误差异：live 名字里的 HTML 实体（`&#039;`）本地已按文档清洗；`SURUME IKA` 名字里有 live 带来的制表符
+- **文档沉淀**：OPS.md 第二节新增「本机环境状态」（XAMPP 已弃用，改用内置库 runtime/mariadb，
+  sync 脚本需设 `MYSQL_CMD`/`MYSQLDUMP_CMD`）+「总库存与 live 对不上标准排查流程」三步法；DB_IMPORT.md 验证清单加提醒 + 踩坑 #6
+- 当天附带修复：XAMPP 数据目录损坏导致 MariaDB 起不来（孤儿表空间 + Aria 系统表损坏），改用内置库全新导入最新 dump (3).sql，全量验证通过后由 start.ps1 接管
+
 ---
 
 ## 🗓️ 2026-08-29
