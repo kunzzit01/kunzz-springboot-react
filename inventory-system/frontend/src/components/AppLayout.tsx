@@ -438,9 +438,12 @@ export default function AppLayout() {
         <div className="informationmenu-footer">
           <div className="footer-stack">
             <div className="ai-toggle-row" onClick={() => setAiVisible(!aiVisible)}
-              title="显示/隐藏进出货页面的 AI 聊天球">
-              <span className="ai-toggle-icon">🤖</span>
-              <span className="ai-toggle-label">AI 助手</span>
+              title="显示/隐藏进出货页面的 Kunzz宝">
+              <span className="ai-toggle-icon">
+                <img src="/static/images/logo.png" alt=""
+                  style={{ width: 18, height: 18, borderRadius: '50%', display: 'block' }} />
+              </span>
+              <span className="ai-toggle-label">Kunzz宝</span>
               <span className={'ai-toggle-switch' + (aiVisible ? ' on' : '')}><i /></span>
             </div>
             <button className="logout-btn" onClick={logout} title="登出">登出</button>

@@ -40,7 +40,7 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: 'assistant',
-      content: '你好！我是库存 AI 助手 🤖\n可以问我："apple sauce 还有多少"、"哪些货低于最低库存"，\n也可以直接吩咐："帮我进货 apple sauce 2 件"（生成草稿，你确认后才会执行）。',
+      content: '你好！我是 Kunzz宝 ✨\n可以问我：“apple sauce 还有多少”、“哪些货低于最低库存”，\n也可以直接吩咐：“帮我进货 apple sauce 2 件”（生成草稿，你确认后才会执行）。',
     },
   ])
   const [drafts, setDrafts] = useState<AiDraft[]>([])
@@ -227,15 +227,20 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
           onPointerMove={onBallPointerMove}
           onPointerUp={onBallPointerUp}
           onPointerCancel={onBallPointerUp}
-          title="AI 助手（拖动可移到任意位置，点按打开）" aria-label="AI 助手"
+          title="Kunzz宝（拖动可移到任意位置，点按打开）" aria-label="Kunzz宝"
         >
-          🤖
+          <img src="/static/images/logo.png" alt="Kunzz宝"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', pointerEvents: 'none' }} />
         </button>
       )}
       {open && (
         <div style={panelStyle}>
           <div style={S.head}>
-            <span>🤖 库存 AI 助手{system ? ` · ${system.toUpperCase()}` : ''}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <img src="/static/images/logo.png" alt=""
+                style={{ width: 20, height: 20, borderRadius: '50%', background: '#fff', padding: 1, boxSizing: 'content-box' }} />
+              Kunzz宝{system ? ` · ${system.toUpperCase()}` : ''}
+            </span>
             <button style={S.close} onClick={() => setOpen(false)} aria-label="关闭">✕</button>
           </div>
           <div style={S.list} ref={listRef}>
@@ -318,10 +323,9 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
 const S: Record<string, React.CSSProperties> = {
   ball: {
     position: 'fixed', width: 56, height: 56,
-    borderRadius: '50%', border: 'none', zIndex: 5100,
-    fontSize: 26, lineHeight: '56px', textAlign: 'center', padding: 0,
-    background: 'linear-gradient(135deg, #1677ff, #36cfc9)', color: '#fff',
-    boxShadow: '0 4px 14px rgba(22,119,255,.45)',
+    borderRadius: '50%', border: 'none', zIndex: 5100, padding: 0,
+    overflow: 'hidden', cursor: 'pointer',
+    boxShadow: '0 4px 14px rgba(0,0,0,.3)',
   },
   panel: {
     position: 'fixed', width: 380, height: 520,
