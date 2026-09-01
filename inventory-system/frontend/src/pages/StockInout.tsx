@@ -1018,8 +1018,15 @@ export default function StockInout() {
         showMsg('单价不能为空且不能小于0', 'error'); return
       }
       // 货品备注校验（对齐旧系统 saveRecord：勾选货品备注时必须填写备注编号）
-      if (editDraft.productRemarkChecked === '1' && !(editDraft.remarkNumber || '').trim()) {
-        showMsg('货品备注已勾选时，请填写备注编号', 'error'); return
+      // 放宽：进货记录编辑补勾选（当初漏勾/漏填）时编号留空 → 传 needGenerateCode 由后端自动生码
+      // 编号展示拆为 前缀-后缀，仅前缀无后缀（如 "AB-"）视为待自动生成
+      const rnRaw = (editDraft.remarkNumber || '').trim()
+      const dashIdx = rnRaw.indexOf('-')
+      const suffixPart = dashIdx >= 0 ? rnRaw.slice(dashIdx + 1).trim() : rnRaw
+      const editIsIncoming = (parseFloat(editDraft.inQuantity || '0') || 0) > 0
+      const needGenCode = editIsIncoming && editDraft.productRemarkChecked === '1' && !suffixPart
+      if (editDraft.productRemarkChecked === '1' && !suffixPart && !needGenCode) {
+        showMsg('货品备注已勾选时，请填写完整备注编号（前缀-编号）', 'error'); return
       }
       // 原记录的备注编号（用于判断是否保持原编号；保持时跳过「在库」校验——
       // 该编号可能已被本记录自身消耗，对齐后端 updateInout 与旧系统编辑行为）
@@ -1077,7 +1084,8 @@ export default function StockInout() {
         outQuantity: editDraft.outQuantity !== '' ? Number(editDraft.outQuantity) : undefined,
         specification: editDraft.specification || undefined, price: editDraft.price !== '' ? Number(editDraft.price) : undefined,
         receiver: editDraft.receiver || undefined, remark: editDraft.remark || undefined,
-        type: editDraft.type || undefined, remarkNumber: editDraft.remarkNumber || undefined,
+        type: editDraft.type || undefined, remarkNumber: needGenCode ? undefined : (editDraft.remarkNumber || undefined),
+        needGenerateCode: needGenCode || undefined,
         // 出货可改目标单位；进货/无出货 → 锁死中央（对齐新行与旧系统）
         targetSystem: outQ > 0 ? (editDraft.targetSystem || undefined) : 'central',
         productRemarkChecked: editDraft.productRemarkChecked === '1',
@@ -1454,9 +1462,28 @@ export default function StockInout() {
                           </select>
                         : typeLabel(r.type)}</td>
                       <td>{isEditing
-                        ? <input type="checkbox" className="remark-checkbox" checked={editDraft.productRemarkChecked === '1'} onChange={(e) => patchEdit({ productRemarkChecked: e.target.checked ? '1' : '0' })} />
+                        ? <input type="checkbox" className="remark-checkbox" checked={editDraft.productRemarkChecked === '1'} onChange={(e) => patchEdit({ productRemarkChecked: e.target.checked ? '1' : '0', remarkNumber: e.target.checked && !(editDraft.remarkNumber || '').trim() ? computePrefix(editDraft.productName || '') + '-' : editDraft.remarkNumber })} />
                         : <input type="checkbox" className="remark-checkbox" checked={!!r.productRemarkChecked} disabled />}</td>
-                      <td>{isEditing ? <input className="table-input" style={{ width: '100%' }} value={editDraft.remarkNumber || ''} onChange={(e) => patchEdit({ remarkNumber: e.target.value })} /> : (r.remarkNumber || '-')}</td>
+                      <td>{isEditing ? (() => {
+                        // 对齐新增行展示：前缀-编号 组合框；纯进货编号禁用（placeholder 自动），由后端生码；出货可手填
+                        const rn = editDraft.remarkNumber || ''
+                        const dash = rn.indexOf('-')
+                        const pre = dash > 0 ? rn.slice(0, dash) : rn
+                        const suf = dash > 0 ? rn.slice(dash + 1) : ''
+                        const checked = editDraft.productRemarkChecked === '1'
+                        const hasOut = parseFloat(editDraft.outQuantity || '0') > 0
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: checked ? 1 : 0.5 }}>
+                            <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!checked}
+                              value={pre} onChange={(e) => patchEdit({ remarkNumber: e.target.value.toUpperCase() + '-' + suf })} />
+                            <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
+                            <input className="table-input" style={{ width: 42, textAlign: 'center', border: 'none', color: checked && !hasOut ? '#9ca3af' : undefined }}
+                              placeholder={checked && !hasOut ? '自动' : '编号'}
+                              disabled={!checked || !hasOut}
+                              value={suf} onChange={(e) => patchEdit({ remarkNumber: pre + '-' + e.target.value.toUpperCase() })} />
+                          </div>
+                        )
+                      })() : (r.remarkNumber || '-')}</td>
                       <td>{isEditing
                         ? <Combobox options={shipperOptions} value={editDraft.receiver || ''} onChange={(v) => patchEdit({ receiver: v })}
                             disabled={parseFloat(editDraft.inQuantity || '0') > 0} style={{ width: '100%', minWidth: 0 }} />

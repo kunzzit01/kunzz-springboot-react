@@ -30,8 +30,8 @@ export interface StockQuery {
   size?: number
 }
 export interface StockSummaryItem { no?: number; product_name?: string; code_number?: string; specification?: string; total_stock?: number; price?: number; total_price?: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; type?: string }
-export const getStockSummary = (system: string) =>
-  http.get<unknown, { summary: StockSummaryItem[]; total_value: number; formatted_total_value: string; total_products: number; type_stats?: Record<string, number>; j1_supply_value?: number; j2_supply_value?: number; j3_supply_value?: number }>('/stock/summary', { params: { system } })
+export const getStockSummary = (system: string, endDate?: string) =>
+  http.get<unknown, { summary: StockSummaryItem[]; total_value: number; formatted_total_value: string; total_products: number; type_stats?: Record<string, number>; j1_supply_value?: number; j2_supply_value?: number; j3_supply_value?: number }>('/stock/summary', { params: { system, endDate: endDate || undefined } })
 
 // ---------- 货品备注分析（stockremark） ----------
 export interface RemarkVariant { code_number?: string; specification?: string; in_quantity?: number; out_quantity?: number; current_stock?: number; formatted_quantity?: string; price?: number; formatted_price?: string; remark_number?: string }
@@ -64,6 +64,16 @@ export const deleteStockProduct = (id: number) =>
   http.delete<unknown, { success: boolean }>(`/stock/products/${id}`)
 export const approveStockProduct = (id: number, approver: string) =>
   http.put<unknown, { success: boolean }>(`/stock/products/${id}/approve`, { approver })
+
+// ---------- 改价日志（总库存：最近改价列 + 点击货品名弹窗看历史） ----------
+export interface PriceLogEntry { changeDate: string; oldPrice: number | null; newPrice: number; changedBy?: string }
+export interface PriceLogLatest { productName: string; changeDate: string; newPrice: number }
+/** 某货品改价历史（从旧到最新） */
+export const getPriceChangeLog = (productName: string) =>
+  http.get<unknown, PriceLogEntry[]>('/stock/products/price-log', { params: { productName } })
+/** 每个货品最近一次改价（列表列展示） */
+export const getPriceChangeLogLatest = () =>
+  http.get<unknown, PriceLogLatest[]>('/stock/products/price-log-latest')
 
 // ---------- 进出货辅助选项（stockeditapi.php） ----------
 export const getCodeNumbers = () =>

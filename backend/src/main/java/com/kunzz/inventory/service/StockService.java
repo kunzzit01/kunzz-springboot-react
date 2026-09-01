@@ -441,8 +441,19 @@ public class StockService {
         // 编辑时：保持原备注编号则跳过「在库」校验——该编号可能已被本记录自身消耗（净库存 ≤ 0），
         // 重新校验必然失败导致无法保存编辑（对齐旧系统 PATCH 编辑不做校验）；仅当改动编号时才要求新编号在库。
         boolean isOutgoing = req.outQuantity() != null && req.outQuantity().signum() > 0;
+        boolean isIncoming = req.inQuantity() != null && req.inQuantity().signum() > 0;
         String remarkNumber = req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase();
         String oldRemark = s.getRemarkNumber() == null ? null : s.getRemarkNumber().trim().toUpperCase();
+
+        // 编辑补勾选自动生码（对齐 createInout needGenerateCode）：进货记录当初漏勾/漏填备注编号，
+        // 事后编辑勾选「货品备注」且编号留空 → 后端自动生成下一个可用编号，无需用户手编
+        if (isIncoming && Boolean.TRUE.equals(req.needGenerateCode())) {
+            String prefix = (req.prefix() == null || req.prefix().isBlank())
+                    ? computePrefix(req.productName()) : req.prefix().trim().toUpperCase();
+            if (prefix.isBlank()) throw new BusinessException("无法计算前缀，请确认货品名称不为空");
+            remarkNumber = generateRemarkCode(prefix);
+        }
+
         if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(req.productName()) > 0) {
             if (remarkNumber == null || remarkNumber.isBlank()) {
                 if (oldRemark == null || oldRemark.isBlank()) {

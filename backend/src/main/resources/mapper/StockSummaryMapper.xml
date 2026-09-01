@@ -22,6 +22,10 @@
             <if test="targetSystem != null and targetSystem != ''">
                 AND target_system = #{targetSystem}
             </if>
+            <!-- 导出日期范围：库存累积，截至 end_date 的余额（对齐旧系统 stocklistapi.php） -->
+            <if test="endDate != null">
+                AND date &lt;= #{endDate}
+            </if>
         </where>
         GROUP BY product_name, code_number, specification, ROUND(price, 2)
         HAVING COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) &lt;&gt; 0

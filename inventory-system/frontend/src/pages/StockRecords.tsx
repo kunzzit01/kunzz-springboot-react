@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getStockSummary, getMinimums } from '../api'
+import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog } from '../api'
+import type { PriceLogEntry } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
 import { showToast } from '../utils/toast'
+import { Modal } from 'antd'
 
 interface SummaryItem {
   no?: number
@@ -236,6 +238,15 @@ export default function StockRecords() {
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
   // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
   const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
+  // 改价日志：每货品最近一次改价（列展示）+ 弹窗历史（从旧到最新）
+  const [priceLatest, setPriceLatest] = useState<Record<string, { date: string; price: number }>>({})
+  const [logModal, setLogModal] = useState<{ name: string; entries: PriceLogEntry[]; loading: boolean } | null>(null)
+  // 导出日期范围弹窗（对齐旧 live 系统 export-date-modal：默认本月，快捷 今天/本月/上月/全部）
+  const [exportModal, setExportModal] = useState<{ sys: string } | null>(null)
+  const [expStart, setExpStart] = useState('')
+  const [expEnd, setExpEnd] = useState('')
+  const [expQuick, setExpQuick] = useState<string>('this_month')
+  const [exporting, setExporting] = useState(false)
   // 多单价展开（按行 no 记录展开状态）
   const [openVariants, setOpenVariants] = useState<Set<number>>(new Set())
   const toggleVariants = (no: number) => setOpenVariants(prev => {
@@ -263,6 +274,38 @@ export default function StockRecords() {
   }
 
   useEffect(() => { load('central'); load('j1'); load('j2'); load('j3'); }, [])
+
+  // 改价日志：一次拉全量最近改价（按货品名匹配；失败静默，不影响页面）
+  useEffect(() => {
+    getPriceChangeLogLatest()
+      .then(list => {
+        const m: Record<string, { date: string; price: number }> = {}
+        for (const e of list || []) m[String(e.productName || '').trim()] = { date: String(e.changeDate || ''), price: Number(e.newPrice) || 0 }
+        setPriceLatest(m)
+      })
+      .catch(() => { /* ignore */ })
+  }, [])
+
+  /** 点击货品名：弹窗展示该货品从旧到最新的单价改动记录 */
+  const openPriceLog = async (name: string) => {
+    setLogModal({ name, entries: [], loading: true })
+    try {
+      const entries = await getPriceChangeLog(name)
+      setLogModal({ name, entries: entries || [], loading: false })
+    } catch {
+      setLogModal({ name, entries: [], loading: false })
+    }
+  }
+  /** 日期显示：列用 28/8/2026（d/m/yyyy），弹窗用 2026年8月28日 */
+  const fmtDmy = (iso: string) => {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(iso || '')
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '-')
+  }
+  const fmtCn = (iso: string) => {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(iso || '')
+    return m ? `${m[1]}年${m[2]}月${m[3]}日` : (iso || '-')
+  }
+  const fmtRm = (v: number | null | undefined) => 'RM' + (Number(v) || 0).toFixed(2)
 
   // 全站实时更新：只刷当前查看的系统（任何写入都广播 all → 当前视图刷新；切换系统时 switchSystem 会补拉）
   useRealtime(system, () => load(system))
@@ -394,9 +437,52 @@ export default function StockRecords() {
   }
   const fmtMoney = (v?: number) => (v ?? 0).toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-  // 导出 PDF（对齐线上 stocklistall.js exportData -> generatePDF：标题/时间/记录数/日期/表头/列宽/最低库存/总计行/页脚 完全一致）
-  const exportPDF = async (sys: string) => {
-    let items = sys === system ? curFiltered : (mergedData[sys]?.summary || []).filter(hasStock)
+  // ---- 导出日期范围（对齐旧 live 系统 export-date-modal：默认本月，快捷 今天/本月/上月/全部） ----
+  const isoToday = () => {
+    const t = new Date()
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`
+  }
+  const openExportModal = (sys: string) => {
+    const t = new Date()
+    const first = new Date(t.getFullYear(), t.getMonth(), 1)
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    setExpStart(iso(first)); setExpEnd(iso(t)); setExpQuick('this_month')
+    setExportModal({ sys })
+  }
+  const quickSetDate = (type: string) => {
+    const t = new Date()
+    const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    setExpQuick(type)
+    if (type === 'today') { setExpStart(iso(t)); setExpEnd(iso(t)) }
+    else if (type === 'this_month') { setExpStart(iso(new Date(t.getFullYear(), t.getMonth(), 1))); setExpEnd(iso(t)) }
+    else if (type === 'last_month') {
+      setExpStart(iso(new Date(t.getFullYear(), t.getMonth() - 1, 1)))
+      setExpEnd(iso(new Date(t.getFullYear(), t.getMonth(), 0)))
+    } else if (type === 'all') { setExpStart(''); setExpEnd(iso(t)) }
+  }
+  const confirmExport = async () => {
+    if (!exportModal) return
+    const sys = exportModal.sys
+    const start = expStart, end = expEnd
+    if (!end) { showMsg('请选择结束日期', 'error'); return }
+    if (start && start > end) { showMsg('开始日期不能晚于结束日期', 'error'); return }
+    // 全部（无开始日期且结束=今天）→ 用页面当前显示数据（对齐旧系统 usePageData）
+    if (!start && (!end || end === isoToday())) { setExportModal(null); exportPDF(sys); return }
+    // 指定日期范围 → 从后端拉截至结束日期的库存余额（库存累积，start 仅用于 PDF 标注）
+    setExporting(true)
+    try {
+      const d = await getStockSummary(sys, end)
+      const items = (d.summary || []).filter(hasStock)
+      setExportModal(null)
+      await exportPDF(sys, { start, end }, items)
+    } catch { /* 拦截器已提示 */ }
+    setExporting(false)
+  }
+
+  // 导出 PDF（对齐线上 stocklistall.js exportData -> generatePDF：标题/时间/记录数/日期范围/表头/列宽/最低库存/总计行/页脚）
+  // range 非空 = 指定日期范围导出（items 来自后端截至 endDate 的汇总；PDF 标注 Date Range，对齐旧系统）
+  const exportPDF = async (sys: string, range?: { start: string; end: string }, rangeItems?: SummaryItem[]) => {
+    let items = rangeItems || (sys === system ? curFiltered : (mergedData[sys]?.summary || []).filter(hasStock))
     if (items.length === 0) { showMsg('没有数据可导出', 'error'); return }
     // J2 导出过滤掉 Sake 类型（对齐线上 performExport）
     if (sys === 'j2') {
@@ -425,12 +511,20 @@ export default function StockRecords() {
       doc.text(`Export Time: ${exportTimeStr}`, 14, 22)
       doc.text(`Records: ${items.length}`, 200, 22)
 
-      // 截至日期（当前导出为页面数据，等同旧系统"全部/今天"场景）
+      // 日期标注（对齐旧系统：指定开始日期 → Date Range；否则 As of Date）
       const now = new Date()
       const y = now.getFullYear()
       const m = String(now.getMonth() + 1).padStart(2, '0')
       const d = String(now.getDate()).padStart(2, '0')
-      doc.text(`As of Date: ${m}/${d}/${y}`, 14, 28)
+      const mdY = (iso: string) => {
+        const mt = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(iso || '')
+        return mt ? `${mt[2]}/${mt[3]}/${mt[1]}` : iso
+      }
+      if (range?.start) {
+        doc.text(`Date Range: ${mdY(range.start)} - ${mdY(range.end || `${y}-${m}-${d}`)}`, 14, 28)
+      } else {
+        doc.text(`As of Date: ${mdY(range?.end || `${y}-${m}-${d}`)}`, 14, 28)
+      }
 
       // 表格数据（表头/列序/列宽 对齐线上）
       const tableData: (string | number)[][] = []
@@ -585,7 +679,7 @@ export default function StockRecords() {
                   value={filters[sys] || ''} onChange={(e) => setFilters(prev => ({ ...prev, [sys]: e.target.value }))} />
               </div>
             </div>
-            <button className="btn btn-warning btn-expand" onClick={() => exportPDF(sys)} title="导出数据">
+            <button className="btn btn-warning btn-expand" onClick={() => openExportModal(sys)} title="导出数据（可选择日期范围）">
               <span className="btn-expand-icon"><i className="fas fa-download"></i></span>
               <span className="btn-expand-text">导出数据</span>
             </button>
@@ -648,7 +742,19 @@ export default function StockRecords() {
                     <tr className={isLowStock ? 'low-stock-row' : ''}>
                       <td className="text-center">{idx + 1}</td>
                       <td className="text-center">{item.code_number || '-'}</td>
-                      <td><strong>{item.product_name}</strong></td>
+                      <td>
+                        <strong
+                          style={{ cursor: priceLatest[productName] ? 'pointer' : 'default' }}
+                          title={priceLatest[productName]
+                            ? `最近改价：${fmtDmy(priceLatest[productName].date)} ${fmtRm(priceLatest[productName].price)}
+点击查看完整改价记录（从旧到最新）`
+                            : undefined}
+                          onClick={() => { if (priceLatest[productName]) openPriceLog(productName) }}
+                        >
+                          {item.product_name}
+                          {priceLatest[productName] && <i className="fas fa-history" style={{ marginLeft: 5, fontSize: 11, color: '#f59e0b' }} />}
+                        </strong>
+                      </td>
                       <td className="stock-cell">
                         <div className={'currency-display ' + minClass}>
                           <span className="currency-symbol">&nbsp;</span>
@@ -780,6 +886,75 @@ export default function StockRecords() {
         {systems.map(s => renderSystemPage(s.key))}
       </div>
 
+      {/* 改价历史弹窗：从旧到最新（对齐需求：8月28日2026 - RM xx） */}
+      <Modal
+        open={!!logModal}
+        onCancel={() => setLogModal(null)}
+        footer={null}
+        title={<span>改价记录 — {logModal?.name}</span>}
+        width={460}
+      >
+        {logModal?.loading && <div style={{ padding: '18px 0', color: '#6b7280' }}>加载中...</div>}
+        {!logModal?.loading && (logModal?.entries.length || 0) === 0 && (
+          <div style={{ padding: '18px 0', color: '#6b7280' }}>该货品暂无改价记录（在「货品种类」更改单价后会自动记录）</div>
+        )}
+        {!logModal?.loading && (logModal?.entries.length || 0) > 0 && (
+          <div style={{ maxHeight: 420, overflowY: 'auto' }}>
+            {(logModal?.entries || []).map((e, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 2px', borderBottom: i < (logModal?.entries.length || 0) - 1 ? '1px dashed #e5e7eb' : 'none' }}>
+                <span style={{ color: '#374151' }}>{fmtCn(e.changeDate)}</span>
+                <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                  {e.oldPrice != null && <span style={{ color: '#9ca3af', fontSize: 12, textDecoration: 'line-through' }}>{fmtRm(e.oldPrice)}</span>}
+                  <span style={{ fontWeight: 700, color: '#c2410c' }}>{fmtRm(e.newPrice)}</span>
+                </span>
+              </div>
+            ))}
+            <div style={{ marginTop: 10, fontSize: 12, color: '#9ca3af' }}>共 {logModal?.entries.length} 条 · 从旧到最新</div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 导出日期范围弹窗（对齐旧 live 系统：默认本月 + 快捷按钮 + 结束日期必填） */}
+      <Modal open={!!exportModal} onCancel={() => setExportModal(null)} footer={null} width={340}
+        title={<span>选择导出日期范围</span>}>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {[['today', '今天'], ['this_month', '本月'], ['last_month', '上月'], ['all', '全部']].map(([k, label]) => (
+            <button key={k} onClick={() => quickSetDate(k)}
+              style={{
+                flex: 1, padding: '6px 0', borderRadius: 8, cursor: 'pointer', fontSize: 12.5,
+                border: '1px solid ' + (expQuick === k ? '#ff5c00' : '#d1d5db'),
+                background: expQuick === k ? '#fff0e6' : '#fff',
+                color: expQuick === k ? '#c2410c' : '#374151',
+                fontWeight: expQuick === k ? 700 : 500,
+              }}>{label}</button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#374151' }}>
+            <span style={{ width: 58 }}>开始日期</span>
+            <input type="date" max={isoToday()} value={expStart}
+              onChange={(e) => { setExpStart(e.target.value); setExpQuick('') }}
+              style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+          </label>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, color: '#374151' }}>
+            <span style={{ width: 58 }}>结束日期</span>
+            <input type="date" max={isoToday()} value={expEnd}
+              onChange={(e) => { setExpEnd(e.target.value); setExpQuick('') }}
+              style={{ flex: 1, padding: '6px 8px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 13 }} />
+          </label>
+        </div>
+        <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>
+          库存为累积计算：导出的是截至结束日期的库存余额；选开始日期时 PDF 会标注日期范围
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <button onClick={() => setExportModal(null)}
+            style={{ padding: '7px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 13 }}>取消</button>
+          <button disabled={exporting} onClick={confirmExport}
+            style={{ padding: '7px 18px', borderRadius: 8, border: 'none', background: '#ff5c00', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
+            {exporting ? '导出中...' : '确认导出'}
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }

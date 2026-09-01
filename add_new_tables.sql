@@ -85,3 +85,19 @@ DEALLOCATE PREPARE stmt;
 --        WHERE table_schema='u690174784_kunzz' AND table_name='stock_minimum_settings' AND column_name='stock_system';
 --      应返回 1 行（varchar(20)）；索引：SHOW INDEX FROM stock_minimum_settings → 应有 unique_system_product (stock_system, product_name)
 -- =============================================================================
+
+-- 3) 改价日志表（总库存「改价记录」列 + 货品名点击弹窗展示改价历史）
+--    货品种类每次更改单价记录一条（old→new，change_date=当天）；总库存从旧到最新展示
+CREATE TABLE IF NOT EXISTS `price_change_log` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `product_name` varchar(255) NOT NULL COMMENT '货品名称(decoded 纯文本,与流水/总库存一致)',
+  `code_number` varchar(50) DEFAULT NULL COMMENT '货品编号',
+  `old_price` decimal(10,3) DEFAULT NULL COMMENT '改价前单价(首次维护为NULL)',
+  `new_price` decimal(10,3) NOT NULL COMMENT '改价后单价',
+  `change_date` date NOT NULL COMMENT '改价日期',
+  `changed_by` varchar(100) DEFAULT NULL COMMENT '操作人',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_pcl_name` (`product_name`),
+  KEY `idx_pcl_date` (`change_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -462,84 +462,103 @@
   /* 收起时不位移（保持绝对居中） */
 }
 
-/* 收起态悬浮提示浮层：白色卡片 + 橙色主题条 + 圆点列表 + 箭头 + 弹性动画 */
-.sidebar-tip {
+/* =============================================================
+   收起态悬浮 flyout：干净的手风琴面板（单面板逐级展开直达）
+   白底 / 浅橙 hover / 缩进层级 / 平滑展开
+   ============================================================= */
+.sidebar-flyout {
   position: fixed;
-  transform: translateY(-50%);
+  left: calc(clamp(52px, 3.65vw, 72px) + 8px);
+  width: clamp(230px, 16.5vw, 292px);
   z-index: 9000;
-  min-width: 160px;
-  max-width: 240px;
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid #ffe1c4;
-  border-radius: 12px;
-  box-shadow: 0 14px 36px rgba(120, 53, 15, 0.2), 0 3px 10px rgba(0, 0, 0, 0.08);
-  padding: 12px 14px;
-  pointer-events: none;
-  animation: sidebarTipIn 0.18s cubic-bezier(0.34, 1.25, 0.4, 1);
+  max-height: min(76vh, 640px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.07);
+  padding: 5px;
+  transform-origin: left top;
+  animation: sidebarFlyoutIn 0.17s ease-out;
 }
-.sidebar-tip::before {
-  content: '';
-  position: absolute;
-  left: -8px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 8px solid transparent;
-  border-right-color: #ffe1c4;
+.sidebar-flyout::-webkit-scrollbar { width: 5px; }
+.sidebar-flyout::-webkit-scrollbar-thumb { background: #e2e5ea; border-radius: 4px; }
+.sidebar-flyout::-webkit-scrollbar-thumb:hover { background: #cbd0d8; }
+.sidebar-flyout::-webkit-scrollbar-track { background: transparent; }
+
+/* 组名标题：小、灰、不可点 */
+.sidebar-flyout-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #a8aeb9;
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  padding: 8px 12px 6px;
+  white-space: nowrap;
 }
-.sidebar-tip::after {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 6px solid transparent;
-  border-right-color: rgba(255, 255, 255, 0.97);
-}
-.sidebar-tip-title {
+
+/* 条目基础 */
+.sf-item {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
+  padding: 8.5px 12px;
+  margin: 1px 0;
+  border-radius: 9px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease, color 0.14s ease;
+}
+.sf-item:hover { background: #fff3ea; color: #c2410c; }
+.sf-item.active { background: #ffedd5; color: #c2410c; font-weight: 650; }
+.sf-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sf-badge {
+  background: #ef4444; color: #fff;
+  font-size: 10.5px; font-weight: 700;
+  padding: 1px 7px; border-radius: 20px;
+}
+
+/* 有下级的条目：右侧箭头，展开时旋转 */
+.sf-group, .sf-branch { font-weight: 600; }
+.sf-caret {
+  margin-left: auto;
+  color: #c3c9d2;
   font-size: 13px;
   font-weight: 700;
-  color: #7c2d12;
-  padding-bottom: 7px;
-  margin-bottom: 7px;
-  border-bottom: 1px solid #fde8d0;
-  white-space: nowrap;
+  transition: transform 0.2s ease, color 0.14s ease;
 }
-.sidebar-tip-title::before {
+.sf-item:hover .sf-caret { color: #fb923c; }
+.sf-item.open .sf-caret { transform: rotate(90deg); }
+
+/* 手风琴展开（grid 0fr→1fr 平滑过渡，层级缩进） */
+.sf-sub {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.22s ease;
+}
+.sf-sub.open { grid-template-rows: 1fr; }
+.sf-sub-inner { overflow: hidden; min-height: 0; }
+.sf-nested .sf-item { padding-left: 26px; font-size: 12.5px; color: #4b5563; }
+.sf-nested .sf-sub-inner .sf-leaf { padding-left: 38px; font-size: 12.5px; }
+.sf-nested .sf-sub-inner .sf-leaf::before {
   content: '';
-  width: 4px;
-  height: 14px;
-  border-radius: 2px;
-  background: linear-gradient(180deg, #ff8019 0%, #ff5c00 100%);
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: #fdba74;
+  flex-shrink: 0;
 }
-.sidebar-tip-pages {
-  display: flex;
-  flex-direction: column;
+
+@keyframes sidebarFlyoutIn {
+  from { opacity: 0; transform: translateX(-6px) scale(0.985); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
 }
-.sidebar-tip-page {
-  position: relative;
-  font-size: 12px;
-  color: #6b7280;
-  padding: 3px 0 3px 14px;
-  line-height: 1.5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.sidebar-tip-page::before {
-  content: '•';
-  position: absolute;
-  left: 2px;
-  color: #ff8019;
-  font-weight: 700;
-}
-@keyframes sidebarTipIn {
-  from { opacity: 0; transform: translateY(-50%) translateX(-6px); }
-  to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 .informationmenu.collapsed .informationmenu-section-title.active {
   box-shadow: 0 3px 10px rgba(255, 92, 0, 0.3);
@@ -623,4 +642,9 @@ body.sidebar-collapsed .kz-main {
   .informationmenu.show {
     transform: translateX(0);
   }
+}
+
+/* 收起态：flyout 右侧再展开的二级全高橙板（与 flyout 衔接不重叠） */
+body.sidebar-collapsed .menu-item-wrapper .submenu {
+  left: min(352px, 46vw);
 }

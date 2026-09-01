@@ -38,11 +38,16 @@ public class StockSummaryService {
 
     /** 某系统库存汇总 */
     public Map<String, Object> summary(String system) {
+        return summary(system, null);
+    }
+
+    /** 某系统库存汇总（endDate 非空 = 截至该日期的库存余额，对齐旧系统导出日期范围） */
+    public Map<String, Object> summary(String system, java.time.LocalDate endDate) {
         String ts = system == null ? "central" : system;
         boolean isCentral = "central".equals(ts);
         // 数据源：central 用 stockinout_data（全量，不过滤 target_system，对齐线上），分店用各自 stockedit 表
         String table = isCentral ? "stockinout_data" : ts + "stockedit_data";
-        List<Map<String, Object>> rows = stockSummaryMapper.summaryRows(table, null);
+        List<Map<String, Object>> rows = stockSummaryMapper.summaryRows(table, null, endDate);
         // 中央无 type 列：从台账补全（8/24，对齐分店显示类型）
         Map<String, String> productType = isCentral ? productTypeMap() : Map.of();
         java.util.function.Function<String, String> normalizeType = t -> {

@@ -165,3 +165,34 @@ body {
   }
   .sp-root .smartSearchWrapper.expanded { right: 12px !important; }
 }
+
+/* ============================================================
+   全站滚动条统一：加粗 + 圆角胶囊 + 悬停变色（人性化）
+   带 !important 压过各页面散落的细滚动条定义，保证全站一致
+   ============================================================ */
+* {
+  scrollbar-width: auto !important;                /* Firefox：最粗档 */
+  scrollbar-color: #b6bdca transparent !important; /* Firefox：滑块/轨道色 */
+}
+::-webkit-scrollbar {
+  width: 14px !important;   /* 纵向粗度 */
+  height: 14px !important;  /* 横向粗度 */
+}
+::-webkit-scrollbar-track {
+  background: transparent !important;              /* 轨道透明，不抢视觉 */
+}
+::-webkit-scrollbar-thumb {
+  background-color: #c3cad6 !important;            /* 温和灰，明暗底都清晰 */
+  border-radius: 999px !important;                 /* 胶囊造型 */
+  border: 3px solid transparent !important;        /* 悬空留边，更精致 */
+  background-clip: content-box !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: #98a2b3 !important;            /* 悬停加深，明确反馈 */
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: #7b8698 !important;            /* 按住再深一档 */
+}
+::-webkit-scrollbar-corner {
+  background: transparent !important;              /* 纵横交汇角落不突兀 */
+}

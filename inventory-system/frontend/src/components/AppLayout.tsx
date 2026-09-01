@@ -133,8 +133,10 @@ export default function AppLayout() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   // 收起态悬浮提示（组名 + 页面列表）
-  const [tip, setTip] = useState<{ label: string; pages: string[]; x: number; y: number } | null>(null)
-  const tipTimer = useRef<any>(null)
+  // 收起态悬浮 flyout：可交互子菜单（支持逐级展开并直接点入页面）
+  const [flyout, setFlyout] = useState<{ section: MenuSection; top: number } | null>(null)
+  const flyoutTimer = useRef<any>(null)
+  const flyoutHideTimer = useRef<any>(null)
   // 当前 hover 的品牌面板 key（鼠标在菜单项或面板上时保持打开）
   const [hoverPanel, setHoverPanel] = useState<string | null>(null)
   const hoverTimer = useRef<any>(null)
@@ -174,6 +176,9 @@ export default function AppLayout() {
     label === '集团架构' ? 'brand' : label === '营收数据' ? 'analytics' : label === '人事管理' ? 'hr' : label === '资源总库' ? 'resource' : 'visual'
   const go = (path: string) => {
     setHoverPanel(null)
+    setFlyout(null)
+    setOpenGroups({}) // 导航后清除组展开/active 残留（active 跟随页面，见 activeSection）
+    if (flyoutTimer.current) clearTimeout(flyoutTimer.current)
     navigate(path)
   }
   const isActive = (p: string) => {
@@ -192,8 +197,17 @@ export default function AppLayout() {
     window.location.href = '/home'
   }
 
+  /** 汉堡切换侧栏：展开/收起都清 flyout 与定时器（避免与展开态侧栏并存双高亮） */
+  const toggleCollapsed = () => {
+    setCollapsed(prev => !prev)
+    setFlyout(null)
+    setHoverPanel(null)
+    if (flyoutTimer.current) clearTimeout(flyoutTimer.current)
+    if (flyoutHideTimer.current) clearTimeout(flyoutHideTimer.current)
+  }
+
   const toggleGroup = (id: string) => {
-    if (collapsed) setCollapsed(false)
+    if (collapsed) { setCollapsed(false); setFlyout(null) }
     setOpenGroups(prev => {
       const next: Record<string, boolean> = {}
       Object.keys(prev).forEach(k => { next[k] = false })
@@ -202,23 +216,83 @@ export default function AppLayout() {
     })
   }
 
-  // ---- 收起态悬浮提示：延迟出现（防误触），显示组名 + 页面列表 ----
-  const showTip = (e: React.MouseEvent, section: MenuSection) => {
+  // ---- 收起态悬浮 flyout：延迟出现（防误触），面板内可直接逐级点入 ----
+  const enterSectionFlyout = (e: React.MouseEvent, section: MenuSection) => {
     if (!collapsed) return
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    if (tipTimer.current) clearTimeout(tipTimer.current)
-    tipTimer.current = setTimeout(() => {
-      setTip({
-        label: section.label,
-        pages: section.children.map(c => c.label).filter(Boolean),
-        x: rect.right + 14,
-        y: rect.top + rect.height / 2,
-      })
-    }, 130)
+    if (flyoutTimer.current) clearTimeout(flyoutTimer.current)
+    if (flyoutHideTimer.current) clearTimeout(flyoutHideTimer.current)
+    setFlyout(null)
+    setHoverPanel(null)
+    flyoutTimer.current = setTimeout(() => {
+      const top = Math.max(10, Math.min(rect.top - 6, window.innerHeight - 120))
+      setFlyout({ section, top })
+    }, 90)
   }
-  const hideTip = () => {
-    if (tipTimer.current) clearTimeout(tipTimer.current)
-    setTip(null)
+  const leaveSectionFlyout = () => {
+    if (flyoutTimer.current) clearTimeout(flyoutTimer.current)
+    flyoutHideTimer.current = setTimeout(() => setFlyout(null), 220)
+  }
+  const keepFlyout = () => {
+    if (flyoutHideTimer.current) clearTimeout(flyoutHideTimer.current)
+  }
+
+  /** flyout 内条目：有下级 → 点击展开手风琴（内联，层级一目了然）；否则直接导航 */
+  const renderFlyoutItem = (child: MenuChild, sectionId: string, idx: number) => {
+    const groups: { label: string; options: { label: string; path: string }[] }[] = []
+    if (child.links?.length) groups.push({ label: '', options: child.links })
+    child.expandables?.forEach(ex => groups.push({ label: ex.label, options: ex.options }))
+    const hasKids = groups.length > 0
+    const key = 'fly|' + sectionId + '|' + idx
+    const open = !!expanded[key]
+
+    if (!hasKids) {
+      return (
+        <a key={idx} href={'#' + (child.path || '')} className={'sf-item' + (child.path && isActive(child.path) ? ' active' : '')}
+          onClick={(e) => { e.preventDefault(); if (child.path) go(child.path) }}>
+          <span className="sf-label">{child.label}</span>
+          {child.path === '/hire' && pending > 0 && <span className="sf-badge">{pending}</span>}
+        </a>
+      )
+    }
+    return (
+      <div key={idx}>
+        <a href="#" className={'sf-item sf-group' + (open ? ' open' : '')}
+          onClick={(e) => { e.preventDefault(); toggleExpand(key) }}>
+          <span className="sf-label">{child.label}</span>
+          <span className="sf-caret">›</span>
+        </a>
+        <div className={'sf-sub' + (open ? ' open' : '')}>
+          <div className="sf-sub-inner">
+            {groups.map((g, gi) => {
+              const k2 = key + '|' + gi
+              const sub2Open = !g.label ? true : !!expanded[k2]
+              return (
+                <div key={gi}>
+                  {!!g.label && (
+                    <a href="#" className={'sf-item sf-branch' + (sub2Open ? ' open' : '')}
+                      onClick={(e) => { e.preventDefault(); toggleExpand(k2) }}>
+                      <span className="sf-label">{g.label}</span>
+                      <span className="sf-caret">›</span>
+                    </a>
+                  )}
+                  <div className={'sf-sub sf-nested' + (sub2Open ? ' open' : '')}>
+                    <div className="sf-sub-inner">
+                      {g.options.map((o, oi) => (
+                        <a key={oi} href={'#' + o.path} className={'sf-item sf-leaf' + (isActive(o.path) ? ' active' : '')}
+                          onClick={(e) => { e.preventDefault(); go(o.path) }}>
+                          <span className="sf-label">{o.label}</span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
   }
   const toggleExpand = (key: string) => setExpanded(prev => ({ ...prev, [key]: !prev[key] }))
 
@@ -241,6 +315,13 @@ export default function AppLayout() {
       return children.length ? { ...section, children } : null
     })
     .filter(Boolean) as MenuSection[]
+
+  // 当前页所在分组（组标题 active 跟随页面自动切换；点其他页面旧高亮自动消失）
+  const activeSection = filteredMenu.find(sec => sec.children.some(c =>
+    (c.path && isActive(c.path)) ||
+    c.links?.some(l => isActive(l.path)) ||
+    c.expandables?.some(ex => ex.options.some(o => isActive(o.path)))
+  ))?.id || ''
 
   const renderChild = (child: MenuChild, sectionId: string, idx: number) => {
     const hasPanel = !!child.panel && (child.links || child.expandables)
@@ -322,7 +403,7 @@ export default function AppLayout() {
               <div className="user-position">{user?.position || 'User'}</div>
             </div>
           </div>
-          <div className="sidebar-menu-hamburger" id="sidebarToggle" onClick={() => setCollapsed(!collapsed)}
+          <div className="sidebar-menu-hamburger" id="sidebarToggle" onClick={toggleCollapsed}
             title={collapsed ? '展开侧边栏' : '收起侧边栏'}>
             <i className={'fas ' + (collapsed ? 'fa-angles-right' : 'fa-bars')}></i>
           </div>
@@ -331,10 +412,10 @@ export default function AppLayout() {
         <div className="informationmenu-content">
           {filteredMenu.map(section => (
             <div className="informationmenu-section" key={section.id}>
-              <div className={'informationmenu-section-title' + (openGroups[section.id] ? ' active' : '')} data-target={section.id}
+              <div className={'informationmenu-section-title' + (activeSection === section.id ? ' active' : '')} data-target={section.id}
                 onClick={() => toggleGroup(section.id)}
-                onMouseEnter={(e) => showTip(e, section)}
-                onMouseLeave={hideTip}>
+                onMouseEnter={(e) => enterSectionFlyout(e, section)}
+                onMouseLeave={leaveSectionFlyout}>
                 <img src={ICONS[section.icon] || ''} alt="" className="section-icon" />
                 <span style={{ flex: 1, paddingLeft: 4 }}>{section.label}</span>
                 <span className="section-arrow">⮞</span>
@@ -350,15 +431,13 @@ export default function AppLayout() {
           <button className="logout-btn" onClick={logout} title="登出">登出</button>
         </div>
       </aside>
-      {/* 收起态悬浮提示浮层（fixed，不受侧栏 overflow 影响） */}
-      {tip && (
-        <div className="sidebar-tip" style={{ left: tip.x, top: tip.y }}>
-          <div className="sidebar-tip-title">{tip.label}</div>
-          <div className="sidebar-tip-pages">
-            {tip.pages.map((p, i) => (
-              <div key={i} className="sidebar-tip-page">{p}</div>
-            ))}
-          </div>
+      {/* 收起态悬浮 flyout：白色手风琴面板，单面板内逐级展开直达 */}
+      {flyout && (
+        <div className="sidebar-flyout" style={{ top: flyout.top }}
+          onMouseEnter={keepFlyout}
+          onMouseLeave={leaveSectionFlyout}>
+          <div className="sidebar-flyout-label">{flyout.section.label}</div>
+          {flyout.section.children.map((child, ci) => renderFlyoutItem(child, flyout.section.id, ci))}
         </div>
       )}
       <main className="kz-main">

@@ -18,10 +18,10 @@ const MAX_TOASTS = 5
 const DEFAULT_DURATION = 4000
 
 const ICONS: Record<string, string> = {
-  success: 'fa-check-circle',
-  error: 'fa-exclamation-circle',
-  warning: 'fa-exclamation-triangle',
-  info: 'fa-info-circle',
+  success: 'fa-check',
+  error: 'fa-times',
+  warning: 'fa-exclamation',
+  info: 'fa-info',
 }
 
 let toastCounter = 0

@@ -1,6 +1,7 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.mapper.PriceChangeLogMapper;
 import com.kunzz.inventory.entity.StockInout;
 import com.kunzz.inventory.realtime.RealtimeService;
 import com.kunzz.inventory.service.StockEditService;
@@ -22,6 +23,7 @@ public class StockEnhanceController {
     private final StockProductService stockProductService;
     private final StockEditService stockEditService;
     private final RealtimeService realtimeService;
+    private final PriceChangeLogMapper priceChangeLogMapper;
 
     /** 回收站：软删除的出入库记录 */
     @GetMapping("/recycle")
@@ -82,6 +84,20 @@ public class StockEnhanceController {
         ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.create(body));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
+    }
+
+    // ---------- 改价日志（总库存：最近改价列 + 点击货品名弹窗看历史） ----------
+
+    /** 某货品改价历史（从旧到最新） */
+    @GetMapping("/products/price-log")
+    public ApiResponse<List<Map<String, Object>>> priceLog(@RequestParam String productName) {
+        return ApiResponse.ok(priceChangeLogMapper.listByProduct(productName));
+    }
+
+    /** 每个货品最近一次改价（总库存「最近改价」列；一次拉全量，前端按货品名匹配） */
+    @GetMapping("/products/price-log-latest")
+    public ApiResponse<List<Map<String, Object>>> priceLogLatest() {
+        return ApiResponse.ok(priceChangeLogMapper.latestAll());
     }
 
     /** 更新记录 */

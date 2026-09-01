@@ -111,19 +111,19 @@ export default function RemarkAnalysis() {
     return 0
   }
 
-  // 卡片统计（对齐线上：kilo 显示总量；SALMON BELLY/HEAD 10PCS 显示 数量*10；否则只显示总数）
+  // 卡片统计（根据货品判断展示：规格 kilo/kg → ⚖️总量；名称/规格含 N PCS → 📦总量=编号数×N；
+  // 其余只显示 # 总数。推广自旧系统的 SALMON BELLY/HEAD 10PCS 硬编码）
   const statsOf = (p: RemarkProduct) => {
-    const hasKilo = (p.variants || []).some(v => {
-      const s = (v.specification || '').toLowerCase()
-      return s.includes('kilo') || s.includes('kg')
-    })
-    const name = (p.product_name || '').toLowerCase().trim()
-    const needsPieces = name === 'salmon belly 10pcs' || name === 'salmon head 10pcs'
+    const name = (p.product_name || '').trim()
+    const specs = ((p.variants || []).map(v => (v.specification || '').toLowerCase().trim()).filter(Boolean)).join(' ')
+    const hasKilo = specs.includes('kilo') || specs.includes('kg')
+    const pcsMatch = /(\d+)\s*pcs/i.exec(name) || /(\d+)\s*pcs/i.exec(specs)
     if (hasKilo) {
-      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">⚖️</span> 总量: {p.total_quantity}</span></div>
+      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">⚖️</span> 总重量: {Number(p.total_quantity).toFixed(2)} Kilo</span></div>
     }
-    if (needsPieces) {
-      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">📦</span> 总量: {(p.variants || []).length * 10}</span></div>
+    if (pcsMatch) {
+      const n = parseInt(pcsMatch[1], 10) || 1
+      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">📦</span> 总件数: {(p.variants || []).length * n} PCS</span></div>
     }
     return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span></div>
   }

@@ -4,6 +4,77 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+---
+## 🗓️ 2026-09-01
+
+### 1. 总库存「改价记录」（新表 price_change_log）
+
+- **货品种类**每次更改单价 → 自动记录一条 log（旧价 → 新价、当天日期、操作人；价格未变不记录，只改名字不记录）
+- **总库存页**展示：有改价记录的货品名旁显示 🕘 图标（无记录完全零痕迹）；悬停货品名提示最近一次改价；**点击货品名弹窗展示从旧到最新的完整历史**（旧价划线 → 新价，含日期与条数）
+- 后端：新增 `PriceChangeLogMapper`（insertLog / listByProduct / latestAll）+ XML；`StockProductMapper.findById`（取旧价）；`StockProductService.update` 改价挂钩（decodeHtml 与流水/总库存货品名口径一致）；`StockEnhanceController` 新增 `GET /products/price-log`、`GET /products/price-log-latest`
+- 建表 SQL 已追加 `add_new_tables.sql`（幂等；老库导入后执行一次即可）
+
+### 2. 进出货：编辑补勾选「货品备注 / 备注编号」（当初漏勾漏填可补救）
+
+- 编辑**进货**记录补勾选备注、编号留空 → 后端**自动生成下一个可用编号**（`StockService.updateInout` 支持 needGenerateCode，对齐创建路径；避让在库编号）
+- 编辑行备注编号展示**对齐新增行**：前缀-编号组合框（纯进货编号框禁用显示「自动」；出货可手填且校验在库）；只填前缀（如 "AB-"）视为待自动生成，不会被当成编号入库；格式不完整拦截保存
+- 分店 jXstockedit_data 无备注编号列，不受影响
+
+### 3. 最低库存设置：清空输入 = 0
+
+- 删除数值后失焦 / Ctrl+S 批量保存 / 行内保存 → 一律**视为 0**（取消最低库存限制），不再弹回原值逼用户手输 0；真正非法字符（abc 等）仍恢复原值
+- 行内保存优先读最新待保存值，修复闭包旧值边缘错误
+
+### 4. 货品备注卡片统计：根据货品判断展示
+
+- "N PCS" 判断从硬编码 2 个货品（SALMON BELLY/HEAD 10PCS）推广为**通用规则**（名称/规格正则提取件数，任意 5/10/20PCS 自动匹配：📦 总件数 = 编号数 × N）
+- 标签人性化：`总量: 345.57` → **`总重量: 345.57 Kilo`** / **`总件数: 160 PCS`**，新用户一眼看懂数字含义
+- 数值统一 toFixed(2)，规避 BigDecimal stripTrailingZeros 的科学计数法显示隐患
+
+### 5. 全站滚动条统一改版（index.css）
+
+- 14px 加粗、圆角胶囊 + 悬空留边、hover/active 三态变色、轨道透明；横向滚动条同步
+- `!important` 全局压制各页面散落的 6px 细条定义（add/corporate/cost/kpi/phone/qna/schedule/sidebar/staff 等），Firefox scrollbar-color 同步配色
+
+### 6. 全站 Toast 改版（utils/toast.ts + styles/toast.css）
+
+- 位置：右下角 → **顶部居中**（与报错提示位置一致；手机端贴顶全宽）
+- 入场：顶部下滑弹性落位；退场向上收回
+- 设计：毛玻璃白底 + 彩色圆形图标底衬（绿✓ 红✕ 黄！ 蓝ⓘ）+ 柔和大投影 + 底部进度条；关闭按钮悬停放大
+- API 完全不变（showToast/showAlert/closeToast），全部调用点零改动自动套用
+
+### 7. KPI 数据上传着色对齐（KpiEdit.tsx）
+
+- `inputCls` 对齐 CostEdit / 旧系统 updateInputColors：**非编辑行也按数据状态着色**——有值(含 0)→浅蓝、未填→浅红；折扣列维持"关键字段 ≥4 项"规则
+- 整月数据完整度打开页面即可扫视，不再只有编辑行变色
+
+### 8. 侧边栏收起态悬浮 flyout（AppLayout.tsx + sidebar.css）
+
+- 收起后悬浮分组图标 → 弹出白色手风琴面板；点击品牌/分店**在面板内逐级展开**（grid 平滑动画、箭头旋转、缩进+圆点层级），点击页面**直达**（例：集团架构 → tokyo Japanese cuisine → J1 Midvalley → 员工排班表）
+- 当前所在页橙色高亮、hire 待审徽章保留、长名称省略号、导航后自动收起全部面板
+- 旧「组名+页面列表」只读 tooltip 彻底移除（JSX/state/CSS 全清）
+
+### 9. 侧边栏收起态 Flyout 与 Active 修复（AppLayout.tsx + sidebar.css）
+
+- 收起侧栏后悬浮分组图标 → 白色手风琴面板：点击品牌/分店**面板内逐级展开**（grid 平滑动画、箭头旋转、缩进+圆点），点击页面直达（集团架构 → tokyo → J1 Midvalley → 员工排班表）
+- 旧「组名+页面列表」只读 tooltip 移除（JSX/state/CSS 全清）
+- **双 Active 修复**：组标题 active 由"点开过哪个组"（openGroups 残留）改为**跟随当前页面所在组**——点其他页面旧高亮自动消失；go() 导航清 openGroups/flyout 定时器；汉堡切换清 flyout，展开态侧栏与 flyout 不再并存
+- 收起态下当前页所在组图标橙色反白，一眼可见当前位置
+
+### 10. 部署脚本与静态资源治理
+
+- 修复 `backend/static/assets` 孤儿构建产物堆积（index.es-* 系列从未被清理）；部署时以 `dist/assets` 为基准镜像同步，并同步复制 `index.html`
+
+### 11. 总库存导出：日期范围选择（对齐旧 live 系统）
+
+- 点击「导出数据」→ 弹出日期范围弹窗（默认本月；快捷 今天/本月/上月/全部；日期上限=今天；结束必填、开始≤结束校验）
+- 语义对齐旧 stocklistapi.php：库存累积计算，**结束日期 = 截至该日的库存余额**（SQL `date <= endDate`）；开始日期不参与计算、仅用于 PDF 标注
+- 「全部」（无开始且结束=今天）→ 用页面当前数据（对齐旧 usePageData）；指定范围 → `GET /stock/summary?endDate=` 拉取后导出
+- PDF 日期行：有开始 → `Date Range: MM/DD/YYYY - MM/DD/YYYY`；否则 `As of Date`；J2 排除 Sake / 最低库存列 / 总计行等原有行为保留
+- 后端：`StockSummaryMapper.summaryRows` 加可选 endDate 参数 + XML 条件；`StockSummaryService.summary(system, endDate)` 重载；`StockController` 加 endDate 入参
+
+---
+
 ## 🗓️ 2026-08-29
 
 ## 1. 本地 AI 助手（Ollama + Qwen3-4B）：库存问答 / 进出货草稿 / 订单秒级解析

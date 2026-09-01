@@ -1,83 +1,83 @@
 /* =============================================================
-   Global Toast Notification System
-   Position: bottom-right, white-background with colored left-border
-   Used across all backend pages via sidebar.php
+   Global Toast Notification System — v2
+   Position: TOP-CENTER（中上顶部，与报错提示位置一致）
+   Design: 毛玻璃白底 + 彩色圆形图标底衬 + 底部进度条 + 下滑入场
+   Used across all pages via utils/toast.ts
    ============================================================= */
 
-/* Container */
+/* Container：顶部居中 */
 #global-toast-container {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 99999;
     display: flex;
-    flex-direction: column-reverse;
+    flex-direction: column;
+    align-items: center;
     gap: 10px;
     pointer-events: none;
-    max-width: clamp(260px, 22vw, 380px);
-    width: 100%;
+    width: min(92vw, 420px);
 }
 
-/* Base toast */
+/* Base toast：毛玻璃卡片，从顶部轻轻下滑入场 */
 .g-toast {
-    background: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e5e7eb;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', sans-serif;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px) saturate(1.4);
+    -webkit-backdrop-filter: blur(12px) saturate(1.4);
+    border-radius: 14px;
+    box-shadow: 0 10px 34px rgba(15, 23, 42, 0.16), 0 2px 10px rgba(15, 23, 42, 0.08);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
     font-size: clamp(12px, 0.85vw, 14px);
     display: flex;
     align-items: flex-start;
-    gap: 10px;
+    gap: 11px;
     padding: 12px 14px;
     pointer-events: auto;
-    transform: translateX(calc(100% + 24px));
+    transform: translateY(-20px) scale(0.96);
     opacity: 0;
-    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
+    transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.28s ease;
     position: relative;
     overflow: hidden;
-    border-left: 4px solid transparent;
     min-width: 0;
+    width: 100%;
 }
 
 /* Shown state */
 .g-toast.g-toast--visible {
-    transform: translateX(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
 }
 
-/* Hiding animation */
+/* Hiding animation：向上收回 */
 .g-toast.g-toast--hiding {
-    transform: translateX(calc(100% + 24px));
+    transform: translateY(-16px) scale(0.97);
     opacity: 0;
-    transition: transform 0.28s ease-in, opacity 0.25s ease-in;
+    transition: transform 0.26s ease-in, opacity 0.24s ease-in;
 }
 
-/* Type variants — colored left border + tinted icon */
-.g-toast--success {
-    border-left-color: #10b981;
-}
-.g-toast--error {
-    border-left-color: #ef4444;
-}
-.g-toast--warning {
-    border-left-color: #f59e0b;
-}
-.g-toast--info {
-    border-left-color: #3b82f6;
-}
+/* Type variants — 彩色圆形图标底衬（无左边框，更现代） */
+.g-toast--success .g-toast__icon { background: #10b981; }
+.g-toast--error   .g-toast__icon { background: #ef4444; }
+.g-toast--warning .g-toast__icon { background: #f59e0b; }
+.g-toast--info    .g-toast__icon { background: #3b82f6; }
 
-/* Icon */
+/* Icon：彩色圆底 + 白色图形 */
 .g-toast__icon {
     flex-shrink: 0;
-    font-size: clamp(14px, 1.1vw, 18px);
-    margin-top: 1px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 12px;
     line-height: 1;
+    margin-top: 1px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
 }
-.g-toast--success .g-toast__icon { color: #10b981; }
-.g-toast--error   .g-toast__icon { color: #ef4444; }
-.g-toast--warning .g-toast__icon { color: #f59e0b; }
-.g-toast--info    .g-toast__icon { color: #3b82f6; }
 
 /* Message */
 .g-toast__body {
@@ -90,7 +90,7 @@
 
 .g-toast__message {
     color: #1f2937;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.45;
     word-break: break-word;
 }
@@ -99,38 +99,38 @@
 .g-toast__close {
     background: none;
     border: none;
-    color: #9ca3af;
+    color: #b0b7c3;
     cursor: pointer;
     padding: 0;
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1;
     flex-shrink: 0;
-    transition: color 0.2s;
-    margin-top: 1px;
+    transition: color 0.2s, transform 0.2s;
+    margin-top: 2px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .g-toast__close:hover {
     color: #374151;
+    transform: scale(1.15);
 }
 
-/* Progress bar */
+/* Progress bar：底部细进度条（随类型着色） */
 .g-toast__progress {
     position: absolute;
     bottom: 0;
     left: 0;
     height: 3px;
     width: 100%;
-    border-radius: 0 0 10px 10px;
     background: transparent;
     transform-origin: left center;
 }
-.g-toast--success .g-toast__progress { background: rgba(16, 185, 129, 0.35); }
-.g-toast--error   .g-toast__progress { background: rgba(239, 68, 68, 0.35); }
-.g-toast--warning .g-toast__progress { background: rgba(245, 158, 11, 0.35); }
-.g-toast--info    .g-toast__progress { background: rgba(59, 130, 246, 0.35); }
+.g-toast--success .g-toast__progress { background: rgba(16, 185, 129, 0.55); }
+.g-toast--error   .g-toast__progress { background: rgba(239, 68, 68, 0.55); }
+.g-toast--warning .g-toast__progress { background: rgba(245, 158, 11, 0.55); }
+.g-toast--info    .g-toast__progress { background: rgba(59, 130, 246, 0.55); }
 
 @keyframes g-toast-progress {
     from { transform: scaleX(1); }
@@ -144,12 +144,11 @@
 /* Responsive */
 @media (max-width: 600px) {
     #global-toast-container {
-        bottom: 12px;
-        right: 12px;
-        left: 12px;
-        max-width: 100%;
+        top: 12px;
+        width: calc(100% - 24px);
     }
     .g-toast {
         font-size: 13px;
+        padding: 11px 12px;
     }
 }

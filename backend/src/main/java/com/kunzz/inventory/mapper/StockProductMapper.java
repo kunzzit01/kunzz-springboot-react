@@ -13,6 +13,9 @@ import java.util.Map;
 @Mapper
 public interface StockProductMapper {
 
+    /** 按 id 查单行（改价日志取旧价用） */
+    Map<String, Object> findById(@Param("id") Integer id);
+
     /** 列表（systemAssign 为 null/空 = 总览全部；keyword 匹配产品名） */
     List<Map<String, Object>> listRows(@Param("systemAssign") String systemAssign,
                                        @Param("keyword") String keyword);

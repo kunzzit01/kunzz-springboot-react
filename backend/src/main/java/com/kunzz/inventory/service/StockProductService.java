@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.mapper.PriceChangeLogMapper;
 import com.kunzz.inventory.mapper.StockProductMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.Map;
 public class StockProductService {
 
     private final StockProductMapper stockProductMapper;
+    private final PriceChangeLogMapper priceChangeLogMapper;
 
     /** 列表 + 统计 */
     @Transactional(readOnly = true)
@@ -123,7 +125,29 @@ public class StockProductService {
         if (r.isEmpty()) return Map.of("success", true);
         int n = stockProductMapper.updateRow(id, r);
         if (n == 0) throw new BusinessException(404, "记录不存在");
+        // 改价日志：body 携带 price 且与旧值不同 → 记录当天一条（总库存改价历史展示用）
+        if (r.containsKey("price")) logPriceChange(id, body);
         return Map.of("success", true);
+    }
+
+    /** 改价日志：货品种类每次更改单价 → 当天记一条（从旧到最新展示在总库存） */
+    private void logPriceChange(Integer id, Map<String, Object> body) {
+        Map<String, Object> old = stockProductMapper.findById(id);
+        if (old == null) return;
+        Double oldPrice = cleanPrice(old.get("price"));
+        Double newPrice = cleanPrice(body.get("price"));
+        if (newPrice == null) return;
+        if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) return; // 价格未变不记录
+        Map<String, Object> log = new LinkedHashMap<>();
+        // 名字与流水/总库存保持一致（decoded 纯文本）：改价同时改名 → 取新名
+        log.put("productName", body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
+                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(old.get("product_name"))));
+        log.put("codeNumber", str(old.get("product_code")));
+        log.put("oldPrice", oldPrice);
+        log.put("newPrice", newPrice);
+        log.put("changeDate", java.time.LocalDate.now().toString());
+        log.put("changedBy", decodeHtml(str(body.getOrDefault("applicant", ""))));
+        priceChangeLogMapper.insertLog(log);
     }
 
     /** 删除记录（对齐 DELETE stockapi.php?id=） */

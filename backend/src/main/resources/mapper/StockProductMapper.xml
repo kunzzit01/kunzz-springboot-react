@@ -20,6 +20,13 @@
         ORDER BY id
     </select>
 
+    <!-- 按 id 查单行（改价日志：取旧价/旧名） -->
+    <select id="findById" resultType="java.util.LinkedHashMap">
+        SELECT id, product_name, product_code, price
+        FROM stock_data
+        WHERE id = #{id}
+    </select>
+
     <insert id="insertRow" parameterType="map">
         INSERT INTO stock_data
             (date, time, product_code, product_name, specification, price, category,

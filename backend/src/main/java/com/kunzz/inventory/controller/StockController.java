@@ -27,8 +27,10 @@ public class StockController {
     // ---------- 总库存汇总（stocklistall） ----------
 
     @GetMapping("/stock/summary")
-    public ApiResponse<Map<String, Object>> stockSummary(@RequestParam(defaultValue = "central") String system) {
-        return ApiResponse.ok(stockSummaryService.summary(system));
+    public ApiResponse<Map<String, Object>> stockSummary(@RequestParam(defaultValue = "central") String system,
+                                                         @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) java.time.LocalDate endDate) {
+        // endDate：导出日期范围用——截至该日期的库存余额（库存累积，对齐旧系统 stocklistapi.php）
+        return ApiResponse.ok(stockSummaryService.summary(system, endDate));
     }
 
     // ---------- 货品备注分析（stockremark） ----------

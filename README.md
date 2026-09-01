@@ -163,7 +163,7 @@ npm run dev                # 打开 http://localhost:5175
 | 分店库存 | J1/J2/J3 合并汇总、单店调整库存、每日经营数据、每日成本；**中央出货改目标单位自动同步分店入库** |
 | 供应商 | 20 家供应商 + 266 种物料管理 |
 | 预警与异常 | 最低库存设置（分系统独立：中央/各分店各自维护，互不影响）、低库存比对、异常扣除记录 |
-| 货品种类 | 货品主数据（编号/规格/单价/类型/供应商）+ **系统分配多选（Central/J1/J2/J3）+ 总览/分店页联动，规则见下文「货品种类总览逻辑」**；货品单价作为进货默认单价来源；批准流（申请人/批准人） |
+| 货品种类 | 货品主数据（编号/规格/单价/类型/供应商）+ **系统分配多选（Central/J1/J2/J3）+ 总览/分店页联动，规则见下文「货品种类总览逻辑」**；货品单价作为进货默认单价来源；批准流（申请人/批准人）；**每次改价自动记入改价日志（price_change_log），总库存页点击货品名可看从旧到最新的单价变动历史** |
 | 餐具管理 | 342 件碗碟信息/五地库存调整/套装及明细/破损/调拨 |
 | 实时推送 | WebSocket 实时状态条（后端 realtime/ + 前端 useRealtime） |
 | 票据/表单 | jspdf 发票导出、OpenPDF 后端 PDF 表单（backend/static/form/*.pdf） |
@@ -197,11 +197,12 @@ npm run dev                # 打开 http://localhost:5175
   - 总览入口**始终可见**（对齐旧系统，不受分店权限限制；员工权限面板无「总览」勾选项）
 - 过滤/打码在前端做（`StockProducts.tsx` `load()`，后端 API 无用户上下文）；打码行的只读保护不可移除，否则会用打码值覆盖真实分配（数据丢失）
 
-### 全局 Toast（对齐旧 live 系统）
+### 全局 Toast（基于旧系统 API，2026-09 视觉/位置改版）
 
-- 共享模块：`frontend/src/utils/toast.ts` + `src/styles/toast.css`（逐字对齐旧系统 `backend/{js,css}/toast.*`）
-- API：`showToast(message, type, duration)` / `showAlert` / `closeToast`；type = success/error/warning/info；默认 4000ms、最多 5 条、右下角
-- **页面内不要再自绘 toast/alert**，统一调 `showToast`（旧系统语义：操作成功=success、校验失败=error、提示=info、警告=warning）
+- 共享模块：`frontend/src/utils/toast.ts` + `src/styles/toast.css`（API 与旧系统逐字对齐；展示位置与样式已改为新版）
+- API：`showToast(message, type, duration)` / `showAlert` / `closeToast`；type = success/error/warning/info；默认 4000ms、最多 5 条、**顶部居中**
+- 新设计：毛玻璃白底 + 彩色圆形图标底衬 + 顶部下滑入场 + 底部进度条
+- **页面内不要再自绘 toast/alert**，统一调 `showToast`（语义不变：操作成功=success、校验失败=error、提示=info、警告=warning）
 
 ## 🔌 API 概览（前缀 /api，除登录外需 Bearer Token）
 

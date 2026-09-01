@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.PriceChangeLogMapper">
+
+    <insert id="insertLog" parameterType="map">
+        INSERT INTO price_change_log
+            (product_name, code_number, old_price, new_price, change_date, changed_by)
+        VALUES
+            (#{l.productName}, #{l.codeNumber}, #{l.oldPrice}, #{l.newPrice}, #{l.changeDate}, #{l.changedBy})
+    </insert>
+
+    <!-- 某货品改价历史：从旧到最新（对齐需求：需要知道从旧到最新的单价记录） -->
+    <select id="listByProduct" resultType="java.util.LinkedHashMap">
+        SELECT change_date AS changeDate, old_price AS oldPrice, new_price AS newPrice, changed_by AS changedBy
+        FROM price_change_log
+        WHERE product_name = #{productName}
+        ORDER BY change_date ASC, id ASC
+    </select>
+
+    <!-- 每个货品最近一次改价（总库存列表列展示；同货品多行取 id 最大即最新） -->
+    <select id="latestAll" resultType="java.util.LinkedHashMap">
+        SELECT l.product_name AS productName, l.change_date AS changeDate, l.new_price AS newPrice
+        FROM price_change_log l
+        JOIN (SELECT product_name, MAX(id) AS mid FROM price_change_log GROUP BY product_name) t
+          ON l.id = t.mid
+    </select>
+
+</mapper>

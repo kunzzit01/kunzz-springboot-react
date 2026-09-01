@@ -3,6 +3,7 @@ package com.kunzz.inventory.mapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -12,9 +13,10 @@ import java.util.Map;
 @Mapper
 public interface StockSummaryMapper {
 
-    /** 某系统库存汇总（表名动态：stockinout_data 或 jXstockedit_data） */
+    /** 某系统库存汇总（表名动态：stockinout_data 或 jXstockedit_data；endDate 非空 = 截至该日期的库存余额，对齐旧系统导出） */
     List<Map<String, Object>> summaryRows(@Param("table") String table,
-                                          @Param("targetSystem") String targetSystem);
+                                          @Param("targetSystem") String targetSystem,
+                                          @Param("endDate") LocalDate endDate);
 
     /** 供货总额（对齐线上 stocklistapi.php getSupplyTotal：本月 jXstockinout_data 的入库额 SUM(in×price)） */
     List<Map<String, Object>> supplyValue(@Param("table") String table,

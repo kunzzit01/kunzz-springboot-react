@@ -362,18 +362,23 @@ export default function KpiEdit() {
     return () => window.removeEventListener('keydown', h)
   })
 
-  // ---- 输入框着色（线上 updateInputColors） ----
+  // ---- 输入框着色（线上 updateInputColors）：查看/编辑均按数据状态着色——有值(含 0)→蓝，空→红
+  //      （对齐 CostEdit 与旧系统：非编辑行也展示 红蓝 状态，不再一律 readonly 灰） ----
   const inputCls = (day: number, field: string) => {
     const base = 'excel-input' + (CURRENCY_FIELDS.includes(field) ? ' currency-input' : '')
-    if (editingDay !== day) return base + ' readonly'
     const r = rows[day] || {}
+    let state: string
     if (field === 'discounts') {
       // 折扣列：行关键字段 >=4 有数据 → 蓝
       const keyFields = ['grossSales', 'diners', 'tax', 'serviceFee', 'tablesUsed', 'newCustomers', 'returningCustomers']
       const filled = keyFields.filter(f => hasVal(r[f])).length
-      return base + (filled >= 4 ? ' has-data' : ' no-data')
+      state = filled >= 4 ? ' has-data' : ' no-data'
+    } else {
+      state = hasVal(r[field]) ? ' has-data' : ' no-data'
     }
-    return base + (hasVal(r[field]) ? ' has-data' : ' no-data')
+    // 非编辑（只读）也带状态着色：readonly 灰底被后面的 has-data/no-data 覆盖（与 CostEdit 同款）
+    if (editingDay !== day) return base + ' readonly' + state
+    return base + state
   }
 
   const weekday = (day: number) => ['日', '一', '二', '三', '四', '五', '六'][new Date(year, month - 1, day).getDay()]

@@ -92,10 +92,12 @@ export default function Settings() {
   }
 
 
-  /** 提交一行：更新本地数据 + 标记未保存；非法输入返回 false（由调用方恢复原值） */
+  /** 提交一行：更新本地数据 + 标记未保存；非法输入返回 false（由调用方恢复原值）。
+   *  清空输入视为 0（删除数值 = 取消最低库存限制），无需手动补输 0。 */
   const commitQty = (name: string, raw: string): boolean => {
     const prev = allRef.current.find((p) => p.product_name === name)?.minimum_quantity ?? 0
-    let qty = parseFloat(raw)
+    const t = raw.trim()
+    let qty = t === '' ? 0 : parseFloat(t)
     if (isNaN(qty) || qty < 0) { return false }
     if (Object.prototype.hasOwnProperty.call(pendingRef.current, name) || qty !== prev) {
       pendingRef.current = { ...pendingRef.current, [name]: qty }
@@ -114,7 +116,8 @@ export default function Settings() {
     // 若焦点还在该行的输入框里（尚未 blur），先把值提交进来再保存
     const active = document.activeElement as HTMLInputElement | null
     if (active?.classList.contains('quantity-input') && active.dataset.name === name) commitQty(name, active.value)
-    const qty = allProducts.find((p) => p.product_name === name)?.minimum_quantity ?? 0
+    // 优先取 pendingRef（同步、最新），避免读 setAllProducts 后的闭包旧值
+    const qty = pendingRef.current[name] ?? allProducts.find((p) => p.product_name === name)?.minimum_quantity ?? 0
     setSavingRow(name)
     try {
       await saveMinimum(system, name, qty)
@@ -130,7 +133,8 @@ export default function Settings() {
     const map = { ...pendingRef.current }
     const ae = document.activeElement as HTMLInputElement | null
     if (ae && ae.classList.contains('quantity-input') && ae.dataset.name) {
-      const q = parseFloat(ae.value)
+      const t = ae.value.trim()
+      const q = t === '' ? 0 : parseFloat(t) // 清空视为 0，与 commitQty 口径一致
       if (!isNaN(q) && q >= 0) map[ae.dataset.name] = q
       ae.blur()
     }
