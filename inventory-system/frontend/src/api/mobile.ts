@@ -39,6 +39,7 @@ export interface MobileTotalRow {
   code_number?: string
   specification?: string
   type?: string
+  freezer_category?: string
   total_qty: number
   last_updated?: string
 }
@@ -80,8 +81,13 @@ export const getMobilePriceTiers = (system: string, productName: string, codeNum
 export const getMobileProductOptions = () =>
   http.get<unknown, MobileProductOption[]>('/stock/mobile/options')
 
+export interface MobileTotalsResponse {
+  items: MobileTotalRow[]
+  summaryCount: number
+}
+
 export const getMobileTotals = (system: string) =>
-  http.get<unknown, MobileTotalRow[]>('/stock/mobile/totals', { params: { system } })
+  http.get<unknown, MobileTotalsResponse>('/stock/mobile/totals', { params: { system } })
 
 // ---------- 电话版批量出货（对齐旧 batch_save：改剩余量 → 差值拆层） ----------
 

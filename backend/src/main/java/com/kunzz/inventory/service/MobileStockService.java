@@ -63,10 +63,16 @@ public class MobileStockService {
         return stockEditMapper.products();
     }
 
-    /** 手机总库存（读 jXstocklist_total 缓存，对齐 /mobile/ch/stocklistjX.php；带台账类型） */
-    public List<Map<String, Object>> totals(String system) {
+    /**
+     * 电话版列表（对齐旧 stocklist_total action：按 product+code+spec 从桌面表实时计算，非缓存表）。
+     * 返回 { items, summaryCount }——summaryCount 对齐旧 stats「总记录」口径。
+     */
+    public Map<String, Object> totals(String system) {
         String sys = sys(system);
-        return mobileStockMapper.listTotals(totalTable(sys));
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", mobileStockMapper.phoneStockList(editTable(sys)));
+        out.put("summaryCount", mobileStockMapper.summaryCount(editTable(sys)));
+        return out;
     }
 
     /**

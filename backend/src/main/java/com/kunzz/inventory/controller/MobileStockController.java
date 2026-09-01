@@ -50,10 +50,10 @@ public class MobileStockController {
 
     // ---------- 电话版：总库存 + 改量出货 ----------
 
-    /** 手机总库存（读 jXstocklist_total，对齐 /mobile/ch/stocklistjX.php） */
+    /** 电话版列表（按 product+code+spec 实时计算 + 总记录数） */
     @GetMapping("/totals")
-    public ApiResponse<List<Map<String, Object>>> totals(@RequestParam(defaultValue = "j1") String system,
-                                                         Authentication authentication) {
+    public ApiResponse<Map<String, Object>> totals(@RequestParam(defaultValue = "j1") String system,
+                                                   Authentication authentication) {
         assertBranch(authentication, system);
         return ApiResponse.ok(mobileStockService.totals(system));
     }
