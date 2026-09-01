@@ -107,3 +107,34 @@
 - 手机同步行在桌面表的标志：`receiver='Mobile'` + `mobile_ref_id` 非空
 - `jXstocklist_total` UNIQUE 键：`(product_name, code_number)`（建表脚本）+ specification 维护（运行时 SQL 带 spec 过滤）
 - 旧版手机页 CSS 已内嵌（注释：移除不存在的外部样式引用以避免 404）——新系统无此历史包袱
+
+---
+
+## 六、电话版（stocklistjX）实现状态 —— 2026-09-01 完成，明日续作清单
+
+> 新系统实现：路由 **`/mobile/inout?system=j1|j2|j3`**（页面 `MobileInout.tsx`，独立布局无侧边栏），
+> 后端 `/api/stock/mobile/*`（`MobileStockController`/`Service`/`Mapper`）。
+> 已通过截图对比验证：**显示记录 255 / 总记录 262、各货品数量与 live 逐行一致**。
+
+### 已对齐（勿回退）
+
+| 项 | 说明 |
+|---|---|
+| 数据源 ⚠️ | **必须实时计算**：按 `product+code_number+specification` 分组 `SUM(in)-SUM(out)` 自 `jXstockedit_data`（对齐旧 `stocklist_total` action，注释原话「避免双重计算」）。**不要用 jXstocklist_total 缓存表**——缓存已漂移（实测 100 PLUS 缓存 1010，实际 82） |
+| 业务 | 改「剩余量」= 出货：出货量 = 实时库存 − 输入值；超扣拒绝（提示当前库存）；无变化取消；按价格从高到低拆行（每层时间 +1s，receiver=当前用户名）→ batch_save 原子提交 |
+| 预检 | batch_save 按 (product, code, price) 聚合比对可用量，**不按 spec 过滤**（对齐旧 outSummary） |
+| 筛选 | 库存分类（category）+ 区域（freezer_category，逗号拆多值，选项随分类联动）+ 搜索（名称/编号）；**隐藏 qty ≤ 0** |
+| stats | 显示记录 = 筛选后行数；总记录 = summary 行数（product+code+spec+ROUND(price,2) 且 net≠0 = 262） |
+| 数量格式 | **三位小数 `99.000`**（旧版 number_format(qty,3)），不得改成整数 |
+| 权限 | users.branch（逗号分隔，kh=总部全通，否则须含分店）；所有端点 403 口径一致；分店 Tab 按 branch 过滤 |
+| 设计 | stocklist.css tokens：#f4f7f2 底 / #fdf9f1 抽屉 / #f7931e 主橙 / #d8d0c5 边框 / 480px / 48px 控件 / 卡片 radius 24 / 奶油编辑块 #f4efe4 / 白色头区 |
+
+### 明日续作（按优先级）
+
+1. **手机真机实测**：J1/J2/J3 三店 + kh 账号各验一遍（登录、列表数量、改量出货、HIFO 层提示、权限拦截）
+2. **手机出货记录 log 页**（未做）：对齐 `/jX/jXstockeditmobile.php`「手机出货记录 - JX」——
+   日期范围 + 快速选择（时段/今天/昨天/本周/上周/这个月/上个月/今年/去年）+ 搜索 + 表格列（日期/货品编号/货品/出货/出货人）+ 导出发票；
+   桌面「手机版」按钮目前指向 /mobile/inout（电话版），log 页建好后按需调整指向或双入口
+3. 电话版页加「出货记录」入口（连到 log 页）
+4. `sync-live-data.bat` / `DB_IMPORT.md` 路径从 XAMPP 改指内置库（XAMPP 已弃用）
+5. 日常：`sync-live-stock.cjs --days=2 --apply`（暂停 OneDrive 后跑）
