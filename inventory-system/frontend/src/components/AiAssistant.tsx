@@ -325,7 +325,7 @@ const S: Record<string, React.CSSProperties> = {
     position: 'fixed', width: 56, height: 56,
     borderRadius: '50%', border: 'none', zIndex: 5100, padding: 0,
     overflow: 'hidden', cursor: 'pointer',
-    boxShadow: '0 4px 14px rgba(0,0,0,.3)',
+    boxShadow: '0 4px 14px rgba(255,92,0,.45)',
   },
   panel: {
     position: 'fixed', width: 380, height: 520,
@@ -333,7 +333,7 @@ const S: Record<string, React.CSSProperties> = {
     flexDirection: 'column', boxShadow: '0 8px 30px rgba(0,0,0,.22)', overflow: 'hidden',
   },
   head: {
-    padding: '12px 16px', background: 'linear-gradient(135deg, #1677ff, #36cfc9)',
+    padding: '12px 16px', background: 'linear-gradient(135deg, #ff5c00, #ff9248)',
     color: '#fff', fontWeight: 600, display: 'flex', justifyContent: 'space-between',
     alignItems: 'center', fontSize: 14,
   },
@@ -346,7 +346,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   bubbleUser: {
     maxWidth: '85%', padding: '8px 12px', borderRadius: '10px 10px 2px 10px',
-    background: '#1677ff', color: '#fff', fontSize: 13, lineHeight: 1.6,
+    background: '#ff5c00', color: '#fff', fontSize: 13, lineHeight: 1.6,
   },
   draftCard: {
     background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 8,
@@ -364,7 +364,7 @@ const S: Record<string, React.CSSProperties> = {
   },
   draftOk: {
     flex: 1, height: 30, border: 'none', borderRadius: 6, cursor: 'pointer',
-    background: '#52c41a', color: '#fff', fontSize: 12,
+    background: '#ff5c00', color: '#fff', fontSize: 12,
   },
   draftCancel: {
     flex: 1, height: 30, border: '1px solid #d9d9d9', borderRadius: 6,
@@ -377,6 +377,6 @@ const S: Record<string, React.CSSProperties> = {
   },
   send: {
     height: 36, padding: '0 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-    background: '#1677ff', color: '#fff', fontSize: 13,
+    background: '#ff5c00', color: '#fff', fontSize: 13,
   },
 }
