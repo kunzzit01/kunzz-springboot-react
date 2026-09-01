@@ -8,10 +8,30 @@ interface Msg {
 }
 
 /**
- * 本地 AI 助手聊天球（只挂在进出货页面右下角）
+ * 本地 AI 助手聊天球（挂在进出货页面）
+ * 聊天球可拖拽到任意位置，位置自动记忆（localStorage）；面板智能贴合球体避免遮挡
  * 链路：本组件 → /api/ai/chat → 后端 AiService → 本地 Ollama（零费用）
  * 查询问答 + 进出货草稿（AI 生成草稿 → 用户确认 → 走原有 createStockInout 接口）
  */
+const POS_KEY = 'ai-ball-pos-v1'
+const BALL = 56
+function clampPos(x: number, y: number) {
+  return {
+    x: Math.min(Math.max(8, x), Math.max(8, window.innerWidth - BALL - 8)),
+    y: Math.min(Math.max(8, y), Math.max(8, window.innerHeight - BALL - 8)),
+  }
+}
+function loadPos(): { x: number; y: number } {
+  try {
+    const raw = localStorage.getItem(POS_KEY)
+    if (raw) {
+      const p = JSON.parse(raw)
+      if (typeof p?.x === 'number' && typeof p?.y === 'number') return clampPos(p.x, p.y)
+    }
+  } catch { /* 忽略 */ }
+  // 默认右下角
+  return clampPos(window.innerWidth - BALL - 28, window.innerHeight - BALL - 28)
+}
 export default function AiAssistant({ system, onSaved }: { system?: string; onSaved?: () => void }) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
@@ -25,6 +45,48 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
   const [drafts, setDrafts] = useState<AiDraft[]>([])
   const [draftBusy, setDraftBusy] = useState(false)
   const listRef = useRef<HTMLDivElement>(null)
+
+  // ---- 聊天球拖拽 + 位置记忆 ----
+  const [pos, setPos] = useState(loadPos)
+  const posRef = useRef(pos)
+  const dragRef = useRef<{ sx: number; sy: number; ox: number; oy: number; moved: boolean } | null>(null)
+  const [dragging, setDragging] = useState(false)
+  useEffect(() => {
+    const onResize = () => {
+      const p = clampPos(posRef.current.x, posRef.current.y)
+      posRef.current = p
+      setPos(p)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  const onBallPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return
+    dragRef.current = { sx: e.clientX, sy: e.clientY, ox: posRef.current.x, oy: posRef.current.y, moved: false }
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  const onBallPointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const d = dragRef.current
+    if (!d) return
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy
+    // 位移 <6px 视为点击而非拖动（避免误触）
+    if (!d.moved && Math.hypot(dx, dy) < 6) return
+    if (!d.moved) { d.moved = true; setDragging(true) }
+    const p = clampPos(d.ox + dx, d.oy + dy)
+    posRef.current = p
+    setPos(p)
+  }
+  const onBallPointerUp = () => {
+    const d = dragRef.current
+    dragRef.current = null
+    setDragging(false)
+    if (!d) return
+    if (d.moved) {
+      try { localStorage.setItem(POS_KEY, JSON.stringify(posRef.current)) } catch { /* 忽略 */ }
+    } else {
+      setOpen(true) // 未拖动 = 点击 → 打开面板
+    }
+  }
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' })
@@ -136,15 +198,34 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
     setDraftBusy(false)
   }
 
+  // 面板贴合聊天球：球在右半屏→面板在球左侧；球靠下半屏→向上展开；始终完整在视口内
+  const panelStyle = (() => {
+    const W = 380, H = 520
+    const vw = window.innerWidth, vh = window.innerHeight
+    const onRight = pos.x > vw / 2
+    let left = onRight ? pos.x - W - 12 : pos.x + BALL + 12
+    left = Math.min(Math.max(8, left), Math.max(8, vw - W - 8))
+    let top = pos.y > vh / 2 ? pos.y - H + BALL : pos.y + BALL + 12
+    top = Math.min(Math.max(8, top), Math.max(8, vh - H - 8))
+    return { ...S.panel, left, top, right: 'auto' as const, bottom: 'auto' as const, height: Math.min(H, vh - 16) }
+  })()
+
   return (
     <>
       {!open && (
-        <button style={S.ball} onClick={() => setOpen(true)} title="AI 助手" aria-label="AI 助手">
+        <button
+          style={{ ...S.ball, left: pos.x, top: pos.y, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none', userSelect: 'none' }}
+          onPointerDown={onBallPointerDown}
+          onPointerMove={onBallPointerMove}
+          onPointerUp={onBallPointerUp}
+          onPointerCancel={onBallPointerUp}
+          title="AI 助手（拖动可移到任意位置，点按打开）" aria-label="AI 助手"
+        >
           🤖
         </button>
       )}
       {open && (
-        <div style={S.panel}>
+        <div style={panelStyle}>
           <div style={S.head}>
             <span>🤖 库存 AI 助手{system ? ` · ${system.toUpperCase()}` : ''}</span>
             <button style={S.close} onClick={() => setOpen(false)} aria-label="关闭">✕</button>
@@ -228,14 +309,14 @@ export default function AiAssistant({ system, onSaved }: { system?: string; onSa
 // ---------- 内联样式（自包含，不污染全局 CSS） ----------
 const S: Record<string, React.CSSProperties> = {
   ball: {
-    position: 'fixed', right: 28, bottom: 28, width: 56, height: 56,
-    borderRadius: '50%', border: 'none', cursor: 'pointer', zIndex: 1200,
+    position: 'fixed', width: 56, height: 56,
+    borderRadius: '50%', border: 'none', zIndex: 1200,
     fontSize: 26, lineHeight: '56px', textAlign: 'center', padding: 0,
     background: 'linear-gradient(135deg, #1677ff, #36cfc9)', color: '#fff',
     boxShadow: '0 4px 14px rgba(22,119,255,.45)',
   },
   panel: {
-    position: 'fixed', right: 24, bottom: 24, width: 380, height: 520,
+    position: 'fixed', width: 380, height: 520,
     background: '#fff', borderRadius: 12, zIndex: 1200, display: 'flex',
     flexDirection: 'column', boxShadow: '0 8px 30px rgba(0,0,0,.22)', overflow: 'hidden',
   },
