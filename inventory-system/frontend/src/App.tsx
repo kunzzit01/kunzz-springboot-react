@@ -53,8 +53,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      {/* 手机版进出货：独立布局（无侧边栏），对齐旧 /jX/jXstockeditmobile.php */}
-      <Route path="/m/inout" element={<RequireAuth><MobileInout /></RequireAuth>} />
+      {/* 电话版出货：独立布局（无侧边栏），对齐旧 /mobile/ch/stocklistjX.php 改量出货业务 */}
+      <Route path="/mobile/inout" element={<RequireAuth><MobileInout /></RequireAuth>} />
+      <Route path="/m/inout" element={<Navigate to="/mobile/inout" replace />} />
       <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
       <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route index element={<Dashboard />} />

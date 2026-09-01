@@ -21,6 +21,8 @@ export interface MobileRecord {
 export interface MobilePriceTier {
   price: number
   available: number
+  specification?: string
+  type?: string
 }
 
 export interface MobileProductOption {
@@ -36,6 +38,7 @@ export interface MobileTotalRow {
   product_name: string
   code_number?: string
   specification?: string
+  type?: string
   total_qty: number
   last_updated?: string
 }
@@ -79,3 +82,22 @@ export const getMobileProductOptions = () =>
 
 export const getMobileTotals = (system: string) =>
   http.get<unknown, MobileTotalRow[]>('/stock/mobile/totals', { params: { system } })
+
+// ---------- 电话版批量出货（对齐旧 batch_save：改剩余量 → 差值拆层） ----------
+
+export interface MobileBatchRow {
+  time: string
+  productName: string
+  codeNumber?: string
+  specification?: string
+  type?: string
+  outQuantity: number
+  price?: number
+  receiver?: string
+}
+
+export const batchSaveMobileRecords = (data: {
+  system: string
+  documentDate?: string
+  rows: MobileBatchRow[]
+}) => http.post<unknown, MobileRecord[]>('/stock/mobile/batch-save', data)

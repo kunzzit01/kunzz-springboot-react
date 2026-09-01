@@ -51,10 +51,11 @@ public interface MobileStockMapper {
                                         @Param("codeNumber") String codeNumber,
                                         @Param("specification") String specification);
 
-    /** 价格层展示（含可用量/超扣负数，价格从高到低；手机出货选层用） */
-    List<Map<String, Object>> tiersDisplay(@Param("table") String table,
-                                           @Param("productName") String productName,
-                                           @Param("codeNumber") String codeNumber);
+
+    /** 价格层（按 price+spec 分组，含可用量/超扣负数；对齐旧 product_stock_by_price，电话版出货拆层用） */
+    List<Map<String, Object>> tiersWithSpec(@Param("table") String table,
+                                            @Param("productName") String productName,
+                                            @Param("codeNumber") String codeNumber);
 
     /** 指定价格的可用库存（跨规格汇总，含负数；出货指定价格层时的预检） */
     BigDecimal availableAtPrice(@Param("table") String table,

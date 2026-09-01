@@ -1233,8 +1233,8 @@ export default function StockInout() {
           <div><h1>进出货 - {SYSTEMS.find(s => s.key === system)?.label}</h1></div>
           <div className="controls">
             <div className="mobile-selector" style={{ display: system === 'central' ? 'none' : 'inline-flex' }}>
-              <a className="selector-button" href={`/m/inout?system=${system}`}
-                onClick={(e) => { e.preventDefault(); navigate(`/m/inout?system=${system}`) }}>手机版</a>
+              <a className="selector-button" href={`/mobile/inout?system=${system}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/mobile/inout?system=${system}`) }}>手机版</a>
             </div>
             <div className="view-selector">
               <button className="selector-button" onClick={() => setViewOpen(!viewOpen)}>

@@ -87,9 +87,10 @@
         FOR UPDATE
     </select>
 
-    <!-- 价格层展示（含可用量/超扣负数，价格从高到低；手机出货选层用） -->
-    <select id="tiersDisplay" resultType="java.util.LinkedHashMap">
-        SELECT COALESCE(price, 0) AS price,
+
+    <!-- 价格层（按 price+spec 分组，含超扣负数；对齐旧 product_stock_by_price） -->
+    <select id="tiersWithSpec" resultType="java.util.LinkedHashMap">
+        SELECT specification, COALESCE(price, 0) AS price, type,
                (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) AS available
         FROM ${table}
         WHERE (product_name = #{productName}
@@ -98,7 +99,7 @@
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
         </if>
-        GROUP BY COALESCE(price, 0)
+        GROUP BY COALESCE(price, 0), specification
         ORDER BY price DESC
     </select>
 
@@ -183,6 +184,7 @@
     </insert>
 
     <select id="listTotals" resultType="java.util.LinkedHashMap">
-        SELECT * FROM ${table} ORDER BY product_name ASC
+        SELECT t.*, (SELECT s.category FROM stock_data s WHERE s.product_name = t.product_name LIMIT 1) AS type
+        FROM ${table} t ORDER BY t.product_name ASC
     </select>
 </mapper>

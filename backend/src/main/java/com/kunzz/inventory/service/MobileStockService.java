@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.dto.MobileBatchSaveRequest;
 import com.kunzz.inventory.dto.MobileStockRequest;
 import com.kunzz.inventory.mapper.MobileStockMapper;
 import com.kunzz.inventory.mapper.StockEditMapper;
@@ -54,7 +55,7 @@ public class MobileStockService {
     /** 出货价格层（含可用量；负数=已超扣；价格从高到低） */
     public List<Map<String, Object>> priceTiers(String system, String productName, String codeNumber) {
         String sys = sys(system);
-        return mobileStockMapper.tiersDisplay(editTable(sys), normalizeName(productName), blankToNull(codeNumber));
+        return mobileStockMapper.tiersWithSpec(editTable(sys), normalizeName(productName), blankToNull(codeNumber));
     }
 
     /** 货品下拉（stock_data 主数据：产品名/编号/规格/类型） */
@@ -62,10 +63,69 @@ public class MobileStockService {
         return stockEditMapper.products();
     }
 
-    /** 手机总库存（读 jXstocklist_total 缓存，对齐 /mobile/ch/stocklistjX.php） */
+    /** 手机总库存（读 jXstocklist_total 缓存，对齐 /mobile/ch/stocklistjX.php；带台账类型） */
     public List<Map<String, Object>> totals(String system) {
         String sys = sys(system);
         return mobileStockMapper.listTotals(totalTable(sys));
+    }
+
+    /**
+     * 电话版批量出货（对齐旧 batch_save）：前端改「剩余量」→ 差值 = 出货量 → 已按价格层拆行。
+     * 事务内：预检（按 product+price 聚合，不按 spec 过滤，与旧版一致）→ 逐行 mobile 主写 + 桌面镜像直写 + total 缓存增减。
+     */
+    @Transactional
+    public List<Map<String, Object>> batchSave(MobileBatchSaveRequest req, String operator) {
+        String sys = sys(req.system());
+        if (req.rows() == null || req.rows().isEmpty()) throw new BusinessException("没有要保存的出货行");
+        LocalDate date = req.documentDate() != null ? req.documentDate() : LocalDate.now();
+
+        // ① 预检：按 (product, code, price) 聚合出货量，跨规格比对可用库存（对齐旧 outSummary 校验）
+        Map<String, BigDecimal> summary = new LinkedHashMap<>();
+        Map<String, MobileBatchSaveRequest.Row> rowByKey = new LinkedHashMap<>();
+        for (MobileBatchSaveRequest.Row row : req.rows()) {
+            String pname = normalizeName(row.productName());
+            if (pname == null) throw new BusinessException("产品名称不能为空");
+            BigDecimal out = nz(row.outQuantity());
+            if (out.signum() <= 0) throw new BusinessException("产品 [" + pname + "] 出货数量必须大于 0");
+            if (row.price() == null) throw new BusinessException("产品 [" + pname + "] 缺少价格层");
+            String key = pname + "|" + blankToNull(row.codeNumber()) + "|" + row.price().stripTrailingZeros().toPlainString();
+            summary.merge(key, out, BigDecimal::add);
+            rowByKey.putIfAbsent(key, row);
+        }
+        for (Map.Entry<String, BigDecimal> e : summary.entrySet()) {
+            MobileBatchSaveRequest.Row sample = rowByKey.get(e.getKey());
+            checkTierStock(sys, normalizeName(sample.productName()), blankToNull(sample.codeNumber()), sample.price(), e.getValue());
+        }
+
+        // ② 逐行写入（mobile 主写 → 桌面镜像直写 → total 缓存）
+        List<Map<String, Object>> created = new java.util.ArrayList<>();
+        for (MobileBatchSaveRequest.Row row : req.rows()) {
+            String pname = normalizeName(row.productName());
+            BigDecimal out = nz(row.outQuantity());
+            LocalTime time = row.time() != null && !row.time().isBlank()
+                    ? LocalTime.parse(row.time().length() > 8 ? row.time().substring(0, 8) : row.time())
+                    : LocalTime.now();
+
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("date", date.toString());
+            r.put("time", time.toString());
+            r.put("productName", pname);
+            r.put("codeNumber", blankToNull(row.codeNumber()));
+            r.put("specification", blankToNull(row.specification()));
+            r.put("type", blankToNull(row.type()));
+            r.put("inQuantity", BigDecimal.ZERO);
+            r.put("outQuantity", out);
+            r.put("receiver", operator);
+            mobileStockMapper.insertRecord(mobileTable(sys), r);
+            Integer refId = toInt(r.get("id"));
+
+            syncToDesktop(sys, pname, blankToNull(row.codeNumber()), blankToNull(row.specification()),
+                    blankToNull(row.type()), BigDecimal.ZERO, out, row.price(), date, time, refId);
+            applyTotal(sys, pname, blankToNull(row.codeNumber()), blankToNull(row.specification()),
+                    BigDecimal.ZERO, out);
+            created.add(record(sys, refId));
+        }
+        return created;
     }
 
     // ---------- 创建（对齐 handlePost） ----------
