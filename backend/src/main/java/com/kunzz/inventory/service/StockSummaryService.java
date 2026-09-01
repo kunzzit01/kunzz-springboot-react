@@ -136,7 +136,9 @@ public class StockSummaryService {
             String monthEnd = ym.atEndOfMonth().toString();
             for (String sub : new String[]{"j1", "j2", "j3"}) {
                 List<Map<String, Object>> sr = stockSummaryMapper.supplyValue(sub + "stockinout_data", monthStart, monthEnd);
-                double v = (sr == null || sr.isEmpty()) ? 0 : toD(sr.get(0).get("total_supply_value"));
+                // 无入库记录时 SUM 返回一行全 NULL，MyBatis 会给出 null 元素，需一并判空
+                double v = (sr == null || sr.isEmpty() || sr.get(0) == null) ? 0
+                        : toD(sr.get(0).get("total_supply_value"));
                 out.put(sub + "_supply_value", round2(v));
             }
         }
