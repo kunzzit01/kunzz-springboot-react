@@ -81,7 +81,7 @@ export default function MobileOut() {
   const access = useMobileAccess()
   const me = { username: access.username, branch: access.branch }
   const allowed = access.ready && access.allowedSystems.includes(system)
-  const [rows, setRows] = useState<MobileTotalRow[]>([])
+  const [rows, setRows] = useState<(MobileTotalRow & { rowKey: string })[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('')
@@ -97,8 +97,8 @@ export default function MobileOut() {
   })
   const [showCal, setShowCal] = useState(false)
   const [calDraft, setCalDraft] = useState(fmtDay(new Date()))
-  const [savingId, setSavingId] = useState<number | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
 
   const [summaryCount, setSummaryCount] = useState(0)
@@ -107,7 +107,11 @@ export default function MobileOut() {
     setLoading(true)
     try {
       const resp = await getMobileTotals(system)
-      setRows(resp.items)
+      // 后端分组聚合不返回 id：用 货品|编号|规格 复合键作行唯一标识（编辑/保存定位用）
+      setRows(resp.items.map(it => ({
+        ...it,
+        rowKey: `${it.product_name}|${it.code_number ?? ''}|${it.specification ?? ''}`,
+      })))
       setSummaryCount(resp.summaryCount)
     } catch { /* 拦截器已提示 */ }
     setLoading(false)
@@ -168,11 +172,11 @@ export default function MobileOut() {
 
   const totalRecords = summaryCount > 0 ? summaryCount : rows.filter(r => Number(r.total_qty) > 0).length
 
-  const startEdit = (id: number) => {
+  const startEdit = (rowKey: string) => {
     if (savingId != null) return
-    const r = rows.find(x => x.id === id)
+    const r = rows.find(x => x.rowKey === rowKey)
     if (!r) return
-    setEditingId(id)
+    setEditingId(rowKey)
     setDraft(qty3(Number(r.total_qty)))
   }
   const cancelEdit = () => {
@@ -181,9 +185,9 @@ export default function MobileOut() {
   }
 
   /** 电话版核心（对齐旧 saveRecord）：保存「剩余量」→ 差值 = 出货量 → HIFO 拆行 → batch_save */
-  const saveRecord = async (id: number) => {
+  const saveRecord = async (rowKey: string) => {
     if (savingId != null) return
-    const record = rows.find(r => r.id === id)
+    const record = rows.find(r => r.rowKey === rowKey)
     if (!record) return
     let currentQty = Number.parseFloat(draft)
     if (Number.isNaN(currentQty) || currentQty < 0) currentQty = 0
@@ -256,7 +260,7 @@ export default function MobileOut() {
     }
 
     // ⑥ 原子批量提交
-    setSavingId(id)
+    setSavingId(rowKey)
     try {
       await batchSaveMobileRecords({ system, documentDate: workDate, rows: outRows })
       // 对齐旧版成功提示：带各价格层明细（RM 单价: 数量）
@@ -334,9 +338,9 @@ export default function MobileOut() {
           {!loading && visible.length === 0 && <div className="msl-msg">没有找到产品</div>}
           <div className="msl-list">
             {visible.map(r => {
-              const editing = editingId === r.id
+              const editing = editingId === r.rowKey
               return (
-                <div key={r.id} className="msl-row">
+                <div key={r.rowKey} className="msl-row">
                   <div className="msl-name">{r.product_name}</div>
                   <div className="msl-footer">
                     <span className="msl-meta">{r.code_number || '—'}{r.specification ? ` · ${r.specification}` : ''}</span>
@@ -350,7 +354,7 @@ export default function MobileOut() {
                         readOnly={!editing}
                         onChange={e => setDraft(e.target.value)}
                         onFocus={e => { if (editing) e.currentTarget.select() }}
-                        onKeyDown={e => { if (e.key === 'Enter') saveRecord(r.id); if (e.key === 'Escape') cancelEdit() }}
+                        onKeyDown={e => { if (e.key === 'Enter') saveRecord(r.rowKey); if (e.key === 'Escape') cancelEdit() }}
                       />
                     </span>
                   </div>
@@ -358,8 +362,8 @@ export default function MobileOut() {
                     {/* 对齐旧版：单按钮切换 ✎（奶油）→ 保存（绿底白笔）；数量未变保存 = 取消 */}
                     <button
                       className={'msl-edit-btn' + (editing ? ' saving' : '')}
-                      onClick={() => (editing ? saveRecord(r.id) : startEdit(r.id))}
-                      disabled={savingId === r.id}
+                      onClick={() => (editing ? saveRecord(r.rowKey) : startEdit(r.rowKey))}
+                      disabled={savingId === r.rowKey}
                       title={editing ? '保存' : '编辑'}
                     >
                       {Icon.pencil}
