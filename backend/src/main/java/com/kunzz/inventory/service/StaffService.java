@@ -355,8 +355,12 @@ public class StaffService {
         out.put("canApprove", false);
         out.put("systems", List.of());
         out.put("views", List.of());
+        // 是否配置过 stock_inventory 权限（记录存在 = 管理员显式勾选过；
+        // 全空数组 = 明确关闭全部，区别于「无记录」（老账号/未配置，默认放行）
+        out.put("configured", false);
         for (UserPagePermission p : perms) {
             if (!"stock_inventory".equals(p.getPageKey())) continue;
+            out.put("configured", true);
             try {
                 Map<String, Object> json = objectMapper.readValue(p.getPermissionsJson(), Map.class);
                 List<String> views = asStrList(json.get("views"));

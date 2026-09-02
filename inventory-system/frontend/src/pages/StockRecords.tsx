@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog } from '../api'
+import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog, getStockPerms } from '../api'
 import type { PriceLogEntry } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
@@ -219,6 +219,18 @@ function useRawPriceTooltip() {
 
 export default function StockRecords() {
   const [system, setSystem] = useState('central')
+  // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
+  const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
+  const locked = allowedSystems !== null && allowedSystems.length === 0
+  useEffect(() => {
+    getStockPerms().then((p: any) => {
+      const configured = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
+      if (!configured) return
+      const allowed = (p.systems || []).map((s: string) => s.toLowerCase())
+      setAllowedSystems(allowed)
+      setSystem(prev => (allowed.includes(prev) ? prev : (systems.map(s => s.key).find(k => allowed.includes(k)) || prev)))
+    }).catch(() => {})
+  }, [])
   // 8/24：鼠标滚轮在供应值区域滚动即可切换显示类型卡（再滚恢复），带节流防连切
   const [showTypeCards, setShowTypeCards] = useState(false)
   const wheelLock = useRef(false)
@@ -873,7 +885,7 @@ export default function StockRecords() {
                 <i className="fas fa-chevron-down"></i>
               </button>
               <div className="selector-dropdown" id="selector-dropdown" style={{ display: sysOpen ? 'block' : 'none' }}>
-                {systems.map(s => (
+                {(locked ? [] : (allowedSystems == null ? systems : systems.filter(s => allowedSystems.includes(s.key)))).map(s => (
                   <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')} onClick={() => switchSystem(s.key)}>{s.label}</div>
                 ))}
               </div>
@@ -883,7 +895,12 @@ export default function StockRecords() {
 
         <div id="alert-container"></div>
 
-        {systems.map(s => renderSystemPage(s.key))}
+        {locked && (
+          <div className="sio-perm-locked">
+            <i className="fas fa-lock" /> 无权限访问：权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。
+          </div>
+        )}
+        {!locked && systems.filter(s => allowedSystems == null || allowedSystems.includes(s.key)).map(s => renderSystemPage(s.key))}
       </div>
 
       {/* 改价历史弹窗：从旧到最新（对齐需求：8月28日2026 - RM xx） */}

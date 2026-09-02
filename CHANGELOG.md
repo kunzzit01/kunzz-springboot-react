@@ -16,7 +16,27 @@
 - **根治**：datadir 迁出 OneDrive → `C:\kunzz-mariadb-data`；start.ps1 的 `$MDB_DATA` 改指新路径，旧目录存在时首次运行自动迁移；
   README 注明换新电脑时数据不跟项目文件夹走（拷 `C:\kunzz-mariadb-data` 或用备份数据包）
 
-### 1. 电话版实测反馈重做：紧凑列表（一屏 8-10+ 货品）+ 去分店切换/返回桌面 + 功能补齐
+### 1. 权限双层化 + 手机出货记录页 + /mobile/out 改名 + 手机专用登录
+
+- **用户反馈**：① 旧桌面「手机版」按钮指向 `jXstockeditmobile`（手机出货记录-JX），新系统没有这个页面；
+  ② 在职员管理关闭全部中央/J1/J2/J3 权限后，桌面和手机仍能浏览；③ mobile 只出货应叫 /mobile/out；④ 需要手机用户专用登录入口
+- **手机出货记录页 `/mobile/records?system=jX`**（新 `MobileRecords.tsx`，对齐旧 /jX/jXstockeditmobile.php 记录视图）：
+  快速日期 8 档（今天/昨天/本周/上周/这个月/上个月/今年/去年，selectQuickRange 同逻辑）+ 日期范围 + 搜索 +
+  紧凑记录卡（日期时间/编号·规格/货品/进货/出货/单价/出货人）+ 显示记录/出货合计 stats + CSV 导出（发票 PDF 对齐后续）；
+  **桌面进出货「手机版」按钮改指此页**（对齐旧 mobile-selector → jXstockeditmobile）
+- **路由改名**：/mobile/inout → **/mobile/out**（旧路径 /mobile/inout、/m/inout、/m/out 均带参重定向）
+- **手机专用登录 `/mobile/login`**（新 `MobileLogin.tsx`，对齐旧 login.html「登入 - KUNZZ HOLDINGS」）：
+  登录后按 branch ∩ 权限树解析可用分店——单店直达 /mobile/out、多店大按钮选择、无权限提示；支持 ?redirect= 回跳；
+  手机页未登录自动跳 /mobile/login（带 redirect，不再跳桌面登录页）
+- **权限双层化（branch + 权限树）**：
+  - 后端 `stockPerms` 新增 `configured`（存在 stock_inventory 记录 = 管理员显式配置过；全空 = 明确关闭，区别于无记录=默认放行）
+  - 后端 `MobileStockController.assertBranch` 双层校验：branch + 权限树（配置过且不含该店 → 403）
+  - 前端共享 `utils/useMobileAccess`（branch ∩ 权限树 → allowedSystems）+ `MobileDenied` 403 卡片（对齐旧 branch_check.php 样式）
+  - 桌面进出货（StockInout）/总库存（StockRecords）系统选项按权限树过滤（无记录 = 全部可用，兼容 demo）；全空 → 整页锁定横幅；
+  - 货品种类（StockProducts）修正：以前「记录全空」被当未配置放行（正是用户遇到的 bug），改用 configured 判定
+- **验证**：tsc + vite 构建通过；jar 重编译重启；demo（无记录）回归 totals/stock-perms 正常；ELAINE/JASON/ZHI ZEEN（全空权限记录）将被桌面锁定 + 手机 403
+
+### 2. 电话版实测反馈重做：紧凑列表（一屏 8-10+ 货品）+ 去分店切换/返回桌面 + 功能补齐
 
 - **用户实测反馈**：① 首版大卡片太占空间，一屏展示不到 8 个货品；② 分店用户经 URL 直达本店（权限限定），
   不应有分店切换 Tab 和「返回桌面版」按钮；③ 功能与设计未完全对齐旧版

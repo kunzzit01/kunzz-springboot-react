@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import AppLayout from './components/AppLayout'
 import Login from './pages/Login'
@@ -38,7 +38,26 @@ import JobPositions from './pages/JobPositions'
 import Recycle from './pages/Recycle'
 import Maintain from './pages/Maintain'
 import Phone from './pages/Phone'
-import MobileInout from './pages/MobileInout'
+import MobileOut from './pages/MobileOut'
+import MobileRecords from './pages/MobileRecords'
+import MobileLogin from './pages/MobileLogin'
+
+/** 手机路径重定向（保留 ?system= 参数） */
+function MobileRedirect({ to }: { to: string }) {
+  const [sp] = useSearchParams()
+  const sys = sp.get('system')
+  return <Navigate to={to + (sys ? `?system=${sys}` : '')} replace />
+}
+
+/** 手机页鉴权：未登录 → 手机专用登录页（带 redirect 回跳） */
+function RequireMobileAuth({ children }: { children: ReactElement }) {
+  const token = localStorage.getItem('inv_token')
+  const location = useLocation()
+  if (!token) {
+    return <Navigate to={'/mobile/login?redirect=' + encodeURIComponent(location.pathname + location.search)} replace />
+  }
+  return children
+}
 
 function RequireAuth({ children }: { children: ReactElement }) {
   const token = localStorage.getItem('inv_token')
@@ -53,9 +72,17 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
-      {/* 电话版出货：独立布局（无侧边栏），对齐旧 /mobile/ch/stocklistjX.php 改量出货业务 */}
-      <Route path="/mobile/inout" element={<RequireAuth><MobileInout /></RequireAuth>} />
-      <Route path="/m/inout" element={<Navigate to="/mobile/inout" replace />} />
+      {/* 电话版（手机端专用，无侧边栏）：
+          /mobile/login 手机用户专用登录（登录后自动去到有权限的分店）；
+          /mobile/out 库存列表改量出货（对齐旧 /mobile/ch/stocklistjX.php）；
+          /mobile/records 手机出货记录（对齐旧 /jX/jXstockeditmobile.php，桌面「手机版」按钮落点）；
+          旧路径 /mobile/inout、/m/inout、/m/out 重定向到 /mobile/out */}
+      <Route path="/mobile/login" element={<MobileLogin />} />
+      <Route path="/mobile/out" element={<RequireMobileAuth><MobileOut /></RequireMobileAuth>} />
+      <Route path="/mobile/records" element={<RequireMobileAuth><MobileRecords /></RequireMobileAuth>} />
+      <Route path="/mobile/inout" element={<MobileRedirect to="/mobile/out" />} />
+      <Route path="/m/inout" element={<MobileRedirect to="/mobile/out" />} />
+      <Route path="/m/out" element={<MobileRedirect to="/mobile/out" />} />
       <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
       <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
         <Route index element={<Dashboard />} />

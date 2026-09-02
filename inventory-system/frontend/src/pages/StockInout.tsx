@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProductDefaultPrice, getProducts,
-  getRemarkCodes, getShippers, getStaff, getStockInout, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
+  getRemarkCodes, getShippers, getStaff, getStockInout, getStockPerms, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
 import { useRowHighlight } from '../utils/rowHighlight'
 import { generateInvoiceNumber, generateInvoicePdf } from '../utils/invoicePdf'
 import { useRealtime } from '../utils/useRealtime'
@@ -253,6 +253,8 @@ export default function StockInout() {
   // 从 URL 读取初始系统（对齐 ?system=j3）
   const urlSystem = new URL(window.location.href).searchParams.get('system')
   const [system, setSystem] = useState(urlSystem && SYSTEMS.some(s => s.key === urlSystem) ? urlSystem : 'central')
+  // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
+  const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
   const [viewOpen, setViewOpen] = useState(false)
   const [sysOpen, setSysOpen] = useState(false)
   const [rows, setRows] = useState<StockInout[]>([])
@@ -316,6 +318,8 @@ export default function StockInout() {
   const [calPreview, setCalPreview] = useState<Date | null>(null)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
+  // 权限锁定：配置过权限树且系统选项全空 → 整页锁定（数据区隐藏，仅显示提示）
+  const locked = allowedSystems !== null && allowedSystems.length === 0
 
   // 实时搜索（对齐旧系统 setupRealTimeSearch：300ms 防抖 + 搜索后回到第一页）
   const onSearchInput = (v: string) => {
@@ -361,6 +365,22 @@ export default function StockInout() {
     getShippers().then((list) => setShipperOptions(list || [])).catch(() => {})
     // 当前登录用户（用于 created_by / deleted_by，对齐旧系统存 username）
     getMe().then((u) => setCurrentUser(u?.username || '')).catch(() => {})
+    // 页面权限（对齐旧 check_permissions.php：无记录 = 默认全部可用；记录全空 = 明确关闭）
+    getStockPerms().then((p: any) => {
+      const configured = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
+      if (!configured) return
+      const allowed = (p.systems || []).map((s: string) => s.toLowerCase())
+      setAllowedSystems(allowed)
+      setSystem(prev => {
+        if (allowed.includes(prev)) return prev
+        const first = SYSTEMS.map(s => s.key).filter(k => allowed.includes(k))[0]
+        if (first) {
+          const base = window.location.pathname.split('?')[0]
+          window.history.replaceState(null, '', first === 'central' ? base : base + '?system=' + first)
+        }
+        return first || prev
+      })
+    }).catch(() => {})
     // 用户名 → 昵称映射（创建人列展示昵称，对齐旧系统 stockeditapi.php resolveCreatedByNicknames）
     getStaff().then((list) => {
       const m = new Map<string, string>()
@@ -1229,12 +1249,18 @@ export default function StockInout() {
   return (
     <div className="sio-root">
       <div className="container">
+        {locked && (
+          <div className="sio-perm-locked">
+            <i className="fas fa-lock" /> 无权限访问：权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。
+          </div>
+        )}
+        <div style={locked ? { display: 'none' } : undefined}>
         <div className="header">
           <div><h1>进出货 - {SYSTEMS.find(s => s.key === system)?.label}</h1></div>
           <div className="controls">
-            <div className="mobile-selector" style={{ display: system === 'central' ? 'none' : 'inline-flex' }}>
-              <a className="selector-button" href={`/mobile/inout?system=${system}`}
-                onClick={(e) => { e.preventDefault(); navigate(`/mobile/inout?system=${system}`) }}>手机版</a>
+            <div className="mobile-selector" style={{ display: system === 'central' || locked ? 'none' : 'inline-flex' }}>
+              <a className="selector-button" href={`/mobile/records?system=${system}`}
+                onClick={(e) => { e.preventDefault(); navigate(`/mobile/records?system=${system}`) }}>手机版</a>
             </div>
             <div className="view-selector">
               <button className="selector-button" onClick={() => setViewOpen(!viewOpen)}>
@@ -1254,7 +1280,7 @@ export default function StockInout() {
                 <i className="fas fa-chevron-down"></i>
               </button>
               <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
-                {SYSTEMS.map(s => (
+                {(allowedSystems == null ? SYSTEMS : SYSTEMS.filter(s => allowedSystems.includes(s.key))).map(s => (
                   <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')}
                     onClick={() => {
                       setSysOpen(false); setSystem(s.key); setPage(0); setNewRows([])
@@ -1616,6 +1642,7 @@ export default function StockInout() {
           </div>
         </div>
       </div>
+        </div>
 
       {/* 新增记录弹窗（对齐 date-rows-modal：白底黑标题 + 2px 黑边 + Enter 创建） */}
       {rowsModal && (

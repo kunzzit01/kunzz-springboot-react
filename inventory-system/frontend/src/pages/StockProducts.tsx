@@ -135,7 +135,8 @@ export default function StockProducts() {
     getMe().then((u: any) => setCurrentUser(u?.displayName || u?.username || '')).catch(() => {})
     // 页面权限：无配置（demo）默认全部可用；有配置则按 views/systems 控制（对齐 check_permissions.php）
     getStockPerms().then((p: any) => {
-      const hasConfig = (p?.views || []).length > 0 || (p?.systems || []).length > 0
+      // configured = 后端确认存在 stock_inventory 权限记录（全空 = 管理员明确关闭，不再当作未配置放行）
+      const hasConfig = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
       if (hasConfig) {
         setCanApply(!!p?.canApply)
         setCanApprove(!!p?.canApprove)

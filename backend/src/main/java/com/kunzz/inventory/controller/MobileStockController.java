@@ -1,10 +1,12 @@
 package com.kunzz.inventory.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.dto.MobileBatchSaveRequest;
 import com.kunzz.inventory.dto.MobileStockRequest;
 import com.kunzz.inventory.entity.User;
+import com.kunzz.inventory.mapper.StaffMapper;
 import com.kunzz.inventory.service.MobileStockService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -31,8 +33,11 @@ import java.util.Map;
 public class MobileStockController {
 
     private final MobileStockService mobileStockService;
+    private final StaffMapper staffMapper;
+    private final ObjectMapper objectMapper;
 
-    // ---------- 权限（对齐旧 session branch 校验：KH 总部全通，否则须包含对应分店） ----------
+    // ---------- 权限（双层：① users.branch 对齐旧 session branch 校验，KH 全通；
+    // ② 页面权限树 stock_inventory.system：配置过则须包含对应分店，未配置（老手机账号）→ 放行） ----------
 
     private User user(Authentication authentication) {
         return (User) authentication.getPrincipal();
@@ -43,7 +48,21 @@ public class MobileStockController {
         User u = user(authentication);
         String branch = u.getBranch() == null ? "" : u.getBranch().toLowerCase();
         List<String> parts = Arrays.stream(branch.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
-        if (!parts.contains("kh") && !parts.contains(sys)) {
+        boolean branchOk = parts.contains("kh") || parts.contains(sys);
+        boolean treeOk = true;
+        try {
+            for (com.kunzz.inventory.entity.UserPagePermission p : staffMapper.listPagePerms(u.getId())) {
+                if (!"stock_inventory".equals(p.getPageKey())) continue;
+                Map<?, ?> json = objectMapper.readValue(p.getPermissionsJson(), Map.class);
+                Object sysObj = json.containsKey("system") ? json.get("system") : json.get("systems");
+                if (sysObj instanceof List<?> list) {
+                    // 记录存在：勾选了系统 → 须包含；全空 = 管理员明确关闭 → 拒绝
+                    treeOk = list.stream().map(String::valueOf).map(String::trim).map(String::toLowerCase).anyMatch(sys::equals);
+                }
+                break;
+            }
+        } catch (Exception ignored) { /* 权限 JSON 读取失败 → 不因权限配置故障锁死手机端 */ }
+        if (!branchOk || !treeOk) {
             throw new BusinessException("无权限操作 " + sys.toUpperCase() + "（用户分店: " + branch + "）");
         }
     }

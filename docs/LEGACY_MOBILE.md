@@ -110,13 +110,18 @@
 
 ---
 
-## 六、电话版（stocklistjX）实现状态 —— 2026-09-01 完成，09-02 按用户实测反馈重做
+## 六、电话版（stocklistjX）实现状态 —— 2026-09-01 完成，09-02 实测反馈重做 + 出货记录页上线
 
-> 新系统实现：路由 **`/mobile/inout?system=j1|j2|j3`**（页面 `MobileInout.tsx`，独立布局无侧边栏），
+> 新系统实现：路由 **`/mobile/out?system=j1|j2|j3`**（页面 `MobileOut.tsx`，独立布局无侧边栏；旧路径 /mobile/inout、/m/inout 重定向），
+> 手机出货记录 **`/mobile/records?system=jX`**（页面 `MobileRecords.tsx`，对齐旧 /jX/jXstockeditmobile.php，桌面进出货「手机版」按钮落点），
+> 手机专用登录 **`/mobile/login`**（页面 `MobileLogin.tsx`，登录后单分店直达 / 多分店大按钮选择，支持 ?redirect=），
 > 后端 `/api/stock/mobile/*`（`MobileStockController`/`Service`/`Mapper`）。
 > 已通过截图对比验证：**显示记录 255 / 总记录 262、各货品数量与 live 逐行一致**。
-> **09-02 更新**：用户反馈首版卡片太占空间（一屏不足 8 个货品）、且分店用户经 URL 直达本店不该看到分店切换/返回桌面 →
-> UI 按 `Downloads/kunzzgroup-main (1) (1)/mobile/ch/css/stocklist.css` **1:1 重做**（紧凑卡片行 + 退出登录钮 + 无分店 Tab），功能补齐（工作日期持久化/非今天确认/分类映射/固定区域表/名称排序/RM 明细提示）。
+> **09-02 更新**：① 用户反馈首版卡片太占空间 → UI 按 stocklist.css **1:1 重做**（紧凑卡片行 + 退出登录钮 + 无分店 Tab）；
+> ② 路由改 /mobile/out（只出货）；③ 新增手机出货记录页（快速日期 8 档 + 范围 + 搜索 + 记录卡 + CSV 导出，发票 PDF 后续）；
+> ④ 新增手机专用登录页；⑤ 权限双层化（见下）。
+
+### 已对齐（勿回退）
 
 ### 已对齐（勿回退）
 
@@ -128,16 +133,15 @@
 | 筛选 | 库存分类（category，Drinks→Service Line 映射）+ 区域（**未选分类 = 固定 20 项** K1-1…SBDI-2，选了分类 = 该分类涉及区域子集，对齐旧 updateFreezerCategoryOptions）+ 搜索（名称/编号）；**隐藏 qty ≤ 0**；筛选结果按名称排序 |
 | stats | 显示记录 = 筛选后行数；总记录 = summary 行数（product+code+spec+ROUND(price,2) 且 net≠0 = 262） |
 | 数量格式 | **三位小数 `99.000`**（旧版 number_format(qty,3)），不得改成整数 |
-| 权限 | users.branch（逗号分隔，kh=总部全通，否则须含分店）；所有端点 403 口径一致；**页面无分店切换、无返回桌面入口**（分店用户经 URL 直达本店，对齐旧 stocklistjX.php 一店一页） |
-| 页头 | 左「退出登录」橙钮（清 inv_token 回 /login，对齐旧 logout-button）+ 标题 + 日期（M月D日）+ 日历钮；工作日期按分店持久化 `jX_stock_edit_date`（localStorage+sessionStorage，对齐旧 workDateManager） |
+| 权限 | **双层**：① users.branch（kh 全通/否则须含分店，后端 MobileStockController + 前端同源）；② 页面权限树 stock_inventory.system（后端 configured 标记：记录存在且全空 = 明确关闭 → 后端 403 + 前端 403 卡片；未配置老手机账号 → 放行）；所有端点 403 口径一致；**页面无分店切换、无返回桌面入口** |
+| 页头 | 左「退出登录」橙钮（清 inv_token 回 /mobile/login，对齐旧 logout-button）+ 标题 + 日期（M月D日）+ 日历钮；工作日期按分店持久化 `jX_stock_edit_date`（localStorage+sessionStorage，对齐旧 workDateManager） |
 | 设计 | stocklist.css **1:1 移植**（`src/styles/mobile-stocklist.css`，类名 msl- 前缀）：#f4f7f2 底 / 480px / 吸顶筛选区（48px 下拉+搜索、radius 14）/ stats 13px / **紧凑卡片行**（padding 12px 14px、radius 14、行距 10px，一屏 8-10+ 货品）/ 数量框编辑态 #583e04 边框 / ✎→绿底保存单按钮切换（旧版无取消钮，数量未变保存=取消）/ 360px 小屏适配 |
 
 ### 明日续作（按优先级）
 
-1. **手机真机实测**：J1/J2/J3 三店 + kh 账号各验一遍（登录、列表数量、改量出货、HIFO 层提示、权限拦截）
-2. **手机出货记录 log 页**（未做）：对齐 `/jX/jXstockeditmobile.php`「手机出货记录 - JX」——
-   日期范围 + 快速选择（时段/今天/昨天/本周/上周/这个月/上个月/今年/去年）+ 搜索 + 表格列（日期/货品编号/货品/出货/出货人）+ 导出发票；
-   桌面「手机版」按钮目前指向 /mobile/inout（电话版），log 页建好后按需调整指向或双入口
-3. 电话版页加「出货记录」入口（连到 log 页）
-4. `sync-live-data.bat` / `DB_IMPORT.md` 路径从 XAMPP 改指内置库（XAMPP 已弃用）
-5. 日常：`sync-live-stock.cjs --days=2 --apply`（暂停 OneDrive 后跑）
+1. **手机真机实测**：J1/J2/J3 三店 + kh 账号各验一遍（登录、列表数量、改量出货、HIFO 层提示、权限拦截）——09-02 已在桌面浏览器验证，真机待测
+2. ~~手机出货记录 log 页~~ → **已完成（09-02）**：/mobile/records（快速日期 8 档 + 日期范围 + 搜索 + 记录卡 + CSV 导出；发票 PDF 导出待对齐）
+3. ~~电话版页加「出货记录」入口~~ → 改由桌面进出货「手机版」按钮直达 /mobile/records（对齐旧 mobile-selector → jXstockeditmobile）；手机端如有需要后续再加入口
+4. ~~`sync-live-data.bat` / `DB_IMPORT.md` 路径从 XAMPP 改指内置库~~ （XAMPP 已弃用）
+5. 日常：`sync-live-stock.cjs --days=2 --apply`（暂停 OneDrive 后跑）；**数据目录已迁 `C:\kunzz-mariadb-data`（09-02 根治 OneDrive 损坏，见 OPS.md 四）**
+6. 桌面「进出货/总库存/货品种类」已按权限树过滤系统选项；**货品异常（/sot）页面未接权限树，后续补**；桌面库存类 API 的后端级权限校验也待补（当前仅手机端接口后端强制）

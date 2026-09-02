@@ -506,3 +506,295 @@
     min-width: 48px;
   }
 }
+
+/* ===== 手机出货记录（MobileRecords） ===== */
+.msl-rec-row .msl-rec-top {
+  grid-area: name;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.msl-rec-date {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #7a736b;
+  white-space: nowrap;
+}
+
+.msl-qty-out {
+  font-weight: 700;
+  color: #2f2a24;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.msl-qty-in {
+  font-weight: 600;
+  color: #2aa745;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* 快速日期 + 自选日期范围（同一行：下拉 + 起~止） */
+.msl-date-range-group {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+}
+
+.msl-date-mini {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 8px;
+  border: 1px solid #d8d0c5;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 13px;
+  color: #2f2a24;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.msl-date-mini:focus {
+  outline: none;
+  border-color: #f7931e;
+}
+
+.msl-date-sep {
+  color: #7a736b;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+/* ===== 无权限访问卡（对齐旧 branch_check.php 403 页） ===== */
+.msl-denied {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 40px 30px;
+  margin: auto 0;
+}
+
+.msl-denied-icon {
+  background: #fef2f2;
+  color: #ef4444;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  border: 4px solid #fecaca;
+}
+
+.msl-denied-icon svg {
+  width: 36px;
+  height: 36px;
+}
+
+.msl-denied h1 {
+  color: #2f2a24;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.msl-denied h2 {
+  color: #7a736b;
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0 0 22px;
+}
+
+.msl-denied-box {
+  background: #f4f7f2;
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 26px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.msl-denied-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  font-size: 13px;
+}
+
+.msl-denied-row:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.msl-denied-row span {
+  color: #7a736b;
+}
+
+.msl-denied-row b {
+  color: #2f2a24;
+  background: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+}
+
+.msl-denied-btn {
+  display: block;
+  width: 100%;
+  background: #f99e00;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 13px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.msl-denied-btn:active {
+  background: #ff5c00;
+}
+
+/* ===== 手机专用登录页（MobileLogin，对齐旧 login.html「登入 - KUNZZ HOLDINGS」） ===== */
+.msl-login-page {
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+}
+
+.msl-login-card {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border: 1px solid #d8d0c5;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  padding: 32px 26px;
+  box-sizing: border-box;
+}
+
+.msl-login-brand {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #f7931e;
+  margin-bottom: 6px;
+}
+
+.msl-login-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2f2a24;
+  margin: 0 0 22px;
+}
+
+.msl-login-sub {
+  text-align: center;
+  font-size: 14px;
+  color: #7a736b;
+  margin: 0 0 18px;
+}
+
+.msl-login-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2f2a24;
+  margin: 14px 0 6px;
+}
+
+.msl-login-card input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d8d0c5;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 16px;
+  color: #2f2a24;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.msl-login-card input:focus {
+  outline: none;
+  border-color: #f7931e;
+  box-shadow: 0 0 0 4px rgba(248, 155, 15, 0.15);
+}
+
+.msl-login-btn {
+  width: 100%;
+  height: 50px;
+  margin-top: 22px;
+  border: none;
+  border-radius: 12px;
+  background: #f7931e;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.msl-login-btn:active {
+  transform: scale(0.98);
+}
+
+.msl-login-btn:disabled {
+  opacity: 0.6;
+}
+
+.msl-login-branches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.msl-login-branch-btn {
+  height: 56px;
+  border: 1px solid #d8d0c5;
+  border-radius: 14px;
+  background: #fdf9f1;
+  color: #2f2a24;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.msl-login-branch-btn:active {
+  background: #f7931e;
+  color: #fff;
+  border-color: #f7931e;
+}
+
+.msl-login-switch {
+  width: 100%;
+  margin-top: 16px;
+  background: transparent;
+  border: none;
+  color: #7a736b;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.msl-login-foot {
+  font-size: 12px;
+  color: #7a736b;
+  letter-spacing: 0.06em;
+}

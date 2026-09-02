@@ -875,3 +875,18 @@
     font-size: 15px;
   }
 }
+
+/* 权限锁定提示（权限设定关闭全部系统时整页锁定） */
+.sio-perm-locked {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin: 24px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
