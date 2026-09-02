@@ -30,7 +30,7 @@ export default function Login() {
       }
       message.success('欢迎回来，' + (res.user.displayName || res.user.username) + '！')
       // 跳转优先级：?redirect= 参数（对齐旧手机版 login.php?redirect=stocklistjX.php）
-      // > 登录前被拦截的页面（保留完整路径+查询，电话版 /mobile/inout?system=jX 依赖 system 定位分店）> 主页
+      // > 登录前被拦截的页面（保留完整路径+查询，电话版 /mobile/*?system=jX 依赖 system 定位分店）> 主页
       const redirectParam = new URLSearchParams(window.location.search).get('redirect')
       if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
         navigate(redirectParam, { replace: true })
