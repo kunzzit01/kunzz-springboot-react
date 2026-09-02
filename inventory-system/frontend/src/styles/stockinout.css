@@ -14,7 +14,7 @@
   margin-bottom: clamp(18px, 1.67vw, 32px);
 }
 .sio-root .header h1 { font-size: clamp(20px, 2.6vw, 50px); font-weight: bold; color: #000; line-height: 1.44; }
-.sio-root .header .controls { display: flex; align-items: center; gap: 12px; }
+.sio-root .header .controls { display: flex; align-items: center; gap: 0px; }
 .sio-root .selector-button {
   background-color: #f99e00; color: white; font-weight: 500;
   padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
@@ -22,13 +22,19 @@
   font-size: clamp(10px, 0.73vw, 14px);
   display: inline-flex; align-items: center; gap: 8px;
   transition: all 0.2s ease;
-  width: clamp(90px, 6.77vw, 130px); justify-content: space-between; position: relative;
+  width: clamp(80px, 6.77vw, 130px); justify-content: space-between; position: relative;
+}
+/* 手机版按钮：居中 + 自适应宽 + min-width（对齐旧 stockeditall.css） */
+.sio-root .mobile-selector { margin-right: 16px; }
+.sio-root .mobile-selector .selector-button {
+  justify-content: center; width: auto; min-width: clamp(80px, 6.77vw, 130px);
 }
 .sio-root .selector-button:hover { background-color: #f98500; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(88, 62, 4, 0.2); }
 .sio-root .selector-dropdown {
-  position: absolute; top: 110%; right: 0; background: white;
+  position: absolute; top: 96%; right: 0; background: white;
   border: 2px solid #000; border-radius: 8px;
   box-shadow: 0 8px 24px rgba(88, 62, 4, 0.2); width: 100%; z-index: 10000; display: none;
+  margin-top: 4px;
 }
 .sio-root .selector-dropdown.show { display: block; }
 .sio-root .selector-dropdown .dropdown-item {
