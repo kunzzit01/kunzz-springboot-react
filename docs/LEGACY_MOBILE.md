@@ -110,24 +110,27 @@
 
 ---
 
-## 六、电话版（stocklistjX）实现状态 —— 2026-09-01 完成，明日续作清单
+## 六、电话版（stocklistjX）实现状态 —— 2026-09-01 完成，09-02 按用户实测反馈重做
 
 > 新系统实现：路由 **`/mobile/inout?system=j1|j2|j3`**（页面 `MobileInout.tsx`，独立布局无侧边栏），
 > 后端 `/api/stock/mobile/*`（`MobileStockController`/`Service`/`Mapper`）。
 > 已通过截图对比验证：**显示记录 255 / 总记录 262、各货品数量与 live 逐行一致**。
+> **09-02 更新**：用户反馈首版卡片太占空间（一屏不足 8 个货品）、且分店用户经 URL 直达本店不该看到分店切换/返回桌面 →
+> UI 按 `Downloads/kunzzgroup-main (1) (1)/mobile/ch/css/stocklist.css` **1:1 重做**（紧凑卡片行 + 退出登录钮 + 无分店 Tab），功能补齐（工作日期持久化/非今天确认/分类映射/固定区域表/名称排序/RM 明细提示）。
 
 ### 已对齐（勿回退）
 
 | 项 | 说明 |
 |---|---|
 | 数据源 ⚠️ | **必须实时计算**：按 `product+code_number+specification` 分组 `SUM(in)-SUM(out)` 自 `jXstockedit_data`（对齐旧 `stocklist_total` action，注释原话「避免双重计算」）。**不要用 jXstocklist_total 缓存表**——缓存已漂移（实测 100 PLUS 缓存 1010，实际 82） |
-| 业务 | 改「剩余量」= 出货：出货量 = 实时库存 − 输入值；超扣拒绝（提示当前库存）；无变化取消；按价格从高到低拆行（每层时间 +1s，receiver=当前用户名）→ batch_save 原子提交 |
+| 业务 | 改「剩余量」= 出货：出货量 = 实时库存 − 输入值；超扣拒绝（提示当前库存并把输入纠正为最大可用、保持编辑态）；无变化取消；保存前工作日期非今天 → confirm（对齐旧 confirmWorkDateBeforeSave）；按价格从高到低拆行（每层时间 +1s，receiver=当前用户名）→ batch_save 原子提交；成功提示带各层明细（RM 单价: 数量） |
 | 预检 | batch_save 按 (product, code, price) 聚合比对可用量，**不按 spec 过滤**（对齐旧 outSummary） |
-| 筛选 | 库存分类（category）+ 区域（freezer_category，逗号拆多值，选项随分类联动）+ 搜索（名称/编号）；**隐藏 qty ≤ 0** |
+| 筛选 | 库存分类（category，Drinks→Service Line 映射）+ 区域（**未选分类 = 固定 20 项** K1-1…SBDI-2，选了分类 = 该分类涉及区域子集，对齐旧 updateFreezerCategoryOptions）+ 搜索（名称/编号）；**隐藏 qty ≤ 0**；筛选结果按名称排序 |
 | stats | 显示记录 = 筛选后行数；总记录 = summary 行数（product+code+spec+ROUND(price,2) 且 net≠0 = 262） |
 | 数量格式 | **三位小数 `99.000`**（旧版 number_format(qty,3)），不得改成整数 |
-| 权限 | users.branch（逗号分隔，kh=总部全通，否则须含分店）；所有端点 403 口径一致；分店 Tab 按 branch 过滤 |
-| 设计 | stocklist.css tokens：#f4f7f2 底 / #fdf9f1 抽屉 / #f7931e 主橙 / #d8d0c5 边框 / 480px / 48px 控件 / 卡片 radius 24 / 奶油编辑块 #f4efe4 / 白色头区 |
+| 权限 | users.branch（逗号分隔，kh=总部全通，否则须含分店）；所有端点 403 口径一致；**页面无分店切换、无返回桌面入口**（分店用户经 URL 直达本店，对齐旧 stocklistjX.php 一店一页） |
+| 页头 | 左「退出登录」橙钮（清 inv_token 回 /login，对齐旧 logout-button）+ 标题 + 日期（M月D日）+ 日历钮；工作日期按分店持久化 `jX_stock_edit_date`（localStorage+sessionStorage，对齐旧 workDateManager） |
+| 设计 | stocklist.css **1:1 移植**（`src/styles/mobile-stocklist.css`，类名 msl- 前缀）：#f4f7f2 底 / 480px / 吸顶筛选区（48px 下拉+搜索、radius 14）/ stats 13px / **紧凑卡片行**（padding 12px 14px、radius 14、行距 10px，一屏 8-10+ 货品）/ 数量框编辑态 #583e04 边框 / ✎→绿底保存单按钮切换（旧版无取消钮，数量未变保存=取消）/ 360px 小屏适配 |
 
 ### 明日续作（按优先级）
 

@@ -1,0 +1,508 @@
+/* 电话版库存列表（MobileInout）——1:1 移植旧 live /mobile/ch/css/stocklist.css
+   类名统一加 msl- 前缀（mobile stock list）避免与其他页面样式冲突。 */
+
+.msl-page {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background-color: #f4f7f2;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: #2f2a24;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ===== 页头：退出登录 + 标题 + 日期 + 日历钮（对齐旧 page-header） ===== */
+.msl-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.msl-title {
+  flex: 1;
+  min-width: 0;
+  font-size: clamp(18px, 5vw, 24px);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  color: #2f2a24;
+}
+
+.msl-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.msl-date {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2f2a24;
+}
+
+.msl-date:empty {
+  display: none;
+}
+
+.msl-logout,
+.msl-cal-btn {
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: #f7931e;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.msl-logout svg,
+.msl-cal-btn svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.msl-logout:active,
+.msl-cal-btn:active {
+  transform: scale(0.95);
+}
+
+/* ===== 筛选区（对齐旧 form-section：吸顶 + 底边框 + 阴影） ===== */
+.msl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  padding: 12px 0 14px;
+  margin: 0 0 4px;
+  background: #f4f7f2;
+  border-bottom: 1px solid #d8d0c5;
+  box-shadow: 0 8px 16px rgba(44, 44, 44, 0.06);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.msl-selects-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  gap: 12px;
+  width: 100%;
+  align-items: stretch;
+}
+
+.msl-select-group {
+  display: flex !important;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  width: 50% !important;
+  max-width: 50% !important;
+}
+
+.msl-select-wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  flex: 1;
+}
+
+.msl-select-wrap select {
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 48px;
+  padding: 0 48px 0 16px;
+  border: 1px solid #d8d0c5;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 16px;
+  color: #2f2a24;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.msl-select-wrap select:focus {
+  outline: none;
+  border-color: #f7931e;
+  box-shadow: 0 0 0 4px rgba(248, 155, 15, 0.15);
+}
+
+.msl-select-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid #7a736b;
+  border-bottom: 2px solid #7a736b;
+  pointer-events: none;
+  transform: translateY(-50%) rotate(-45deg);
+}
+
+.msl-search {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.msl-search input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  padding: 0 16px;
+  border: 1px solid #d8d0c5;
+  border-radius: 14px;
+  background: #ffffff;
+  font-size: 16px;
+  color: #2f2a24;
+  box-sizing: border-box;
+}
+
+.msl-search input::placeholder {
+  color: #7a736b;
+}
+
+.msl-search input:focus {
+  outline: none;
+  border-color: #f7931e;
+  box-shadow: 0 0 0 4px rgba(248, 155, 15, 0.15);
+}
+
+.msl-btn-search {
+  flex: 0 0 48px;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  padding: 0;
+  border: none;
+  border-radius: 14px;
+  background: #f7931e;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.msl-btn-search svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.msl-btn-search:active {
+  transform: scale(0.97);
+}
+
+/* ===== stats（显示记录 / 总记录） ===== */
+.msl-stats {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  color: #7a736b;
+}
+
+.msl-stats .msl-stat-value {
+  font-weight: 700;
+  color: #2f2a24;
+}
+
+/* ===== 货品行（对齐旧 tbody tr 卡片：紧凑两行网格） ===== */
+.msl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msl-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name action"
+    "footer action";
+  gap: 8px 12px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #d8d0c5;
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(44, 44, 44, 0.04);
+}
+
+.msl-name {
+  grid-area: name;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  word-break: break-word;
+  align-self: start;
+  color: #2f2a24;
+}
+
+.msl-footer {
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+  font-size: 13px;
+  color: #7a736b;
+  align-self: stretch;
+}
+
+.msl-meta {
+  flex: 0 1 auto;
+  min-width: 0;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.msl-sep {
+  flex-shrink: 0;
+  color: rgba(122, 115, 107, 0.45);
+  line-height: 1;
+  margin: 0 2px;
+}
+
+.msl-qty-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.msl-qty-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #7a736b;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.msl-qty-input {
+  box-sizing: border-box;
+  width: auto;
+  min-width: 48px;
+  max-width: 88px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  color: #2f2a24;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  font-family: inherit;
+}
+
+.msl-qty-input::-webkit-outer-spin-button,
+.msl-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.msl-qty-input.editing {
+  background: #fff;
+  border: 1px solid #583e04;
+  border-radius: 8px;
+  padding: 4px 8px;
+  pointer-events: auto;
+}
+
+.msl-qty-input:not(.editing) {
+  pointer-events: none;
+}
+
+.msl-actions {
+  grid-area: action;
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: center;
+  text-align: center;
+}
+
+.msl-edit-btn {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(244, 239, 228, 0.9);
+  color: #7a736b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  padding: 0;
+}
+
+.msl-edit-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.msl-edit-btn.saving {
+  background: #2aa745;
+  color: #ffffff;
+}
+
+.msl-edit-btn:active {
+  transform: scale(0.95);
+}
+
+.msl-edit-btn:disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ===== 空态 / 加载 / 错误（对齐旧 table-message-row） ===== */
+.msl-msg {
+  text-align: center;
+  padding: 36px 16px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.msl-msg.is-error {
+  color: #ef4444;
+}
+
+/* ===== 日历弹窗（对齐旧 calendar-modal） ===== */
+.msl-cal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+  display: flex;
+}
+
+.msl-cal-modal {
+  background: #fdf9f1;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 340px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #d8d0c5;
+}
+
+.msl-cal-modal h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2f2a24;
+}
+
+.msl-cal-modal .msl-date-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 1px solid #d8d0c5;
+  border-radius: 12px;
+  background: #fff;
+  color: #2f2a24;
+  margin-bottom: 20px;
+}
+
+.msl-cal-modal .msl-date-input:focus {
+  outline: none;
+  border-color: #f7931e;
+}
+
+.msl-cal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.msl-cal-actions button {
+  padding: 10px 20px;
+  font-size: 15px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: none;
+  font-weight: 500;
+}
+
+.msl-cal-actions .msl-btn-cancel {
+  background: #e5e7eb;
+  color: #2f2a24;
+}
+
+.msl-cal-actions .msl-btn-confirm {
+  background: #f7931e;
+  color: #fff;
+}
+
+.msl-cal-actions button:active {
+  transform: scale(0.98);
+}
+
+/* ===== 小屏（对齐旧 @media 360px） ===== */
+@media (max-width: 360px) {
+  .msl-header {
+    gap: 10px;
+  }
+
+  .msl-logout,
+  .msl-cal-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .msl-selects-row {
+    gap: 8px;
+  }
+
+  .msl-row {
+    padding: 10px 12px;
+  }
+
+  .msl-name {
+    font-size: 14px;
+  }
+
+  .msl-footer {
+    font-size: 12px;
+  }
+
+  .msl-qty-input {
+    font-size: 13px;
+    min-width: 48px;
+  }
+}
