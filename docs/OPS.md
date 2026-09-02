@@ -687,3 +687,46 @@ curl -s -o /dev/null -w "%{http_code}\n" \
    如果旧系统还在往同一个库写数据，本地每次同步都会带进新的脏数据。
 2. 若旧系统已停用、只由新系统写入，则此清单会逐渐变成「每次都是 0 问题」，只需跑检查即可。
 3. 可选防线：汇总接口对产品名做显示层解码（但幽灵组仍会是独立行，不能替代清洗）。
+
+---
+
+## 四、2026-09-02 事故：j2/j3stockedit_data 表空间损坏（根因：OneDrive 同步 mariadb-data）
+
+### 症状
+- 电话版 `/mobile/inout?system=j2|j3` 报「服务器内部错误」：
+  `Got error 1877 "Unknown error" from storage engine InnoDB`（SQL error 1030），查询 `jXstockedit_data` 即触发
+- `CHECK TABLE` → `Index PRIMARY is marked as corrupted`；随后恶化到 `ERROR 1932 Table doesn't exist in engine`
+- mysqld.err.log 关键行：`InnoDB: Failed to read file '.\u690174784_kunzz\j2stockedit_data.ibd' at offset 255: Page read from tablespace is corrupted.`
+- 波及范围仅 **j2stockedit_data / j3stockedit_data** 两张表（j1、mobile 三表、stock_data 等 CHECK 全 OK）
+
+### 根因
+`runtime/mariadb-data/` 位于 **OneDrive 同步范围**（OneDrive 备份桌面 → 整个 inventory-system 在同步内）。
+OneDrive 在 mysqld 运行/关机期间上传/回滚 .ibd → 页面撕裂 → InnoDB 表空间损坏。
+**实测复现**：删除损坏 .ibd 后数秒内被 OneDrive 从云端同步回（带回的是坏版本）。
+这是该数据目录第二次损坏（2026-09-01 曾有孤儿表空间 + Aria 系统表损坏，见 CHANGELOG 09-01）。
+
+### 修复过程（2026-09-02，已验证）
+关键点：MariaDB 10.4 InnoDB 元数据在 **InnoDB 自己的字典**里（innodb_sys_tables），`.frm` 只是服务层入口。
+只删文件 → 服务层看不到表 → `DROP IF EXISTS` 不会传达到 InnoDB → 字典条目永远清不掉 → CREATE 报 1813/1050。
+
+1. `taskkill //IM OneDrive.exe //F`（暂停 OneDrive，防止文件被同步回滚/恢复）
+2. `mysqladmin -u root shutdown` 优雅停库
+3. 坏文件移入 `runtime/quarantine_corrupt_20260902/`（.ibd + .frm 都隔离）
+4. **把 .frm 放回 datadir（不放 .ibd）** → 重启 mysqld → 服务层重新认得表
+5. `DROP TABLE j2stockedit_data; DROP TABLE j3stockedit_data;` —— 真正贯穿两层，InnoDB 字典条目被清
+   （验证：`SELECT name FROM information_schema.innodb_sys_tables WHERE name LIKE '%j2stockedit_data%'` 为空）
+6. 从 `database/u690174784_kunzz.sql`（09-01 14:45 dump）awk 提取两表片段（`runtime/repair_j2j3.sql`），
+   `mysql --init-command="SET SESSION sql_mode=''" 库名 < repair_j2j3.sql`
+   —— **必须非严格模式**：j3 有 31 行 `target_system` 枚举外脏值（live 原有），严格模式报 `Data truncated` 中断导入
+7. `CHECK TABLE` 两表 OK；行数 j2=14,976 / j3=17,928（与 dump AUTO_INCREMENT 对齐）；
+   电话版查询（stocklist_total 同款 SQL）实测通过；后端无需重启（连接池自动重连）
+8. 重启 OneDrive（云端拿到的是健康文件）
+
+### 数据损失评估
+dump 之后只有 09-01 晚的会话测试写入（且已清理），j2 表 .ibd 自导入后未变过——**零数据损失**。
+
+### 预防（重要）
+- **每次跑库（导入/同步/备份/更新）前先暂停 OneDrive**：`taskkill //IM OneDrive.exe //F`，做完再启动
+- **根治**：把 datadir 移出 OneDrive 同步范围（改 start.ps1 的 `$MDB_DATA` 指向 OneDrive 外路径，如 `C:\kunzz-mariadb-data`），
+  或放弃桌面文件夹备份。**未根治前，本地库随时可能再次损坏，重要操作前先跑 `备份数据.bat`**
+- mysqlcheck 全库体检确认无其他隐患后，才继续使用
