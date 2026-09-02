@@ -135,6 +135,21 @@
         LIMIT 1
     </select>
 
+    <!-- 桌面恢复联动：重建手机记录（手机表无 mobile_ref_id 列，链接由桌面行 updateMobileRefId 回指） -->
+    <insert id="insertRecordWithRef" parameterType="map" useGeneratedKeys="true" keyProperty="r.newId">
+        INSERT INTO ${table}
+            (date, time, product_name, code_number, specification, type,
+             in_quantity, out_quantity, receiver)
+        VALUES
+            (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.specification}, #{r.type},
+             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver})
+    </insert>
+
+    <!-- 恢复联动：桌面镜像行回指重建后的手机记录 id -->
+    <update id="updateMobileRefId">
+        UPDATE ${table} SET mobile_ref_id = #{refId} WHERE id = #{id}
+    </update>
+
     <!-- 桌面表镜像单行（receiver='Mobile' 固定，mobile_ref_id 关联手机记录） -->
     <insert id="insertDesktopRow" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
         INSERT INTO ${table}

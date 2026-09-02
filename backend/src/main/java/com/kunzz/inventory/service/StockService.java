@@ -36,6 +36,7 @@ public class StockService {
     private final CompanyCategoryRepository categoryRepository;
     private final StockInoutMapper stockInoutMapper;
     private final StockMinimumMapper stockMinimumMapper;
+    private final MobileStockService mobileStockService;
 
     // ---------- 库存台账 ----------
 
@@ -508,6 +509,8 @@ public class StockService {
         if (system != null && List.of("j1", "j2", "j3").contains(system)) {
             // 分店删除：若有中央关联（中央出货生成）→ 联动软删除中央记录（对齐旧系统双向删除）
             Integer mainId = stockInoutMapper.findBranchMainId(system + "stockedit_data", id);
+            // 手机来源镜像行（mobile_ref_id）→ 联动硬删手机台账记录 + 反冲缓存（桌面删 → 手机记录连删）
+            Integer mobileRefId = stockInoutMapper.findMobileRefId(system + "stockedit_data", id);
             stockInoutMapper.softDeleteBranch(system + "stockedit_data", id, deletedBy);
             if (mainId != null) {
                 StockInout main = stockInoutRepository.findById(mainId).orElse(null);
@@ -516,6 +519,9 @@ public class StockService {
                     main.setDeletedBy(deletedBy);
                     stockInoutRepository.save(main);
                 }
+            }
+            if (mobileRefId != null) {
+                mobileStockService.deleteByDesktopRef(mobileRefId, system);
             }
             return;
         }
@@ -551,6 +557,12 @@ public class StockService {
                         main.setDeletedBy(null);
                         stockInoutRepository.save(main);
                     }
+                }
+                // 手机来源镜像行 → 联动重建手机台账记录（与删除级联对称）
+                Integer mobileRefId = stockInoutMapper.findMobileRefId(system + "stockedit_data", id);
+                if (mobileRefId != null) {
+                    Map<String, Object> row = stockInoutMapper.findBranchRowById(system + "stockedit_data", id);
+                    if (row != null) mobileStockService.restoreByDesktopRef(mobileRefId, system, row);
                 }
                 continue;
             }

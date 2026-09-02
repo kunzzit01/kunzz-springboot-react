@@ -6,6 +6,7 @@ import {
 } from '../api/mobile'
 import { showToast } from '../utils/toast'
 import { useMobileAccess, mobileLogout, MobileDenied } from '../utils/useMobileAccess'
+import { useRealtime } from '../utils/useRealtime'
 import '../styles/mobile-stocklist.css'
 
 /**
@@ -118,6 +119,8 @@ export default function MobileOut() {
   }, [system, allowed])
 
   useEffect(() => { loadTotals() }, [loadTotals])
+  // 全站实时推送：桌面删除手机镜像行 / 其他端写入 → 自动刷新（编辑/保存中暂停，避免打断输入）
+  useRealtime(system, () => { loadTotals() }, 1000, 3000, () => editingId != null || savingId != null)
 
   // 工作日期持久化（对齐旧 setDefaultWorkDate：双写 localStorage + sessionStorage）
   const setWorkDate = (d: string) => {

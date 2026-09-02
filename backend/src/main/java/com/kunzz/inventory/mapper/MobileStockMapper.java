@@ -45,6 +45,12 @@ public interface MobileStockMapper {
 
     String masterCategory(@Param("productName") String productName);
 
+    /** 重建手机记录（桌面恢复联动），新 id 写回 r.newId */
+    int insertRecordWithRef(@Param("table") String table, @Param("r") java.util.Map<String, Object> r);
+
+    /** 恢复联动：桌面镜像行回指重建后的手机记录 id */
+    int updateMobileRefId(@Param("table") String table, @Param("id") Integer id, @Param("refId") Integer refId);
+
     /** HIFO 分层：按 (price, specification) 分组可用库存，价格从高到低，FOR UPDATE 锁定（与旧版一致） */
     List<Map<String, Object>> hifoTiers(@Param("table") String table,
                                         @Param("productName") String productName,

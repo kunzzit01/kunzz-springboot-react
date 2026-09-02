@@ -43,6 +43,12 @@ public interface StockInoutMapper {
     /** 查分店记录的中央关联 id */
     Integer findBranchMainId(@Param("table") String table, @Param("id") Integer id);
 
+    /** 查分店记录的手机来源 ref（手机出货镜像行有 mobile_ref_id） */
+    Integer findMobileRefId(@Param("table") String table, @Param("id") Integer id);
+
+    /** 查分店行完整数据（恢复时重建手机记录用） */
+    java.util.Map<String, Object> findBranchRowById(@Param("table") String table, @Param("id") Integer id);
+
     // ---------- 分店进出库表（jXstockinout_data，对齐旧系统 saveToJ1Table） ----------
 
     /** 中央出库转分店入库（main_record_id 关联中央记录，target_system='from_main'） */

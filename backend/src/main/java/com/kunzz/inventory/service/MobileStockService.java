@@ -241,6 +241,46 @@ public class MobileStockService {
         mobileStockMapper.deleteDesktopByRef(editTable(sys), id, sys);
     }
 
+    /**
+     * 桌面删除联动（双向闭环）：桌面进出货删除手机镜像行 → 同步硬删手机台账记录 + 反冲缓存。
+     * 手机记录已不存在时静默返回（幂等）。
+     */
+    @Transactional
+    public void deleteByDesktopRef(Integer refId, String system) {
+        String sys = sys(system);
+        Map<String, Object> old = mobileStockMapper.getRecord(mobileTable(sys), refId);
+        if (old == null) return;
+        mobileStockMapper.deleteRecord(mobileTable(sys), refId);
+        applyTotal(sys, str(old.get("product_name")), str(old.get("code_number")), str(old.get("specification")),
+                bd(old.get("in_quantity")).negate(), bd(old.get("out_quantity")).negate());
+    }
+
+    /**
+     * 桌面恢复联动（双向闭环）：桌面进出货恢复手机镜像行 → 重建手机台账记录 + 回补缓存。
+     * 手机记录已存在时静默返回（幂等）。
+     */
+    @Transactional
+    public void restoreByDesktopRef(Integer refId, String system, Map<String, Object> desktopRow) {
+        String sys = sys(system);
+        if (mobileStockMapper.getRecord(mobileTable(sys), refId) != null) return;
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("date", str(desktopRow.get("date")));
+        r.put("time", str(desktopRow.get("time")));
+        r.put("productName", str(desktopRow.get("product_name")));
+        r.put("codeNumber", str(desktopRow.get("code_number")));
+        r.put("specification", str(desktopRow.get("specification")));
+        r.put("type", str(desktopRow.get("type")));
+        r.put("inQuantity", bd(desktopRow.get("in_quantity")));
+        r.put("outQuantity", bd(desktopRow.get("out_quantity")));
+        r.put("receiver", str(desktopRow.get("receiver")));
+        mobileStockMapper.insertRecordWithRef(mobileTable(sys), r);
+        // 桌面镜像行回指重建后的手机记录（链接只存在桌面表 mobile_ref_id 列上）
+        mobileStockMapper.updateMobileRefId(editTable(sys), ((Number) desktopRow.get("id")).intValue(),
+                ((Number) r.get("newId")).intValue());
+        applyTotal(sys, str(desktopRow.get("product_name")), str(desktopRow.get("code_number")), str(desktopRow.get("specification")),
+                bd(desktopRow.get("in_quantity")), bd(desktopRow.get("out_quantity")));
+    }
+
     // ---------- 桌面镜像同步（对齐 syncToJ1StockEditData 'insert'） ----------
 
     private void syncToDesktop(String sys, String productName, String codeNumber, String specification, String type,

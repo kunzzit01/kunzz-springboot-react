@@ -33,6 +33,7 @@ import java.util.Map;
 public class MobileStockController {
 
     private final MobileStockService mobileStockService;
+    private final com.kunzz.inventory.realtime.RealtimeService realtimeService;
     private final StaffMapper staffMapper;
     private final ObjectMapper objectMapper;
 
@@ -83,6 +84,7 @@ public class MobileStockController {
                                                             Authentication authentication) {
         assertBranch(authentication, req.system());
         User u = user(authentication);
+        realtimeService.notifyStockChanged("all");
         return ApiResponse.ok(mobileStockService.batchSave(req, u.getUsername()));
     }
 
@@ -109,27 +111,32 @@ public class MobileStockController {
         return ApiResponse.ok(mobileStockService.record(system, id));
     }
 
-    /** 创建（四步数据流） */
+    /** 创建（四步数据流）→ 全站实时推送 */
     @PostMapping("/records")
     public ApiResponse<Map<String, Object>> create(@RequestBody MobileStockRequest req, Authentication authentication) {
         assertBranch(authentication, req.system());
-        return ApiResponse.ok(mobileStockService.create(req));
+        Map<String, Object> created = mobileStockService.create(req);
+        realtimeService.notifyStockChanged("all");
+        return ApiResponse.ok(created);
     }
 
-    /** 更新（关键字段变更撤旧加新 / 否则差值回补；桌面镜像删旧重同步） */
+    /** 更新（关键字段变更撤旧加新 / 否则差值回补；桌面镜像删旧重同步）→ 全站实时推送 */
     @PutMapping("/records/{id}")
     public ApiResponse<Map<String, Object>> update(@PathVariable Integer id, @RequestBody MobileStockRequest req,
                                                    Authentication authentication) {
         assertBranch(authentication, req.system());
-        return ApiResponse.ok(mobileStockService.update(id, req));
+        Map<String, Object> updated = mobileStockService.update(id, req);
+        realtimeService.notifyStockChanged("all");
+        return ApiResponse.ok(updated);
     }
 
-    /** 删除（mobile 硬删 + total 反冲 + mobile_ref_id 级联删桌面行） */
+    /** 删除（mobile 硬删 + total 反冲 + mobile_ref_id 级联删桌面行）→ 全站实时推送 */
     @DeleteMapping("/records/{id}")
     public ApiResponse<Void> delete(@PathVariable Integer id, @RequestParam(defaultValue = "j1") String system,
                                     Authentication authentication) {
         assertBranch(authentication, system);
         mobileStockService.delete(id, system);
+        realtimeService.notifyStockChanged("all");
         return ApiResponse.ok();
     }
 

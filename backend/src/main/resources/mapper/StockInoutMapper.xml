@@ -114,6 +114,16 @@
         SELECT main_record_id FROM ${table} WHERE id = #{id}
     </select>
 
+    <!-- 查分店记录的手机来源 ref（手机出货镜像行有 mobile_ref_id） -->
+    <select id="findMobileRefId" resultType="java.lang.Integer">
+        SELECT mobile_ref_id FROM ${table} WHERE id = #{id}
+    </select>
+
+    <!-- 查分店行完整数据（桌面恢复时重建手机记录用） -->
+    <select id="findBranchRowById" resultType="java.util.LinkedHashMap">
+        SELECT * FROM ${table} WHERE id = #{id}
+    </select>
+
     <!-- 中央出库转分店入库（对齐旧系统 saveToJ1Table：out_quantity 作为 in_quantity，target_system='from_main'） -->
     <!-- 注意：j3stockinout_data 没有 created_by 列（老库结构不一致），故不写该列 -->
     <insert id="insertBranchInout" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">

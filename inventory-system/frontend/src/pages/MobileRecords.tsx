@@ -5,6 +5,7 @@ import { getMobileRecords, type MobileRecord } from '../api/mobile'
 import { generateInvoiceNumber, generateInvoicePdf } from '../utils/invoicePdf'
 import { showToast } from '../utils/toast'
 import { useMobileAccess, MobileDenied } from '../utils/useMobileAccess'
+import { useRealtime } from '../utils/useRealtime'
 import '../styles/mobile-records.css'
 
 /**
@@ -119,6 +120,9 @@ export default function MobileRecords() {
   }, [system, rangeStart, rangeEnd, allowed])
 
   useEffect(() => { load() }, [load])
+  // 全站实时推送：数据变更 → 自动刷新
+  useRealtime(system, () => { load() }, 1000, 3000)
+  // 全站实时推送：数据变更 → 自动刷新
 
   // 搜索（对齐旧 unified-filter：货品/编号/出货人 实时过滤）
   const visible = useMemo(() => {
