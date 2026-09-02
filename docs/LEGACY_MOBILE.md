@@ -129,7 +129,7 @@
 | 项 | 说明 |
 |---|---|
 | 数据源 ⚠️ | **必须实时计算**：按 `product+code_number+specification` 分组 `SUM(in)-SUM(out)` 自 `jXstockedit_data`（对齐旧 `stocklist_total` action，注释原话「避免双重计算」）。**不要用 jXstocklist_total 缓存表**——缓存已漂移（实测 100 PLUS 缓存 1010，实际 82） |
-| 业务 | 改「剩余量」= 出货：出货量 = 实时库存 − 输入值；超扣拒绝（提示当前库存并把输入纠正为最大可用、保持编辑态）；无变化取消；保存前工作日期非今天 → confirm（对齐旧 confirmWorkDateBeforeSave）；按价格从高到低拆行（每层时间 +1s，receiver=当前用户名）→ batch_save 原子提交；成功提示带各层明细（RM 单价: 数量） |
+| 业务 | 改「剩余量」= 出货：出货量 = **实时库存（含负价格层真实净值，有意偏离旧版：旧版负层截 0 会导致多扣货，见 OPS）** − 输入值；超扣拒绝（提示当前库存并把输入纠正为最大可用、保持编辑态）；无变化取消；保存前工作日期非今天 → confirm（对齐旧 confirmWorkDateBeforeSave）；按价格从高到低拆行（每层时间 +1s，receiver=当前用户名）→ batch_save 原子提交；成功提示带各层明细（RM 单价: 数量）；**行定位用「货品|编号|规格」复合键**（后端分组列表无 id，早期版本用 undefined id 导致全行同步编辑/保存错行，已修勿回退） |
 | 预检 | batch_save 按 (product, code, price) 聚合比对可用量，**不按 spec 过滤**（对齐旧 outSummary） |
 | 筛选 | 库存分类（category，Drinks→Service Line 映射）+ 区域（**未选分类 = 固定 20 项** K1-1…SBDI-2，选了分类 = 该分类涉及区域子集，对齐旧 updateFreezerCategoryOptions）+ 搜索（名称/编号）；**隐藏 qty ≤ 0**；筛选结果按名称排序 |
 | stats | 显示记录 = 筛选后行数；总记录 = summary 行数（product+code+spec+ROUND(price,2) 且 net≠0 = 262） |
@@ -137,6 +137,8 @@
 | 权限 | **双层**：① users.branch（kh 全通/否则须含分店，后端 MobileStockController + 前端同源）；② 页面权限树 stock_inventory.system（后端 configured 标记：记录存在且全空 = 明确关闭 → 后端 403 + 前端 403 卡片；未配置老手机账号 → 放行）；所有端点 403 口径一致；**页面无分店切换、无返回桌面入口** |
 | 页头 | 左「退出登录」橙钮（清 inv_token 回 /mobile/login，对齐旧 logout-button）+ 标题 + 日期（M月D日）+ 日历钮；工作日期按分店持久化 `jX_stock_edit_date`（localStorage+sessionStorage，对齐旧 workDateManager） |
 | 设计 | stocklist.css **1:1 移植**（`src/styles/mobile-stocklist.css`，类名 msl- 前缀）：#f4f7f2 底 / 480px / 吸顶筛选区（48px 下拉+搜索、radius 14）/ stats 13px / **紧凑卡片行**（padding 12px 14px、radius 14、行距 10px，一屏 8-10+ 货品）/ 数量框编辑态 #583e04 边框 / ✎→绿底保存单按钮切换（旧版无取消钮，数量未变保存=取消）/ 360px 小屏适配 |
+| 实时 | 手机页订阅全站 WebSocket 推送（编辑/保存中暂停刷新，节流+尾部补刷）；手机写操作（创建/更新/删除/batch-save）→ 广播 stock_changed → 桌面自动刷新 |
+| 双向闭环 | 桌面删除手机镜像行 → 联动硬删手机台账记录+反冲缓存；桌面恢复 → 联动重建手机记录（桌面行 mobile_ref_id 回指新 id）；与桌面删除/恢复（撤销）完全对称 |
 
 ### 明日续作（按优先级）
 
