@@ -1246,19 +1246,26 @@ export default function StockInout() {
     } catch { /* 拦截器已提示 */ }
   }
 
-  return (
-    <div className="sio-root">
-      <div className="container">
-        {locked && (
+  // 权限锁定：配置过权限树且系统选项全空 → 整页锁定（在所有 hooks 之后提前返回，不影响原 flex 滚动结构）
+  if (locked) {
+    return (
+      <div className="sio-root">
+        <div className="container">
           <div className="sio-perm-locked">
             <i className="fas fa-lock" /> 无权限访问：权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。
           </div>
-        )}
-        <div style={locked ? { display: 'none' } : undefined}>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="sio-root">
+      <div className="container">
         <div className="header">
           <div><h1>进出货 - {SYSTEMS.find(s => s.key === system)?.label}</h1></div>
           <div className="controls">
-            <div className="mobile-selector" style={{ display: system === 'central' || locked ? 'none' : 'inline-flex' }}>
+            <div className="mobile-selector" style={{ display: system === 'central' ? 'none' : 'inline-flex' }}>
               <a className="selector-button" href={`/mobile/records?system=${system}`}
                 onClick={(e) => { e.preventDefault(); navigate(`/mobile/records?system=${system}`) }}>手机版</a>
             </div>
@@ -1642,7 +1649,6 @@ export default function StockInout() {
           </div>
         </div>
       </div>
-        </div>
 
       {/* 新增记录弹窗（对齐 date-rows-modal：白底黑标题 + 2px 黑边 + Enter 创建） */}
       {rowsModal && (
