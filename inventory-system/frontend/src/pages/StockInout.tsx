@@ -1370,7 +1370,7 @@ export default function StockInout() {
         {/* 库存表格（16 列中文表头，对齐 stockeditall.php） */}
         <div className="table-container">
           <div className="table-scroll-container" ref={scrollRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
-            <table className="stock-table" id="stock-table">
+            <table className={'stock-table' + (useVirtual ? ' virtual-on' : '')} id="stock-table">
               {/* 全列自适应：按百分比锁列宽（不横向滚动）；小屏字体经 clamp 自动缩小 */}
               <colgroup>
                 <col style={{ width: '7%' }} /><col style={{ width: '7%' }} /><col style={{ width: '11%' }} />
@@ -1423,7 +1423,7 @@ export default function StockInout() {
                       <td>{isEditing
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : (r.codeNumber || '-')}</td>
-                      <td>{isEditing
+                      <td className="product-name-cell">{isEditing
                         ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v) => onEditPickProduct(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : <b>{r.productName}</b>}</td>
                       <td>{isEditing

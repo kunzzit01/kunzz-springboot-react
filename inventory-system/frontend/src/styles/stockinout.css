@@ -14,7 +14,7 @@
   margin-bottom: clamp(18px, 1.67vw, 32px);
 }
 .sio-root .header h1 { font-size: clamp(20px, 2.6vw, 50px); font-weight: bold; color: #000; line-height: 1.44; }
-.sio-root .header .controls { display: flex; align-items: center; gap: 0px; }
+.sio-root .header .controls { display: flex; align-items: center; gap: 12px; }
 .sio-root .selector-button {
   background-color: #f99e00; color: white; font-weight: 500;
   padding: clamp(6px, 0.52vw, 10px) clamp(16px, 1.04vw, 20px);
@@ -96,6 +96,12 @@
 .sio-root .stock-table tr.editing-row > td,
 .sio-root .stock-table tr.new-row > td { overflow: hidden; }
 .sio-root .stock-table tbody tr:not(.editing-row):not(.new-row) > td { white-space: nowrap; text-overflow: ellipsis; }
+/* 货品名过长换行（仅非虚拟滚动模式：虚拟模式依赖固定 37px 行高对齐，保持省略号） */
+.sio-root .stock-table:not(.virtual-on) tbody tr:not(.editing-row):not(.new-row) > td.product-name-cell {
+  white-space: normal;
+  word-break: break-word;
+  text-overflow: clip;
+}
 /* 手机窄屏：编辑态隐藏单价/总价列的 RM 前缀，把宽度还给输入框，避免溢出 */
 @media (max-width: 480px) {
   .sio-root .stock-table .editing-row .currency-display > .currency-symbol { display: none; }

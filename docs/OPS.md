@@ -734,3 +734,8 @@ dump 之后只有 09-01 晚的会话测试写入（且已清理），j2 表 .ibd
   旧目录存在时首次运行自动迁移；README 方式 A 已注明换新电脑时数据不跟文件夹走
 - 日常跑库（导入/同步/备份/更新）前暂停 OneDrive（`taskkill //IM OneDrive.exe //F`，做完再启动）仍建议保留，双保险
 - mysqlcheck 全库体检确认无其他隐患后，才继续使用
+
+### 09-02 补充：live 侧手机镜像缺失补录（j3）
+- 发现：live 旧手机页 09-01 的 100 PLUS 出货（HONG MING SOON，48+21=69，mobile_ref 12947/12948）在 **live 桌面表 j3stockedit_data 无镜像行**（旧版自身镜像漂移，同 fix_mobile_sync.php 存在的动机）；缓存表 j3stocklist_total 却已扣 -69
+- 本地已补录两条桌面镜像行（id 18984/18985，receiver='Mobile'，单价 1.14=出货时点最近非 Mobile 进货价，mobile_ref_id 关联），桌面进出货与实时库存恢复正常
+- live 端同样缺这两行（桌面口径 100 PLUS 多算 69），如需对齐 live 可在 live 执行同款补录
