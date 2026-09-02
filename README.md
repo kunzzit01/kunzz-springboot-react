@@ -55,6 +55,8 @@
 > 将整个项目文件夹（含 `runtime/`、`database/`、`backend/target/`）复制到新电脑，双击根目录 **`一键启动.bat`** 即可。
 > 无需安装 Java / Node / Maven / XAMPP。
 > 首次运行自动完成：初始化内置 MariaDB → 导入 `database/` 数据包 → 启动后端（官网已内嵌在后端中）。
+> **数据库文件不在项目文件夹内**：存在 `C:\kunzz-mariadb-data`（OneDrive 同步会损坏数据库文件，见 docs/OPS.md 四）；
+> 旧版目录 `runtime/mariadb-data` 存在时首次运行会自动迁移。换新电脑时数据不跟文件夹走，需拷贝 `C:\kunzz-mariadb-data` 或用 `备份数据.bat` 的数据包。
 > 已装过的用户更新：双击 **`更新系统.bat`**，自动从 GitHub 拉取最新 start.ps1 / 后端 jar / 文档（无需安装 git）。
 
 - 访问：**http://localhost:8081** （演示账号 demo / demo123）

@@ -13,7 +13,9 @@ Set-Location $ROOT
 $JRE      = Join-Path $ROOT 'runtime\jre21'
 $MDB_ZIP  = Join-Path $ROOT 'runtime\mariadb.zip'
 $MDB      = Join-Path $ROOT 'runtime\mariadb'
-$MDB_DATA = Join-Path $ROOT 'runtime\mariadb-data'
+# 数据目录必须在 OneDrive 同步范围外！OneDrive 同步运行中的 InnoDB 文件会导致表空间损坏
+# （2026-09-01/09-02 两次事故，见 docs/OPS.md 第四节）。首次运行会自动把旧目录 runtime\mariadb-data 搬过来。
+$MDB_DATA = 'C:\kunzz-mariadb-data'
 $JAR      = Join-Path $ROOT 'backend\target\inventory-backend-1.0.0.jar'
 $DUMP     = Join-Path $ROOT 'database\u690174784_kunzz.sql'
 $DB_NAME  = 'u690174784_kunzz'
@@ -324,6 +326,19 @@ function Get-MariaDB {
 
 # ---------- 准备数据库 ----------
 function Prepare-Database {
+    # 数据目录迁移（根治 OneDrive 损坏：把旧目录搬出同步范围；目录见文件头注释）
+    $MDB_DATA_LEGACY = Join-Path $ROOT 'runtime\mariadb-data'
+    if (-not (Test-Path $MDB_DATA) -and (Test-Path $MDB_DATA_LEGACY)) {
+        if (Test-PortOpen $PORT_DB) {
+            Write-Host "  [!!] 旧数据目录 (OneDrive 内) 存在，但端口 $PORT_DB 已有数据库在运行，本次跳过迁移。" -ForegroundColor Yellow
+            Write-Host "       关闭旧数据库后重新运行即可自动迁到 $MDB_DATA（OneDrive 同步会损坏数据库文件）。" -ForegroundColor Yellow
+        } else {
+            Write-Host "  [..] 把数据库目录迁出 OneDrive（OneDrive 同步运行中的数据库文件会导致损坏）：$MDB_DATA" -ForegroundColor Cyan
+            Move-Item $MDB_DATA_LEGACY $MDB_DATA
+            Write-Host "  [OK] 迁移完成，数据库不再受 OneDrive 影响" -ForegroundColor Green
+        }
+    }
+
     if (Test-PortOpen $PORT_DB) {
         # 端口被占用：尝试直接使用现有数据库服务（如 XAMPP）
         $probe = Run-Mysql "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name='$DB_NAME'"

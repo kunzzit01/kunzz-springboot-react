@@ -706,6 +706,10 @@ OneDrive 在 mysqld 运行/关机期间上传/回滚 .ibd → 页面撕裂 → I
 这是该数据目录第二次损坏（2026-09-01 曾有孤儿表空间 + Aria 系统表损坏，见 CHANGELOG 09-01）。
 
 ### 修复过程（2026-09-02，已验证）
+**后续进展（同日）**：j1stockedit_data 也发现同类损坏（二级索引 idx_product_name_price_deleted_at 恶化到 1932）——
+OneDrive 在事故处理期间仍在后台把旧页回写。已用同流程修复（CHECK OK，22,300 行，与 dump 差 1 行 = 昨晚已清理的测试残残留）。
+**根治已完成**：数据目录已迁出 OneDrive → `C:\kunzz-mariadb-data`，start.ps1 已改（`$MDB_DATA`）且新装机会自动从旧目录迁移；
+README 方式 A 已注明换机时数据不跟文件夹走。本节其余流程保留作为同类事故参考。
 关键点：MariaDB 10.4 InnoDB 元数据在 **InnoDB 自己的字典**里（innodb_sys_tables），`.frm` 只是服务层入口。
 只删文件 → 服务层看不到表 → `DROP IF EXISTS` 不会传达到 InnoDB → 字典条目永远清不掉 → CREATE 报 1813/1050。
 
@@ -726,7 +730,7 @@ OneDrive 在 mysqld 运行/关机期间上传/回滚 .ibd → 页面撕裂 → I
 dump 之后只有 09-01 晚的会话测试写入（且已清理），j2 表 .ibd 自导入后未变过——**零数据损失**。
 
 ### 预防（重要）
-- **每次跑库（导入/同步/备份/更新）前先暂停 OneDrive**：`taskkill //IM OneDrive.exe //F`，做完再启动
-- **根治**：把 datadir 移出 OneDrive 同步范围（改 start.ps1 的 `$MDB_DATA` 指向 OneDrive 外路径，如 `C:\kunzz-mariadb-data`），
-  或放弃桌面文件夹备份。**未根治前，本地库随时可能再次损坏，重要操作前先跑 `备份数据.bat`**
+- ~~根治待办~~ → **已根治（同日）**：datadir 已迁出 OneDrive 至 `C:\kunzz-mariadb-data`；start.ps1 已改（`$MDB_DATA`），
+  旧目录存在时首次运行自动迁移；README 方式 A 已注明换新电脑时数据不跟文件夹走
+- 日常跑库（导入/同步/备份/更新）前暂停 OneDrive（`taskkill //IM OneDrive.exe //F`，做完再启动）仍建议保留，双保险
 - mysqlcheck 全库体检确认无其他隐患后，才继续使用

@@ -7,6 +7,15 @@
 ---
 ## 🗓️ 2026-09-02
 
+### 0. 事故修复 + 根治：OneDrive 损坏数据库 → 数据目录迁出至 C:\kunzz-mariadb-data
+
+- **事故**：电话版 J2/J3 报 `Got error 1877 from storage engine InnoDB` → CHECK 发现 `j2/j3stockedit_data` 表空间损坏（j1 在处理期间也被 OneDrive 回写损坏）。
+  根因：`runtime/mariadb-data/` 在 OneDrive 同步范围内（同步运行中的 InnoDB 文件 = 页撕裂；实测删掉的坏文件几秒内被云端同步回）
+- **修复**：MariaDB 10.4 字典级修复流程（暂停 OneDrive → 隔离坏文件 → 放回 .frm 让服务层重新认表 → 真正的 DROP 清 InnoDB 字典 →
+  从 09-01 dump 重建 + 非严格模式导入）——j1/j2/j3 三张表全部 CHECK OK，全库 mysqlcheck 无其他隐患，数据零损失（仅差 1 行已清理的测试残留），详见 docs/OPS.md 四
+- **根治**：datadir 迁出 OneDrive → `C:\kunzz-mariadb-data`；start.ps1 的 `$MDB_DATA` 改指新路径，旧目录存在时首次运行自动迁移；
+  README 注明换新电脑时数据不跟项目文件夹走（拷 `C:\kunzz-mariadb-data` 或用备份数据包）
+
 ### 1. 电话版实测反馈重做：紧凑列表（一屏 8-10+ 货品）+ 去分店切换/返回桌面 + 功能补齐
 
 - **用户实测反馈**：① 首版大卡片太占空间，一屏展示不到 8 个货品；② 分店用户经 URL 直达本店（权限限定），
