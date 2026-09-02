@@ -23,6 +23,9 @@
   display: inline-flex; align-items: center; gap: 8px;
   transition: all 0.2s ease;
   width: clamp(80px, 6.77vw, 130px); justify-content: space-between; position: relative;
+  /* 三个按钮统一大小：<a> 与 <button> 字体/行高不同会导致高度漂移 */
+  font-family: inherit; line-height: 1.2;
+  height: clamp(30px, 2.2vw, 42px); box-sizing: border-box;
 }
 /* 手机版按钮：居中 + 自适应宽 + min-width（对齐旧 stockeditall.css） */
 .sio-root .mobile-selector { margin-right: 16px; }
