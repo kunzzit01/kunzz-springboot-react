@@ -20,6 +20,8 @@
   （K1-1…SBDI-2，对齐 allFreezerCategories），选分类 = 涉及区域子集；筛选结果按名称排序；库存不足 → 提示并把输入纠正为最大可用（保持编辑态）；
   成功提示带各价格层明细（RM 单价: 数量）；编辑钮对齐旧版 ✎→绿底白笔单按钮切换（旧版无取消钮，数量未变保存=取消）；日历弹窗文案「选择日期/取消/确定」
 - **验证**：tsc+vite 构建通过；puppeteer-core+Edge 390×844 视口 mock 数据截图核对（首屏密度/吸顶/编辑态/绿色保存钮）
+- **登录跳转对齐**（分店用户 URL 直达的闭环）：Login 保留被拦截页完整路径+查询（原来丢 `?system=jX` 会回错分店）；
+  支持 `/login?redirect=/mobile/inout?system=j2`（对齐旧手机版 login.php?redirect=stocklistjX.php）；新版已同步 backend/static（磁盘伺服免重启）
 
 ---
 ---

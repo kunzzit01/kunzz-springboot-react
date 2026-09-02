@@ -29,8 +29,15 @@ export default function Login() {
         return
       }
       message.success('欢迎回来，' + (res.user.displayName || res.user.username) + '！')
-      const from = (location.state as { from?: { pathname: string } } | null)?.from
-      navigate(from?.pathname || '/', { replace: true })
+      // 跳转优先级：?redirect= 参数（对齐旧手机版 login.php?redirect=stocklistjX.php）
+      // > 登录前被拦截的页面（保留完整路径+查询，电话版 /mobile/inout?system=jX 依赖 system 定位分店）> 主页
+      const redirectParam = new URLSearchParams(window.location.search).get('redirect')
+      if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+        navigate(redirectParam, { replace: true })
+        return
+      }
+      const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
+      navigate((from?.pathname || '/') + (from?.search || ''), { replace: true })
     } catch {
       /* 拦截器已提示 */
     } finally {
