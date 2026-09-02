@@ -2,6 +2,7 @@ package com.kunzz.inventory.common;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.dao.DataAccessException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -47,6 +48,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleOther(Exception e) {
         log.error("Unhandled exception", e);
-        return ApiResponse.error(500, "服务器内部错误: " + e.getMessage());
+        // 数据库层异常（表缺失/损坏等）：给用户可操作的提示，不泄漏 SQL 细节（完整堆栈见后端日志）
+        if (e instanceof DataAccessException) {
+            return ApiResponse.error(500, "数据库异常：库存数据暂无法读取。请重启系统（一键启动.bat）重试；"
+                    + "若仍报错，可能是数据未导入完整，请重新运行「更新系统.bat」导入数据包");
+        }
+        return ApiResponse.error(500, "服务器内部错误，请稍后重试（详情见后端日志）");
     }
 }

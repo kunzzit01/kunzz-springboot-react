@@ -46,26 +46,51 @@ function Import-LatestDatabase {
     Start-Process $MYSQLD -ArgumentList "--datadir=$MDB_DATA", "--port=3306", "--default-time-zone=+08:00", "--console" `
         -RedirectStandardOutput (Join-Path $ROOT 'runtime\mysqld.out.log') `
         -RedirectStandardError  (Join-Path $ROOT 'runtime\mysqld.err.log') -WindowStyle Hidden
-    Start-Sleep -Seconds 8
 
-    # 备份当前库
+    # 等待 mysqld 就绪（InnoDB 恢复可能超过 8 秒；固定等待曾导致备份/导入在未就绪时静默失败）
+    Write-Host "  [..] 等待数据库就绪（最多 120 秒）..." -ForegroundColor Cyan
+    $ready = $false
+    for ($i = 0; $i -lt 60; $i++) {
+        & (Join-Path $MDB 'bin\mysqladmin.exe') -u root ping 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+        Start-Sleep -Seconds 2
+    }
+    if (-not $ready) { throw "MariaDB 120 秒内未就绪（见 runtime\mysqld.err.log），已取消导入，本地数据库未做任何改动" }
+
+    # 备份当前库（导入前唯一保险：必须确认备份有效，否则绝不动库）
     Write-Host "  [..] 备份当前数据库..." -ForegroundColor Cyan
     New-Item -ItemType Directory -Path $BACKUP -Force | Out-Null
+    $oldTables = & $MYSQL -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='u690174784_kunzz'" 2>$null
+    if ($LASTEXITCODE -ne 0) { $oldTables = 0 }
     $bk = Join-Path $BACKUP ("pre_update_" + (Get-Date -Format 'yyyyMMdd_HHmmss') + ".sql")
     & $DUMP -u root --quick u690174784_kunzz 2>$null | Out-File -FilePath $bk -Encoding utf8
-    if ((Get-Item $bk).Length -lt 1KB) { Write-Host "    [!] 备份为空（可能当前无库），继续导入" -ForegroundColor Yellow }
-    else { Write-Host "    [OK] 备份: $bk" -ForegroundColor Green }
+    if ((Get-Item $bk).Length -lt 1KB) {
+        if ([int]$oldTables -gt 0) { throw "备份失败（mysqldump 输出为空，但当前库有 $oldTables 张表）！已取消导入，本地数据库未做任何改动——请先解决备份问题再更新" }
+        else { Write-Host "    [i] 当前无库（全新安装），跳过备份" -ForegroundColor Gray }
+    } else { Write-Host "    [OK] 备份: $bk" -ForegroundColor Green }
 
-    # 重建库 + 导入 + 补丁 + 清洗
+    # 重建库 + 导入 + 补丁 + 清洗（每步校验退出码，失败立即中止并提示回滚）
     Write-Host "  [..] 重建库并导入最新数据包（约 1~2 分钟）..." -ForegroundColor Cyan
     & $MYSQL -u root -e "DROP DATABASE IF EXISTS u690174784_kunzz; CREATE DATABASE u690174784_kunzz CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
-    Get-Content $PKG -Encoding UTF8 | & $MYSQL -u root --default-character-set=utf8mb4 u690174784_kunzz
-    Get-Content (Join-Path $ROOT 'add_new_tables.sql') -Encoding UTF8 | & $MYSQL -u root u690174784_kunzz
-    Get-Content (Join-Path $ROOT 'sync_cleanup.sql') -Encoding UTF8 | & $MYSQL -u root u690174784_kunzz
+    if ($LASTEXITCODE -ne 0) { throw "重建数据库失败（退出码 $LASTEXITCODE），请用备份回滚：mysql -u root u690174784_kunzz < $($bk | Split-Path -Leaf)" }
+    # 用 mysql source 导入（forward slash 路径；避免 PowerShell 管道逐行重编码 + 编码问题）
+    $pkgSrc = ($PKG -replace '\\', '/')
+    $patchSrc = ((Join-Path $ROOT 'add_new_tables.sql') -replace '\\', '/')
+    $cleanSrc = ((Join-Path $ROOT 'sync_cleanup.sql') -replace '\\', '/')
+    & $MYSQL -u root --default-character-set=utf8mb4 u690174784_kunzz -e "source $pkgSrc"
+    if ($LASTEXITCODE -ne 0) { throw "导入数据包失败（退出码 $LASTEXITCODE），请用备份回滚：mysql -u root u690174784_kunzz < $($bk | Split-Path -Leaf)" }
+    & $MYSQL -u root --default-character-set=utf8mb4 u690174784_kunzz -e "source $patchSrc"
+    if ($LASTEXITCODE -ne 0) { throw "结构补丁失败（add_new_tables.sql，退出码 $LASTEXITCODE）" }
+    & $MYSQL -u root --default-character-set=utf8mb4 u690174784_kunzz -e "source $cleanSrc"
+    if ($LASTEXITCODE -ne 0) { throw "数据清洗失败（sync_cleanup.sql，退出码 $LASTEXITCODE）" }
 
-    # 验证
+    # 验证：表数 + 总库存核心表（stockinout_data / j1j2j3stockedit_data 缺一打开总库存就报错）
     $cnt = & $MYSQL -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='u690174784_kunzz'"
     if ([int]$cnt -lt 69) { throw "导入验证失败：仅 $cnt 张表（应 >= 69），请查看上方报错或用备份回滚" }
+    foreach ($t in 'stockinout_data','j1stockedit_data','j2stockedit_data','j3stockedit_data') {
+        & $MYSQL -u root -N -e "SELECT 1 FROM u690174784_kunzz.$t LIMIT 1" *> $null
+        if ($LASTEXITCODE -ne 0) { throw "导入验证失败：核心表 $t 不可读，请用备份回滚：mysql -u root u690174784_kunzz < $($bk | Split-Path -Leaf)" }
+    }
     Write-Host "  [OK] 数据库已更新为最新（$cnt 张表，含新系统结构补丁 + 数据清洗）" -ForegroundColor Green
     Write-Host "       回滚方法：mysql -u root < $($bk | Split-Path -Leaf)（在 database\backup\ 内）" -ForegroundColor Gray
 }
