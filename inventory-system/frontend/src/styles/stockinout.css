@@ -105,11 +105,20 @@
 .sio-root .stock-table tr.editing-row > td,
 .sio-root .stock-table tr.new-row > td { overflow: hidden; }
 .sio-root .stock-table tbody tr:not(.editing-row):not(.new-row) > td { white-space: nowrap; text-overflow: ellipsis; }
-/* 货品名过长换行（仅非虚拟滚动模式：虚拟模式依赖固定 37px 行高对齐，保持省略号） */
-.sio-root .stock-table:not(.virtual-on) tbody tr:not(.editing-row):not(.new-row) > td.product-name-cell {
+/* 货品名过长自动换行（虚拟/非虚拟模式均生效：虚拟模式行高由 StockInout 估算种子+DOM 实测校正，参数与下方 b 的 clamp() 一致） */
+.sio-root .stock-table tbody tr:not(.editing-row):not(.new-row) > td.product-name-cell {
   white-space: normal;
   word-break: break-word;
   text-overflow: clip;
+}
+/* 货品名块级化：行高/内距与 td span 完全一致（line-height clamp(14px,1.25vw,24px) + padding clamp(4px,0.42vw,8px) clamp(6px,0.63vw,12px)），
+   长名自动换行且行高可精确预计算 */
+.sio-root .stock-table td.product-name-cell > b {
+  display: block;
+  font-weight: 400;
+  line-height: clamp(14px, 1.25vw, 24px);
+  padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
+  text-align: center;
 }
 /* 手机窄屏：编辑态隐藏单价/总价列的 RM 前缀，把宽度还给输入框，避免溢出 */
 @media (max-width: 480px) {

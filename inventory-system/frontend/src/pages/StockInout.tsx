@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProductDefaultPrice, getProducts,
@@ -238,8 +238,8 @@ interface NewRow {
 const QUICK_RANGES: Record<string, [Date, Date]> = {
   today: [new Date(), new Date()],
   yesterday: [new Date(Date.now() - 864e5), new Date(Date.now() - 864e5)],
-  thisWeek: [(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()) })(), new Date()],
-  lastWeek: [(() => { const d = new Date(); const m = d.getDate() - d.getDay() - 7; return new Date(d.getFullYear(), d.getMonth(), m) })(), (() => { const d = new Date(); const m = d.getDate() - d.getDay() - 1; return new Date(d.getFullYear(), d.getMonth(), m) })()],
+  thisWeek: [(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)) })(), new Date()],
+  lastWeek: [(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 7) })(), (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7) - 1) })()],
   thisMonth: [(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1) })(), new Date()],
   lastMonth: [(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth() - 1, 1) })(), (() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 0) })()],
   thisYear: [(() => { const d = new Date(); return new Date(d.getFullYear(), 0, 1) })(), new Date()],
@@ -307,6 +307,7 @@ export default function StockInout() {
   const newRowCounter = useRef(0)
   // 虚拟滚动（对齐 VIRTUAL_SCROLL_THRESHOLD=80）
   const scrollRef = useRef<HTMLDivElement>(null)
+  const tableRef = useRef<HTMLTableElement>(null)
   const [scrollTop, setScrollTop] = useState(0)
   const ROW_HEIGHT = 37
   const VIRTUAL_THRESHOLD = 80
@@ -470,17 +471,112 @@ export default function StockInout() {
     return `${dt.getDate()} ${MON[dt.getMonth()]}`
   }
   const useVirtual = rows.length > VIRTUAL_THRESHOLD && newRows.length === 0
+  // ---- 变高行虚拟滚动（自然换行 + DOM 实测校正）：货品名过长自动换行，不截断不裁剪 ----
+  // 行高先用 canvas 估算做种子（贴近真实），渲染后用真实 DOM 高度校正 → 虚拟画布与实际一致；
+  // 行高参数与 stockinout.css 的 clamp() 一致（line-height/padding/font-size 随视口缩放）
+  const [viewportW, setViewportW] = useState(() => window.innerWidth)
+  const [tableW, setTableW] = useState(1200)
+  const rowMetrics = useMemo(() => ({
+    lineH: Math.min(24, Math.max(14, viewportW * 0.0125)),  // td span line-height clamp(14px, 1.25vw, 24px)
+    padV: Math.min(8, Math.max(4, viewportW * 0.0042)),     // span 纵向 padding clamp(4px, 0.42vw, 8px)
+    padH: Math.min(12, Math.max(6, viewportW * 0.0063)),    // span 横向 padding clamp(6px, 0.63vw, 12px)
+    font: Math.min(14, Math.max(8, viewportW * 0.0074)),    // td 字号 clamp(8px, 0.74vw, 14px)
+  }), [viewportW])
+  const measureCanvasRef = useRef<CanvasRenderingContext2D | null>(null)
+  useEffect(() => {
+    const onResize = () => { setViewportW(window.innerWidth); setTableW(scrollRef.current?.clientWidth || 1200) }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+  useEffect(() => { setTableW(scrollRef.current?.clientWidth || 1200) }, [rows.length, useVirtual])
+  // 估算货品名换行行数（近似 CSS word-break/overflow-wrap：无空格逐字断行，有空格按词断，超长词再按字断）
+  const measureLines = (text: string, usable: number, font: number) => {
+    if (!text) return 1
+    if (!measureCanvasRef.current) measureCanvasRef.current = document.createElement('canvas').getContext('2d')
+    const ctx = measureCanvasRef.current
+    if (!ctx) return 1
+    ctx.font = `400 ${font}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans SC', 'Microsoft YaHei', sans-serif`
+    const w = (s: string) => ctx.measureText(s).width
+    if (!text.includes(' ')) return Math.max(1, Math.ceil(w(text) / usable))
+    let lines = 1, cur = 0
+    for (const word of text.split(' ')) {
+      const ww = w(word)
+      if (ww > usable) {
+        if (cur > 0) { lines++; cur = 0 }
+        const n = Math.ceil(ww / usable)
+        lines += n - 1
+        cur = ww - (n - 1) * usable
+        continue
+      }
+      if (cur > 0 && cur + w(' ') + ww > usable) { lines++; cur = ww }
+      else cur = cur === 0 ? ww : cur + w(' ') + ww
+    }
+    return Math.max(1, lines)
+  }
+  // 每行高度（0=未知→按单行默认）；种子=canvas 估算，渲染后实测校正
+  const [rowH, setRowH] = useState<number[]>([])
+  useEffect(() => {
+    if (!useVirtual) { setRowH([]); return }
+    const { lineH, padV, padH, font } = rowMetrics
+    // 名称列宽 11%（colgroup col 定义）；×0.97 防测量误差导致少算行数
+    const usable = Math.max(40, tableW * 0.11 - padH * 2 - 2) * 0.97
+    const arr: number[] = []
+    for (const r of rows) {
+      const lines = measureLines(String(r.productName || ''), usable, font)
+      arr.push(padV * 2 + lines * lineH)
+    }
+    setRowH(arr)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, useVirtual, tableW, rowMetrics])
+  const defaultRowH = rowMetrics.padV * 2 + rowMetrics.lineH
+  const rowPrefix = useMemo(() => {
+    const prefix: number[] = [0]
+    let acc = 0
+    for (let i = 0; i < rows.length; i++) {
+      const h = rowH[i] && rowH[i]! > 0 ? rowH[i]! : defaultRowH
+      acc += h
+      prefix.push(acc)
+    }
+    return { prefix, total: acc }
+  }, [rows.length, rowH, defaultRowH])
+  const rowPrefixRef = useRef(rowPrefix)
+  useEffect(() => { rowPrefixRef.current = rowPrefix }, [rowPrefix])
+  // 渲染后实测可见行真实高度，校正种子估算偏差（估算误差只会触发一次重算，不裁剪内容）
+  useLayoutEffect(() => {
+    if (!useVirtual) return
+    const trs = tableRef.current?.querySelectorAll('tbody tr[data-vi]')
+    if (!trs || trs.length === 0) return
+    setRowH(prev => {
+      const base = prev.length === rows.length ? prev : new Array<number>(rows.length).fill(0)
+      let next: number[] | null = null
+      trs.forEach(tr => {
+        const gi = Number(tr.getAttribute('data-vi'))
+        if (!Number.isFinite(gi) || gi < 0) return
+        const h = (tr as HTMLElement).getBoundingClientRect().height
+        if (h > 0 && Math.abs((base[gi] || 0) - h) > 0.5) {
+          if (!next) next = base.slice()
+          next[gi] = h
+        }
+      })
+      return next || prev
+    })
+  })
   const virtual = useMemo(() => {
     if (!useVirtual) return { startIdx: 0, endIdx: rows.length, spacerTop: 0, spacerBottom: 0 }
+    const { prefix, total } = rowPrefix
     const containerH = scrollRef.current?.clientHeight || 600
-    const startIdx = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 8)
-    const endIdx = Math.min(rows.length, Math.ceil((scrollTop + containerH) / ROW_HEIGHT) + 8)
-    return {
-      startIdx, endIdx,
-      spacerTop: startIdx * ROW_HEIGHT,
-      spacerBottom: (rows.length - endIdx) * ROW_HEIGHT,
+    // 二分找可见首行（第一行底部 prefix[i+1] > scrollTop）
+    let lo = 0, hi = rows.length - 1, first = rows.length
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1
+      if (prefix[mid + 1] > scrollTop) { first = mid; hi = mid - 1 } else lo = mid + 1
     }
-  }, [rows.length, useVirtual, scrollTop])
+    let last = first
+    while (last < rows.length && prefix[last] < scrollTop + containerH) last++
+    const startIdx = Math.max(0, first - 8)
+    const endIdx = Math.min(rows.length, last + 8)
+    return { startIdx, endIdx, spacerTop: prefix[startIdx], spacerBottom: total - prefix[endIdx] }
+  }, [rows.length, useVirtual, scrollTop, rowPrefix])
   const totalOf = (r: StockInout) => {
     const inQ = parseFloat(String(r.inQuantity ?? 0)) || 0
     const outQ = parseFloat(String(r.outQuantity ?? 0)) || 0
@@ -980,7 +1076,10 @@ export default function StockInout() {
         if (savedIds.length) {
           const idx = items.findIndex((r: StockInout) => savedIds.includes(Number(r.id)))
           if (idx >= 0) {
-            const top = Math.max(0, idx * ROW_HEIGHT - 60)
+            // 变高虚拟滚动：用前缀和定位真实行顶；非虚拟模式维持旧近似
+            const rh = rowPrefixRef.current
+            const rowTop = rh && rh.prefix.length > idx ? rh.prefix[idx] : idx * ROW_HEIGHT
+            const top = Math.max(0, rowTop - 60)
             if (scrollRef.current) scrollRef.current.scrollTop = top
             setScrollTop(top)
             flash(String(savedIds[0]))
@@ -1370,7 +1469,7 @@ export default function StockInout() {
         {/* 库存表格（16 列中文表头，对齐 stockeditall.php） */}
         <div className="table-container">
           <div className="table-scroll-container" ref={scrollRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
-            <table className={'stock-table' + (useVirtual ? ' virtual-on' : '')} id="stock-table">
+            <table ref={tableRef} className={'stock-table' + (useVirtual ? ' virtual-on' : '')} id="stock-table">
               {/* 全列自适应：按百分比锁列宽（不横向滚动）；小屏字体经 clamp 自动缩小 */}
               <colgroup>
                 <col style={{ width: '7%' }} /><col style={{ width: '7%' }} /><col style={{ width: '11%' }} />
@@ -1405,7 +1504,8 @@ export default function StockInout() {
                     <td colSpan={16} style={{ height: virtual.spacerTop, padding: 0, border: 'none', lineHeight: 0 }} />
                   </tr>
                 )}
-                {rows.slice(useVirtual ? virtual.startIdx : 0, useVirtual ? virtual.endIdx : undefined).map((r) => {
+                {rows.slice(useVirtual ? virtual.startIdx : 0, useVirtual ? virtual.endIdx : undefined).map((r, i) => {
+                  const gi = (useVirtual ? virtual.startIdx : 0) + i
                   const inQ = parseFloat(String(r.inQuantity ?? 0)) || 0
                   const outQ = parseFloat(String(r.outQuantity ?? 0)) || 0
                   const price = parseFloat(String(r.price ?? 0)) || 0
@@ -1418,7 +1518,7 @@ export default function StockInout() {
                   const editPriceValue = editPriceMatch ? editPriceMatch.price : editDraft.price
                   const patchEdit = (patch: Record<string, string>) => setEditDrafts(prev => ({ ...prev, [Number(r.id)]: { ...prev[Number(r.id)], ...patch } }))
                   return (
-                    <tr key={r.id} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
+                    <tr key={r.id} data-vi={useVirtual ? gi : undefined} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
                       <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => patchEdit({ date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
                       <td>{isEditing
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
