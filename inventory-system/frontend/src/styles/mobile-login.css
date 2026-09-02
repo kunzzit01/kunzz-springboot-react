@@ -1,0 +1,245 @@
+/* 手机专用登录页（MobileLogin）——CSS 1:1 移植旧 /mobile/ch/css/login.css，
+   所有规则限定在 .moblogin-root 下避免污染 SPA 全局。 */
+
+.moblogin-root {
+  font-family: "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+.moblogin-root form {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 登录 */
+.moblogin-root .login-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: url('/images/bg/phoneBG.png') no-repeat center center/cover;
+}
+
+.moblogin-root .login-form {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(15px);
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  padding: 10px;
+  width: clamp(17.5000rem, 47.6190vw + 6.7857rem, 18.7500rem);
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+
+.moblogin-root .login-form h2 {
+  font-size: 40px;
+  font-weight: bold;
+  margin: 0px;
+  color: black;
+}
+
+.moblogin-root .login-form label.input-label {
+  display: block;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+.moblogin-root .login-form input[type="text"],
+.moblogin-root .login-form input[type="password"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-sizing: border-box;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.moblogin-root .login-form input:focus {
+  outline: none;
+  border-color: #ff8c00;
+}
+
+/* 密码容器 + 眼睛 */
+.moblogin-root .password-container {
+  position: relative;
+  width: 100%;
+}
+
+.moblogin-root .password-container input {
+  width: 100%;
+  height: 40px;
+  border: 2px solid rgba(15, 13, 13, 0.2);
+  border-radius: 10px;
+  box-sizing: border-box;
+  margin-bottom: 0px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  padding: 10px;
+}
+
+.moblogin-root .password-container input:focus {
+  border-radius: 6px;
+  outline: none;
+}
+
+.moblogin-root .login-form .eye-icon {
+  position: absolute;
+  top: 50%;
+  right: 15px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.moblogin-root .login-form .eye-icon:hover {
+  opacity: 1;
+}
+
+/* form-options：记住我 + 忘记密码 一行两侧 */
+.moblogin-root .form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0 0 0;
+  padding: 0;
+}
+
+/* 记住我（蓝色开关） */
+.moblogin-root .remember-me {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: #333;
+  gap: 6px;
+  line-height: 1;
+  cursor: pointer;
+  margin: 0px;
+}
+
+.moblogin-root .remember-me input[type="checkbox"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  width: 34px !important;
+  height: 18px !important;
+  background-color: #ccc;
+  border-radius: 16px !important;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin: 0;
+  vertical-align: middle;
+  padding: 0 !important;
+  border: none;
+}
+
+.moblogin-root .remember-me input[type="checkbox"]:checked {
+  background-color: #007bff;
+}
+
+.moblogin-root .remember-me input[type="checkbox"]::before {
+  content: '';
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background-color: white;
+  top: 1.5px;
+  left: 3px;
+  transition: transform 0.3s;
+}
+
+.moblogin-root .remember-me input[type="checkbox"]:checked::before {
+  transform: translateX(13px);
+}
+
+/* 忘记密码 */
+.moblogin-root .forgot-password a {
+  font-size: 14px;
+  color: black;
+  text-decoration: none;
+}
+
+.moblogin-root .forgot-password a:hover {
+  text-decoration: underline;
+}
+
+/* 登入按钮（橙金渐变） */
+.moblogin-root .login-form button[type="submit"] {
+  width: 100%;
+  padding: 8px;
+  margin-top: 20px;
+  background: linear-gradient(to right, #ff8c00 20%, #ffd700);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(223, 121, 5, 0.8);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.moblogin-root .login-form button[type="submit"]:hover {
+  background: linear-gradient(to right, #FF5C00, #ffcc00);
+}
+
+.moblogin-root .login-form button[type="submit"]:disabled {
+  opacity: 0.7;
+}
+
+/* 分隔线 */
+.moblogin-root .form-divider {
+  border: none;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #001F54 50%, transparent);
+  margin: 20px 0;
+  border-radius: 3px;
+}
+
+/* 登录后分店选择（旧版无此状态：多分店账号登录后的选择卡，沿用玻璃风格） */
+.moblogin-root .branch-choose-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: black;
+  margin: 8px 0 16px;
+}
+
+.moblogin-root .branch-btn {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 2px solid rgba(15, 13, 13, 0.2);
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2f2a24;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.moblogin-root .branch-btn:active {
+  background: #ff8c00;
+  color: #fff;
+  border-color: #ff8c00;
+}
+
+.moblogin-root .switch-account {
+  background: transparent;
+  border: none;
+  color: #333;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 4px;
+}

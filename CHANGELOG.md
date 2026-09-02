@@ -20,13 +20,17 @@
 
 - **用户反馈**：① 旧桌面「手机版」按钮指向 `jXstockeditmobile`（手机出货记录-JX），新系统没有这个页面；
   ② 在职员管理关闭全部中央/J1/J2/J3 权限后，桌面和手机仍能浏览；③ mobile 只出货应叫 /mobile/out；④ 需要手机用户专用登录入口
-- **手机出货记录页 `/mobile/records?system=jX`**（新 `MobileRecords.tsx`，对齐旧 /jX/jXstockeditmobile.php 记录视图）：
-  快速日期 8 档（今天/昨天/本周/上周/这个月/上个月/今年/去年，selectQuickRange 同逻辑）+ 日期范围 + 搜索 +
-  紧凑记录卡（日期时间/编号·规格/货品/进货/出货/单价/出货人）+ 显示记录/出货合计 stats + CSV 导出（发票 PDF 对齐后续）；
-  **桌面进出货「手机版」按钮改指此页**（对齐旧 mobile-selector → jXstockeditmobile）
+- **手机出货记录页 `/mobile/records?system=jX`**（新 `MobileRecords.tsx`，**1:1 对齐旧 /jX/jXstockeditmobile.php**）：
+  CSS 整块机械移植（styles/mobile-records.css，加 .mobrec-root 前缀防污染）——头部（手机出货记录 - JX + 「返回上一页」灰钮 → 桌面进出货）、
+  unified-header-row（日期范围[真日历弹窗：月/年切换+两击选范围+今日/起止/区间高亮，对齐旧 selectDate] + 快速选择「时段」8 档 +
+  搜索 + 导出数据钮 + 总记录数）、5 列表格（日期「02 Sep」/货品编号/货品/出货[红字三位小数]/出货人，暂无数据态，滚动区）、
+  **生成 PDF 发票弹窗**（DD/MM/YYYY 起止 + 店面 j1/j2/j3 + 发票日期 + 后三位 → 复用 getInvoiceData + generateInvoicePdf）；桌面「手机版」按钮改指此页
+  （对齐旧 mobile-selector → jXstockeditmobile）。注：旧页的「新增记录」弹窗/「新增库存记录」表单无任何打开入口（孤儿代码），不实现
 - **路由改名**：/mobile/inout → **/mobile/out**（旧路径 /mobile/inout、/m/inout、/m/out 均带参重定向）
-- **手机专用登录 `/mobile/login`**（新 `MobileLogin.tsx`，对齐旧 login.html「登入 - KUNZZ HOLDINGS」）：
-  登录后按 branch ∩ 权限树解析可用分店——单店直达 /mobile/out、多店大按钮选择、无权限提示；支持 ?redirect= 回跳；
+- **手机专用登录 `/mobile/login`**（新 `MobileLogin.tsx` + `styles/mobile-login.css`，**1:1 对齐旧 /mobile/ch/login.html + css/login.css**）：
+  phoneBG 背景图（已拷入 backend/static/images/bg/）+ 玻璃卡片（半透明白+blur+白边框）+ 登入 40px + 账号/密码（眼睛明暗切换）+
+  记住我蓝色开关（inv_remember）+ 忘记密码？ + 橙金渐变登入钮 + 渐变分隔线；中文字符过滤对齐旧版；
+  登录后按 branch ∩ 权限树解析可用分店——单店直达 /mobile/out、多店玻璃风大按钮选择、无权限提示；支持 ?redirect= 回跳（对齐旧 login.php）；
   手机页未登录自动跳 /mobile/login（带 redirect，不再跳桌面登录页）
 - **权限双层化（branch + 权限树）**：
   - 后端 `stockPerms` 新增 `configured`（存在 stock_inventory 记录 = 管理员显式配置过；全空 = 明确关闭，区别于无记录=默认放行）
