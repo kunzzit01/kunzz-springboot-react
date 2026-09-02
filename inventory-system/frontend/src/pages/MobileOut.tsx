@@ -202,7 +202,9 @@ export default function MobileOut() {
     } catch { /* 拦截器已提示 */ }
 
     // ② 汇总所有价格层的可用库存（负数截 0）
-    const totalStock = tiers.reduce((sum, t) => sum + Math.max(0, Number(t.available) || 0), 0)
+    // ⚠ 总库存 = 各价格层真实净值之和（含负数层）：必须与列表显示口径一致，
+    // 否则列表 74（含 -4 负层）但计算 78（负层截 0）→ 输 73 会多扣 4（用户实测 bug；旧 live 同有此缺陷，此处有意修正）
+    const totalStock = tiers.reduce((sum, t) => sum + (Number(t.available) || 0), 0)
 
     // ③ 本次出货量 = 实时库存 − 剩余量
     const outQty = totalStock - currentQty
