@@ -25,6 +25,16 @@
   结构补丁 + 清洗 → 70 表含 freezer_position → 后端重启 → 总库存抽查 j3 货品 287→294 ✅；
   分发包 `database/u690174784_kunzz.sql` 同步更新
 
+### 12. 修复：分店类型统计与旧 live 对不上（type 归属规则）
+
+- **现象**（用户对账 J1）：总库存-J1 总额一致（33,671.71 vs 33,671.70，舍入），但类型卡差异大：
+  Kitchen 新多 754.30 / Sushi Bar 新少 701.80 / Service Line 新少 52.50
+- **根因**：合并 key 内 type 归属规则不同——旧 live 用 `MAX(type)`（字典序最大），
+  新系统当时用 GROUP_CONCAT 取 price 最小一条的 type（当时注释称“对齐旧系统”实为误判，3fe8283 引入）
+- **修复**：`StockSummaryMapper.xml` summaryRows 的 type 改回 `MAX(COALESCE(type,''))`；
+  实测 J1 四类型与旧 live 完全一致（6,117.89 / 1,827.30 / 15,526.11 / 10,200.40）；j2/j3 正常
+- **防再犯**：docs/OPS.md 二.5 新增第 6 条实战案例与规范——对账口径修改必须先用 live 真实页面对账验证
+
 ### 8. 同步最新数据包到 git（9/3 导入含结构补丁后的全量 70 表）
 
 - `database/u690174784_kunzz.sql` 重新导出：live 9/3 10:37 数据 + 新系统结构（operation_logs/phone_records/

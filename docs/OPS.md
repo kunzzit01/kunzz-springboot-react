@@ -408,6 +408,21 @@ HAVING SUM(in_quantity)-SUM(out_quantity) <> 0;
 | `SUNTORY THE PREMIUM MALT'S` 两边名字不同 | live 还带 HTML 实体 `&#039;`，本地已按第 1 步清洗成正常撇号——**本地更干净**，是文档规定的处理 |
 | `SURUME IKA P` 名字里的空格怪怪的 | live 脏数据：名字里混了一个制表符（TAB），两边同款同数量，不影响库存 |
 
+### 6. 类型统计（类型卡）与 live 对不上 —— type 归属必须用 MAX(type)（2026-09-03 实战）
+
+**现象**：总库存-J1 总额一致（分差 0.01 的舍入），但四个类型卡金额差异大：
+Kitchen 新多 754.30 / Sushi Bar 新少 701.80 / Service Line 新少 52.50（和恰为 754.30）。
+
+**根因**：合并 key（名字+规格+单价+编号）内同货品既有 Kitchen 又有 Sushi Bar 的流水时，type 归属规则不同：
+- 旧 live（stocklistapi.php）：`MAX(type)`（字典序最大：Sushi Bar > Service Line > Sake > Kitchen）
+- 新系统当时：`GROUP_CONCAT(type ORDER BY price ASC)` 取 price 最小一条的 type ——当时注释声称“对齐旧系统”，**实为误判**（未与 live 真实页面对账就改了）
+
+**修复**：`StockSummaryMapper.xml` summaryRows 的 type 改回 `MAX(COALESCE(type,''))` 对齐旧 live；
+实测 J1 四类型与 live 完全一致（6,117.89 / 1,827.30 / 15,526.11 / 10,200.40）。
+
+**规范（防再犯）**：任何对账口径/聚合规则的修改，**必须先用 live 真实页面数字逐项对账验证后才允许合入**；
+对账时类型统计与流水总额要分开看——总额一致 ≠ 分类归属一致。
+
 ---
 
 ## 四、数据包生成流程（当前推荐）
