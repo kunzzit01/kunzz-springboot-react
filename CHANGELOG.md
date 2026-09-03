@@ -18,6 +18,12 @@
   live 无此列重建后自动补上，位次数据从零开始属预期）+ sync_cleanup.sql；70 表
 - **后端重启后抽查**：总库存 central 258 货品 RM92,388.61 / j1 259 / j3 287，freezer 列正常带出；前端两页无 JS 错误
 
+### 8. 同步最新数据包到 git（9/3 导入含结构补丁后的全量 70 表）
+
+- `database/u690174784_kunzz.sql` 重新导出：live 9/3 10:37 数据 + 新系统结构（operation_logs/phone_records/
+  price_change_log + stock_data.freezer_position），无 uca1400；旧换行噪声顺带消除；
+  配合 update.ps1 可选导入（询问式 Y/N）即为用户交付最新系统
+
 ### 7. 修复：改价日志从未写入（用户问“功能有在生效吗”实测发现）
 
 - **根因**：`StockProductService.update` 里 `logPriceChange` 在 `updateRow` **之后**才 `findById`——拿到的是已更新的新价，
