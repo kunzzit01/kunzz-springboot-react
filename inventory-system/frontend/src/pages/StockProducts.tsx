@@ -474,7 +474,7 @@ export default function StockProducts() {
 
         <div className="excel-container">
           <div className="table-scroll-container">
-            <table className="excel-table" id="excel-table">
+            <table className={'excel-table' + (system !== 'overview' ? ' has-pos' : '')} id="excel-table">
               <thead>
                 <tr>
                   <th>序号</th>
@@ -487,7 +487,7 @@ export default function StockProducts() {
                   <th>申请人</th>
                   <th>系统分配</th>
                   <th>冰箱分类</th>
-                  <th>位次</th>
+                  {system !== 'overview' && <th>位次</th>}
                   <th>{statusColTitle}</th>
                   <th>操作</th>
                 </tr>
@@ -523,7 +523,7 @@ export default function StockProducts() {
                         : <input className="excel-input text-input readonly" readOnly value={currentSys.value} title="仅总览可设置系统分配" />}
                     </td>
                     <td><MultiSelect value={r.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
-                    <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
+                    {system !== 'overview' && <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>}
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
                     <td className="action-cell">
                       <button className="edit-btn save-mode" onClick={() => saveNewRow(r, idx)} title="保存记录" disabled={saving}><i className="fas fa-save" /></button>
@@ -591,11 +591,13 @@ export default function StockProducts() {
                           ? <MultiSelect value={draft.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setDraft(id, { freezer_category: v })} />
                           : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
                       </td>
-                      <td>
-                        {isEditing
-                          ? <input className="excel-input" type="number" min={0} placeholder="如 1" value={draft.freezer_position ?? ''} onChange={(e) => setDraft(id, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} />
-                          : <input className="excel-input" readOnly value={r.freezer_position || ''} placeholder="未设置" />}
-                      </td>
+                      {system !== 'overview' && (
+                        <td>
+                          {isEditing
+                            ? <input className="excel-input" type="number" min={0} placeholder="如 1" value={draft.freezer_position ?? ''} onChange={(e) => setDraft(id, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} />
+                            : <input className="excel-input" readOnly value={r.freezer_position || ''} placeholder="未设置" />}
+                        </td>
+                      )}
                       <td style={{ padding: 8 }}>
                         {r.approver ? (
                           <span style={{ color: '#065f46', fontWeight: 600 }}>已批准</span>

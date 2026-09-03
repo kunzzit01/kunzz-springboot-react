@@ -78,20 +78,11 @@
 }
 .sp-root .table-scroll-container { overflow-x: hidden; overflow-y: auto; flex: 1; position: relative; }
 .sp-root .excel-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
-/* 9/3：新增位次列后 13 列定宽（fixed 布局下 th 的 min-width 无效，必须用 width；合计 100%） */
-.sp-root .excel-table th:nth-child(1), .sp-root .excel-table td:nth-child(1) { width: 4%; }
-.sp-root .excel-table th:nth-child(2), .sp-root .excel-table td:nth-child(2) { width: 8.5%; }
-.sp-root .excel-table th:nth-child(3), .sp-root .excel-table td:nth-child(3) { width: 13.5%; }
-.sp-root .excel-table th:nth-child(4), .sp-root .excel-table td:nth-child(4) { width: 7%; }
-.sp-root .excel-table th:nth-child(5), .sp-root .excel-table td:nth-child(5) { width: 7%; }
-.sp-root .excel-table th:nth-child(6), .sp-root .excel-table td:nth-child(6) { width: 8%; }
-.sp-root .excel-table th:nth-child(7), .sp-root .excel-table td:nth-child(7) { width: 10.5%; }
-.sp-root .excel-table th:nth-child(8), .sp-root .excel-table td:nth-child(8) { width: 7%; }
-.sp-root .excel-table th:nth-child(9), .sp-root .excel-table td:nth-child(9) { width: 9.5%; }
-.sp-root .excel-table th:nth-child(10), .sp-root .excel-table td:nth-child(10) { width: 9.5%; }
-.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 4.5%; }
-.sp-root .excel-table th:nth-child(12), .sp-root .excel-table td:nth-child(12) { width: 5.5%; }
-.sp-root .excel-table th:nth-child(13), .sp-root .excel-table td:nth-child(13) { width: 6%; }
+/* 9/3：位次列仅中央/J1/J2/J3 视图显示（has-pos）：前 10 列沿用上方原比例，只补 11/12/13 列——
+   位次窄列、状态同原第11列、操作同原第12列；总览 12 列完全走原规则。fixed 下 min-width 无效必须用 width */
+.sp-root .excel-table.has-pos th:nth-child(11), .sp-root .excel-table.has-pos td:nth-child(11) { width: 4.5%; }
+.sp-root .excel-table.has-pos th:nth-child(12), .sp-root .excel-table.has-pos td:nth-child(12) { width: 8%; }
+.sp-root .excel-table.has-pos th:nth-child(13), .sp-root .excel-table.has-pos td:nth-child(13) { width: 90px; }
 .sp-root .excel-table th {
   background: #636363; color: white;
   padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
@@ -104,9 +95,9 @@
 }
 .sp-root .excel-table tr:nth-child(even) { background-color: #f9fafb; }
 .sp-root .excel-table tr:hover { background-color: #f3f4f6; }
-/* 状态列（第12列，9/3 新增位次列后由 11→12）保留状态色背景：已批准浅绿 / 待批准浅黄 */
-.sp-root .excel-table tr.status-approved td:nth-child(12) { background-color: #d1fae5 !important; }
-.sp-root .excel-table tr.status-pending td:nth-child(12) { background-color: #fef3c7 !important; }
+/* 状态列色背景：已批准浅绿 / 待批准浅黄（总览 12 列 = 第11列；中央/分店 13 列 = 第12列） */
+.sp-root .excel-table tr.status-approved td:nth-child(11), .sp-root .excel-table.has-pos tr.status-approved td:nth-child(12) { background-color: #d1fae5 !important; }
+.sp-root .excel-table tr.status-pending td:nth-child(11), .sp-root .excel-table.has-pos tr.status-pending td:nth-child(12) { background-color: #fef3c7 !important; }
 /* 新行 / 编辑行（可编辑状态，浅绿/蓝色提示） */
 .sp-root .excel-table tr.new-row td { background-color: #f0fdf4 !important; }
 .sp-root .excel-table tr.editing-row td { background-color: #cde3ff !important; }
