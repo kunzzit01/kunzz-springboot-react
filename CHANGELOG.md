@@ -43,6 +43,19 @@
   ③ 状态高亮双选择器：总览 nth-child(11) / has-pos nth-child(12) ④ 位次 th/td 仅 system!==‘overview’ 渲染（数据仍随行保存，切换无损）
 - **验证**：总览 12 列宽 49/124/223/99/99/99/161/87/99/111/99/90 = 原设计；中央 13 列前 10 列同比例 + 位次 53px + 状态 95/操作 90；截图目视两页均正常
 
+### 5. 货品种类搜索修复：全能多字段 + 精准切换（用户反馈）
+
+- **原问题**：① 后端只搜货品名字（编号/规格/类型/供应商/冰箱分类全搜不到）；② 无精准模式；③ **搜索慢一拍**——
+  防抖回调持旧渲染闭包的 load（旧 kw），要多打一个字符才生效
+- **修复**：
+  - 后端（`StockProductMapper.xml/.java` + `StockProductService` + `StockEnhanceController`）：listRows 加 exact 参数——
+    false = 全能模糊（名字/编号/规格/类型/供应商/冰箱分类 任一 LIKE）；true = LOWER(product_name) 完全等于
+  - 前端（`StockProducts.tsx` + `api/index.ts`）：搜索框左侧图标改为模式切换（对齐总库存 smartSearch：
+    放大镜=全能 / 等号=精准橙色高亮，title 提示，placeholder 随模式变化）；`load(kwArg?, exactArg?)` 直传最新值修慢一拍；
+    smartSearch-icon 解除 pointer-events:none 改为可点击（对齐 stocklist.css）
+- **验证**（API + 浏览器）：供应商 SENRI→57 条、分类 K1-6→27 条、编号片段 0001→11 条（编号真实格式带空格如 "DI 0001"）；
+  精准 ASARI→4 条（同名多记录正常）、ASAR→0 条、完整名 A5 AWAGYU→1 条；截图确认等号橙色激活态
+
 ### 1. 总库存导出支持类型多选（用户需求：只导出 Sake 类型）
 
 - **需求**：总库存「导出数据」只想要某个/某几个类型（如今天只要 Sake），不需要每次导全量

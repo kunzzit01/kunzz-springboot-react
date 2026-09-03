@@ -24,13 +24,13 @@ public class StockProductService {
     private final StockProductMapper stockProductMapper;
     private final PriceChangeLogMapper priceChangeLogMapper;
 
-    /** 列表 + 统计 */
+    /** 列表 + 统计（exact=true 货品名精确匹配，false 全能多字段模糊） */
     @Transactional(readOnly = true)
-    public Map<String, Object> list(String systemAssign, String keyword) {
+    public Map<String, Object> list(String systemAssign, String keyword, boolean exact) {
         String sys = (systemAssign == null || "overview".equals(systemAssign) || systemAssign.isBlank())
                 ? null : systemAssign;
         List<Map<String, Object>> rows = stockProductMapper.listRows(sys,
-                (keyword == null || keyword.isBlank()) ? null : keyword.trim());
+                (keyword == null || keyword.isBlank()) ? null : keyword.trim(), exact);
 
         List<Map<String, Object>> items = new ArrayList<>();
         for (Map<String, Object> r : rows) {

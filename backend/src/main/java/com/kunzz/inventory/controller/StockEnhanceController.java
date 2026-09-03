@@ -66,8 +66,9 @@ public class StockEnhanceController {
     @GetMapping("/products")
     public ApiResponse<Map<String, Object>> products(
             @RequestParam(required = false) String systemAssign,
-            @RequestParam(required = false) String keyword) {
-        return ApiResponse.ok(stockProductService.list(systemAssign, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false, defaultValue = "false") boolean exact) {
+        return ApiResponse.ok(stockProductService.list(systemAssign, keyword, exact));
     }
 
     /** 进货默认单价（货品种类里最新维护的 price；无则 null） */

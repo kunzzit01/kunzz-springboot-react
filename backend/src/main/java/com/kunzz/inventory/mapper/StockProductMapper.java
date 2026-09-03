@@ -16,9 +16,10 @@ public interface StockProductMapper {
     /** 按 id 查单行（改价日志取旧价用） */
     Map<String, Object> findById(@Param("id") Integer id);
 
-    /** 列表（systemAssign 为 null/空 = 总览全部；keyword 匹配产品名） */
+    /** 列表（systemAssign 为 null/空 = 总览全部；keyword：exact=false 多字段模糊（名称/编号/规格/类型/供应商/冰箱分类），exact=true 货品名完全等于） */
     List<Map<String, Object>> listRows(@Param("systemAssign") String systemAssign,
-                                       @Param("keyword") String keyword);
+                                       @Param("keyword") String keyword,
+                                       @Param("exact") boolean exact);
 
     /** 插入新记录 */
     int insertRow(@Param("r") Map<String, Object> r);

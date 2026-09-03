@@ -115,6 +115,8 @@ export default function StockProducts() {
   const [drafts, setDrafts] = useState<Record<number, ProductRow>>({})
   const [kw, setKw] = useState('')
   const [searchExpanded, setSearchExpanded] = useState(false)
+  // 搜索模式：false=全能模糊（名称/编号/规格/类型/供应商/冰箱分类） / true=精准（货品名完全等于关键字）；对齐总库存 smartSearch
+  const [exactMatch, setExactMatch] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
@@ -160,10 +162,11 @@ export default function StockProducts() {
     }).catch(() => {})
   }, [])
 
-  const load = async () => {
+  // kwArg/exactArg：防抖/切模式时直传最新值，避免旧渲染闭包读到上一拍的关键字（搜索慢一拍 bug）
+  const load = async (kwArg?: string, exactArg?: boolean) => {
     setLoading(true)
     try {
-      const d = await getStockProducts(system === 'overview' ? '' : system, kw || undefined)
+      const d = await getStockProducts(system === 'overview' ? '' : system, (kwArg ?? kw) || undefined, exactArg ?? exactMatch)
       // 总览 = 全部货品总目录（不再按 ≥2 间过滤；单一间的也展示）
       // 权限过滤：有权限配置的员工只看与自己系统权限有交集 ≥ 1 间的货品，
       // 且「系统分配」列只展示交集部分（打码，如 Central,J1,J2,J3 → J2+J3 员工只看到 J2,J3）；
@@ -381,11 +384,19 @@ export default function StockProducts() {
     else if (k === 'sot') navigate('/sot')
   }
 
-  // 实时搜索（对齐旧系统 initRealTimeSearch：300ms 防抖自动搜索）
+  // 实时搜索（对齐旧系统 initRealTimeSearch：300ms 防抖自动搜索；直传最新关键字）
   const onSearchInput = (v: string) => {
     setKw(v)
     if (searchTimer.current) clearTimeout(searchTimer.current)
-    searchTimer.current = setTimeout(() => { load() }, 300)
+    searchTimer.current = setTimeout(() => { load(v) }, 300)
+  }
+
+  // 切换搜索模式后带关键字重查（对齐总库存 smartSearch 图标切换；直传新模式）
+  const toggleExact = () => {
+    const next = !exactMatch
+    setExactMatch(next)
+    setSearchExpanded(true)
+    setTimeout(() => { searchRef.current?.focus(); if (kw.trim()) load(kw, next) }, 50)
   }
 
   // 输入框点击全选（对齐旧系统 handleInputFocus）
@@ -449,8 +460,13 @@ export default function StockProducts() {
               <label>搜索货品</label>
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
                 onClick={(e) => { if (!searchExpanded) { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) } }}>
-                <i className="fas fa-search smartSearch-icon"></i>
-                <input ref={searchRef} type="text" className="smartSearch-input" placeholder="输入关键字搜索..."
+                {/* 左侧图标即搜索模式切换：放大镜=全能模糊 / 等号=精准（货品名完全等于关键字）；对齐总库存/进出货页 */}
+                <span className="smartSearch-icon"
+                  title={exactMatch ? '精准搜索：只显示货品名字完全等于关键字的行（点击切换为全能）' : '全能搜索：货品名字/编号/规格/类型/供应商/冰箱分类 任一包含关键字（点击切换为精准）'}
+                  onClick={(e) => { e.stopPropagation(); toggleExact() }}>
+                  <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
+                </span>
+                <input ref={searchRef} type="text" className="smartSearch-input" placeholder={exactMatch ? '精准：输入完整货品名字...' : '搜索名字/编号/规格/类型/供应商/冰箱分类...'}
                   onChange={(e) => onSearchInput(e.target.value)} />
               </div>
             </div>

@@ -54,8 +54,8 @@ export interface StockProductRow {
   system_assign?: string
   freezer_category?: string
 }
-export const getStockProducts = (systemAssign?: string, keyword?: string) =>
-  http.get<unknown, { total: number; approved: number; pending: number; items: StockProductRow[] }>('/stock/products', { params: { systemAssign, keyword } })
+export const getStockProducts = (systemAssign?: string, keyword?: string, exact?: boolean) =>
+  http.get<unknown, { total: number; approved: number; pending: number; items: StockProductRow[] }>('/stock/products', { params: { systemAssign, keyword, exact: exact || undefined } })
 export const createStockProduct = (data: Partial<StockProductRow>) =>
   http.post<unknown, { success: boolean }>('/stock/products', data)
 export const updateStockProduct = (id: number, data: Partial<StockProductRow>) =>
