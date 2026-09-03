@@ -126,6 +126,21 @@
   ② API 直调 POST /stock/inout → 403 拦截 ✅；③ 恢复权限后 URL 浏览与 API 写入均正常 ✅；special 恒放行
 - **备案**：拦截器解析 Immutable List set 的坑（ UnsupportedOperationException→500）已修
 
+### 14. 安全加固（对齐 Web security basics 清单：XSS/SQLi/密码/限速/安全头）
+
+- **审计结果**：SQL 注入（MyBatis #{} 参数化、${table} 均为 switch 白名单）✅；密码 BCrypt（+argon2 兼容老账号）✅；
+  CSRF 天然免疫（JWT Bearer 非 cookie）；错误信息已友好化（9/2）✅；缺：限速、安全响应头、XSS 转义、bcrypt 强度
+- **新增**：
+  - `SecurityHeadersFilter`：全局安全响应头——nosniff/DENY/Referrer-Policy/Permissions-Policy/HSTS/
+    CSP（default-src 'self'；放行 cdnjs+jquery+Google Fonts 域名；ws/wss 实时推送；实测零违规零页面错误）
+  - `AuthController` 登录限速：同 IP **15 分钟内 5 次失败 → 429 锁定 15 分钟**；成功登录清零（skipSuccessfulRequests 语义）；
+    内存态，重启清零
+  - `Schedule.tsx`：排班表格 contentEditable 单元格 DB 来源内容 escapeHtml 后渲染（XSS 转义，对齐第 1 节）
+  - `SecurityConfig`：BCrypt 强度 10→12（新密码；旧哈希验证兼容不受影响）
+- **实测**：安全头 6 项全输出；第 6 次错密码 → 429；CSP 零违规零页面错误、图标/字体正常、249 行正常渲染
+- **备忘**：JWT_SECRET 默认值仅供本地，生产必须环境变量注入（OPS.md/GO_LIVE.md 已写）；JWT Bearer + localStorage 
+  无会话 cookie，CSRF 不适用；Cookie 方案如有改动需补 HttpOnly/Secure/SameSite
+
 ### 10. 全站实时推送审核：补 3 处漏广播 + 修 batch-save 广播时序 + 双端实测
 
 - **静态审计**（后端 14 处写操作 vs 前端 5 页订阅）：桌面总库存/进出货/货品种类、手机出货/记录均已订阅 useRealtime（

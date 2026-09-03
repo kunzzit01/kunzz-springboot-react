@@ -7,6 +7,11 @@ import '../styles/schedule.css'
 import ModalClose from '../components/ModalClose'
 import { showToast } from '../utils/toast'
 
+/** XSS 防护：DB 来源的排班代码渲染为纯文本（对齐 Web security basics 第 1 节） */
+function escapeHtml(str: string): string {
+  return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m] as string))
+}
+
 interface Emp { id: number; name: string; phone?: string; position?: string; workArea?: string; restaurant?: string; isActive?: boolean }
 interface Shift { id: number; shiftCode: string; restaurant?: string; startTime?: string; endTime?: string }
 interface LeaveType { id?: number; code: string; name: string; color?: string; type?: string; description?: string }
@@ -987,7 +992,8 @@ export default function Schedule() {
                       if (rec && cd.color !== 'transparent') { style.background = cd.color; style.color = cd.textColor }
                       else style.color = cd.textColor
                       const key = cellKey(emp.id, dateStr)
-                      const content = cd.shiftCode ? cd.shiftCode : (cd.showText && cd.code ? cd.code : '\u00A0')
+                      const raw = cd.shiftCode ? cd.shiftCode : (cd.showText && cd.code ? cd.code : '\u00A0')
+                      const content = raw === '\u00A0' ? raw : escapeHtml(raw)
                       // 脏单元格：保持 React 上次写入的 html，避免重渲染覆盖用户正在编辑的内容
                       const dirtyHtml = dirtyCellsRef.current.get(key)
                       return (
