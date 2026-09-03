@@ -36,7 +36,8 @@ public class SecurityConfig {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        // strength 12（对齐 Web security basics 第 3 节建议；旧哈希验证不受影响，bcrypt cost 自包含）
+        return new BCryptPasswordEncoder(12);
     }
 
     /**
