@@ -126,10 +126,13 @@ public class StockProductService {
         if (body.containsKey("freezer_category")) r.put("freezerCategory", str(body.get("freezer_category")));
         if (body.containsKey("freezer_position")) r.put("freezerPosition", parsePos(body.get("freezer_position")));
         if (r.isEmpty()) return Map.of("success", true);
+        // 改价日志必须用【改价前】的旧价：update 前先取旧值（9/3 修复：原来 update 后才 findById，
+        // 拿到的是新价，与 body 相等 → “价格未变不记录” → 日志从未写入）
+        Map<String, Object> before = stockProductMapper.findById(id);
         int n = stockProductMapper.updateRow(id, r);
         if (n == 0) throw new BusinessException(404, "记录不存在");
         // 改价日志：body 携带 price 且与旧值不同 → 记录当天一条（总库存改价历史展示用）
-        if (r.containsKey("price")) logPriceChange(id, body);
+        if (r.containsKey("price")) logPriceChange(before, body);
         return Map.of("success", true);
     }
 
@@ -140,18 +143,18 @@ public class StockProductService {
     }
 
     /** 改价日志：货品种类每次更改单价 → 当天记一条（从旧到最新展示在总库存） */
-    private void logPriceChange(Integer id, Map<String, Object> body) {
-        Map<String, Object> old = stockProductMapper.findById(id);
-        if (old == null) return;
-        Double oldPrice = cleanPrice(old.get("price"));
+    /** 改价日志：用改价前的旧值判断/记录（before 为 null = 货品不存在，静默跳过） */
+    private void logPriceChange(Map<String, Object> before, Map<String, Object> body) {
+        if (before == null) return;
+        Double oldPrice = cleanPrice(before.get("price"));
         Double newPrice = cleanPrice(body.get("price"));
         if (newPrice == null) return;
         if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) return; // 价格未变不记录
         Map<String, Object> log = new LinkedHashMap<>();
         // 名字与流水/总库存保持一致（decoded 纯文本）：改价同时改名 → 取新名
         log.put("productName", body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
-                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(old.get("product_name"))));
-        log.put("codeNumber", str(old.get("product_code")));
+                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name"))));
+        log.put("codeNumber", str(before.get("product_code")));
         log.put("oldPrice", oldPrice);
         log.put("newPrice", newPrice);
         log.put("changeDate", java.time.LocalDate.now().toString());

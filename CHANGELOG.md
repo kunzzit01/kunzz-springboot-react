@@ -18,6 +18,15 @@
   live 无此列重建后自动补上，位次数据从零开始属预期）+ sync_cleanup.sql；70 表
 - **后端重启后抽查**：总库存 central 258 货品 RM92,388.61 / j1 259 / j3 287，freezer 列正常带出；前端两页无 JS 错误
 
+### 7. 修复：改价日志从未写入（用户问“功能有在生效吗”实测发现）
+
+- **根因**：`StockProductService.update` 里 `logPriceChange` 在 `updateRow` **之后**才 `findById`——拿到的是已更新的新价，
+  与 body 新价相等 → “价格未变不记录” 直接 return；自 9/1 功能上线（61ae8e2）起日志表一直是空
+- **修复**：update 前先 `findById` 取旧值，`logPriceChange(before, body)` 用旧价判断/记录；价格未变仍不记录，首次维护价（旧价 NULL）也记一条
+- **实测全链路**：改 A5 AWAGYU 600→555 → price_change_log 写入 (old 600/new 555/changedBy Soon) →
+  总库存页 🕘 图标出现 + 悬停“最近改价：03/09/2026 RM555.00” + 点击弹窗“RM600.00(划线)→RM555.00 共 1 条”三件套全过；
+  jar 重编译重启
+
 ### 2. 总库存「冰箱分类 + 位次」显示与排序（Kitchen 等全类型通用）
 
 - **需求**：选中货品类型后，总库存显示「冰箱分类」列、按 冰箱分类→位次 排序；**位次（Position）只作后台排序，绝不出现在 UI**
