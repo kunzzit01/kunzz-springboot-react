@@ -31,7 +31,7 @@ CORS_ALLOWED_ORIGINS="http://localhost:*,http://127.0.0.1:*,http://${EC2_HOST}"
 SMTP_HOST="smtp.gmail.com"
 SMTP_PORT="587"
 SMTP_USER="kunzzsup@gmail.com"
-SMTP_PASS="pobc jkvr yygb dhyk"
+SMTP_PASS="换成新的Gmail应用密码"   # ⚠ 旧密码已进 git 历史，必须先去 Google 账号撤销重生成
 # 欢迎邮件里的登录按钮地址（生产 = 后台域名）
 APP_BASE_URL="http://${EC2_HOST}"
 

@@ -69,6 +69,16 @@
   ③ 状态高亮双选择器：总览 nth-child(11) / has-pos nth-child(12) ④ 位次 th/td 仅 system!==‘overview’ 渲染（数据仍随行保存，切换无损）
 - **验证**：总览 12 列宽 49/124/223/99/99/99/161/87/99/111/99/90 = 原设计；中央 13 列前 10 列同比例 + 位次 53px + 状态 95/操作 90；截图目视两页均正常
 
+### 9. 上 live 准备：本地清理 + GO_LIVE 部署清单
+
+- **本地清理**（约 100MB，均 gitignored 无引用）：runtime 9/2 事故残留（quarantine/repair SQL/fixed_dump/
+  backup_before_sync/live_j*_mobile 缓存/旧日志）删除；旧备份归档 database/backup/；
+  **保留** runtime/mariadb（程序本体）+ jre21 + ollama（AI 助手）
+- **新增 docs/GO_LIVE.md**：EC2 + DBeaver（现有 live 库）上线上线清单——
+  ① DBeaver 跑 add_new_tables.sql（幂等补丁，对旧 PHP 零影响）+ 建 inventory_app 专用账号 + Remote MySQL 白名单
+  ② EC2 装 JRE21/Nginx ③ deploy-ec2.sh / nginx-ec2.sh 配置运行 ④ 上线验证清单（含旧 PHP 并行验证）
+  ⑤ 安全：**SMTP 应用密码已泄露进 git 历史，必须轮换**（deploy-ec2.sh 已改占位符）⑥ 回滚方案（结构无需回滚，旧系统不读新列）
+
 ### 5. 货品种类搜索修复：全能多字段 + 精准切换（用户反馈）
 
 - **原问题**：① 后端只搜货品名字（编号/规格/类型/供应商/冰箱分类全搜不到）；② 无精准模式；③ **搜索慢一拍**——
