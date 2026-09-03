@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createSot, deleteSot, getCodeNumbers, getPriceStock, getProducts, getSots, updateSot } from '../api'
+import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stocksot.css'
 import { showToast } from '../utils/toast'
@@ -251,6 +252,8 @@ export default function StockSot() {
       .then((list) => setRows(list || []))
       .catch(() => {})
   useEffect(() => { load() }, [])
+  // 全站实时：货品异常增删改（本端或其他用户）后自动刷新（9/3 补齐）
+  useRealtime('*', () => load(), 1000, 3000)
   useEffect(() => {
     // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统）
     getProducts().then((list) => setProductOptions((list || []).map((p: any) => {

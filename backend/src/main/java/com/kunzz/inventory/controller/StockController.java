@@ -172,17 +172,22 @@ public class StockController {
 
     @PostMapping("/stock/minimum")
     public ApiResponse<StockMinimumSetting> createMinimum(@Valid @RequestBody StockMinimumRequest req) {
-        return ApiResponse.ok(stockService.createMinimum(req));
+        ApiResponse<StockMinimumSetting> resp = ApiResponse.ok(stockService.createMinimum(req));
+        realtimeService.notifyStockChanged("all"); // 实时：最低库存影响总库存显示
+        return resp;
     }
 
     @PutMapping("/stock/minimum/{id}")
     public ApiResponse<StockMinimumSetting> updateMinimum(@PathVariable Integer id, @Valid @RequestBody StockMinimumRequest req) {
-        return ApiResponse.ok(stockService.updateMinimum(id, req));
+        ApiResponse<StockMinimumSetting> resp = ApiResponse.ok(stockService.updateMinimum(id, req));
+        realtimeService.notifyStockChanged("all");
+        return resp;
     }
 
     @DeleteMapping("/stock/minimum/{id}")
     public ApiResponse<Void> deleteMinimum(@PathVariable Integer id) {
         stockService.deleteMinimum(id);
+        realtimeService.notifyStockChanged("all");
         return ApiResponse.ok();
     }
 
@@ -195,17 +200,22 @@ public class StockController {
 
     @PostMapping("/stock/sot")
     public ApiResponse<StockSot> createSot(@Valid @RequestBody StockSotRequest req) {
-        return ApiResponse.ok(stockService.createSot(req));
+        ApiResponse<StockSot> resp = ApiResponse.ok(stockService.createSot(req));
+        realtimeService.notifyStockChanged("all"); // 实时：异常扣除影响库存量展示
+        return resp;
     }
 
     @PutMapping("/stock/sot/{id}")
     public ApiResponse<StockSot> updateSot(@PathVariable Integer id, @Valid @RequestBody StockSotRequest req) {
-        return ApiResponse.ok(stockService.updateSot(id, req));
+        ApiResponse<StockSot> resp = ApiResponse.ok(stockService.updateSot(id, req));
+        realtimeService.notifyStockChanged("all");
+        return resp;
     }
 
     @DeleteMapping("/stock/sot/{id}")
     public ApiResponse<Void> deleteSot(@PathVariable Integer id) {
         stockService.deleteSot(id);
+        realtimeService.notifyStockChanged("all");
         return ApiResponse.ok();
     }
 

@@ -92,6 +92,18 @@
 - **验证**（API + 浏览器）：供应商 SENRI→57 条、分类 K1-6→27 条、编号片段 0001→11 条（编号真实格式带空格如 "DI 0001"）；
   精准 ASARI→4 条（同名多记录正常）、ASAR→0 条、完整名 A5 AWAGYU→1 条；截图确认等号橙色激活态
 
+### 10. 全站实时推送审核：补 3 处漏广播 + 修 batch-save 广播时序 + 双端实测
+
+- **静态审计**（后端 14 处写操作 vs 前端 5 页订阅）：桌面总库存/进出货/货品种类、手机出货/记录均已订阅 useRealtime（
+  节流+尾部补刷+编辑中暂停）；发现缺口：① `/stock/minimum` 单条增删改（Settings 页在用，影响总库存最低库存列）无广播；
+  ② `/stock/sot` 增删改（货品异常页）无广播；③ **batch-save 先广播后写入**（时序 bug：前端刷到旧数据）；
+  ④ StockSot 页未订阅实时刷新；⑤ `/stock/records` 与 `/categories` 写接口无 UI 调用方（遗留，不补）
+- **修复**：StockController minimum/sot 6 个端点补 `notifyStockChanged("all")`；MobileStockController batch-save 改为
+  写入成功后广播；StockSot.tsx 加 `useRealtime('*')`；总库存切页签已确认总是重载（无缺口）
+- **端到端实测**（headless 四页面同账号）：手机出货 batch-save（ASARI 扣 0.5）写入成功后 →
+  桌面总库存/桌面进出货/手机出货/手机记录 **四页全部自动刷新** ✅；桌面 POST /stock/inout → 总库存/进出货自动刷 ✅；
+  测试数据已全部清理（出货记录删/物理清 RT-TEST 残留）
+
 ### 1. 总库存导出支持类型多选（用户需求：只导出 Sake 类型）
 
 - **需求**：总库存「导出数据」只想要某个/某几个类型（如今天只要 Sake），不需要每次导全量

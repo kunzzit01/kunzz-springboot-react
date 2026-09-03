@@ -84,8 +84,9 @@ public class MobileStockController {
                                                             Authentication authentication) {
         assertBranch(authentication, req.system());
         User u = user(authentication);
-        realtimeService.notifyStockChanged("all");
-        return ApiResponse.ok(mobileStockService.batchSave(req, u.getUsername()));
+        List<Map<String, Object>> result = mobileStockService.batchSave(req, u.getUsername());
+        realtimeService.notifyStockChanged("all"); // 实时：写入成功后再广播（9/3 修复：原来先广播后写入，前端会刷到旧数据）
+        return ApiResponse.ok(result);
     }
 
     // ---------- 通用记录 CRUD（与旧 mobile API 对齐，供扩展用） ----------
