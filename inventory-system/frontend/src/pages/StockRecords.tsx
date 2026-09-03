@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog, getStockPerms } from '../api'
+import { FREEZER_OPTIONS } from './StockProducts'
 import type { PriceLogEntry } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
@@ -24,6 +25,10 @@ interface SummaryItem {
   /** 同货品多单价：合并展示（库存合并，单价变体明细） */
   price_count?: number
   price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; code_nos?: string[] }[]
+  /** 冰箱分类（台账 stock_data.freezer_category，多选逗号分隔；9/3 新增，仅选中类型后显示） */
+  freezer_category?: string
+  /** 位次（台账 stock_data.freezer_position；仅后台排序，绝不出现在 UI） */
+  freezer_position?: number | null
 }
 interface SummaryData {
   summary: SummaryItem[]
@@ -428,13 +433,15 @@ export default function StockRecords() {
     return m
   }, [data])
 
-  // 过滤后的行（搜索 + 类型）
+  // 过滤后的行（搜索 + 类型）；选中具体类型时：冰箱分类→位次→货品名 排序（9/3）
+  // 兑底：多值 freezer 取首项按 FREEZER_OPTIONS 业务顺序（字母序会 C-1 跑到 K1 前）；未知 freezer 排已知名单后；
+  //       无 freezer 排最后；position 数字排序、NULL/空/0 排该冰箱最后；重复 position 用货品名稳定兜底
   const filtered = useMemo(() => {
     const d = mergedData[system]
     if (!d) return []
     const kw = (filters[system] || '').toLowerCase()
     const sel = typeSel[system] || new Set<string>()
-    return d.summary.filter(item => {
+    const arr = d.summary.filter(item => {
       if (!hasStock(item)) return false // 无库存不展示
       const itemType = normalizeItemType(item.type)
       if (sel.size > 0 && !sel.has(itemType)) return false
@@ -448,6 +455,24 @@ export default function StockRecords() {
         (item.specification || '').toLowerCase().includes(kw)
       )
     })
+    if (sel.size > 0) {
+      const UNKNOWN_BASE = FREEZER_OPTIONS.length
+      const freezerRank = (fc?: string) => {
+        const first = (fc || '').split(',')[0]?.trim() || ''
+        if (!first) return UNKNOWN_BASE + 1 // 无冰箱分类 → 最后
+        const i = FREEZER_OPTIONS.indexOf(first)
+        return i === -1 ? UNKNOWN_BASE : i // 名单外的新 freezer → 已知名单之后（字母序稳定）
+      }
+      const posRank = (p?: number | null) => (p == null || p <= 0 ? Number.MAX_SAFE_INTEGER : p)
+      arr.sort((a, b) => {
+        const fa = freezerRank(a.freezer_category), fb = freezerRank(b.freezer_category)
+        if (fa !== fb) return fa - fb
+        const pa = posRank(a.freezer_position), pb = posRank(b.freezer_position)
+        if (pa !== pb) return pa - pb
+        return (a.product_name || '').localeCompare(b.product_name || '')
+      })
+    }
+    return arr
   }, [mergedData, system, filters, typeSel, exactMatch])
 
   const cur = data[system]
@@ -622,6 +647,8 @@ export default function StockRecords() {
   const renderSystemPage = (sys: string) => {
     const d = mergedData[sys]
     const isCentral = sys === 'central'
+    // 选中具体类型 → 显示「冰箱分类」列 + 启用冰箱/位次排序（9/3；未选=全部时保持原样）
+    const showFridge = (typeSel[sys] || new Set<string>()).size > 0
     const cards = typeCards[sys] || []
     // 类型卡片隐藏规则：该类型在（同名合并+无库存隐藏后的）表格里已无任何行 → 卡片不展示
     const typeHasStock = (t: string) => (d?.summary || []).some(it => normalizeItemType(it.type) === t && hasStock(it))
@@ -737,6 +764,7 @@ export default function StockRecords() {
                   <th>序号.</th>
                   <th>货品编号</th>
                   <th>货品</th>
+                  {showFridge && <th>冰箱分类</th>}
                   <th>最低库存</th>
                   <th>{isCentral ? '库存数量' : '库存总量'}</th>
                   <th>规格</th>
@@ -746,10 +774,10 @@ export default function StockRecords() {
               </thead>
               <tbody id={sys + '-stock-tbody'}>
                 {loading[sys] && (
-                  <tr><td colSpan={8} className="no-data" style={{ padding: 30, textAlign: 'center' }}>加载中...</td></tr>
+                  <tr><td colSpan={showFridge ? 9 : 8} className="no-data" style={{ padding: 30, textAlign: 'center' }}>加载中...</td></tr>
                 )}
                 {!loading[sys] && sysFiltered.length === 0 && (
-                  <tr><td colSpan={8} className="no-data">
+                  <tr><td colSpan={showFridge ? 9 : 8} className="no-data">
                     <i className="fas fa-inbox"></i>
                     <div>暂无{SYSTEM_NAMES[sys]}数据</div>
                   </td></tr>
@@ -790,6 +818,7 @@ export default function StockRecords() {
                           {priceLatest[productName] && <i className="fas fa-history" style={{ marginLeft: 5, fontSize: 11, color: '#f59e0b' }} />}
                         </strong>
                       </td>
+                      {showFridge && <td className="text-center">{item.freezer_category || '-'}</td>}
                       <td className="stock-cell">
                         <div className={'currency-display ' + minClass}>
                           <span className="currency-symbol">&nbsp;</span>
@@ -838,6 +867,7 @@ export default function StockRecords() {
                         <td className="text-center"></td>
                         <td className="text-center pv-muted" title={(v.code_nos && v.code_nos.length > 1 ? '此单价由多个编号构成：' : '来源编号：') + ((v.code_nos && v.code_nos.join(' / ')) || '')}>{(v.code_nos && v.code_nos.length ? v.code_nos.join(' / ') : item.code_number) || '-'}</td>
                         <td><span className="pv-caret">└</span> {item.product_name}</td>
+                        {showFridge && <td className="text-center pv-muted">-</td>}
                         <td className="stock-cell"><span className="pv-muted">-</span></td>
                         <td className="stock-cell">
                           <div className={'currency-display ' + (parseFloat(String(v.stock)) > 0 ? 'positive-value' : 'zero-value')}>
@@ -866,7 +896,7 @@ export default function StockRecords() {
                 })}
                 {!loading[sys] && sysFiltered.length > 0 && (
                   <tr className="total-row">
-                    <td colSpan={7} className="text-right" style={{ textAlign: 'right', paddingRight: 15 }}>总计:</td>
+                    <td colSpan={showFridge ? 8 : 7} className="text-right" style={{ textAlign: 'right', paddingRight: 15 }}>总计:</td>
                     <td className="price-cell">
                       <div className="currency-display">
                         <span className="currency-symbol">RM</span>

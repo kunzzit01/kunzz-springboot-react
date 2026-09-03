@@ -48,6 +48,7 @@ public class StockProductService {
             item.put("approver", decodeHtml(str(r.get("approver"))));
             item.put("system_assign", decodeHtml(str(r.get("system_assign"))));
             item.put("freezer_category", decodeHtml(str(r.get("freezer_category"))));
+            item.put("freezer_position", r.get("freezer_position"));
             items.add(item);
         }
 
@@ -102,6 +103,7 @@ public class StockProductService {
         r.put("approver", body.getOrDefault("approver", ""));
         r.put("systemAssign", body.getOrDefault("system_assign", ""));
         r.put("freezerCategory", body.getOrDefault("freezer_category", ""));
+        r.put("freezerPosition", parsePos(body.get("freezer_position")));
         stockProductMapper.insertRow(r);
         return Map.of("success", true);
     }
@@ -122,12 +124,19 @@ public class StockProductService {
         if (body.containsKey("approver"))      r.put("approver", str(body.get("approver")));
         if (body.containsKey("system_assign")) r.put("systemAssign", str(body.get("system_assign")));
         if (body.containsKey("freezer_category")) r.put("freezerCategory", str(body.get("freezer_category")));
+        if (body.containsKey("freezer_position")) r.put("freezerPosition", parsePos(body.get("freezer_position")));
         if (r.isEmpty()) return Map.of("success", true);
         int n = stockProductMapper.updateRow(id, r);
         if (n == 0) throw new BusinessException(404, "记录不存在");
         // 改价日志：body 携带 price 且与旧值不同 → 记录当天一条（总库存改价历史展示用）
         if (r.containsKey("price")) logPriceChange(id, body);
         return Map.of("success", true);
+    }
+
+    /** 位次解析：空/非法 → 0（=未设置，排序时排该冰箱最后；9/3 新增） */
+    private Integer parsePos(Object v) {
+        if (v == null) return 0;
+        try { return Integer.parseInt(String.valueOf(v).trim()); } catch (Exception e) { return 0; }
     }
 
     /** 改价日志：货品种类每次更改单价 → 当天记一条（从旧到最新展示在总库存） */

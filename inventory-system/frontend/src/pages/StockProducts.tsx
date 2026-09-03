@@ -20,6 +20,8 @@ interface ProductRow {
   approver?: string
   system_assign?: string
   freezer_category?: string
+  /** 位次：同冰箱分类内排序（0/空 = 未设置；总库存排序用，货品资料可编辑） */
+  freezer_position?: number | string | null
   /** 总览打码行（真实分配超出员工权限，只显示交集；只读防覆盖） */
   _assignMasked?: boolean
 }
@@ -41,7 +43,7 @@ const SYSTEM_OPTIONS = [
   { value: 'J2', label: 'J2' },
   { value: 'J3', label: 'J3' },
 ]
-const FREEZER_OPTIONS = ['K1-1', 'K1-2', 'K1-3', 'K1-4', 'K1-5', 'K1-6', 'K1-7', 'C-1', 'KDI-1', 'KDI-2', 'KDI-3', 'KDI-4', 'S1-1', 'S1-2', 'S1-3', 'S1-4', 'SBS-1', 'SBS-2', 'SBDI-1', 'SBDI-2']
+export const FREEZER_OPTIONS = ['K1-1', 'K1-2', 'K1-3', 'K1-4', 'K1-5', 'K1-6', 'K1-7', 'C-1', 'KDI-1', 'KDI-2', 'KDI-3', 'KDI-4', 'S1-1', 'S1-2', 'S1-3', 'S1-4', 'SBS-1', 'SBS-2', 'SBDI-1', 'SBDI-2']
 
 /** 多选单元格（system_assign / freezer_category） */
 function MultiSelect({ value, onChange, disabled, options }: { value?: string; onChange: (v: string) => void; disabled?: boolean; options: string[] }) {
@@ -239,6 +241,7 @@ export default function StockProducts() {
       supplier: '', applicant: currentUser || '', approver: '',
       system_assign: system === 'overview' ? '' : sys.value,
       freezer_category: '',
+      freezer_position: '',
     }])
     // 创建空行后自动滚动到待填写位置
     setTimeout(() => {
@@ -484,6 +487,7 @@ export default function StockProducts() {
                   <th style={{ minWidth: 100 }}>申请人</th>
                   <th style={{ minWidth: 130 }}>系统分配</th>
                   <th style={{ minWidth: 130 }}>冰箱分类</th>
+                  <th style={{ minWidth: 70 }}>位次</th>
                   <th style={{ minWidth: 100 }}>{statusColTitle}</th>
                   <th style={{ minWidth: 90 }}>操作</th>
                 </tr>
@@ -519,6 +523,7 @@ export default function StockProducts() {
                         : <input className="excel-input text-input readonly" readOnly value={currentSys.value} title="仅总览可设置系统分配" />}
                     </td>
                     <td><MultiSelect value={r.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
+                    <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
                     <td className="action-cell">
                       <button className="edit-btn save-mode" onClick={() => saveNewRow(r, idx)} title="保存记录" disabled={saving}><i className="fas fa-save" /></button>
@@ -585,6 +590,11 @@ export default function StockProducts() {
                         {isEditing
                           ? <MultiSelect value={draft.freezer_category || ''} options={FREEZER_OPTIONS} onChange={(v) => setDraft(id, { freezer_category: v })} />
                           : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
+                      </td>
+                      <td>
+                        {isEditing
+                          ? <input className="excel-input" type="number" min={0} placeholder="如 1" value={draft.freezer_position ?? ''} onChange={(e) => setDraft(id, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} />
+                          : <input className="excel-input" readOnly value={r.freezer_position || ''} placeholder="未设置" />}
                       </td>
                       <td style={{ padding: 8 }}>
                         {r.approver ? (

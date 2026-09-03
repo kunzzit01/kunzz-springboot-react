@@ -6,7 +6,7 @@
     <!-- 总览（systemAssign 为空）返回全部货品；总览的权限交集过滤/打码由前端按登录人做（见 StockProducts.tsx load()），后端 API 无用户上下文 -->
     <select id="listRows" resultType="java.util.LinkedHashMap">
         SELECT id, date, time, product_code, product_name, specification, price, category,
-               supplier, applicant, approver, system_assign, freezer_category,
+               supplier, applicant, approver, system_assign, freezer_category, freezer_position,
                created_at, updated_at
         FROM stock_data
         <where>
@@ -30,10 +30,10 @@
     <insert id="insertRow" parameterType="map">
         INSERT INTO stock_data
             (date, time, product_code, product_name, specification, price, category,
-             supplier, applicant, approver, system_assign, freezer_category)
+             supplier, applicant, approver, system_assign, freezer_category, freezer_position)
         VALUES
             (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.price}, #{r.category},
-             #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory})
+             #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory}, #{r.freezerPosition})
     </insert>
 
     <!-- 部分字段安全更新：service 只放行请求里实际携带的字段，null 的列不动 -->
@@ -50,6 +50,7 @@
             <if test="r.approver != null">approver = #{r.approver},</if>
             <if test="r.systemAssign != null">system_assign = #{r.systemAssign},</if>
             <if test="r.freezerCategory != null">freezer_category = #{r.freezerCategory},</if>
+            <if test="r.freezerPosition != null">freezer_position = #{r.freezerPosition},</if>
         </set>
         WHERE id = #{id}
     </update>

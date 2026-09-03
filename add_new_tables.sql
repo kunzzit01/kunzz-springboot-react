@@ -101,3 +101,13 @@ CREATE TABLE IF NOT EXISTS `price_change_log` (
   KEY `idx_pcl_name` (`product_name`),
   KEY `idx_pcl_date` (`change_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 4) 货品位次列（总库存「冰箱分类+位次」排序，2026-09-03）
+--    freezer_category 已存在；freezer_position = 同冰箱分类内的货品位次（INT，NULL=未设置排该冰箱最后）
+--    幂等：已存在会跳过（information_schema 检查）
+SET @col_exists := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                    WHERE table_schema='u690174784_kunzz' AND table_name='stock_data' AND column_name='freezer_position');
+SET @ddl := IF(@col_exists = 0,
+               'ALTER TABLE stock_data ADD COLUMN freezer_position INT NULL COMMENT ''位次：同冰箱分类内排序'' AFTER freezer_category',
+               'SELECT ''freezer_position 已存在，跳过''');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;

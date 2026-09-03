@@ -65,6 +65,10 @@ public class StockData {
     @Column(name = "freezer_category", length = 50)
     private String freezerCategory;
 
+    /** 位次：同冰箱分类内的排序序号（NULL=未设置，排该冰箱最后；仅后台排序，UI 不显示） */
+    @Column(name = "freezer_position")
+    private Integer freezerPosition;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

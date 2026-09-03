@@ -36,6 +36,15 @@ public class StockSummaryService {
         return m;
     }
 
+    /** 产品名 → [冰箱分类, 位次]（总库存「冰箱分类」列+排序用；同名多记录取 id 最小一条，稳定；9/3 新增） */
+    private Map<String, Object[]> productFreezerMap() {
+        Map<String, Object[]> m = new java.util.HashMap<>();
+        for (Object[] row : stockDataRepository.productFreezerInfo()) {
+            if (row[0] != null) m.putIfAbsent(String.valueOf(row[0]), row);
+        }
+        return m;
+    }
+
     /** 某系统库存汇总 */
     public Map<String, Object> summary(String system) {
         return summary(system, null);
@@ -50,6 +59,8 @@ public class StockSummaryService {
         List<Map<String, Object>> rows = stockSummaryMapper.summaryRows(table, null, endDate);
         // 中央无 type 列：从台账补全（8/24，对齐分店显示类型）
         Map<String, String> productType = isCentral ? productTypeMap() : Map.of();
+        // 冰箱分类+位次（全系统通用台账字段；总库存选中类型后显示分类+排序；9/3 新增）
+        Map<String, Object[]> freezerMap = productFreezerMap();
         java.util.function.Function<String, String> normalizeType = t -> {
             if (t == null || t.isBlank()) return "";
             return "Drinks".equalsIgnoreCase(t) ? "Service Line" : t;
@@ -124,6 +135,10 @@ public class StockSummaryService {
             item.put("price_count", variants.size());
             item.put("price_variants", variants);
             item.put("type", type);
+            // 冰箱分类+位次（多值如 "K1-6,S1-2" 原样带出，前端排序取首个；未登记货品为空串/null）
+            Object[] fz = freezerMap.get(str(m.get("product_name")));
+            item.put("freezer_category", fz == null ? "" : str(fz[1]));
+            item.put("freezer_position", fz == null ? null : fz[2]);
             summary.add(item);
         }
 

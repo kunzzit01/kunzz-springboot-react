@@ -7,6 +7,22 @@
 ---
 ## 🗓️ 2026-09-03
 
+### 2. 总库存「冰箱分类 + 位次」显示与排序（Kitchen 等全类型通用）
+
+- **需求**：选中货品类型后，总库存显示「冰箱分类」列、按 冰箱分类→位次 排序；**位次（Position）只作后台排序，绝不出现在 UI**
+- **数据链路（先分析后实施，真实字段非假设）**：
+  - 冰箱分类 = 台账 `stock_data.freezer_category`（多选逗号分隔，真实值 K1-1..K1-7/C-1/KDI-1..4/S1-1..4/SBS-1/2/SBDI-1/2；中央/分店总库存通用）
+  - 位次 = **新增** `stock_data.freezer_position` INT NULL（全系统原本无此字段）→ Migration + `add_new_tables.sql` 幂等补丁（information_schema 检查防重复执行）
+  - 业务排序顺序 = 前端既有 `FREEZER_OPTIONS` 数组（字母序会把 C-1 排到 K1 前，故不用 ORDER BY 字符串）；后端不分页（全量返回）→ 排序在前端过滤后执行，无跨页错序风险
+- **后端**（`StockData` entity + `StockDataRepository.productFreezerInfo()` + `StockSummaryService.productFreezerMap()`，仿 productTypeMap 先例）：summary 每 item 带出 freezer_category（多值原样）/ freezer_position；聚合 SQL 零改动，库存/价格计算不变
+- **总库存前端**（`StockRecords.tsx`）：仅选中具体类型时 ① 表头/行新增「冰箱分类」列（货品后，多值显示原值）② 排序 冰箱分类(FREEZER_OPTIONS 序) → 位次(数字，NULL/空/0 排该冰箱最后) → 货品名兜底（重复位次稳定）；未选类型（全部）保持原布局原排序；UI 序号仍是排序后动态 idx+1（与位次完全分离）；colSpan 条件 8/9 同步；**无 Position/Rank/Order 任何栏位**；导出 PDF/搜索/审核逻辑不动
+- **货品种类（数据入口）**：`StockProductMapper.xml` list/insert/update + `StockProductService`（parsePos：空/非法→0=未设置）+ `StockProducts.tsx` 新增「位次」数字编辑列（对齐现有 excel 编辑风格）
+- **验证**（真实货品 K1-6 设 pos 1,1,2,3,5,10 + 大量 NULL，测后还原）：
+  - 145 行 Kitchen：冰箱分组单调（K1-1→K1-2→…→SBDI）✅；K1-6 组内 = AWAGYU(1)→KANI CREAM KOROKE(1重复名称兜底)→CURRY(2)→EGG(3)→STICK(5)→FRANKFURTHER(**10 数字序不在 2 前**)→NULL 位次货品名称序 ✅
+  - 未选类型无冰箱分类列；表头无 Position/Rank/Order；序号 1..N 连续；搜索 AWAGYU → 1 行 K1-6 ✅；无 JS 错误
+  - 货品种类 API 写入/清空（""→0）实测通过；tsc+vite 构建通过，jar 重编译重启正常
+- **Approval 不受影响**：总库存数据源为已入账流水，货品种类审批统计（approver 非空=approved）逻辑未动
+
 ### 1. 总库存导出支持类型多选（用户需求：只导出 Sake 类型）
 
 - **需求**：总库存「导出数据」只想要某个/某几个类型（如今天只要 Sake），不需要每次导全量
