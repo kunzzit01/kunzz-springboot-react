@@ -259,9 +259,13 @@ export default function StockRecords() {
   const [expEnd, setExpEnd] = useState('')
   const [expQuick, setExpQuick] = useState<string>('this_month')
   const [exporting, setExporting] = useState(false)
-  // 导出类型多选（选项 = 该系统 typeCards show 项；默认全选 = 原行为）
+  // 导出类型多选（默认全选 = 原行为）；选项 = 该系统 typeCards show 项 ∩ 实际有数据的类型
+  // （对齐页面类型卡隐藏规则：该类型在 summary 里已无任何有库存行 → 不作为导出选项，如中央无 Sake）
   const [expTypes, setExpTypes] = useState<Set<string>>(new Set())
-  const allExportTypes = (sys: string) => (typeCards[sys] || []).filter(c => c.show).map(c => c.type)
+  const allExportTypes = (sys: string) => {
+    const d = mergedData[sys]
+    return (typeCards[sys] || []).filter(c => c.show && (d?.summary || []).some(it => normalizeItemType(it.type) === c.type && hasStock(it))).map(c => c.type)
+  }
   const toggleExpType = (t: string) => setExpTypes(prev => {
     const n = new Set(prev)
     if (n.has(t)) n.delete(t); else n.add(t)
