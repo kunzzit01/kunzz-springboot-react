@@ -340,6 +340,36 @@
     width: 14%;
 }.stl-root /* Total Price */
 
+/* 9/3：总库存选中类型时新增「冰箱分类」列（9 列）——
+   table-layout:fixed 下 nth-child 宽度整体错位，为 has-fridge 单独定义一套列宽（合计 100%）；
+   未选类型时 8 列走原规则，零回归 */.stl-root .stock-table.has-fridge th:nth-child(1), .stl-root .stock-table.has-fridge td:nth-child(1){
+    width: 6%;
+}.stl-root /* 序号 */
+.stock-table.has-fridge th:nth-child(2), .stl-root .stock-table.has-fridge td:nth-child(2){
+    width: 9%;
+}.stl-root /* 货品编号 */
+.stock-table.has-fridge th:nth-child(3), .stl-root .stock-table.has-fridge td:nth-child(3){
+    width: 16%;
+}.stl-root /* 货品 */
+.stock-table.has-fridge th:nth-child(4), .stl-root .stock-table.has-fridge td:nth-child(4){
+    width: 9%;
+}.stl-root /* 冰箱分类 */
+.stock-table.has-fridge th:nth-child(5), .stl-root .stock-table.has-fridge td:nth-child(5){
+    width: 11%;
+}.stl-root /* 最低库存 */
+.stock-table.has-fridge th:nth-child(6), .stl-root .stock-table.has-fridge td:nth-child(6){
+    width: 12%;
+}.stl-root /* 库存数量 */
+.stock-table.has-fridge th:nth-child(7), .stl-root .stock-table.has-fridge td:nth-child(7){
+    width: 9%;
+}.stl-root /* 规格 */
+.stock-table.has-fridge th:nth-child(8), .stl-root .stock-table.has-fridge td:nth-child(8){
+    width: 14%;
+}.stl-root /* 单价 */
+.stock-table.has-fridge th:nth-child(9), .stl-root .stock-table.has-fridge td:nth-child(9){
+    width: 14%;
+}.stl-root /* 总价 */
+
 .table-container{
     background: white;
     border-radius: 4px;

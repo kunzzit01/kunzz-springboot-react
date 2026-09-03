@@ -477,19 +477,19 @@ export default function StockProducts() {
             <table className="excel-table" id="excel-table">
               <thead>
                 <tr>
-                  <th style={{ minWidth: 50 }}>序号</th>
-                  <th style={{ minWidth: 110 }}>货品编号</th>
-                  <th style={{ minWidth: 180 }}>货品名字</th>
-                  <th style={{ minWidth: 110 }}>规格</th>
-                  <th style={{ minWidth: 90 }}>单价 (RM)</th>
-                  <th style={{ minWidth: 120 }}>货品类型</th>
-                  <th style={{ minWidth: 130 }}>供应商</th>
-                  <th style={{ minWidth: 100 }}>申请人</th>
-                  <th style={{ minWidth: 130 }}>系统分配</th>
-                  <th style={{ minWidth: 130 }}>冰箱分类</th>
-                  <th style={{ minWidth: 70 }}>位次</th>
-                  <th style={{ minWidth: 100 }}>{statusColTitle}</th>
-                  <th style={{ minWidth: 90 }}>操作</th>
+                  <th>序号</th>
+                  <th>货品编号</th>
+                  <th>货品名字</th>
+                  <th>规格</th>
+                  <th>单价 (RM)</th>
+                  <th>货品类型</th>
+                  <th>供应商</th>
+                  <th>申请人</th>
+                  <th>系统分配</th>
+                  <th>冰箱分类</th>
+                  <th>位次</th>
+                  <th>{statusColTitle}</th>
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody id="excel-tbody">

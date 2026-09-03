@@ -758,7 +758,7 @@ export default function StockRecords() {
 
         <div className="table-container">
           <div className="table-scroll-container">
-            <table className="stock-table" id={sys + '-stock-table'}>
+            <table className={'stock-table' + (showFridge ? ' has-fridge' : '')} id={sys + '-stock-table'}>
               <thead>
                 <tr>
                   <th>序号.</th>
