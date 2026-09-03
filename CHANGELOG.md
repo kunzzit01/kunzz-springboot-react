@@ -7,6 +7,17 @@
 ---
 ## 🗓️ 2026-09-03
 
+### 6. 导入 live 最新数据库（9/3 10:37 dump，67 表）
+
+- **dump**：`u690174784_kunzz (5).sql`（23.9MB，Generation Time Sep 3 02:37 UTC = 马来 10:37，Hostinger MariaDB 11.8.8）
+- **流程**（照 docs/DB_IMPORT.md）：uca1400×3 → sed 修复副本（utf8mb4_unicode_ci）；本地备份 `backup_before_import_20260903_103806.sql`（66 表）；
+  重建库（踩坑 #2 重现：DROP 报 errno 13 → 字典已空后清残留目录 C:\kunzz-mariadb-data\u690174784_kunzz）；导入退出码 0
+- **验证全过**：67 表 = dump 数；4 视图全在；行数 j1 22400 / j2 15014 / j3 17966 / 中央流水 27607 / 台账 609 / 用户 22；
+  业务日期 9/3（当天）；CHECK TABLE 6 表全 OK；时区 +08:00
+- **结构补丁**：add_new_tables.sql（operation_logs/phone_records/price_change_log + **freezer_position 列**，
+  live 无此列重建后自动补上，位次数据从零开始属预期）+ sync_cleanup.sql；70 表
+- **后端重启后抽查**：总库存 central 258 货品 RM92,388.61 / j1 259 / j3 287，freezer 列正常带出；前端两页无 JS 错误
+
 ### 2. 总库存「冰箱分类 + 位次」显示与排序（Kitchen 等全类型通用）
 
 - **需求**：选中货品类型后，总库存显示「冰箱分类」列、按 冰箱分类→位次 排序；**位次（Position）只作后台排序，绝不出现在 UI**
