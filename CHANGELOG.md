@@ -109,6 +109,23 @@
 - **验证**（API + 浏览器）：供应商 SENRI→57 条、分类 K1-6→27 条、编号片段 0001→11 条（编号真实格式带空格如 "DI 0001"）；
   精准 ASARI→4 条（同名多记录正常）、ASAR→0 条、完整名 A5 AWAGYU→1 条；截图确认等号橙色激活态
 
+### 13. 权限加强：URL 直达也能拦住（用户反馈：关闭权限后用户仍能通过 URL 浏览）
+
+- **根因**：侧边栏按 `user_sidebar_permissions` 过滤了菜单，但**路由层只有登录守卫**（无页面权限判断）→
+  URL 直达 /records 等照样渲染；后端数据接口也无页面权限校验（API 直调同样畅通）
+- **双层修复**：
+  - **前端**：新增 `utils/pagePerms.ts`（路由→权限映射 + canAccess 判定，语义对齐 AppLayout：
+    sections 一级组 + submenu 二级；**无 sidebar 记录 = 从未配置 → 全放行**；special 老板恒放行）+
+    `App.tsx` 新增 `RequirePage` 守卫包住 AppLayout 全部子路由——无权限 → “无权限访问此页面”拦截页（可返回首页）；
+    登出时重置权限缓存
+  - **后端**：新增 `PagePermissionInterceptor`（纵深防御）——拦**非 GET** 写操作：
+    /api/stock/** → resource、/api/kpi/** → analytics、/api/staff/** → hr、/api/media/** → visual、
+    /api/schedule|phone/** → brand；无权限返回 403 JSON。principal 兼容 User 实体与 Authentication 包装两种形态；
+    手机端 /api/mobile/** 不在此拦（已有 assertBranch 专属双层校验，避免双体系冲突）
+- **实测**（临时将测试账号 105 resource 组移除）：① URL 直达 /records → “无权限访问此页面” ✅；
+  ② API 直调 POST /stock/inout → 403 拦截 ✅；③ 恢复权限后 URL 浏览与 API 写入均正常 ✅；special 恒放行
+- **备案**：拦截器解析 Immutable List set 的坑（ UnsupportedOperationException→500）已修
+
 ### 10. 全站实时推送审核：补 3 处漏广播 + 修 batch-save 广播时序 + 双端实测
 
 - **静态审计**（后端 14 处写操作 vs 前端 5 页订阅）：桌面总库存/进出货/货品种类、手机出货/记录均已订阅 useRealtime（

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { getMe, getMyPermissions, getPendingCount } from '../api'
+import { resetPagePerms } from '../utils/pagePerms'
 import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
 import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
@@ -201,6 +202,7 @@ export default function AppLayout() {
   const logout = () => {
     localStorage.removeItem('inv_token')
     sessionStorage.clear()
+    resetPagePerms() // 清页面权限缓存（下次登录重新拉取）
     // 回到官网主页（一键启动模式下官网由后端托管在 /home）
     window.location.href = '/home'
   }

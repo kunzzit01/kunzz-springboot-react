@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import type { ReactElement } from 'react'
+import { useEffect, useState } from 'react'
 import AppLayout from './components/AppLayout'
+import { loadPagePerms, canAccess, resetPagePerms } from './utils/pagePerms'
 import Login from './pages/Login'
 import ChangePassword from './pages/ChangePassword'
 import Dashboard from './pages/Dashboard'
@@ -68,6 +70,31 @@ function RequireAuth({ children }: { children: ReactElement }) {
   return children
 }
 
+/** 页面级权限守卫：URL 直达也拦截（对齐旧系统 sidebar/page permissions 语义；9/3 新增） */
+function RequirePage({ children }: { children: ReactElement }) {
+  const location = useLocation()
+  const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading')
+  useEffect(() => {
+    // 登出后缓存作废
+    if (!localStorage.getItem('inv_token')) { resetPagePerms(); setState('ok'); return }
+    loadPagePerms()
+      .then(({ perms, isSpecial }) => setState(canAccess(perms, location.pathname, location.search, isSpecial) ? 'ok' : 'denied'))
+      .catch(() => setState('ok')) // 权限接口异常时不误伤（与 AppLayout 语义一致）
+  }, [location.pathname, location.search])
+  if (state === 'loading') return null
+  if (state === 'denied') {
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
+        <i className="fas fa-lock" style={{ fontSize: 42, color: '#d1d5db' }} />
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#374151' }}>无权限访问此页面</div>
+        <div style={{ fontSize: 13.5, color: '#9ca3af' }}>如需开通请联系管理员调整您的权限设定</div>
+        <a href="/" style={{ marginTop: 6, padding: '9px 22px', borderRadius: 10, background: '#ff5c00', color: '#fff', textDecoration: 'none', fontWeight: 600, fontSize: 14 }}>返回首页</a>
+      </div>
+    )
+  }
+  return children
+}
+
 export default function App() {
   return (
     <Routes>
@@ -84,7 +111,7 @@ export default function App() {
       <Route path="/m/inout" element={<MobileRedirect to="/mobile/out" />} />
       <Route path="/m/out" element={<MobileRedirect to="/mobile/out" />} />
       <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
-      <Route path="/" element={<RequireAuth><AppLayout /></RequireAuth>}>
+      <Route path="/" element={<RequireAuth><RequirePage><AppLayout /></RequirePage></RequireAuth>}>
         <Route index element={<Dashboard />} />
         <Route path="records" element={<StockRecords />} />
         <Route path="sot" element={<StockSot />} />
