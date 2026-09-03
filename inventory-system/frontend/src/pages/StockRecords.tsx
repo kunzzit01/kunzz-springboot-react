@@ -259,6 +259,14 @@ export default function StockRecords() {
   const [expEnd, setExpEnd] = useState('')
   const [expQuick, setExpQuick] = useState<string>('this_month')
   const [exporting, setExporting] = useState(false)
+  // 导出类型多选（选项 = 该系统 typeCards show 项；默认全选 = 原行为）
+  const [expTypes, setExpTypes] = useState<Set<string>>(new Set())
+  const allExportTypes = (sys: string) => (typeCards[sys] || []).filter(c => c.show).map(c => c.type)
+  const toggleExpType = (t: string) => setExpTypes(prev => {
+    const n = new Set(prev)
+    if (n.has(t)) n.delete(t); else n.add(t)
+    return n
+  })
   // 多单价展开（按行 no 记录展开状态）
   const [openVariants, setOpenVariants] = useState<Set<number>>(new Set())
   const toggleVariants = (no: number) => setOpenVariants(prev => {
@@ -459,6 +467,7 @@ export default function StockRecords() {
     const first = new Date(t.getFullYear(), t.getMonth(), 1)
     const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     setExpStart(iso(first)); setExpEnd(iso(t)); setExpQuick('this_month')
+    setExpTypes(new Set(allExportTypes(sys)))
     setExportModal({ sys })
   }
   const quickSetDate = (type: string) => {
@@ -478,24 +487,30 @@ export default function StockRecords() {
     const start = expStart, end = expEnd
     if (!end) { showMsg('请选择结束日期', 'error'); return }
     if (start && start > end) { showMsg('开始日期不能晚于结束日期', 'error'); return }
+    if (expTypes.size === 0) { showMsg('请至少选择一个导出类型', 'error'); return }
     // 全部（无开始日期且结束=今天）→ 用页面当前显示数据（对齐旧系统 usePageData）
-    if (!start && (!end || end === isoToday())) { setExportModal(null); exportPDF(sys); return }
+    if (!start && (!end || end === isoToday())) { setExportModal(null); exportPDF(sys, undefined, undefined, expTypes); return }
     // 指定日期范围 → 从后端拉截至结束日期的库存余额（库存累积，start 仅用于 PDF 标注）
     setExporting(true)
     try {
       const d = await getStockSummary(sys, end)
       const items = (d.summary || []).filter(hasStock)
       setExportModal(null)
-      await exportPDF(sys, { start, end }, items)
+      await exportPDF(sys, { start, end }, items, expTypes)
     } catch { /* 拦截器已提示 */ }
     setExporting(false)
   }
 
   // 导出 PDF（对齐线上 stocklistall.js exportData -> generatePDF：标题/时间/记录数/日期范围/表头/列宽/最低库存/总计行/页脚）
   // range 非空 = 指定日期范围导出（items 来自后端截至 endDate 的汇总；PDF 标注 Date Range，对齐旧系统）
-  const exportPDF = async (sys: string, range?: { start: string; end: string }, rangeItems?: SummaryItem[]) => {
+  const exportPDF = async (sys: string, range?: { start: string; end: string }, rangeItems?: SummaryItem[], typeSel?: Set<string>) => {
     let items = rangeItems || (sys === system ? curFiltered : (mergedData[sys]?.summary || []).filter(hasStock))
     if (items.length === 0) { showMsg('没有数据可导出', 'error'); return }
+    // 类型多选过滤（normalizeItemType 统一 Drinks→Service Line）
+    if (typeSel && typeSel.size > 0) {
+      items = items.filter((it: SummaryItem) => typeSel.has(normalizeItemType(it.type)))
+      if (items.length === 0) { showMsg('所选类型没有数据可导出', 'error'); return }
+    }
     // J2 导出过滤掉 Sake 类型（对齐线上 performExport）
     if (sys === 'j2') {
       items = items.filter((it: SummaryItem) => it.type !== 'Sake')
@@ -536,6 +551,10 @@ export default function StockRecords() {
         doc.text(`Date Range: ${mdY(range.start)} - ${mdY(range.end || `${y}-${m}-${d}`)}`, 14, 28)
       } else {
         doc.text(`As of Date: ${mdY(range?.end || `${y}-${m}-${d}`)}`, 14, 28)
+      }
+      // 类型标注（仅选择了部分类型时显示）
+      if (typeSel && typeSel.size > 0 && typeSel.size < allExportTypes(sys).length) {
+        doc.text(`Types: ${[...typeSel].join(', ')}`, 200, 28)
       }
 
       // 表格数据（表头/列序/列宽 对齐线上）
@@ -691,7 +710,7 @@ export default function StockRecords() {
                   value={filters[sys] || ''} onChange={(e) => setFilters(prev => ({ ...prev, [sys]: e.target.value }))} />
               </div>
             </div>
-            <button className="btn btn-warning btn-expand" onClick={() => openExportModal(sys)} title="导出数据（可选择日期范围）">
+            <button className="btn btn-warning btn-expand" onClick={() => openExportModal(sys)} title="导出数据（可选择日期范围与类型）">
               <span className="btn-expand-icon"><i className="fas fa-download"></i></span>
               <span className="btn-expand-text">导出数据</span>
             </button>
@@ -933,7 +952,7 @@ export default function StockRecords() {
 
       {/* 导出日期范围弹窗（对齐旧 live 系统：默认本月 + 快捷按钮 + 结束日期必填） */}
       <Modal open={!!exportModal} onCancel={() => setExportModal(null)} footer={null} width={460} centered
-        title={<span style={{ fontSize: 16 }}>选择导出日期范围</span>}>
+        title={<span style={{ fontSize: 16 }}>选择导出日期范围与类型</span>}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
           {[['today', '今天'], ['this_month', '本月'], ['last_month', '上月'], ['all', '全部']].map(([k, label]) => (
             <button key={k} onClick={() => quickSetDate(k)}
@@ -946,6 +965,26 @@ export default function StockRecords() {
                 transition: 'all 0.15s',
               }}>{label}</button>
           ))}
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 13, color: '#6b7280', fontWeight: 600 }}>导出类型（可多选，默认全选）</span>
+            <button onClick={() => exportModal && setExpTypes(new Set(allExportTypes(exportModal.sys)))}
+              style={{ border: 'none', background: 'none', color: '#ff5c00', fontSize: 12.5, cursor: 'pointer', fontWeight: 600, padding: 0 }}>全选</button>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {(exportModal ? allExportTypes(exportModal.sys) : []).map(t => (
+              <button key={t} onClick={() => toggleExpType(t)}
+                style={{
+                  padding: '7px 14px', borderRadius: 10, cursor: 'pointer', fontSize: 13.5,
+                  border: '1.5px solid ' + (expTypes.has(t) ? '#ff5c00' : '#d1d5db'),
+                  background: expTypes.has(t) ? '#fff0e6' : '#fff',
+                  color: expTypes.has(t) ? '#c2410c' : '#374151',
+                  fontWeight: expTypes.has(t) ? 700 : 500,
+                  transition: 'all 0.15s',
+                }}>{t}</button>
+            ))}
+          </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#374151' }}>
@@ -962,7 +1001,7 @@ export default function StockRecords() {
           </label>
         </div>
         <div style={{ fontSize: 12.5, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>
-          库存为累积计算：导出的是截至结束日期的库存余额；选开始日期时 PDF 会标注日期范围
+          库存为累积计算：导出的是截至结束日期的库存余额；选开始日期时 PDF 会标注日期范围；类型只勾选部分时 PDF 会标注 Types
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button onClick={() => setExportModal(null)}

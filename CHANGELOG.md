@@ -5,6 +5,25 @@
 
 ---
 ---
+## 🗓️ 2026-09-03
+
+### 1. 总库存导出支持类型多选（用户需求：只导出 Sake 类型）
+
+- **需求**：总库存「导出数据」只想要某个/某几个类型（如今天只要 Sake），不需要每次导全量
+- **实现**（`StockRecords.tsx` 导出弹窗，仅前端改动）：
+  - 导出弹窗新增「导出类型（可多选，默认全选）」chips 行（Service Line / Sake / Kitchen / Sushi Bar），
+    选项 = 该系统 typeCards 的 show 项（J2 自动无 Sake 选项），右上「全选」一键复位；全不选确认 → 拦截提示
+  - `confirmExport` 两条路径（页面数据直出 / 指定日期拉接口）都传入选中集合；`exportPDF` 用 `normalizeItemType`
+    （Drinks→Service Line 兜底）过滤；过滤后无数据 → 提示「所选类型没有数据可导出」
+  - PDF 头部：仅选部分类型时右上角标注 `Types: Sake`（全选不标注，对齐原样式）；默认全选 = 与原导出完全一致（零回归）
+- **验证**（puppeteer + Chrome 有头窗口，CDP 下载落盘）：
+  - J3 全类型 → Records: 282（= API 全量）且无 Types 标注 ✅
+  - J3 仅 Sake → **Records: 51（= API Sake 恰好 51 条）** + `Types: Sake` 标注 + 无 Kitchen/Sushi 货品混入 ✅
+  - chips 默认全选/单选切换/全不选拦截、tsc + vite 构建通过；backend/static 已同步（免重启）
+  - 备注：无头模式下首次导出的「下载不落地/鼠标事件不派发」均为 headless 环境限制，有头（真实用户）一切正常
+
+---
+---
 ## 🗓️ 2026-09-02
 
 ### 0. 事故修复 + 根治：OneDrive 损坏数据库 → 数据目录迁出至 C:\kunzz-mariadb-data
