@@ -18,6 +18,13 @@
   live 无此列重建后自动补上，位次数据从零开始属预期）+ sync_cleanup.sql；70 表
 - **后端重启后抽查**：总库存 central 258 货品 RM92,388.61 / j1 259 / j3 287，freezer 列正常带出；前端两页无 JS 错误
 
+### 11. 再导入 live 更新 dump（9/3 11:28 dump (6)，j3 +21 条新录入）
+
+- 同标准流程：备份 `backup_before_import_20260903_113042.sql`（66 表）→ DROP/重建（这次 DROP 正常无残留）→ 导入退出码 0 →
+  验证 67 表/4 视图全过（行数对比上份：j3 17966→17987 其余持平，与 51 分钟间隔增长吻合）→ CHECK 5 表 OK →
+  结构补丁 + 清洗 → 70 表含 freezer_position → 后端重启 → 总库存抽查 j3 货品 287→294 ✅；
+  分发包 `database/u690174784_kunzz.sql` 同步更新
+
 ### 8. 同步最新数据包到 git（9/3 导入含结构补丁后的全量 70 表）
 
 - `database/u690174784_kunzz.sql` 重新导出：live 9/3 10:37 数据 + 新系统结构（operation_logs/phone_records/
