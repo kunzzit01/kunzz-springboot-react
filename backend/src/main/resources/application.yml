@@ -9,7 +9,9 @@ spring:
     url: ${DB_URL:jdbc:mysql://localhost:3306/u690174784_kunzz?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:}
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 不写死 driver-class-name：由 DB_URL 的 scheme 自动选择驱动
+    #   jdbc:mysql://   → MySQL Connector/J
+    #   jdbc:mariadb:// → MariaDB 原生驱动（版本号正确，Hibernate 不会误判为 5.5.5）
   jpa:
     hibernate:
       ddl-auto: none   # 老库结构由原备份管理，禁止 Hibernate 改表

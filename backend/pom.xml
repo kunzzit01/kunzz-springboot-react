@@ -64,6 +64,14 @@
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- MariaDB 原生驱动：DB_URL 用 jdbc:mariadb:// 时启用。
+             它能把版本号正确报告为 10.11.x，避免 Hibernate 依据
+             MySQL Connector/J 返回的 "5.5.5-10.11.14-MariaDB" 误判为 5.5.5 -->
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
