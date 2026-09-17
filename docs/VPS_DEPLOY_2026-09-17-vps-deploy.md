@@ -1046,13 +1046,18 @@ AI 降级正常 ✅   旧站 kunzzgroup.com 200 ✅   DNS/Domain 全程未动 �
 
 ## 已知残留（均不阻塞，留待独立处理）
 
-| # | 项 | 影响 | 需要的动作 |
-|---|---|---|---|
-| 1 | `HHH000511` 方言警告 | 仅提示，Hibernate 保守但可用 | 换 MariaDB driver（需批准 + 回归）|
-| 2 | 官网 `index.css:861` 引用不存在的 `背景3.jpg`（实际是 `.webp`）| 一个背景图位置 | 改 1 个字符（**源码，需批准**）|
-| 3 | `demo` / `demo123` 弱口令账号仍在库中 | 任何人可登入后台 | 改密码或移除 `DataInitializer`（**源码，需批准**）|
-| 4 | npm audit 报 4（后台）/ 7（官网）个构建期依赖漏洞 | 不进运行时 | 单独评估，**不要现在跑 `npm audit fix`**（会改 lock 文件、破坏可复现构建）|
-| 5 | `SPRING_AUTOCONFIGURE_EXCLUDE` 已加到环境文件 | 消除了 Spring 默认内存账号 | 保留 ✅ |
+> **2026-09-18 更新**：下面的 1 / 2 / 3 已修复并部署上线（提交 `df6e687` / `2f6f00f` / `2d28ab6`），
+> 保留原表以便对照"当时是什么问题"。
+
+| # | 项 | 状态 |
+|---|---|---|
+| 1 | `HHH000511` 方言警告（Hibernate 把 MariaDB 读成 5.5.5）| ✅ **已修复**：引入 MariaDB 原生驱动，`DB_URL` 改 `jdbc:mariadb://`；日志 `Database version` 已正确显示 10.11，警告消失。⚠️ **每次重新导入 dump 后仍要封堵 demo 账号**（见 §2.3） |
+| 2 | 官网 `index.css:861` 引用不存在的 `背景3.jpg` | ✅ **已修复**：改为 `背景3.webp`（提交 `df6e687`）|
+| 3 | `demo` / `demo123` 弱口令账号 | ✅ **已处理**：`DataInitializer` 改为 `@ConditionalOnProperty(matchIfMissing=true)`，生产设 `APP_INIT_DEMO=false`；库中该行已改名为 `demo_disabled` 并置无效密码。⚠️ **重新导入 dump 后要重做库内封堵**（dump 会把它带回来）|
+| 4 | npm audit 报 4（后台）/ 7（官网）个构建期依赖漏洞 | ⏳ 未处理 —— 不进运行时。**不要随手跑 `npm audit fix`**（会改 `package-lock.json`、破坏可复现构建）|
+| 5 | `SPRING_AUTOCONFIGURE_EXCLUDE` 环境变量 | ✅ 保留 |
+| 6 | 运行期文件（`/opt/inventory/data`、`uploads`）无备份 | ⏳ **待补** 每周 tar 备份（见 §三）|
+| 7 | 数据"唯一真相来源"未决定（A/B/C）| ⏳ **切域名之前必须决定**（见 §2.1）|
 
 ---
 
