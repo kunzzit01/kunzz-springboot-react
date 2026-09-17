@@ -1053,3 +1053,250 @@ AI 降级正常 ✅   旧站 kunzzgroup.com 200 ✅   DNS/Domain 全程未动 �
 | 3 | `demo` / `demo123` 弱口令账号仍在库中 | 任何人可登入后台 | 改密码或移除 `DataInitializer`（**源码，需批准**）|
 | 4 | npm audit 报 4（后台）/ 7（官网）个构建期依赖漏洞 | 不进运行时 | 单独评估，**不要现在跑 `npm audit fix`**（会改 lock 文件、破坏可复现构建）|
 | 5 | `SPRING_AUTOCONFIGURE_EXCLUDE` 已加到环境文件 | 消除了 Spring 默认内存账号 | 保留 ✅ |
+
+---
+
+# 🔁 日常运维：更新代码 / 更新数据
+
+> 部署布局决定「改了什么，就要重建什么」。**先记住这张表**：
+
+| 产物 | 位置 | 由什么决定 | 重建代价 |
+|---|---|---|---|
+| 后端 jar | `/opt/inventory/app.jar` | `backend/**`（含 `pom.xml`、`application.yml`）| `mvn` 约 80 秒 |
+| 后台前端 | `/var/www/admin/` | `inventory-system/frontend/**` | `npm run build` 约 15 秒 |
+| 官网前端 | `/var/www/website/` | `website/**` | `npm run build` 约 1 秒 |
+| 运行期数据 | `/opt/inventory/data/`、`/opt/inventory/uploads/` | 后台界面上传 + 仓库拷贝 | 增量拷贝 |
+| 配置与密钥 | `/etc/inventory-backend.env` | 手工维护（**不在 git 里**）| — |
+| 数据库 | MariaDB `u690174784_kunzz` | `database/*.sql` 或旧站导出 | 导入约 3 秒 |
+
+**源码目录**：`/opt/kunzz-springboot-react`（git clone，分支 `main`）
+
+---
+
+## 一、更新代码
+
+### 1.1 每次都先备份（30 秒，别省）
+
+```bash
+cp /opt/inventory/app.jar /opt/inventory/app.jar.bak
+sudo cp /etc/inventory-backend.env /etc/inventory-backend.env.bak
+sudo mysqldump --single-transaction u690174784_kunzz | gzip > /opt/backups/pre_update_$(date +%F_%H%M).sql.gz
+```
+
+### 1.2 拉取代码
+
+```bash
+cd /opt/kunzz-springboot-react
+git status --short        # 应为空；有输出说明有人在这台机器上改过源码
+git pull --ff-only
+git log --oneline -3
+```
+
+> ⚠️ 仓库里**跟踪着一个 74 MB 的 `backend/target/*.jar`**。如果那次提交包含新的 jar，
+> `git pull` 会顺带下载它（慢但无害）——**VPS 不用这个 jar，我们自己在 VPS 上构建**。
+
+### 1.3 判断要重建什么
+
+```bash
+git diff --name-only HEAD@{1}..HEAD
+```
+
+| 改动命中的路径 | 要做的事 |
+|---|---|
+| `backend/**` | 重建后端（1.4）|
+| `inventory-system/frontend/**` | 重建后台前端（1.5）|
+| `website/**` | 重建官网（1.6）|
+| `database/*.sql`、`add_new_tables.sql` | **另外**做数据更新（见第二节）|
+| 只有 `docs/**`、`*.md` | 什么都不用重建 ✅ |
+| `application.yml` 新增了 `${新变量:默认值}` | 在 `/etc/inventory-backend.env` 里补上该变量 |
+
+> 懒人做法：不确定就**三个全重建**。总耗时约 2 分钟，反正只有 1~2 秒停机。
+
+### 1.4 重建后端
+
+```bash
+cd /opt/kunzz-springboot-react/backend
+mvn -DskipTests clean package          # 期望 BUILD SUCCESS
+cp target/inventory-backend-1.0.0.jar /opt/inventory/app.jar
+chown kunzz:kunzz /opt/inventory/app.jar
+sudo systemctl restart inventory-backend
+sleep 10
+sudo systemctl is-active inventory-backend
+```
+
+### 1.5 重建后台前端
+
+```bash
+cd /opt/kunzz-springboot-react/inventory-system/frontend
+npm ci                                  # 仅当 package-lock.json 变了才需要
+npm run build
+sudo rsync -a --delete dist/ /var/www/admin/
+sudo chown -R www-data:www-data /var/www/admin
+```
+
+> **前端不需要重启任何服务** —— nginx 直接读磁盘，刷新浏览器即可。
+> 若改了 `public/` 里的资源（字体、发票模板），`rsync --delete` 会自动同步 ✓
+
+### 1.6 重建官网
+
+```bash
+cd /opt/kunzz-springboot-react/website
+npm run build
+sudo rsync -a --delete dist/ /var/www/website/
+sudo chown -R www-data:www-data /var/www/website
+```
+
+### 1.7 同步运行期数据文件（**容易被忘，但很关键**）
+
+`/opt/inventory/data/` 和 `/opt/inventory/uploads/` **不在 git 里**（一个是后台界面上传产生的，
+一个是从仓库拷过去之后会被运行期写入）。仓库里这几项有更新时要手动同步：
+
+```bash
+cp -r /opt/kunzz-springboot-react/backend/uploads/. /opt/inventory/uploads/
+cp -r /opt/kunzz-springboot-react/backend/data/.    /opt/inventory/data/
+chown -R kunzz:kunzz /opt/inventory
+sudo systemctl restart inventory-backend    # 让媒体缓存重建
+```
+
+### 1.8 更新后验证（1 分钟）
+
+```bash
+curl -s -o /dev/null -w "root=%{http_code}\n" http://127.0.0.1:8080/
+curl -s -o /dev/null -w "home=%{http_code}\n" http://127.0.0.1:8080/home/
+curl -s -o /dev/null -w "api=%{http_code}\n"  http://127.0.0.1:8080/api/auth/me
+curl -s -o /dev/null -w "photo=%{http_code}\n" "http://127.0.0.1:8080/uploads/dishware/$(ls /opt/inventory/uploads/dishware | head -1)"
+```
+
+期望 `200 / 200 / 401 / 200`，然后浏览器登录点一下「总库存」和「进出货」。
+
+### 1.9 回滚（任何一步异常）
+
+```bash
+cp /opt/inventory/app.jar.bak /opt/inventory/app.jar
+sudo cp /etc/inventory-backend.env.bak /etc/inventory-backend.env
+sudo systemctl restart inventory-backend
+```
+
+前端回滚：前端 dist 没有自动备份，**靠 git**：
+```bash
+cd /opt/kunzz-springboot-react
+git checkout <上一个正常的提交> -- inventory-system/frontend   # 或 website
+# 然后重新 build + rsync
+```
+
+---
+
+## 二、更新数据（替换数据库）
+
+### 2.1 ⚠️ 先想清楚一件事：谁是「唯一真相来源」
+
+**当前状态**：VPS 库是 2026-09-17 10:06 的**快照**；旧 PHP 站仍在 `kunzzgroup.com` 上写 Hostinger 的库。
+**两边会分叉** —— 旧站上任何新的进出货，VPS 这边都没有。
+
+| 场景 | 做法 |
+|---|---|
+| **A. VPS 当测试沙盒**（现在）| 想同步就在旧站导新 dump，整库替换（2.2）。**VPS 上的写入会丢** |
+| **B. 让 VPS 直连旧 Hostinger 库** | 数据只有一份、永不分叉；但需要 Hostinger 放行 VPS IP + `DB_URL` 改回外网地址 + 有网络延迟 |
+| **C. 正式迁移**（切域名时）| 旧站下线，VPS 库成为唯一真相 —— **届时必须先做 C，再切 DNS** |
+
+> **切域名之前必须先把 A/B/C 定下来。** 在 A 的状态下切域名 = 用户在新系统下的单，旧系统看不到，反之亦然。
+
+### 2.2 整库替换（场景 A）
+
+```bash
+# ① 备份当前 VPS 库（可回滚，必做）
+sudo mysqldump --single-transaction --routines --triggers u690174784_kunzz \
+  | gzip > /opt/backups/before_refresh_$(date +%F_%H%M).sql.gz
+
+# ② 拿到新的 dump（在 VPS 上从 GitHub 拉，或本地上传）
+curl -fL -o /opt/inventory/new_dump.sql https://raw.githubusercontent.com/kunzzit01/kunzz-springboot-react/main/database/u690174784_kunzz.sql
+
+# ③ 核对字节数/md5（对不上就停下重来）
+ls -l /opt/inventory/new_dump.sql
+
+# ④ 🔴 重建空库后导入 —— dump 里有 70 处 DROP TABLE IF EXISTS，
+#    只能导入空库；导入前再确认一次连的是本机
+sudo mariadb -e "SELECT @@hostname, @@port;"
+sudo mariadb -e "DROP DATABASE u690174784_kunzz; CREATE DATABASE u690174784_kunzz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo mariadb u690174784_kunzz < /opt/inventory/new_dump.sql
+echo "import exit=$?"                       # 必须 0
+
+# ⑤ 补建新表（每次替换后都要，freezer_categories 不在 dump 里）
+sudo mariadb < /opt/inventory/add_new_tables.sql
+
+# ⑥ 校验：应为 71 对象（67 表 + 4 视图）、8 触发器、20 外键
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='u690174784_kunzz';"
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM information_schema.triggers WHERE trigger_schema='u690174784_kunzz';"
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM freezer_categories;"
+
+# ⑦ 重启后端（清连接池里的旧连接）
+sudo systemctl restart inventory-backend
+```
+
+> `kunzz_app` 的授权在 `DROP DATABASE` 后会保留（授权记录按库名存在 mysql.db 里），无需重建账号。
+> 但如果**重建了账号**，记得同步更新 `/etc/inventory-backend.env` 的 `DB_PASSWORD`。
+
+### 2.3 ⚠️ 替换数据后有两类"不一致"要检查
+
+1. **账号弱口令会跟着 dump 回来** —— dump 里有 `demo`/`demo123`，替换后要重新封堵：
+   ```bash
+   sudo mariadb u690174784_kunzz -e "UPDATE users SET username='demo_disabled', email='demo_disabled@kunzz.local', password='disabled' WHERE username='demo';"
+   ```
+2. **图片文件与数据库记录要对得上** —— dump 里存的是相对路径（如 `/dishware/xxx.jpg`），
+   实际文件在 `/opt/inventory/uploads/dishware/`。若新 dump 引用了本地没有的照片 → 破图。
+   同步方法见 1.7。
+
+### 2.4 只做结构补丁（不替换数据）
+
+仓库根目录的 `add_new_tables.sql` 是**幂等**的（已存在就跳过），可以随时跑：
+
+```bash
+cd /opt/kunzz-springboot-react && git pull --ff-only
+sudo mariadb < add_new_tables.sql
+```
+
+`sync_cleanup.sql` **含 `DELETE`**，属于数据清洗 —— 跑之前必须先备份、先对账。
+
+---
+
+## 三、备份（当前状态与缺口）
+
+| 项 | 状态 |
+|---|---|
+| 数据库每日备份 | ✅ 已配 `/etc/cron.daily/kunzz-db-backup`，保留 14 天，落在 `/opt/backups/` |
+| **`/opt/inventory/data` + `uploads`** | 🔴 **尚无备份** —— 后台界面上传的图片/媒体**只存在于这台机器** |
+| 源码 | ✅ 在 GitHub |
+| 配置/密钥 | `/etc/inventory-backend.env`（600 root），**建议离线另存一份** |
+
+建议补上运行期文件的每周备份：
+
+```bash
+sudo tee /etc/cron.weekly/kunzz-files-backup >/dev/null <<'SH'
+#!/bin/sh
+tar czf /opt/backups/kunzz-files_$(date +%F).tar.gz -C /opt/inventory data uploads
+find /opt/backups -name 'kunzz-files_*.tar.gz' -mtime +28 -delete
+SH
+sudo chmod +x /etc/cron.weekly/kunzz-files-backup
+```
+
+**异地备份**：`/opt/backups/` 与数据库在同一台机器上，机器坏了两个一起没。
+建议定期把 `/opt/backups/*.gz` 拉回本地（WinSCP 即可）。
+
+---
+
+## 四、常用排查命令
+
+```bash
+sudo systemctl status inventory-backend --no-pager     # 服务状态
+sudo journalctl -u inventory-backend -n 100 --no-pager  # 后端日志
+sudo tail -50 /var/log/nginx/access.log                # 谁在访问
+sudo tail -50 /var/log/nginx/error.log                 # nginx 报错
+sudo ss -lntp | grep -E ':(8080|8082|3306)\b'          # 端口绑定
+sudo mariadb u690174784_kunzz -e "SHOW PROCESSLIST;"   # 数据库连接
+docker ps --format '{{.Names}}' | wc -l                # 确认 18 个容器仍在
+```
+
+**改完 nginx 配置永远走这两步，不要 restart：**
+```bash
+sudo nginx -t && sudo systemctl reload nginx
+```
