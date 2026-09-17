@@ -5,6 +5,30 @@
 
 ---
 ---
+## 🗓️ 2026-09-17
+
+### 1. 导入 live 最新数据库（9/17 09:40 dump (11)，分发包更新）
+
+- **dump**：`u690174784_kunzz (11).sql`（25.0MB，Generation Time Sep 17 01:40 UTC = 马来 09:40，Hostinger MariaDB 11.8.9）
+- **流程**（照 docs/DB_IMPORT.md + OPS.md 清洗清单）：uca1400×3 → sed 修复副本；备份 `backup_before_import_20260917_095351.sql`（66 表）；
+  DROP/重建（本次无残留，一次通过）→ 导入退出码 0（58s）→ add_new_tables.sql → sync_cleanup.sql
+- **验证（三重）**：① 63 表逐表行数与 dump 原文一致（仅 users +1 demo 账号 = 后端启动自动重建、stock_minimum_settings −5 行 0 值编码重复 = 清洗规定，均属预期）；
+  ② 独立第二遍导入 + 全库 66 表逐字节比对：除 demo 行与清洗时间戳外完全相同；③ CHECK TABLE 全 OK、时区 +08:00、HTML 实体残留 0
+- **数据量**：j1 23704 / j2 15889 / j3 18683 / 中央流水 28739 / 台账 610；业务日期含 9/17 上午（j1 +25、j3 +22、流水 +48）
+- **分发包**：`database/u690174784_kunzz.sql` 更新为本次 70 表全量（回测导入 70 表、关键表行数全对）
+
+### 2. 修复：总库存总额与老 live 相差 1 分钱（J2/J3，逐行舍入口径）
+
+- **现象**：总库存-J2 老 live RM 28,377.72 vs 新系统 28,377.73；J3 同样差 0.01（类型卡金额两边一致）
+- **根因**：老 live PHP 是**每个分组先 `round(净库存×显示单价, 2)` 再逐行求和**；新系统是精确十进制求和后只在最后四舍五入。
+  Kilo 类三位小数数量产生半厘：J2 精确 28377.725（A5 AWAGYU 162.322 / SALMON 31.293）→ 新 .73、live .72；
+  J3 精确 44004.773（A5 AWAGYU 183.928 / SMOKED DUCK 132.655）→ 新 .77、live .78
+- **修复**：`StockSummaryMapper.xml` summaryRows 的 total_price 改为 `ROUND(SUM((in-out)×ROUND(price,2)), 2)`（分组先舍入再求和）
+- **实测**（抓 live 真实 summary JSON 逐行对账）：J1 31907.19 / J2 28377.72 / J3 44004.78 全部一致；
+  逐行 275/218/317 行金额零差异（仅 J3 4 行名称差异 = 本地已清洗 HTML 实体，金额相同）；类型卡逐项一致
+- **jar**：重新构建 `backend/target/inventory-backend-1.0.0.jar` 随本次提交推送（GitHub Release v1.0.1 资产未更新，走 repo zip 下载的用户可拿到新 jar）
+
+---
 ## 🗓️ 2026-09-03
 
 ### 6. 导入 live 最新数据库（9/3 10:37 dump，67 表）

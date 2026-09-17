@@ -4,8 +4,11 @@
 
     <!-- 汇总：按 产品+编号+规格+单价(ROUND 2位) 分组（对齐线上 stocklistapi.php）
          净库存 = SUM(in) - SUM(out)
-         总价 = SUM((in - out) × ROUND(price, 2))  ← 用显示价(2位小数)计算（对齐线上 8/23 修复：
-                显示价计算总价值，避免多位小数原始价造成总价偏差）
+         总价 = ROUND(SUM((in - out) × ROUND(price, 2)), 2)  ← 用显示价(2位小数)计算，且**每个分组先四舍五入到 2 位再求和**
+                （对齐线上 8/23 修复 + 9/17 逐行舍入对齐：老 live PHP 是 round(净库存×单价, 2) 后逐行相加，
+                 精确十进制求和会在 Kilo 类三位小数数量上产生半厘（如 0.293×554=162.322），
+                 导致 J2 总额 28377.725 → 新系统四舍五入得 .73、老 live 逐行舍入得 .72。
+                 分组先 ROUND(...,2) 后 SUM 即与老 live 完全一致）
          单价显示 = ROUND(price, 2)；type 仅展示（MAX，不参与分组）
          price_raw / price_raw_max = 组内原始单价范围（用于前端悬浮提示差异） -->
     <select id="summaryRows" resultType="java.util.LinkedHashMap">
@@ -17,7 +20,7 @@
                     之前用 GROUP_CONCAT 取 price 最小一条的 type 是误判，导致 J1 分类统计与 live 差 754.30/701.80/52.50） -->
                MAX(COALESCE(type, '')) AS type,
                COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS total_stock,
-               SUM((COALESCE(in_quantity, 0) - COALESCE(out_quantity, 0)) * ROUND(price, 2)) AS total_price
+               ROUND(SUM((COALESCE(in_quantity, 0) - COALESCE(out_quantity, 0)) * ROUND(price, 2)), 2) AS total_price
         FROM ${table}
         <where>
             deleted_at IS NULL
