@@ -203,8 +203,9 @@ export default function AppLayout() {
     localStorage.removeItem('inv_token')
     sessionStorage.clear()
     resetPagePerms() // 清页面权限缓存（下次登录重新拉取）
-    // 回到官网主页（一键启动模式下官网由后端托管在 /home）
-    window.location.href = '/home'
+    // 回到官网主页。⚠️ 结尾斜杠不能省：nginx 里官网是 location /home/，
+    // 写成 /home 会落进后台的 location / 而回到后台登录页
+    window.location.href = '/home/'
   }
 
   /** 汉堡切换侧栏：展开/收起都清 flyout 与定时器（避免与展开态侧栏并存双高亮） */

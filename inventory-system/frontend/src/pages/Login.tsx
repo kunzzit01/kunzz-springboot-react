@@ -49,13 +49,9 @@ export default function Login() {
     <section className="login-section">
       <div className="login-form">
         <button type="button" className="back-button" onClick={() => {
-    // 已登录直接回主页；未登录时若 history 有有效前页则后退，否则留登录页
-    if (localStorage.getItem('inv_token')) {
-      navigate('/', { replace: true })
-    } else if (window.history.length > 1) {
-      window.history.back()
-    }
-  }} aria-label="返回">
+          // 回公司官网首页（官网在 /home/，是独立 SPA，必须整页跳转）
+          window.location.href = '/home/'
+        }} aria-label="返回">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M19 12H5M12 19L5 12L12 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
