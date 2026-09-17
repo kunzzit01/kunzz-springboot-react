@@ -5,14 +5,19 @@ import com.kunzz.inventory.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
- * 初始化演示账号（不影响老库已有用户）
+ * 初始化演示账号（不影响老库已有用户）。
+ *
+ * 仅用于本地开发：本地一键启动用 demo/demo123 登录。
+ * 生产环境必须设 APP_INIT_DEMO=false 关闭，否则库中会留有这个弱口令账号。
  */
 @Slf4j
 @Component
+@ConditionalOnProperty(name = "app.init-demo", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
