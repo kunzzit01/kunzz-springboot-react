@@ -1,0 +1,9 @@
+# 并行任务防撞（规则见仓库根目录 AGENTS.md）
+#
+# CHANGELOG.md 是所有人往顶部追加的单文件。冲突时用 union 驱动：
+# 两边的条目都保留，绝不出现「整篇被一侧覆盖」→ 日志丢失。
+CHANGELOG.md merge=union
+
+# 钩子与 shell 脚本必须保持 LF，否则 Git for Windows 下 hook 无法执行
+.githooks/* text eol=lf
+*.sh text eol=lf

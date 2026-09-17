@@ -1,0 +1,98 @@
+#!/bin/sh
+# 防撞 pre-commit 钩子 —— 只允许提交本 task 登记白名单内的文件。
+# 规则见仓库根目录 AGENTS.md 第 1、2 节。
+#
+# 生效方式：git config core.hooksPath .githooks
+# 声明当前任务：echo "<任务ID>" > "$(git rev-parse --git-dir)/CURRENT_TASK"
+# 紧急绕过：KUNZZ_NO_GUARD=1 git commit ...
+# 本文件必须保持 LF 换行（见 .gitattributes），否则 Windows 下无法执行。
+
+if [ "${KUNZZ_NO_GUARD:-0}" = "1" ]; then
+    echo "[防撞] KUNZZ_NO_GUARD=1 —— 本次跳过防撞检查。" >&2
+    exit 0
+fi
+
+gitdir=$(git rev-parse --git-dir 2>/dev/null) || exit 0
+task=$(cat "$gitdir/CURRENT_TASK" 2>/dev/null | tr -d ' \t\r\n')
+[ -n "$task" ] || task=$(printf '%s' "${KUNZZ_TASK:-}" | tr -d ' \t\r\n')
+# 容错：写成 "CURRENT_TASK=xxx" / "KUNZZ_TASK=xxx" 也能识别
+task=$(printf '%s' "$task" | sed 's/^[A-Za-z_]*=//')
+
+staged=$(git diff --cached --name-only --diff-filter=ACMRD)
+[ -n "$staged" ] || exit 0
+
+# ---------- 没有登记任务：不阻塞，只提醒「扫描式提交」 ----------
+if [ -z "$task" ]; then
+    n=$(printf '%s\n' "$staged" | wc -l | tr -d ' ')
+    hot=$(printf '%s\n' "$staged" | grep -E '^(backend/static/|backend/target/|.*package-lock\.json$)' || true)
+    if [ "$n" -gt 15 ] || [ -n "$hot" ]; then
+        echo "" >&2
+        echo "[防撞] 提醒：本次暂存 $n 个文件，且命中构建产物热点：" >&2
+        [ -n "$hot" ] && printf '        %s\n' $hot >&2
+        echo "[防撞] 请确认这些文件都属于当前任务；不属于的用：" >&2
+        echo "        git restore --staged <路径>   （只取消暂存，不丢内容）" >&2
+        echo "" >&2
+    fi
+    exit 0
+fi
+
+# ---------- 有登记任务：强制白名单 ----------
+taskfile="docs/tasks/$task.md"
+if [ ! -f "$taskfile" ]; then
+    echo "" >&2
+    echo "[防撞] 已声明任务「$task」，但找不到登记文件：$taskfile" >&2
+    echo "[防撞] 按 AGENTS.md 第 1 节先登记写入白名单，再提交。" >&2
+    echo "       模板见 docs/tasks/README.md" >&2
+    echo "" >&2
+    exit 1
+fi
+
+tmpd=$(mktemp -d 2>/dev/null) || exit 0
+trap 'rm -rf "$tmpd"' EXIT
+
+# 解析白名单：取「白名单」条目与「明确不碰」之间的 "- 路径" 行
+awk '
+    /^[[:space:]]*-[[:space:]]*白名单/ { inb = 1; next }
+    /^[[:space:]]*-[[:space:]]*(明确不碰|不碰|禁止)/ { inb = 0 }
+    inb && /^[[:space:]]*-[[:space:]]+/ {
+        line = $0
+        sub(/^[[:space:]]*-[[:space:]]+/, "", line)
+        sub(/[[:space:]]*#.*$/, "", line)
+        sub(/[[:space:]]+$/, "", line)
+        sub(/^\.\//, "", line)
+        if (line != "") print line
+    }
+' "$taskfile" > "$tmpd/allow"
+
+printf '%s\n' "$staged" > "$tmpd/staged"
+
+# 白名单条目以 / 结尾视为目录前缀，其余按精确路径匹配
+awk '
+    NR == FNR {
+        if (substr($0, length($0), 1) == "/") { dir[++nd] = $0 } else { exact[$0] = 1 }
+        next
+    }
+    {
+        p = $0
+        if (p in exact) next
+        for (i = 1; i <= nd; i++) if (index(p, dir[i]) == 1) next
+        print p
+    }
+' "$tmpd/allow" "$tmpd/staged" > "$tmpd/bad"
+
+if [ -s "$tmpd/bad" ]; then
+    echo "" >&2
+    echo "[防撞] 提交被拦下：以下文件不在任务「$task」的白名单内。" >&2
+    echo "       登记文件：$taskfile" >&2
+    echo "" >&2
+    sed 's/^/        /' "$tmpd/bad" >&2
+    echo "" >&2
+    echo "  这些多半是别的 task 正在改的文件，把它们留在工作区即可：" >&2
+    echo "        git restore --staged <路径>     # 只取消暂存，内容不丢" >&2
+    echo "  确实该由我改的，先补进登记文件的白名单，再重新提交。" >&2
+    echo "  确需绕过（危险）：KUNZZ_NO_GUARD=1 git commit ..." >&2
+    echo "" >&2
+    exit 1
+fi
+
+exit 0

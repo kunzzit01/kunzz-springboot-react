@@ -1,0 +1,64 @@
+#!/bin/sh
+# 防撞 pre-push 钩子 —— 禁止对 main 的强推 / 非快进推送。
+# 强推会整段删掉别人已经推上去的提交，是「多任务互相覆盖」里唯一不可恢复的那种。
+# 规则见仓库根目录 AGENTS.md 第 3 节。
+#
+# 生效方式：git config core.hooksPath .githooks
+# 紧急绕过：KUNZZ_NO_GUARD=1 git push ...
+# 本文件必须保持 LF 换行（见 .gitattributes），否则 Windows 下无法执行。
+
+if [ "${KUNZZ_NO_GUARD:-0}" = "1" ]; then
+    echo "[防撞] KUNZZ_NO_GUARD=1 —— 本次跳过防撞检查。" >&2
+    exit 0
+fi
+
+zero=$(git hash-object --stdin </dev/null 2>/dev/null | tr '0-9a-f' '0')
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -n "$remote_ref" ] || continue
+
+    case "$remote_ref" in
+        refs/heads/main|refs/heads/master) ;;
+
+        # 自己的 task 分支：允许 rebase 后带 --force-with-lease 推
+        refs/heads/task/*) continue ;;
+
+        *) continue ;;
+    esac
+
+    # 删除 main
+    if [ "$local_sha" = "$zero" ]; then
+        echo "" >&2
+        echo "[防撞] 拒绝删除 $remote_ref。分支删除需要人工确认。" >&2
+        echo "" >&2
+        status=1
+        continue
+    fi
+
+    # 首次推送（远程还没有这个分支）没有可比对的历史
+    [ "$remote_sha" != "$zero" ] || continue
+
+    # remote_sha 不是 local_sha 的祖先 ⇒ 这次推送会丢掉远程已有的提交
+    if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+        echo "" >&2
+        echo "[防撞] 拒绝推送到 $remote_ref：这不是快进推送。" >&2
+        echo "" >&2
+        echo "  说明：远程 $remote_ref 上有你本地没有的提交（别的 task 先推了），" >&2
+        echo "        或者你正在强推。两种情况下继续推送都会删掉别人的提交。" >&2
+        echo "" >&2
+        echo "  正确做法（把别人的提交先整合进来，再推）：" >&2
+        echo "        git fetch origin main" >&2
+        echo "        git log --oneline HEAD..origin/main      # 看看别人推了什么" >&2
+        echo "        git pull --rebase origin main" >&2
+        echo "  冲突若涉及自己白名单外的文件：git rebase --abort 后先报告，不要选一边。" >&2
+        echo "" >&2
+        echo "  远程本地各在哪：" >&2
+        echo "        远程 $remote_ref = $(git rev-parse --short "$remote_sha" 2>/dev/null)" >&2
+        echo "        本地 $local_ref  = $(git rev-parse --short "$local_sha" 2>/dev/null)" >&2
+        echo "" >&2
+        status=1
+    fi
+done
+
+exit $status
