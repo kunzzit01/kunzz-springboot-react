@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog, getStockPerms } from '../api'
-import { FREEZER_OPTIONS } from './StockProducts'
+import { useFreezerCategories } from '../utils/useFreezerCategories'
 import type { PriceLogEntry } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
@@ -223,6 +223,10 @@ function useRawPriceTooltip() {
 
 
 export default function StockRecords() {
+  // 冰箱分类（按业务顺序）：总库存「冰箱分类 → 位次 → 货品名」排序的依据。
+  // 顺序改由字典表的 sort_order 提供（原先硬编码在 StockProducts 里的数组）——
+  // 这样分类改名之后位置不变，不会掉到列表最后打乱拣货顺序。
+  const { names: freezerOptions, reload: reloadFreezer } = useFreezerCategories()
   const [system, setSystem] = useState('central')
   // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
   const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
@@ -337,7 +341,7 @@ export default function StockRecords() {
   const fmtRm = (v: number | null | undefined) => 'RM' + (Number(v) || 0).toFixed(2)
 
   // 全站实时更新：只刷当前查看的系统（任何写入都广播 all → 当前视图刷新；切换系统时 switchSystem 会补拉）
-  useRealtime(system, () => load(system))
+  useRealtime(system, () => { load(system); reloadFreezer() })
 
   // 加载最低库存设置（8/24 修复：按系统分别加载，各分店设置独立，互不影响）
   // 同名产品多记录取最大，对齐线上 loadLowStockSettings；老库 product_name 含 HTML 实体需解码
@@ -456,11 +460,11 @@ export default function StockRecords() {
       )
     })
     if (sel.size > 0) {
-      const UNKNOWN_BASE = FREEZER_OPTIONS.length
+      const UNKNOWN_BASE = freezerOptions.length
       const freezerRank = (fc?: string) => {
         const first = (fc || '').split(',')[0]?.trim() || ''
         if (!first) return UNKNOWN_BASE + 1 // 无冰箱分类 → 最后
-        const i = FREEZER_OPTIONS.indexOf(first)
+        const i = freezerOptions.indexOf(first)
         return i === -1 ? UNKNOWN_BASE : i // 名单外的新 freezer → 已知名单之后（字母序稳定）
       }
       const posRank = (p?: number | null) => (p == null || p <= 0 ? Number.MAX_SAFE_INTEGER : p)
@@ -473,7 +477,8 @@ export default function StockRecords() {
       })
     }
     return arr
-  }, [mergedData, system, filters, typeSel, exactMatch])
+    // freezerOptions 必须进依赖：分类改名/调顺序后要按新顺序重排（少了它排序会停在旧顺序）
+  }, [mergedData, system, filters, typeSel, exactMatch, freezerOptions])
 
   const cur = data[system]
   const curFiltered = filtered

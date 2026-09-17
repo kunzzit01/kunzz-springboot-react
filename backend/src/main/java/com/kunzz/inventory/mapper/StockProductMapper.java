@@ -36,4 +36,16 @@ public interface StockProductMapper {
 
     /** 删除记录 */
     int deleteRow(@Param("id") Integer id);
+
+    /** 冰箱分类改名用：找出所有引用该分类的货品（FIND_IN_SET 按逗号 token 精确匹配，避免 LIKE 误命中前缀） */
+    List<Map<String, Object>> findByFreezerToken(@Param("name") String name);
+
+    /** 冰箱分类改名用：只更新 freezer_category 单列（不整行覆写，避免覆盖并发编辑的其它字段） */
+    int updateFreezerOnly(@Param("id") Integer id, @Param("value") String value);
+
+    /**
+     * 冰箱分类使用量：按原始串分组计数，service 再按逗号拆开累加到每个分类上
+     * （不能直接 GROUP BY 单值，多值行如 'K1-6,S1-2' 会被当成一个独立值）
+     */
+    List<Map<String, Object>> freezerUsageGroups();
 }

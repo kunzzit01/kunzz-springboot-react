@@ -65,6 +65,35 @@ export const deleteStockProduct = (id: number) =>
 export const approveStockProduct = (id: number, approver: string) =>
   http.put<unknown, { success: boolean }>(`/stock/products/${id}/approve`, { approver })
 
+// ---------- 冰箱分类字典（可改名 / 调顺序 / 停用 / 删除） ----------
+// 货品上的冰箱分类仍是 stock_data.freezer_category 里的纯文本，本接口只维护「名字 + 顺序」
+export interface FreezerCategoryItem {
+  /** null = 货品上在用但字典里没有（老数据），可在管理面板「补充」进字典 */
+  id: number | null
+  name: string
+  sort_order: number
+  is_active: boolean
+  /** 被多少个货品使用（多值货品会分别计入每个分类） */
+  usage_count: number
+  registered?: boolean
+}
+export const getFreezerCategories = (all?: boolean) =>
+  http.get<unknown, FreezerCategoryItem[]>('/stock/freezer-categories', { params: { all: all || undefined } })
+export const createFreezerCategory = (name: string) =>
+  http.post<unknown, FreezerCategoryItem>('/stock/freezer-categories', { name })
+export const renameFreezerCategory = (id: number, name: string) =>
+  http.put<unknown, { success: boolean; renamed: boolean; changed: number; old_name: string; new_name: string }>(
+    `/stock/freezer-categories/${id}/rename`, { name })
+export const setFreezerCategoryActive = (id: number, active: boolean) =>
+  http.put<unknown, FreezerCategoryItem>(`/stock/freezer-categories/${id}/active`, { active })
+export const reorderFreezerCategories = (ids: number[]) =>
+  http.put<unknown, void>('/stock/freezer-categories/reorder', { ids })
+/** 删除分类；force=true 时连同货品上的引用一起去掉（有货品在用时必须带，否则会被拒绝） */
+export const deleteFreezerCategory = (id: number, force?: boolean) =>
+  http.delete<unknown, { success: boolean; name: string; cleared: number }>('/stock/freezer-categories/' + id, {
+    params: { force: force || undefined },
+  })
+
 // ---------- 改价日志（总库存：最近改价列 + 点击货品名弹窗看历史） ----------
 export interface PriceLogEntry { changeDate: string; oldPrice: number | null; newPrice: number; changedBy?: string }
 export interface PriceLogLatest { productName: string; changeDate: string; newPrice: number }

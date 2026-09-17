@@ -111,3 +111,51 @@ SET @ddl := IF(@col_exists = 0,
                'ALTER TABLE stock_data ADD COLUMN freezer_position INT NULL COMMENT ''位次：同冰箱分类内排序'' AFTER freezer_category',
                'SELECT ''freezer_position 已存在，跳过''');
 PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+-- =============================================================================
+-- 5) 冰箱分类字典表（2026-09-17：支持改名 / 调顺序 / 停用）
+--    背景：冰箱分类原本只是 stock_data.freezer_category 里的纯文本（逗号分隔多选），
+--    名字本身就是数据，没有字典。导致两件事做不了：
+--      (a) 名字一改，总库存排序就认不出它（顺序靠前端硬编码数组的下标）→ 掉到列表最后，打乱拣货顺序
+--      (b) 无法新增 / 停用冰箱
+--    本表只存【名字 + 顺序】，stock_data 的表结构、字段类型、数据格式完全不变；
+--    改名时由后端级联改写 stock_data.freezer_category 里对应的那个 token。
+-- =============================================================================
+CREATE TABLE IF NOT EXISTS `freezer_categories` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) NOT NULL COMMENT '冰箱分类名称（须与 stock_data.freezer_category 逗号串里的 token 完全一致）',
+  `sort_order` int(11) NOT NULL DEFAULT 0 COMMENT '业务顺序：总库存排序用，对应冰箱物理顺序',
+  `is_active` tinyint(1) NOT NULL DEFAULT 1 COMMENT '停用后不再出现在下拉选项，历史数据保持原样',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_freezer_name` (`name`),
+  KEY `idx_freezer_sort` (`sort_order`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 种子：现有 20 个分类，顺序与原前端 FREEZER_OPTIONS 完全一致（上线当天界面零变化）
+-- 只在表为空（本次新建）时灌入：否则有人在系统里改过名之后再跑本文件，会把旧名字又插回来。
+INSERT INTO `freezer_categories` (`name`, `sort_order`)
+SELECT * FROM (
+            SELECT 'K1-1'   AS name,  1 AS sort_order
+  UNION ALL SELECT 'K1-2',   2
+  UNION ALL SELECT 'K1-3',   3
+  UNION ALL SELECT 'K1-4',   4
+  UNION ALL SELECT 'K1-5',   5
+  UNION ALL SELECT 'K1-6',   6
+  UNION ALL SELECT 'K1-7',   7
+  UNION ALL SELECT 'C-1',    8
+  UNION ALL SELECT 'KDI-1',  9
+  UNION ALL SELECT 'KDI-2', 10
+  UNION ALL SELECT 'KDI-3', 11
+  UNION ALL SELECT 'KDI-4', 12
+  UNION ALL SELECT 'S1-1',  13
+  UNION ALL SELECT 'S1-2',  14
+  UNION ALL SELECT 'S1-3',  15
+  UNION ALL SELECT 'S1-4',  16
+  UNION ALL SELECT 'SBS-1', 17
+  UNION ALL SELECT 'SBS-2', 18
+  UNION ALL SELECT 'SBDI-1',19
+  UNION ALL SELECT 'SBDI-2',20
+) AS seed
+WHERE NOT EXISTS (SELECT 1 FROM `freezer_categories`);

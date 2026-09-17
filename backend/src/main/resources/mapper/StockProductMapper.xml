@@ -89,4 +89,29 @@
         DELETE FROM stock_data WHERE id = #{id}
     </delete>
 
+    <!-- 冰箱分类改名：引用该分类的货品行（FIND_IN_SET 精确匹配逗号 token；LIKE '%K1-1%' 会误命中 K1-10） -->
+    <select id="findByFreezerToken" resultType="java.util.LinkedHashMap">
+        SELECT id, product_name, freezer_category
+        FROM stock_data
+        WHERE FIND_IN_SET(#{name}, freezer_category) &gt; 0
+        ORDER BY id
+    </select>
+
+    <!-- 冰箱分类改名 / 删除时清理引用：只改 freezer_category 一列。
+         「updated_at = updated_at」是刻意的自赋值 —— 显式赋值可抑制该列上的
+         ON UPDATE CURRENT_TIMESTAMP，让分类改名这类全局维护不顶掉货品的最后修改时间。
+         否则：货品种类页会按 updated_at 重新排序（被改的分类整批跑到列表末尾），
+         进货取默认单价（ORDER BY updated_at DESC）也可能换一条来源。 -->
+    <update id="updateFreezerOnly">
+        UPDATE stock_data SET freezer_category = #{value}, updated_at = updated_at WHERE id = #{id}
+    </update>
+
+    <!-- 冰箱分类使用量：按原始串分组（多值行在 service 里再拆开累加） -->
+    <select id="freezerUsageGroups" resultType="java.util.LinkedHashMap">
+        SELECT freezer_category, COUNT(*) AS cnt
+        FROM stock_data
+        WHERE freezer_category IS NOT NULL AND freezer_category &lt;&gt; ''
+        GROUP BY freezer_category
+    </select>
+
 </mapper>

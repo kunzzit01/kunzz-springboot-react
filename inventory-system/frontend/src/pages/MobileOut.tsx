@@ -7,6 +7,7 @@ import {
 import { showToast } from '../utils/toast'
 import { useMobileAccess, mobileLogout, MobileDenied } from '../utils/useMobileAccess'
 import { useRealtime } from '../utils/useRealtime'
+import { useFreezerCategories } from '../utils/useFreezerCategories'
 import '../styles/mobile-stocklist.css'
 
 /**
@@ -21,13 +22,9 @@ import '../styles/mobile-stocklist.css'
 
 const SYSTEMS = ['j1', 'j2', 'j3'] as const
 
-/** 旧版三店共用的固定区域选项（updateFreezerCategoryOptions 的 allFreezerCategories） */
-const FIXED_AREAS = [
-  'K1-1', 'K1-2', 'K1-3', 'K1-4', 'K1-5', 'K1-6', 'K1-7', 'C-1',
-  'KDI-1', 'KDI-2', 'KDI-3', 'KDI-4',
-  'S1-1', 'S1-2', 'S1-3', 'S1-4',
-  'SBS-1', 'SBS-2', 'SBDI-1', 'SBDI-2',
-]
+// 区域选项改为从冰箱分类字典表读取（原先是这里硬编码的 FIXED_AREAS 20 项）。
+// 字典不可用时由 useFreezerCategories 回落同一份清单（utils/useFreezerCategories.ts 的 FREEZER_FALLBACK），
+// 所以手机版在接口挂掉时照常可用。
 
 const fmtDay = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -82,6 +79,8 @@ export default function MobileOut() {
   const access = useMobileAccess()
   const me = { username: access.username, branch: access.branch }
   const allowed = access.ready && access.allowedSystems.includes(system)
+  // 区域选项（按冰箱分类字典的顺序；接口不可用时回落内置清单）
+  const { names: freezerAreas } = useFreezerCategories()
   const [rows, setRows] = useState<(MobileTotalRow & { rowKey: string })[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -139,16 +138,16 @@ export default function MobileOut() {
     return Array.from(set).sort()
   }, [rows])
 
-  // 区域选项（对齐旧 updateFreezerCategoryOptions：未选分类 = 固定 20 项；选了分类 = 该分类涉及的区域）
+  // 区域选项（对齐旧 updateFreezerCategoryOptions：未选分类 = 全部区域；选了分类 = 该分类涉及的区域）
   const areaOptions = useMemo(() => {
-    if (!typeFilter) return FIXED_AREAS
+    if (!typeFilter) return freezerAreas
     const set = new Set<string>()
     rows.forEach(r => {
       if (normCategory(r.type) !== typeFilter) return
       String(r.freezer_category || '').split(',').map(s => s.trim()).filter(Boolean).forEach(c => set.add(c))
     })
-    return FIXED_AREAS.filter(a => set.has(a))
-  }, [rows, typeFilter])
+    return freezerAreas.filter(a => set.has(a))
+  }, [rows, typeFilter, freezerAreas])
 
   const visible = useMemo(() => {
     // 零库存过滤（对齐旧 generateTable：排除数量 ≤ 0）+ 搜索 + 分类 + 区域，最后按名称排序

@@ -64,8 +64,96 @@
 }
 .sp-root .btn-primary { background-color: #f99e00; color: white; }
 .sp-root .btn-primary:hover { background-color: #f98500; transform: translateY(-1px); }
+.sp-root .btn-primary:disabled { background-color: #d1d5db; cursor: not-allowed; transform: none; }
 .sp-root .btn-success { background-color: #10b981; color: white; }
 .sp-root .btn-success:hover { background-color: #059669; transform: translateY(-1px); }
+.sp-root .btn-secondary { background-color: #6b7280; color: white; }
+.sp-root .btn-secondary:hover { background-color: #4b5563; transform: translateY(-1px); }
+/* 快捷键提示（对齐进出货页的快捷键说明） */
+.sp-root .sp-shortcut-hint {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: clamp(8px, 0.68vw, 13px); color: #8a7a5c;
+  background: #faf7f2; border: 1px dashed #d8cdb6; border-radius: 6px;
+  padding: clamp(3px, 0.31vw, 6px) clamp(6px, 0.63vw, 12px); white-space: nowrap;
+}
+.sp-root .sp-shortcut-hint i { color: #f99e00; }
+
+/* 冰箱分类维护入口（工具栏）：
+   常态 = 淡奶油底 + 琥珀描边 + 琥珀雪花图标 —— 一眼看得出是个按钮，
+   但用浅色描边样式与「添加新记录（绿）/ 保存所有数据（橙）」两个主操作区分开，不抢视线；
+   hover = 暖色浅底 + 轻微上浮（位移量与页内其它按钮一致），文字加深保证可读；
+   is-open = 面板打开时切实底琥珀，等同「按下」状态，看得出当前面板是开着的。 */
+.sp-root .btn.btn-freezer {
+  background: #fff8ec; color: #92400e;
+  border: 1px solid #f6d9a8;
+  box-shadow: 0 1px 2px rgba(88, 62, 4, 0.06);
+}
+.sp-root .btn.btn-freezer > i { color: #f99e00; transition: color 0.2s; }
+.sp-root .btn.btn-freezer:hover {
+  background: #fff2d9; border-color: #f99e00; color: #7c3a06;
+  box-shadow: 0 3px 8px rgba(249, 158, 0, 0.22);
+  transform: translateY(-1px);
+}
+.sp-root .btn.btn-freezer:active { transform: translateY(0); box-shadow: 0 1px 3px rgba(249, 158, 0, 0.25); }
+.sp-root .btn.btn-freezer.is-open {
+  background: #f99e00; border-color: #f99e00; color: #fff;
+  box-shadow: 0 3px 8px rgba(249, 158, 0, 0.32);
+}
+.sp-root .btn.btn-freezer.is-open > i { color: #fff; }
+
+/* 冰箱分类面板里的小按钮（↑ ↓ 停用/启用 🗑 ＋加入 收起）
+   刻意不挂 .btn 类 —— .sp-root .btn 会把边框清掉，而这些小按钮靠边框才看得出可点；
+   全部样式自带，不依赖 index.css / media.css 的全局按钮规则。 */
+.sp-root .fc-mini {
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  min-width: 22px; min-height: 22px; padding: 2px 7px; background: #fff; color: #6b7280;
+  border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;
+  font-size: 12px; font-weight: 600; font-family: inherit; line-height: 1.2;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
+}
+.sp-root .fc-mini:hover {
+  background: #fff8ec; border-color: #f99e00; color: #92400e;
+  box-shadow: 0 2px 5px rgba(249, 158, 0, 0.16);
+}
+.sp-root .fc-mini:active { background: #fff2d9; box-shadow: none; }
+.sp-root .fc-mini:disabled,
+.sp-root .fc-mini:disabled:hover {
+  opacity: 0.4; cursor: not-allowed;
+  background: #fff; border-color: #e5e7eb; color: #9ca3af; box-shadow: none;
+}
+/* 待登记项（货品上在用但不在清单里）的「＋ 加入」：用琥珀描边提示可操作 */
+.sp-root .fc-mini.fc-primary { background: #fff8ec; border-color: #f6d9a8; color: #92400e; }
+.sp-root .fc-mini.fc-primary:hover { background: #fff2d9; border-color: #f99e00; color: #7c3a06; }
+/* 删除：hover 才转为危险色，避免平时面板里一片红 */
+.sp-root .fc-mini.fc-danger:hover { background: #fef2f2; border-color: #f87171; color: #dc2626; box-shadow: 0 2px 5px rgba(220, 38, 38, 0.15); }
+
+/* 分类名字输入框：hover 提示可编辑、聚焦给琥珀描边，暗示「改这里就能重命名」 */
+.sp-root .fc-name {
+  border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; color: #374151;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sp-root .fc-name:hover { border-color: #f6d9a8; }
+.sp-root .fc-name:focus { outline: none; border-color: #f99e00; box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.15); }
+
+/* 拖拽手柄（⠿）：按住拖动调整分类顺序。
+   touch-action:none 是必须的 —— 否则触屏上拖动会被当成页面滚动，根本拖不动。 */
+.sp-root .fc-grip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 15px; height: 22px; color: #d1d5db; cursor: grab;
+  border-radius: 4px; touch-action: none;
+  transition: color 0.15s, background 0.15s;
+}
+.sp-root .fc-grip:hover { color: #f99e00; background: #fff8ec; }
+.sp-root .fc-grip:active { cursor: grabbing; color: #f99e00; }
+.sp-root .fc-grip:focus-visible { outline: 2px solid #f99e00; outline-offset: 1px; color: #f99e00; }
+/* 正在拖动的分类块：抬起来，其余块照常让位（本地顺序实时跟手，松手才提交） */
+.sp-root .fc-chip.is-dragging {
+  position: relative; z-index: 2;
+  border-color: #f99e00 !important;
+  box-shadow: 0 6px 16px rgba(249, 158, 0, 0.3);
+  transform: scale(1.03);
+}
+
 .sp-root .stats-info { display: flex; gap: clamp(10px, 1.04vw, 20px); align-items: center; font-size: clamp(8px, 0.74vw, 14px); color: #6b7280; flex-wrap: wrap; }
 .sp-root .stat-item { display: flex; align-items: center; gap: 6px; }
 .sp-root .stat-value { font-weight: bold; color: #583e04; font-size: clamp(10px, 0.84vw, 16px); }
