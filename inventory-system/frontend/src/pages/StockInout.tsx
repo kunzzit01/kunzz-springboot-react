@@ -101,7 +101,7 @@ const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padS
  *  输入框底部空间不足时自动向上展开（对齐旧系统 calculateDropdownPosition）。 */
 type ComboOption = string | { label: string; value: string }
 
-function Combobox({ options, value, onChange, onSelect, placeholder, style, disabled }: {
+function Combobox({ options, value, onChange, onSelect, placeholder, style, disabled, className }: {
   options: ComboOption[]
   value: string
   onChange: (v: string) => void
@@ -109,6 +109,8 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
   placeholder?: string
   style?: React.CSSProperties
   disabled?: boolean
+  /** 包裹层附加类名（货品选择栏传 product-combo：单独给一套醒目边框，见 stockinout.css） */
+  className?: string
 }) {
   const [open, setOpen] = useState(false)
   const [focusAll, setFocusAll] = useState(false)
@@ -126,32 +128,34 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
     [norm, value, focusAll],
   )
   const close = () => setOpen(false)
-  // 计算下拉位置：基于输入框 viewport 坐标（fixed 定位），下方空间不足（约 220px）时向上展开。
+  // 计算下拉位置：基于输入框 viewport 坐标（fixed 定位），下方空间不足（约 280px）时向上展开。
   // 向上展开用 bottom 定位（选单底部贴住输入框顶部，按实际高度自然贴合，无估算缝隙）
   const computePos = (): { top?: number; bottom?: number; left: number; width: number; up: boolean; maxH: number } | null => {
     const input = ref.current?.querySelector('input')
     if (!input) return null
     const r = input.getBoundingClientRect()
-    const DROP_H = 220
+    const DROP_H = 280
     const below = window.innerHeight - r.bottom - 8
     const above = r.top - 8
     let up: boolean
     if (below >= DROP_H) up = false
     else if (above >= DROP_H) up = true
     else up = above > below
-    // 宽度按最长选项内容自适应（对齐旧系统 min-width 200 / max-width 400），选项不换行
+    // 宽度按最长选项内容自适应（对齐旧系统 min-width 200 / max-width 400；本版放大到 240/460 更好读），选项不换行
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    let w = Math.max(r.width, 200)
+    let w = Math.max(r.width, 240)
     if (ctx) {
-      // 与选项字体一致（15px，视力友好）
-      ctx.font = '15px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
-      for (const o of filtered) w = Math.max(w, ctx.measureText(o.label).width + 36)
+      // 与选项字体一致（16px）
+      ctx.font = '16px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif'
+      for (const o of filtered) w = Math.max(w, ctx.measureText(o.label).width + 44)
     }
-    const width = Math.min(400, w)
+    const width = Math.min(460, w)
+    // 靠右的输入框（收货单位等）：左缘夹紧，避免选单溢出视口右边
+    const left = Math.max(4, Math.min(r.left, window.innerWidth - width - 8))
     // 向上时按可用空间限高避免超出视口顶
-    if (up) return { bottom: window.innerHeight - r.top + 4, left: r.left, width, up, maxH: Math.min(200, Math.max(60, above)) }
-    return { top: r.bottom + 2, left: r.left, width, up, maxH: 200 }
+    if (up) return { bottom: window.innerHeight - r.top + 4, left, width, up, maxH: Math.min(280, Math.max(80, above)) }
+    return { top: r.bottom + 2, left, width, up, maxH: 280 }
   }
   const openDropdown = () => { setPos(computePos()); setOpen(true) }
   useEffect(() => {
@@ -177,7 +181,7 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
     }
   }, [open])
   return (
-    <div ref={ref} style={{ position: 'relative', flex: 1, minWidth: 80, ...style }}>
+    <div ref={ref} className={className} style={{ position: 'relative', flex: 1, minWidth: 80, ...style }}>
       <input className="table-input text-input" placeholder={placeholder} value={value} disabled={disabled}
         style={{ width: '100%', paddingRight: value && !disabled ? 22 : 8 }}
         onChange={(e) => { setFocusAll(false); onChange(e.target.value); openDropdown() }}
@@ -186,24 +190,43 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
       {value && !disabled && (
         <button type="button"
           onClick={(e) => { e.stopPropagation(); onChange(''); openDropdown() }}
-          style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', fontSize: 15, lineHeight: 1, padding: '2px 4px', zIndex: 2 }}
+          style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#b98a3a', cursor: 'pointer', fontSize: 16, lineHeight: 1, padding: '2px 4px', zIndex: 2, borderRadius: 4 }}
           title="清除">×</button>
       )}
+      {/* 选单样式内联：浮层 portal 到 body，不在 .sio-root 作用域内（class 选择器命中不到）；
+          sio-combo-panel 只用于滚动条（伪元素没法内联），规则在 stockinout.css 无前缀区 */}
       {open && !disabled && pos && createPortal(
-        <div ref={dropRef} style={{
+        <div ref={dropRef} className="sio-combo-panel" style={{
           position: 'fixed', left: pos.left, width: pos.width, zIndex: 9999,
           top: pos.top ?? 'auto', bottom: pos.bottom ?? 'auto',
-          background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, boxShadow: '0 8px 24px rgba(0,0,0,.12)',
-          maxHeight: pos.maxH, overflow: 'auto', textAlign: 'left',
+          background: '#fff', border: '2px solid #f99e00', borderRadius: 10,
+          boxShadow: '0 10px 28px rgba(88,62,4,.18), 0 2px 6px rgba(88,62,4,.10)',
+          padding: 6, maxHeight: pos.maxH, overflow: 'auto', overscrollBehavior: 'contain',
+          textAlign: 'left', animation: 'sioComboPop .12s ease-out',
         }}>
-          {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 14 }}>无匹配</div>}
-          {filtered.map((o, i) => (
-            <div key={o.value + '-' + i} onClick={() => { setFocusAll(false); onChange(o.value); onSelect?.(o.value, o); close() }}
-              style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
-              title={o.label}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8f5eb')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>{o.label}</div>
-          ))}
+          {filtered.length === 0 && <div style={{ padding: '14px', color: '#9ca3af', fontSize: 15, textAlign: 'center' }}>无匹配</div>}
+          {filtered.map((o, i) => {
+            // 两段式：主体深色 + 尾部括号（供应商/编号）浅灰，长清单更好扫读
+            const m = o.label.match(/^(.*\S)\s*(\([^()]*\))\s*$/)
+            const main = m ? m[1] : o.label
+            const tail = m ? m[2] : ''
+            return (
+              <div key={o.value + '-' + i} onClick={() => { setFocusAll(false); onChange(o.value); onSelect?.(o.value, o); close() }}
+                className="sio-combo-item"
+                style={{
+                  display: 'flex', alignItems: 'baseline', gap: 6,
+                  padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 16, lineHeight: 1.35,
+                  borderTop: i > 0 ? '1px solid #f1ece2' : 'none', // 浅分割线
+                  transition: 'background .12s ease, box-shadow .12s ease',
+                }}
+                title={o.label}
+                onMouseEnter={e => { e.currentTarget.style.background = '#fff4e0'; e.currentTarget.style.boxShadow = 'inset 3px 0 0 #f99e00' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}>
+                <span style={{ color: '#111827', fontWeight: 500, minWidth: 0, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{main}</span>
+                {tail && <span style={{ color: '#9ca3af', fontSize: 14, flex: '0 0 auto' }}>{tail}</span>}
+              </div>
+            )
+          })}
         </div>,
         document.body,
       )}
@@ -229,6 +252,10 @@ interface NewRow {
   receiver: string
   remark: string
   hifoBase?: string
+  /** HIFO 提示：这次出货跨几个价格层（>1 才显示拆行按钮） */
+  hifoTiers?: number
+  /** 拆行时用的出货总量（按钮文案用） */
+  hifoSplitQty?: string
   /** 货品供应商（选货品时记录，明确进货时自动填入并锁死） */
   supplier?: string
   /** 该行自己的价格/库存选项（各新增行独立，避免互相覆盖） */
@@ -311,6 +338,9 @@ export default function StockInout() {
   const [nicknameMap, setNicknameMap] = useState<Map<string, string>>(new Map())
   const [currentUser, setCurrentUser] = useState('')
   const newRowCounter = useRef(0)
+  // 最新新增行快照：事件闭包里的 newRows 可能滞后（先填数量、后选货品时读不到刚填的值）
+  const newRowsRef = useRef<NewRow[]>([])
+  newRowsRef.current = newRows
   // 虚拟滚动（对齐 VIRTUAL_SCROLL_THRESHOLD=80）
   const scrollRef = useRef<HTMLDivElement>(null)
   const tableRef = useRef<HTMLTableElement>(null)
@@ -737,7 +767,7 @@ export default function StockInout() {
     if (remarkPickFor === key) { setRemarkPickFor(null); return }  // 再点一次收起
     if (btn) {
       const r = btn.getBoundingClientRect()
-      const GAP = 4, MIN_H = 120
+      const GAP = 4, MIN_H = 140
       const below = window.innerHeight - r.bottom - GAP - 8
       const above = r.top - GAP - 8
       // 上下都放不下时，按空间大的一侧展开并限高（与 Combobox 同一套算法）
@@ -746,8 +776,8 @@ export default function StockInout() {
         top: up ? undefined : Math.round(r.bottom + GAP),
         bottom: up ? Math.round(window.innerHeight - r.top + GAP) : undefined,
         left: Math.round(r.left),
-        minWidth: 190,
-        maxHeight: Math.round(Math.max(MIN_H, Math.min(260, up ? above : below))),
+        minWidth: 220,
+        maxHeight: Math.round(Math.max(MIN_H, Math.min(300, up ? above : below))),
       })
     }
     setRemarkPickFor(key)
@@ -762,21 +792,30 @@ export default function StockInout() {
   const renderRemarkPicker = (key: string, onPick: (remarkNumber: string) => void) => {
     if (remarkPickFor !== key || !remarkPickPos) return null
     return createPortal(
-      <div className="remark-pick" onMouseDown={(e) => e.preventDefault()}
+      // 样式内联：浮层 portal 到 body，不在 .sio-root 作用域内（class 选择器命中不到）；
+      // sio-combo-panel 只用于滚动条（伪元素没法内联）。与货品下拉选单同一套外观。
+      <div className="remark-pick sio-combo-panel" onMouseDown={(e) => e.preventDefault()}
         style={{
           position: 'fixed', zIndex: 9999,
           top: remarkPickPos.top ?? 'auto', bottom: remarkPickPos.bottom ?? 'auto',
           left: remarkPickPos.left, minWidth: remarkPickPos.minWidth, maxHeight: remarkPickPos.maxHeight,
+          background: '#fff', border: '2px solid #f99e00', borderRadius: 10,
+          boxShadow: '0 10px 28px rgba(88,62,4,.18), 0 2px 6px rgba(88,62,4,.10)',
+          padding: 6, overflow: 'auto', overscrollBehavior: 'contain', textAlign: 'left',
+          animation: 'sioComboPop .12s ease-out',
         }}>
-        {remarkPickLoading && <div className="remark-pick-empty">加载中…</div>}
+        {remarkPickLoading && <div style={{ padding: '14px', color: '#9ca3af', fontSize: 15, textAlign: 'center' }}>加载中…</div>}
         {!remarkPickLoading && remarkPickOpts.length === 0 && (
-          <div className="remark-pick-empty">该货品当前没有在库备注编号</div>
+          <div style={{ padding: '14px', color: '#9ca3af', fontSize: 15, textAlign: 'center' }}>该货品当前没有在库备注编号</div>
         )}
-        {!remarkPickLoading && remarkPickOpts.map(o => (
+        {!remarkPickLoading && remarkPickOpts.map((o, i) => (
           <div key={o.remark_number} className="remark-pick-item"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 16, lineHeight: 1.35, whiteSpace: 'nowrap', borderTop: i > 0 ? '1px solid #f1ece2' : 'none', transition: 'background .12s ease, box-shadow .12s ease' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#fff4e0'; e.currentTarget.style.boxShadow = 'inset 3px 0 0 #f99e00' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}
             onClick={() => { onPick(o.remark_number); setRemarkPickFor(null) }}>
-            <span className="rp-code">{o.remark_number}</span>
-            <span className="rp-qty">
+            <span style={{ fontWeight: 600 }}>{o.remark_number}</span>
+            <span style={{ color: '#6b7280', fontSize: 14 }}>
               剩余 {Number(o.available).toFixed(3)}{o.specification ? ' ' + o.specification : ''}
             </span>
           </div>
@@ -787,17 +826,31 @@ export default function StockInout() {
   }
   const onPickProduct = async (key: string, name: string, hintCode?: string) => {
     if (!name) return
-    const row = newRows.find(r => r.key === key)
+    const row = newRowsRef.current.find(r => r.key === key)
+    // 出货量在进入时就抓下来：后面有 await，期间实时刷新会重渲染表格，事后再读 DOM/state 可能已空
+    const qtyAtPick = pickRowOutQty(key, row)
     try {
       const list = await getProducts()
       // 同名多供应商（一个供应商一行）时按所点那条的编号定位，否则退回第一行（老行为）
       const wantCode = String(hintCode || row?.codeNumber || '').toUpperCase()
       const byName = (list || []).filter((p: any) => p.product_name === name)
-      const hit = (wantCode && byName.find((p: any) => String(p.product_code || '').toUpperCase() === wantCode)) || byName[0]
-      const autoCode = hit ? hit.product_code || '' : (row?.codeNumber || '')
+      let hit = (wantCode && byName.find((p: any) => String(p.product_code || '').toUpperCase() === wantCode)) || byName[0]
       // 选择货品后：若有出库数量则按该数量加载价格+库存，否则加载全部价格（对齐旧系统）
       const reqQty = row && parseFloat(row.outQty) > 0 ? parseFloat(row.outQty) : 0
-      const priceList = await getPriceStock(name, autoCode || undefined, reqQty || undefined, system)
+      let priceList = await getPriceStock(name, hit?.product_code || undefined, reqQty || undefined, system)
+      // 用户只点了货品名（没点具体编号）：同名多供应商里如果这行没库存，
+      // 自动改用「有库存的那一家」（旧行为固定取台账第一行，可能正好是没货的，出货就只能空着）
+      if (!wantCode && byName.length > 1 && (!priceList || priceList.length === 0)) {
+        for (const cand of byName) {
+          const code2 = String(cand.product_code || '')
+          if (!code2 || code2 === String(hit?.product_code || '')) continue
+          try {
+            const l2 = await getPriceStock(name, code2, reqQty || undefined, system)
+            if (l2 && l2.length > 0) { hit = cand; priceList = l2; break }
+          } catch { /* try next */ }
+        }
+      }
+      const autoCode = hit ? hit.product_code || '' : (row?.codeNumber || '')
       // 每行独立保存价格/库存选项（避免多行新增时互相覆盖）
       // 对齐旧系统 handleProductChange：选货品后自动补全编号/规格/类型/价格
       const spec = (hit && hit.specification) ? hit.specification : (row?.specification || '')
@@ -828,13 +881,16 @@ export default function StockInout() {
           price: '',
           priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
         })
+        // 出货量已填、货品后选 → 刷新 HIFO 拆行提示
+        await refreshHifoSplitHint(key, qtyAtPick, name, autoCode || undefined)
       }
     } catch { /* ignore */ }
   }
   /** 选择编号后自动回填货品（对齐旧系统 handleCodeNumberChange：code → 货品名/规格/类型/供应商/价格） */
   const onPickCode = async (key: string, code: string) => {
     if (!code) return
-    const row = newRows.find(r => r.key === key)
+    const row = newRowsRef.current.find(r => r.key === key)
+    const qtyAtPick = pickRowOutQty(key, row)
     try {
       const list = await getProducts()
       const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
@@ -875,6 +931,7 @@ export default function StockInout() {
           priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
           receiver: parseFloat(row?.inQty || '0') > 0 && hit?.supplier ? String(hit.supplier) : row?.receiver,
         })
+        await refreshHifoSplitHint(key, qtyAtPick, name, code)
       }
     } catch { /* ignore */ }
   }
@@ -983,7 +1040,10 @@ export default function StockInout() {
     }
   }
   const handleInQty = async (key: string, v: string) => {
-    const row = newRows.find(r => r.key === key)
+    const row = newRowsRef.current.find(r => r.key === key)
+    // 转成进货 → 之前的 HIFO 拆行作废
+    setNewRows(prev => prev.filter(r => !(r.hifoBase === key)))
+    patchNew(key, { hifoTiers: 0, hifoSplitQty: '' })
     patchNew(key, {
       inQty: v,
       outQty: parseFloat(v) > 0 ? '0' : row?.outQty || '',
@@ -998,8 +1058,75 @@ export default function StockInout() {
       patchNew(key, { price: dp !== null ? dp : '0.00', priceMode: 'manual' })
     }
   }
+  /** 取某新增行当前出货量：DOM 优先（刚输入的最新值），state 兜底 */
+  const pickRowOutQty = (key: string, row?: NewRow): string => {
+    const trs = Array.from(document.querySelectorAll('#stock-table tbody tr.new-row'))
+    const idx = newRowsRef.current.findIndex(r => r.key === key)
+    if (idx >= 0 && trs[idx]) {
+      const inp = trs[idx].querySelector('input.out-qty') as HTMLInputElement | null
+      if (inp && inp.value) return inp.value
+    }
+    return row?.outQty || ''
+  }
+
+  /** 判断这次出货要不要走 HIFO 多层：要则在该行显示「HIFO 拆 N 行」按钮。
+   *  ⚠ 只提示、不改写用户输入的数量——用户填 80 就应保持 80，拆行由用户点按钮触发。 */
+  const refreshHifoSplitHint = async (key: string, outQtyRaw: string, productName: string, codeNumber?: string) => {
+    const outQty = parseFloat(outQtyRaw) || 0
+    setNewRows(prev => prev.filter(r => !(r.hifoBase === key)))   // 数量/货品变了 → 之前拆出来的行作废
+    patchNew(key, { hifoTiers: 0, hifoSplitQty: '' })
+    if (outQty <= 0 || !productName) return
+    try {
+      const batches = await getPriceBatches(productName, codeNumber || undefined, system)
+      if (!batches || batches.length === 0) return
+      const top = batches[0]
+      if (top.available_stock >= outQty) return                  // 最高价那层就够 → 不提示
+      let remaining = outQty, tiers = 0
+      for (const b of batches) { if (remaining <= 0) break; const d = Math.min(remaining, b.available_stock); if (d > 0) tiers++; remaining = Math.round((remaining - d) * 1000) / 1000 }
+      if (tiers > 1) patchNew(key, { hifoTiers: tiers, hifoSplitQty: String(outQty) })
+    } catch { /* ignore */ }
+  }
+
+  /** 按 HIFO 真正拆行：第一层留在原行，其余插到其后（用户点「HIFO 拆行」按钮才执行） */
+  const applyHifoSplit = async (key: string, outQtyRaw: string, productName: string, codeNumber?: string) => {
+    const outQty = parseFloat(outQtyRaw) || 0
+    if (outQty <= 0 || !productName) return
+    setNewRows(prev => prev.filter(r => !(r.hifoBase === key)))
+    try {
+      const batches = await getPriceBatches(productName, codeNumber || undefined, system)
+      if (!batches || batches.length === 0) return
+      const totalStock = batches.reduce((s, b) => s + b.available_stock, 0)
+      if (outQty > totalStock) {
+        showMsg(`总库存不足！需要 ${outQty}，可用 ${totalStock.toFixed(3)}`, 'error'); return
+      }
+      let remaining = outQty
+      const splitRows: { key: string; price: string; qty: string }[] = []
+      for (let i = 0; i < batches.length && remaining > 0; i++) {
+        const b = batches[i]
+        const deduct = Math.min(remaining, b.available_stock)
+        remaining = Math.round((remaining - deduct) * 1000) / 1000
+        if (i === 0) patchNew(key, { outQty: String(deduct), price: b.price, priceMode: 'batch', hifoTiers: 0, hifoSplitQty: '' })
+        else splitRows.push({ key: 'new-' + Date.now() + '-' + (newRowCounter.current++), price: b.price, qty: String(deduct) })
+      }
+      if (splitRows.length > 0) {
+        setNewRows(prev => {
+          const idx = prev.findIndex(r => r.key === key)
+          if (idx < 0) return prev
+          const base = prev[idx]
+          const next = [...prev]
+          next.splice(idx + 1, 0, ...splitRows.map(sr => ({
+            ...base, key: sr.key, outQty: sr.qty, price: sr.price, priceMode: 'batch' as string, inQty: '0', hifoBase: key,
+            hifoTiers: 0, hifoSplitQty: '',
+          })))
+          return next
+        })
+        showMsg(`已按 HIFO 拆分为 ${splitRows.length + 1} 行（最高价先出）`, 'success')
+      }
+    } catch { /* ignore */ }
+  }
+
   const handleOutQty = async (key: string, v: string) => {
-    const row = newRows.find(r => r.key === key)
+    const row = newRowsRef.current.find(r => r.key === key)
     patchNew(key, {
       outQty: v,
       inQty: parseFloat(v) > 0 ? '0' : row?.inQty || '',
@@ -1014,43 +1141,10 @@ export default function StockInout() {
         .then((list) => { if (list && list.length) patchNew(key, { stockOptions: list }) })
         .catch(() => {})
     }
-    if (!row || parseFloat(v) <= 0) return
-    if (!row.productName) return
-    setNewRows(prev => prev.filter(r => !(r.hifoBase === key)))
-    const outQty = parseFloat(v) || 0
-    try {
-      const batches = await getPriceBatches(row.productName, row.codeNumber || undefined, system)
-      if (!batches || batches.length === 0) return
-      const totalStock = batches.reduce((s, b) => s + b.available_stock, 0)
-      if (outQty > totalStock) {
-        showMsg(`总库存不足！需要 ${outQty}，可用 ${totalStock.toFixed(3)}`, 'error'); return
-      }
-      if (batches[0].available_stock >= outQty) {
-        patchNew(key, { price: batches[0].price, priceMode: 'batch' }); return
-      }
-      let remaining = outQty
-      const splitRows: { key: string; price: string; qty: string }[] = []
-      for (let i = 0; i < batches.length && remaining > 0; i++) {
-        const b = batches[i]
-        const deduct = Math.min(remaining, b.available_stock)
-        remaining = Math.round((remaining - deduct) * 1000) / 1000
-        if (i === 0) patchNew(key, { outQty: String(deduct), price: b.price, priceMode: 'batch' })
-        else splitRows.push({ key: 'new-' + Date.now() + '-' + (newRowCounter.current++), price: b.price, qty: String(deduct) })
-      }
-      if (splitRows.length > 0) {
-        const base = row
-        setNewRows(prev => {
-          const idx = prev.findIndex(r => r.key === key)
-          const next = [...prev]
-          next.splice(idx + 1, 0, ...splitRows.map(sr => ({
-            ...base, key: sr.key, outQty: sr.qty, price: sr.price, priceMode: 'batch' as string, inQty: '0', hifoBase: key,
-          })))
-          return next
-        })
-        showMsg(`已自动拆分为 ${splitRows.length + 1} 行（HIFO 最高价先出）`, 'success')
-      }
-    } catch { /* ignore */ }
+    if (!row?.productName) return
+    await refreshHifoSplitHint(key, v, row.productName, row.codeNumber || undefined)
   }
+
   /** 批量保存新增行（对齐 batchSaveNewRows） */
   const saveNewRows = async () => {
     if (saving) return // 防连点/重复提交
@@ -1596,7 +1690,7 @@ export default function StockInout() {
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : (r.codeNumber || '-')}</td>
                       <td className="product-name-cell">{isEditing
-                        ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v, o) => onEditPickProduct(Number(r.id), v, (o as any)?.code)} style={{ width: '100%', minWidth: 0 }} />
+                        ? <Combobox className="product-combo" options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v, o) => onEditPickProduct(Number(r.id), v, (o as any)?.code)} style={{ width: '100%', minWidth: 0 }} />
                         : <b>{r.productName}</b>}</td>
                       <td>{isEditing
                         ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.inQuantity || ''}
@@ -1734,18 +1828,18 @@ export default function StockInout() {
                 )}
                 {/* 行内新增（对齐 addNewRowWithDate）：始终追加到表格底部 */}
                 {!batchMode && newRows.map((nr) => (
-<tr key={nr.key} className="new-row">
+<tr key={nr.key} className="new-row" data-key={nr.key}>
                     <td><input type="date" className="table-input" value={nr.date} onChange={(e) => patchNew(nr.key, { date: e.target.value })} /></td>
                     <td><Combobox options={codeOptions} value={nr.codeNumber} placeholder="编号"
                       onChange={(v) => patchNew(nr.key, { codeNumber: v })}
                       onSelect={(v) => onPickCode(nr.key, v)} /></td>
-                    <td><Combobox options={productOptions} value={nr.productName} placeholder="货品"
+                    <td><Combobox className="product-combo" options={productOptions} value={nr.productName} placeholder="货品"
                       onChange={(v) => patchNew(nr.key, { productName: v })}
                       onSelect={(v, o) => onPickProduct(nr.key, v, (o as any)?.code)} /></td>
                     <td><input type="number" className="table-input" min={0} step="0.001" placeholder="0" value={nr.inQty}
                       disabled={parseFloat(nr.outQty) > 0} /* 对齐旧系统 enforceQuantityMutex：出>0 时禁用进货 */
                       onChange={(e) => handleInQty(nr.key, e.target.value)} /></td>
-                    <td><input type="number" className="table-input" min={0} step="0.001" placeholder="0" value={nr.outQty}
+                    <td><input type="number" className="table-input out-qty" min={0} step="0.001" placeholder="0" value={nr.outQty}
                       disabled={parseFloat(nr.inQty) > 0} /* 对齐旧系统 enforceQuantityMutex：进>0 时禁用出货 */
                       onChange={(e) => handleOutQty(nr.key, e.target.value)} /></td>
                     <td>
@@ -1766,6 +1860,14 @@ export default function StockInout() {
                     <td>
                       <div className="currency-display">
                         <span className="currency-symbol">RM</span>
+                        {/* HIFO：出货量跨多个价格层时给出拆行按钮（点它才拆，不擅自改写已填数量） */}
+                        {(nr.hifoTiers || 0) > 1 && (
+                          <button type="button" className="hifo-split-btn"
+                            title={`本次出货 ${nr.hifoSplitQty} 跨 ${nr.hifoTiers} 个价格层，按 HIFO 从最高价逐层扣`}
+                            onClick={() => applyHifoSplit(nr.key, nr.hifoSplitQty || nr.outQty, nr.productName, nr.codeNumber || undefined)}>
+                            <i className="fas fa-layer-group" /> HIFO 拆 {nr.hifoTiers} 行
+                          </button>
+                        )}
                         {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode !== 'manual' ? (
                           <select className="table-select" style={{ width: '100%' }} value={nr.price}
                             onChange={(e) => patchNew(nr.key, { price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
