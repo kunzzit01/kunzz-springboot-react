@@ -74,7 +74,14 @@ body {
 .btn-info { background: #e6f4ff; color: #1677ff; border-color: #91caff; }
 .btn-info:hover { background: #d5edff; }
 .btn-default { background: #fff; border-color: #d9d9d9; color: #333; }
-.btn-default:hover { border-color: #ff5c00; color: #ff5c00; }
+/* hover 必须自带背景色：styles/media.css 里有一条「无页面作用域」的全局 .btn:hover（橙底 + 橙色光晕 + 上浮），
+   与本条优先级相同；本条若只写文字/边框色，背景就会被它刷成 #f98500，
+   再叠上这里的 color:#ff5c00 → 橙字压橙底，hover 时文字几乎看不见。
+   自带浅底 + 同色系柔和光晕后，全站（货品种类 / 货品备注 / 菜单 / 分店 / 回收站…）的 btn-default hover 都恢复正常。 */
+.btn-default:hover {
+  background: #fff7f0; border-color: #ff5c00; color: #ff5c00;
+  box-shadow: 0 2px 6px rgba(255, 92, 0, 0.18); transform: translateY(-1px);
+}
 .btn-danger { background: #fff1f0; color: #cf1322; border-color: #ffccc7; }
 
 /* 筛选栏 / 表格 */

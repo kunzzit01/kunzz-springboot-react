@@ -915,7 +915,9 @@
   font-weight: 600;
 }
 
-/* ---------- 备注编号选择器（出货时挑在库编号 + 剩余量，不必再跑货品备注页） ---------- */
+/* ---------- 备注编号选择器（出货时挑在库编号 + 剩余量） ----------
+   注意：浮层 portal 到 body，不在 .sio-root 作用域内 → 面板样式必须内联（见 StockInout.tsx）。
+   这里只留表格内的那个箭头按钮（它在表格里，属于 .sio-root）。 ---------- */
 .sio-root .remark-pick-btn {
   display: inline-flex;
   align-items: center;
@@ -933,27 +935,68 @@
 .sio-root .remark-pick-btn:hover { background: #f3f4f6; color: #111827; }
 .sio-root .remark-pick-btn.open { background: #fef3c7; color: #92400e; }
 
-.sio-root .remark-pick {
-  /* 浮层由组件 portal 到 body 并 fixed 定位（td 有 overflow:hidden，absolute 会被裁掉） */
-  min-width: 190px;
-  overflow: auto;
-  background: #fff;
-  border: 1px solid #d1d5db;
+/* ---------- 货品选择栏（行内新增/编辑行的「货品」输入框） ----------
+   与下拉选单同一套品牌色：边框 2px #f99e00 + 米白底 + 略放大（高度 44px / 字号 ~14px）。
+   选单本身 portal 到 body，样式内联在 StockInout.tsx（class 选择器命中不到）。 ---------- */
+.sio-root .stock-table .product-combo input.table-input {
+  height: 44px;
+  border: 2px solid #f99e00;
+  border-radius: 8px;
+  background: #fffdf6;
+  color: #111827;
+  font-weight: 500;
+  font-size: clamp(10px, 0.82vw, 15px);
+  padding: 8px 6px;
+}
+.sio-root .stock-table .product-combo input.table-input::placeholder { color: #b98a3a; font-weight: 400; }
+.sio-root .stock-table .product-combo input.table-input:hover {
+  background: #fff; border-color: #f98500; box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.12);
+}
+.sio-root .stock-table .product-combo input.table-input:focus {
+  background: #fff; border: 2px solid #f98500; box-shadow: 0 0 0 3px rgba(249, 158, 0, 0.18);
+}
+.sio-root .stock-table .product-combo input.table-input:disabled {
+  border-color: #e5e7eb; background: #f3f4f6; box-shadow: none;
+}
+
+/* 下拉选单入场（选单 portal 到 body，keyframes 为全局名，内联 animation 引用） */
+@keyframes sioComboPop {
+  from { opacity: 0; transform: translateY(-4px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ---------- 选单滚动条（货品/编号下拉 + 备注编号选择器） ----------
+   这两个浮层 portal 到 body，不在 .sio-root 作用域内，故下面不加前缀。
+   目的是替掉 Windows 默认那条又粗又带上下箭头的滚动条：细、圆角、米色。 ---------- */
+.sio-combo-panel { scrollbar-width: thin; scrollbar-color: #e3d9c6 transparent; }
+.sio-combo-panel::-webkit-scrollbar { width: 10px; }
+.sio-combo-panel::-webkit-scrollbar-track { background: transparent; }
+.sio-combo-panel::-webkit-scrollbar-thumb {
+  background: #e3d9c6;
+  border: 3px solid #fff; /* 白色内衬 → 视觉上更细的一条 */
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+.sio-combo-panel::-webkit-scrollbar-thumb:hover { background: #cfc0a4; background-clip: padding-box; border: 3px solid #fff; }
+.sio-combo-panel::-webkit-scrollbar-button { display: none; width: 0; height: 0; } /* 去掉上下箭头 */
+.sio-combo-panel::-webkit-scrollbar-corner { background: transparent; }
+
+/* HIFO 拆行按钮（出货量跨多个价格层时出现在单价列；点了才拆，不擅自改写已填数量） */
+.sio-root .hifo-split-btn {
+  display: block;
+  width: 100%;
+  margin-bottom: 3px;
+  padding: 3px 6px;
+  border: 1px solid #f99e00;
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
-  text-align: left;
-}
-.sio-root .remark-pick-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 10px;
+  background: #fff4e0;
+  color: #8a5a00;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
   cursor: pointer;
-  font-size: 13px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.sio-root .remark-pick-item:hover { background: #f8f5eb; }
-.sio-root .remark-pick-item .rp-code { font-weight: 600; }
-.sio-root .remark-pick-item .rp-qty { color: #6b7280; font-size: 12px; }
-.sio-root .remark-pick-empty { padding: 8px 10px; color: #9ca3af; font-size: 13px; }
+.sio-root .hifo-split-btn:hover { background: #ffe9c4; }
