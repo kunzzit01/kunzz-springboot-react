@@ -440,8 +440,8 @@ export default function StockInout() {
       // 点击快速选择（时段）菜单外部时关闭
       const qd = document.querySelector('.sio-root .quick-dropdown')
       if (qd && !t.closest('.quick-dropdown')) setQuickOpen(false)
-      // 点击备注编号选择器外部时关闭
-      if (!t.closest('.remark-pick') && !t.closest('.remark-pick-btn')) setRemarkPickFor(null)
+      // 点击备注编号选择器外部时关闭（点编号框本身不关：它自己负责开/关，否则会被这次 click 立刻关掉）
+      if (!t.closest('.remark-pick') && !t.closest('.remark-pick-btn') && !t.closest('.remark-code-input')) setRemarkPickFor(null)
       const w = document.querySelector('.sio-root .header-search .smartSearchWrapper')
       if (w && w.contains(t)) return
       if (!searchInputRef.current?.value) setSearchExpanded(false)
@@ -1786,7 +1786,7 @@ export default function StockInout() {
                               <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!checked}
                                 value={pre} onChange={(e) => patchEdit({ remarkNumber: e.target.value.toUpperCase() + '-' + suf })} />
                               <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
-                              <input className="table-input" style={{ flex: '1 1 44px', minWidth: 30, textAlign: 'center', border: 'none', color: checked && !hasOut ? '#9ca3af' : undefined }}
+                              <input className="table-input remark-code-input" style={{ flex: '1 1 44px', minWidth: 30, textAlign: 'center', border: 'none', color: checked && !hasOut ? '#9ca3af' : undefined }}
                                 placeholder={checked && !hasOut ? '自动' : '编号'}
                                 disabled={!checked || !hasOut}
                                 title="点这里可选择在库备注编号（含剩余量），也可直接输入"
@@ -1924,7 +1924,7 @@ export default function StockInout() {
                           <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
                           {/* 对齐旧系统：进货时编号由后端自动生成（输入框禁用），出货时手动填写；
                               出货时点这个框即弹出「在库编号 + 剩余量」清单（无需额外的箭头按钮，避免挤占宽度/影响美观） */}
-                          <input className="table-input" style={{ flex: '1 1 44px', minWidth: 30, textAlign: 'center', border: 'none', color: !(parseFloat(nr.outQty || '0') > 0) && nr.remarkChecked ? '#9ca3af' : undefined }}
+                          <input className="table-input remark-code-input" style={{ flex: '1 1 44px', minWidth: 30, textAlign: 'center', border: 'none', color: !(parseFloat(nr.outQty || '0') > 0) && nr.remarkChecked ? '#9ca3af' : undefined }}
                             placeholder={nr.remarkChecked && !(parseFloat(nr.outQty || '0') > 0) ? '自动' : '编号'}
                             disabled={!nr.remarkChecked || !(parseFloat(nr.outQty || '0') > 0)}
                             title="点这里可选择在库备注编号（含剩余量），也可直接输入"

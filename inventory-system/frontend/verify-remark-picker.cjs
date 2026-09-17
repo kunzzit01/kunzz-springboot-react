@@ -67,15 +67,12 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
     }
   }, pos)
   console.log('  命中检查:', JSON.stringify(who))
-  // 直接派发 mousedown（headless 坐标点击常不稳）
-  await p.evaluate(() => {
-    const tr = document.querySelector('#stock-table tbody tr.new-row')
-    const ins = Array.from(tr.querySelectorAll('input.table-input'))
-    const i = ins.findIndex(e => e.placeholder === '前缀')
-    const el = ins[i + 1]
-    el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 1, clientY: 1 }))
-  })
+  // 真实鼠标点击（按下→抬起），这正是之前会「开了又关」的路径
+  await p.mouse.move(pos.x, pos.y); await sleep(80)
+  await p.mouse.down(); await sleep(80); await p.mouse.up()
   await sleep(2500)
+  const stillOpen = await p.evaluate(() => ({ 面板: !!document.querySelector('.remark-pick'), 项数: document.querySelectorAll('.remark-pick .remark-pick-item').length }))
+  console.log('  真实点击后面板:', JSON.stringify(stillOpen))
   const list = await p.evaluate(() => Array.from(document.querySelectorAll('.remark-pick .remark-pick-item')).map(it => it.innerText.replace(/\s+/g, ' ').trim()).slice(0, 4))
   console.log('③ 点框后弹出清单:', JSON.stringify(list))
 
