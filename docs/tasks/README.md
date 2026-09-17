@@ -33,4 +33,4 @@
 | 2026-09-17-anti-collision-rules | 已完成 | AGENTS.md、.githooks/、.gitattributes | main |
 | 2026-09-17-updater-guard | 已完成 | git-update.ps1、AGENTS.md、docs/tasks/ | main |
 | 2026-09-17-pin-freezer | 已完成 | 冰箱分类功能 15 个文件（固化并发会话未提交的改动） | main |
-| 2026-09-17-push-all | 进行中 | 固化全部剩余改动（代码 / 构建产物 / 文档），分 4 个提交 | main |
+| 2026-09-17-push-all | 已完成 | 固化全部剩余改动（代码 / 构建产物 / 文档），分 4 个提交 | main |
