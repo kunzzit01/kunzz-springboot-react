@@ -858,7 +858,7 @@ body::-webkit-scrollbar {
         gap: 0;
         background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%),
-            url('/images/背景3.jpg') no-repeat center center/cover;
+            url('/images/背景3.webp') no-repeat center center/cover;
     }
 
     .comprofile-section {
