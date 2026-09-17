@@ -1305,3 +1305,219 @@ docker ps --format '{{.Names}}' | wc -l                # 确认 18 个容器仍�
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+---
+
+# 🚀 第二阶段：切域名 runbook（2026-09-19 计划）
+
+> **决策已定**（2026-09-18 用户确认）：
+> ① DNS 所在的 Hostinger 账号是用户自己的 → 可以自己改记录
+> ② 旧 PHP 站**明天可以停** → 走 **方案 C：正式切换，VPS 库成为唯一真相**
+
+## 0. 关键路径（按依赖排序）
+
+```
+[今天必须先做]  门① 子域名 + 打通 80/443 + HTTPS
+                        ↑ 这是唯一的未知数：80/443 现在归 Traefik
+        ↓
+[明天低峰期]    门② 冻结旧站 → 导最终 dump → 导入 VPS
+        ↓
+               门③ 改主域名 A 记录 → 验证 → 完成
+```
+
+> ⚠️ **门① 不打通就不要动主域名。** 否则用户访问 `https://www.kunzzgroup.com` 会打到 Traefik
+> 而不是 KUNZZ（现在是 404/其他站），等于用一个坏状态替换一个正常营业的站。
+
+## 1. 门① 子域名测试（今天，零风险）
+
+### 1.1 DNS 加一条记录
+
+在自己的 Hostinger 账号：`hPanel → Domains → kunzzgroup.com → DNS Zone Editor`
+
+```
+类型 A ｜ 名称 new ｜ 值 187.127.125.136 ｜ TTL 300
+```
+
+### 1.2 先确认带端口能通（不依赖 Traefik）
+
+```
+http://new.kunzzgroup.com:8080/         后台
+http://new.kunzzgroup.com:8080/home/    官网
+```
+
+通了说明 DNS 生效 ✓，然后才动 80/443。
+
+### 1.3 把 80/443 接给 KUNZZ（**需要先确认 Traefik 配置方式**）
+
+两条命令取配置方式：
+
+```bash
+docker inspect traefik-traefik-1 --format '{{json .Mounts}}' | tr ',' '\n' | grep -iE 'source|destination'
+```
+```bash
+docker inspect traefik-traefik-1 --format '{{.Config.Cmd}}' && docker inspect traefik-traefik-1 --format '{{json .Config.Labels}}'
+```
+
+| 情况 | 接法 |
+|---|---|
+| **file provider 已启用**（有挂载 `dynamic.yml` 之类）| 往该文件**追加**一个 router + service：`Host(new.kunzzgroup.com)` → `http://127.0.0.1:8080`。**只加不改**，Traefik 热加载，无需重启 |
+| **只有 docker provider**（靠 labels）| 需要先启用 file provider（加挂载 + 启动参数），**会重启 Traefik** → 影响其余容器，要挑时间 |
+| **Traefik 有 dashboard** | 直接看 Routers/Services，确认现有路由规则再照抄格式 |
+
+**TLS**：Traefik 的 ACME 会自动为 `new.kunzzgroup.com` 签证书（如果已配 `--certificatesresolvers`）；
+否则用 certbot。**证书签下来之前不要动主域名。**
+
+## 2. 门② 数据冻结与迁移（明天低峰期）
+
+### T-30min 准备
+
+```bash
+# ① 备份 VPS 现有库与文件（回滚用）
+sudo mysqldump --single-transaction --routines --triggers u690174784_kunzz | gzip > /opt/backups/pre_cutover_$(date +%F_%H%M).sql.gz
+tar czf /opt/backups/pre_cutover_files_$(date +%F_%H%M).tar.gz -C /opt/inventory data uploads
+```
+
+```bash
+# ② 通知员工停止使用旧系统，并确认旧系统不再有新写入
+```
+
+### T-0 导出旧站最终数据
+
+1. 在 **Hostinger 旧账号**的 phpMyAdmin 导出 `u690174784_kunzz`（结构+数据，**不要**包含建库语句也可，导入时指定库名）
+2. **同时**把旧站的 `uploads/` / `media/` 目录打包下载（旧后台可能上传过新照片，git 里没有）
+
+> ⚠️ **已知坑（`docs/OPS.md` 记录过）**：Hostinger 的 MariaDB 是 11.8，导出的 dump 可能含
+> `utf8mb4_uca1400_ai_ci` 排序规则。**本地 MariaDB 10.4 不支持，需要 sed 替换；
+> 但 VPS 上是 10.11（10.10+ 才有 uca1400），理论上支持，无需替换。**
+> 导入前先查：`grep -c uca1400 dump.sql`
+> - 返回 0 → 直接导入
+> - 返回 >0 → 先试直接导入；若报 `Unknown collation`，再按 `DB_IMPORT.md` 的方式 sed 替换成 `utf8mb4_unicode_ci`
+
+### T+0 导入 VPS
+
+```bash
+ls -l /opt/inventory/final_dump.sql        # 核对字节数
+sudo mariadb -e "SELECT @@hostname, @@port;"   # 确认是本机
+sudo mariadb -e "DROP DATABASE u690174784_kunzz; CREATE DATABASE u690174784_kunzz CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+sudo mariadb u690174784_kunzz < /opt/inventory/final_dump.sql
+echo "import exit=$?"                      # 必须 0
+sudo mariadb < /opt/inventory/add_new_tables.sql     # 补 freezer_categories
+```
+
+```bash
+# 同步旧站的媒体文件（如果新下载的有更新）
+cp -r /新下载的/uploads/. /opt/inventory/uploads/
+chown -R kunzz:kunzz /opt/inventory
+```
+
+```bash
+# 🔴 重新封堵 demo 弱口令（dump 会把它带回来）
+sudo mariadb u690174784_kunzz -e "UPDATE users SET username='demo_disabled', email='demo_disabled@kunzz.local', password='disabled' WHERE username='demo';"
+```
+
+### 校验（必须全部命中）
+
+```bash
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='u690174784_kunzz';"
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM freezer_categories;"
+sudo mariadb u690174784_kunzz -e "SELECT COUNT(*) FROM users;"
+```
+
+**并抽查几条当天的真实进出货记录**（数量、金额要和旧站最后看到的一致）。
+
+## 3. 门③ 切换域名
+
+### 3.1 改环境变量为正式域名
+
+```bash
+sudo sed -i 's|^APP_BASE_URL=.*|APP_BASE_URL=https://www.kunzzgroup.com|' /etc/inventory-backend.env
+sudo sed -i 's|^CORS_ALLOWED_ORIGINS=.*|CORS_ALLOWED_ORIGINS=https://www.kunzzgroup.com,https://kunzzgroup.com|' /etc/inventory-backend.env
+sudo systemctl restart inventory-backend
+```
+
+### 3.2 加旧 URL 的 301 重定向（接住老书签和旧链接）
+
+旧站的 `.php` 页面**都已经迁移到新站了**，所以直接 301 过去即可：
+
+```bash
+sudo tee /etc/nginx/snippets/kunzz-legacy-redirects.conf >/dev/null <<'NGINX'
+# 旧 PHP 站 URL → 新站对应页面
+location = /index.php                  { return 301 /home/; }
+location = /about.php                  { return 301 /home/about; }
+location = /joinus.php                 { return 301 /home/joinus; }
+location = /tokyo-japanese-cuisine.php { return 301 /home/tokyo; }
+location = /tokyo-izakaya.php          { return 301 /home/tokyo; }
+location = /frontend/login.html        { return 301 /login; }
+location = /frontend/success.html      { return 301 /home/; }
+location /frontend/                    { return 301 /home/; }
+location /backend/                     { return 301 /home/; }
+NGINX
+```
+
+然后在 `/etc/nginx/sites-available/kunzz` 的 `server {}` 内加一行引用，并 `nginx -t && systemctl reload nginx`：
+```nginx
+include /etc/nginx/snippets/kunzz-legacy-redirects.conf;
+```
+
+> ⚠️ `location /` 是 SPA 回退，这些 `location =` 精确匹配要**放在它前面**（nginx 精确匹配 `=` 优先级高于前缀匹配，位置无关，但放前面更清晰）。
+
+### 3.3 改 DNS 主域名
+
+```
+hPanel → DNS Zone Editor：
+  kunzzgroup.com      A → 187.127.125.136
+  www.kunzzgroup.com  A → 187.127.125.136
+```
+
+> 🔴 **改之前把原值抄下来（回滚用）**：
+> `kunzzgroup.com → 145.79.24.162` ／ `www.kunzzgroup.com → 145.79.29.154`
+
+### 3.4 验证（逐项打勾）
+
+```bash
+curl -s -o /dev/null -w "root=%{http_code}\n"      https://www.kunzzgroup.com/
+curl -s -o /dev/null -w "home=%{http_code}\n"      https://www.kunzzgroup.com/home/
+curl -s -o /dev/null -w "login=%{http_code}\n"     https://www.kunzzgroup.com/login
+curl -s -o /dev/null -w "api=%{http_code}\n"       https://www.kunzzgroup.com/api/auth/me
+curl -s -o /dev/null -w "redirect=%{http_code}\n"  https://www.kunzzgroup.com/frontend/login.html
+```
+
+期望 `200 / 200 / 200 / 401 / 301`。
+
+**浏览器实测**：登录 → 总库存（冰箱分类/位次）→ 进出货 → PDF → 官网 → **手机上打开一次**。
+
+## 4. 回滚触发条件与动作
+
+**触发条件（任一出现）：**
+- 登录不了 / 数据对不上 / 页面白屏
+- 关键业务操作报错
+- 30 分钟内无法定位原因
+
+**回滚动作（几分钟生效）：**
+```
+① DNS：把 kunzzgroup.com / www 的 A 记录改回原值
+        kunzzgroup.com     → 145.79.24.162
+        www.kunzzgroup.com → 145.79.29.154
+② 后端：sudo cp /etc/inventory-backend.env.bak /etc/inventory-backend.env && sudo systemctl restart inventory-backend
+③ 数据：sudo mariadb u690174784_kunzz < /opt/backups/pre_cutover_*.sql.gz 之后重建
+```
+
+> 🔴 **旧 Hostinger 主机在切换后至少保留 2 周不要退订。** 它是唯一的回滚退路。
+> 等新系统稳定运行、并且你确认旧站的业务都已经在新系统里可用，再考虑退订。
+
+## 5. 切换后要跟进的代码清理（需批准）
+
+| # | 位置 | 问题 |
+|---|---|---|
+| 1 | `MediaServeController.REMOTE_MEDIA_BASE` | 切换后指向自己 → 自引用。建议改为可配置或移除兜底 |
+| 2 | `TimelineController.REMOTE_API` / `REMOTE_IMG_BASE` | 同上 |
+| 3 | `website/.env.production` 的 `VITE_PHP_BASE` | 已无意义（旧站要下线了）|
+| 4 | `website/src/pages/TokyoPage.jsx` 的 4 处 `replaceAll(...kunzzgroup.com...)` | 东京页里那些 `.php` 链接现在被重写成绝对旧站地址 —— 切换后应该改成指向新站路由，或配合 §3.2 的 301 |
+| 5 | `website/src/components/{cn,en}/Header.jsx` | **待浏览器确认**：logo/首页用 `href="/"`、EN 用 `href="/Home_en"`，是绝对根路径 —— 若点击后跳到后台登录页，需要改成 `/home/...` |
+
+## 6. 门① 完成前不要做的事
+
+- ❌ 不要改主域名 A 记录
+- ❌ 不要停旧 Hostinger 主机
+- ❌ 不要动 NS（会把 MX 邮件记录一起带走）
+- ❌ 不要重启 VPS（会重启 18 个容器）
