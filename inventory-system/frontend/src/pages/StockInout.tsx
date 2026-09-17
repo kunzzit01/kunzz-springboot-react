@@ -792,8 +792,15 @@ export default function StockInout() {
     } catch { setRemarkPickOpts([]) } finally { setRemarkPickLoading(false) }
   }
   /** 备注编号选择器浮层（新增行/编辑行共用） */
-  const renderRemarkPicker = (key: string, onPick: (remarkNumber: string) => void) => {
+  const renderRemarkPicker = (key: string, onPick: (remarkNumber: string) => void, currentValue?: string) => {
     if (remarkPickFor !== key || !remarkPickPos) return null
+    // 当前已选中的编号：调用方给的是「编号后缀」（如 195）或完整编号（如 SA-195），两种都归一成后缀比对
+    const curRaw = String(currentValue || '').trim().toUpperCase()
+    const cur = curRaw.indexOf('-') >= 0 ? curRaw.slice(curRaw.lastIndexOf('-') + 1) : curRaw
+    const suffixOf = (rn: string) => {
+      const v = String(rn || '').toUpperCase()
+      return v.indexOf('-') >= 0 ? v.slice(v.lastIndexOf('-') + 1) : v
+    }
     return createPortal(
       // 样式内联：浮层 portal 到 body，不在 .sio-root 作用域内（class 选择器命中不到）；
       // sio-combo-panel 只用于滚动条（伪元素没法内联）。与货品下拉选单同一套外观。
@@ -812,10 +819,22 @@ export default function StockInout() {
           <div style={{ padding: '14px', color: '#9ca3af', fontSize: 15, textAlign: 'center' }}>该货品当前没有在库备注编号</div>
         )}
         {!remarkPickLoading && remarkPickOpts.map((o, i) => (
-          <div key={o.remark_number} className="remark-pick-item"
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 16, lineHeight: 1.35, whiteSpace: 'nowrap', borderTop: i > 0 ? '1px solid #f1ece2' : 'none', transition: 'background .12s ease, box-shadow .12s ease' }}
+          <div key={o.remark_number} className={'remark-pick-item' + (suffixOf(o.remark_number) === cur && cur !== '' ? ' active' : '')}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 16, lineHeight: 1.35, whiteSpace: 'nowrap', borderTop: i > 0 ? '1px solid #f1ece2' : 'none',
+              transition: 'background .12s ease, box-shadow .12s ease',
+              // 已选中项：常亮底色 + 左侧色条（否则用户看不出当前选的是哪条）
+              background: suffixOf(o.remark_number) === cur && cur !== '' ? '#fff4e0' : 'transparent',
+              boxShadow: suffixOf(o.remark_number) === cur && cur !== '' ? 'inset 3px 0 0 #f99e00' : 'none',
+              fontWeight: suffixOf(o.remark_number) === cur && cur !== '' ? 700 : 400,
+            }}
             onMouseEnter={e => { e.currentTarget.style.background = '#fff4e0'; e.currentTarget.style.boxShadow = 'inset 3px 0 0 #f99e00' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}
+            onMouseLeave={e => {
+              const on = suffixOf(o.remark_number) === cur && cur !== ''
+              e.currentTarget.style.background = on ? '#fff4e0' : 'transparent'
+              e.currentTarget.style.boxShadow = on ? 'inset 3px 0 0 #f99e00' : 'none'
+            }}
             onMouseDown={(e) => {
               e.preventDefault(); e.stopPropagation()
               if (remarkPickFiredRef.current) return
@@ -1798,7 +1817,7 @@ export default function StockInout() {
                                 }}
                                 value={suf} onChange={(e) => { patchEdit({ remarkNumber: pre + '-' + e.target.value.toUpperCase() }); setRemarkPickFor(null) }} />
                             </div>
-                            {renderRemarkPicker(pickKey, (rn) => patchEdit({ remarkNumber: rn.toUpperCase() }))}
+                            {renderRemarkPicker(pickKey, (rn) => patchEdit({ remarkNumber: rn.toUpperCase() }), suf)}
                           </div>
                         )
                       })() : (r.remarkNumber || '-')}</td>
@@ -1942,7 +1961,7 @@ export default function StockInout() {
                           patchNew(nr.key, d > 0
                             ? { remarkPrefix: rn.slice(0, d).toUpperCase(), remarkSuffix: rn.slice(d + 1).toUpperCase() }
                             : { remarkSuffix: rn.toUpperCase() })
-                        })}
+                        }, nr.remarkSuffix)}
                       </div>
                     </td>
                     <td><Combobox options={shipperOptions} value={nr.receiver} placeholder="请输入或选择收货人"

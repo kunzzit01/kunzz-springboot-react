@@ -92,6 +92,28 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
     return { 前缀: ins[i] ? ins[i].value : '', 编号: ins[i+1] ? ins[i+1].value : '', 面板: !!document.querySelector('.remark-pick') }
   })
   console.log('④ 选中「' + (it2 && it2.text) + '」后:', JSON.stringify(after))
+
+  // ⑤ 再打开一次：选中项应带 active 高亮
+  const pos3 = await p.evaluate(() => {
+    const tr = document.querySelector('#stock-table tbody tr.new-row')
+    const ins = Array.from(tr.querySelectorAll('input.table-input'))
+    const i = ins.findIndex(e => e.placeholder === '前缀')
+    const el = ins[i + 1]
+    const r = el.getBoundingClientRect()
+    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }
+  })
+  await p.mouse.move(pos3.x, pos3.y); await sleep(80); await p.mouse.down(); await sleep(80); await p.mouse.up()
+  await sleep(2500)
+  const active = await p.evaluate(() => {
+    const items = Array.from(document.querySelectorAll('.remark-pick .remark-pick-item'))
+    return {
+      面板项数: items.length,
+      active项: items.filter(it => it.classList.contains('active')).map(it => it.innerText.replace(/\s+/g, ' ').trim()),
+      active背景: (items.find(it => it.classList.contains('active')) || {}).style ? (items.find(it => it.classList.contains('active')) || {}).style.background : '(无)',
+    }
+  })
+  console.log('⑤ 重开后高亮:', JSON.stringify(active))
+  await p.screenshot({ path: '../../runtime/remark-active.png' })
   console.log('错误:', errs.length ? errs.slice(0,3) : '无')
   await p.screenshot({ path: '../../runtime/remark-nobox.png' })
   await b.close()
