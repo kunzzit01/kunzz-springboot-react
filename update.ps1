@@ -13,6 +13,8 @@
 #   3) 白名单齐全性校验：更新包缺必需文件时直接中止，绝不半更新。
 #   4) 备份改用 mysqldump --result-file 直写文件：旧写法经 PowerShell 管道，
 #      在非 UTF-8 控制台（如 ACP 1252）下会把中文产品名写坏，回滚文件等于废纸。
+#   5) 自我覆盖保护：包内 update.ps1 版本号低于本机时不覆盖自己，避免"修复版被旧包回滚"，
+#      这样单独把本文件拷给用户也能长期生效（不必等 GitHub 上的包更新）。
 $ErrorActionPreference = 'Stop'
 $ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $ROOT
@@ -28,7 +30,20 @@ $REQUIRED = @(
     'backend/target/inventory-backend-1.0.0.jar', 'backend/static'
 )
 # 可选文件（旧包可能没有；缺了只提示，不中止）
-$OPTIONAL = @('sync-live-data.bat', 'backup-data.ps1', 'inventory-system/frontend/sync-live-stock.cjs')
+$OPTIONAL = @(
+    'sync-live-data.bat', 'backup-data.ps1', 'inventory-system/frontend/sync-live-stock.cjs',
+    'Git更新.bat', 'git-update.ps1'
+)
+
+# 读取更新脚本版本号（首行的 vN），用于防止更新器被旧包降级覆盖
+function Get-UpdateScriptVersion([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return 0 }
+    try {
+        $first = Get-Content -LiteralPath $Path -TotalCount 1
+        if ($first -match 'v(\d+)') { return [int]$Matches[1] }
+    } catch {}
+    return 0
+}
 
 Write-Host ""
 Write-Host "  ============================================" -ForegroundColor Cyan
@@ -187,12 +202,15 @@ try {
     # 3b. 复制（-LiteralPath：中文名/括号名不被当通配符；缺失不再静默跳过）
     $script:updated = 0
     $script:skipped = @()
-    function Copy-In([string]$rel) {
+    function Copy-In([string]$rel, [switch]$Optional) {
         $from = Join-Path $src.FullName ($rel -replace '/', '\')
         $to   = Join-Path $ROOT ($rel -replace '/', '\')
         if (-not (Test-Path -LiteralPath $from)) {
-            $script:skipped += $rel
-            Write-Host "    [!!] 包内缺失，跳过: $rel" -ForegroundColor Yellow
+            # 可选文件缺失属正常（旧包没有），不算失败，也不进 skipped 汇总
+            if (-not $Optional) {
+                $script:skipped += $rel
+                Write-Host "    [!!] 包内缺失，跳过: $rel" -ForegroundColor Yellow
+            }
             return
         }
         New-Item -ItemType Directory -Path (Split-Path $to -Parent) -Force | Out-Null
@@ -200,8 +218,16 @@ try {
         $script:updated++
         Write-Host "    [OK] $rel" -ForegroundColor Green
     }
-    # 启动脚本
-    Copy-In 'start.ps1'; Copy-In 'update.ps1'; Copy-In '一键启动.bat'; Copy-In '更新系统.bat'
+    # 启动脚本（update.ps1 单独判定：包内版本更低时不自我覆盖，避免修复版被旧包回滚）
+    Copy-In 'start.ps1'; Copy-In '一键启动.bat'; Copy-In '更新系统.bat'
+    $pkgVer  = Get-UpdateScriptVersion (Join-Path $src.FullName 'update.ps1')
+    $selfVer = Get-UpdateScriptVersion (Join-Path $ROOT 'update.ps1')
+    if ($pkgVer -lt $selfVer) {
+        Write-Host ("    [i] 包内 update.ps1 为 v{0}，本机为 v{1}：跳过自我覆盖以免更新器降级（其余文件不受影响）" -f $pkgVer, $selfVer) -ForegroundColor Yellow
+        Write-Host "        建议让维护方把新版 update.ps1 推到 GitHub，后续更新才能自动带上修复。" -ForegroundColor Gray
+    } else {
+        Copy-In 'update.ps1'
+    }
     # 数据库补丁 + 数据包（新装/重装用；已装机器业务数据不受影响）
     Copy-In 'add_new_tables.sql'; Copy-In 'sync_cleanup.sql'
     Copy-In 'database/u690174784_kunzz.sql'
@@ -211,8 +237,10 @@ try {
     # 后端程序（含内嵌依赖，最新构建）
     Copy-In 'backend/target/inventory-backend-1.0.0.jar'
     # 数据同步工具（可选：按需覆盖脚本本体，不碰 live-credentials.json）
-    Copy-In 'sync-live-data.bat'; Copy-In 'backup-data.ps1'
-    Copy-In 'inventory-system/frontend/sync-live-stock.cjs'
+    Copy-In 'sync-live-data.bat' -Optional; Copy-In 'backup-data.ps1' -Optional
+    Copy-In 'inventory-system/frontend/sync-live-stock.cjs' -Optional
+    # Git 更新工具（可选：装了 Git 的机器可改用 Git更新.bat 走 git 增量更新）
+    Copy-In 'Git更新.bat' -Optional; Copy-In 'git-update.ps1' -Optional
     # 前端页面（后端从磁盘伺服 backend/static，必须随更新走）
     $staticFrom = Join-Path $src.FullName 'backend\static'
     if (Test-Path -LiteralPath $staticFrom) {
