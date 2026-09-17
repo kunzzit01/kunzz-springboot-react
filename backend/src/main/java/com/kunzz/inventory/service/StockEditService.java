@@ -1,5 +1,6 @@
 package com.kunzz.inventory.service;
 
+import com.kunzz.inventory.common.HtmlText;
 import com.kunzz.inventory.mapper.StockEditMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,8 @@ public class StockEditService {
         for (Map<String, Object> r : stockEditMapper.codeNumbers()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("code_number", str(r.get("code_number")));
-            m.put("product_name", str(r.get("product_name")));
+            // 货品名解码：与货品种类页/总库存页口径一致（老库有 &amp; 实体，编码/解码两套名字会导致下拉匹配不上）
+            m.put("product_name", HtmlText.decode(str(r.get("product_name"))));
             out.add(m);
         }
         return out;
@@ -37,12 +39,14 @@ public class StockEditService {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : stockEditMapper.products()) {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("product_name", str(r.get("product_name")));
+            // 货品名/供应商解码：货品种类页（StockProductService）本来就是解码后的值，
+            // 进出货这里不解码会出现「同一条货品两套名字」（如 L&amp;L FROZEN vs L&L FROZEN）→ 下拉里认不出、搜不到
+            m.put("product_name", HtmlText.decode(str(r.get("product_name"))));
             m.put("product_code", str(r.get("product_code")));
-            m.put("supplier", str(r.get("supplier")));
+            m.put("supplier", HtmlText.decode(str(r.get("supplier"))));
             // 对齐旧系统 code_by_product：自动补全规格/类型用
-            m.put("specification", str(r.get("specification")));
-            String cat = str(r.get("category"));
+            m.put("specification", HtmlText.decode(str(r.get("specification"))));
+            String cat = HtmlText.decode(str(r.get("category")));
             if (cat != null && (cat.equalsIgnoreCase("service line") || cat.equals("Drinks"))) {
                 cat = "Service Line";
             }

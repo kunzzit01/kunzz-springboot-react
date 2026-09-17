@@ -68,7 +68,7 @@ export function canAccess(perms: MyPerms | null | undefined, pathname: string, s
 }
 
 // —— 会话级缓存（一次登录拉一次，切换路由不再重复请求）——
-let permsPromise: Promise<MyPerms> | null = null
+let permsPromise: Promise<{ perms: MyPerms; isSpecial: boolean }> | null = null
 let specialFlag = false
 
 export function loadPagePerms(force = false): Promise<{ perms: MyPerms; isSpecial: boolean }> {

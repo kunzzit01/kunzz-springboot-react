@@ -105,7 +105,7 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
   options: ComboOption[]
   value: string
   onChange: (v: string) => void
-  onSelect?: (v: string) => void
+  onSelect?: (v: string, opt?: { label: string; value: string }) => void
   placeholder?: string
   style?: React.CSSProperties
   disabled?: boolean
@@ -198,7 +198,7 @@ function Combobox({ options, value, onChange, onSelect, placeholder, style, disa
         }}>
           {filtered.length === 0 && <div style={{ padding: 8, color: '#9ca3af', fontSize: 14 }}>无匹配</div>}
           {filtered.map((o, i) => (
-            <div key={o.value + '-' + i} onClick={() => { setFocusAll(false); onChange(o.value); onSelect?.(o.value); close() }}
+            <div key={o.value + '-' + i} onClick={() => { setFocusAll(false); onChange(o.value); onSelect?.(o.value, o); close() }}
               style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
               title={o.label}
               onMouseEnter={e => (e.currentTarget.style.background = '#f8f5eb')}
@@ -355,7 +355,8 @@ export default function StockInout() {
       const name = String(p?.product_name || '')
       const sup = String(p?.supplier || '').trim()
       const code = String(p?.product_code || '').trim()
-      return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name }
+      // code 随选项带出：同名多供应商时据此定位所点的那一条（仅内部用，显示不变）
+      return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name, code }
     }))).catch(() => {})
     // 编号下拉：显示 CODE (NAME)（对齐旧系统）
     getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => {
@@ -721,12 +722,15 @@ export default function StockInout() {
     if (words.length === 1) return alnum(words[0]).substring(0, 2)
     return (alnum(words[0])[0] || '') + (alnum(words[1])[0] || '')
   }
-  const onPickProduct = async (key: string, name: string) => {
+  const onPickProduct = async (key: string, name: string, hintCode?: string) => {
     if (!name) return
     const row = newRows.find(r => r.key === key)
     try {
       const list = await getProducts()
-      const hit = (list || []).find((p: any) => p.product_name === name)
+      // 同名多供应商（一个供应商一行）时按所点那条的编号定位，否则退回第一行（老行为）
+      const wantCode = String(hintCode || row?.codeNumber || '').toUpperCase()
+      const byName = (list || []).filter((p: any) => p.product_name === name)
+      const hit = (wantCode && byName.find((p: any) => String(p.product_code || '').toUpperCase() === wantCode)) || byName[0]
       const autoCode = hit ? hit.product_code || '' : (row?.codeNumber || '')
       // 选择货品后：若有出库数量则按该数量加载价格+库存，否则加载全部价格（对齐旧系统）
       const reqQty = row && parseFloat(row.outQty) > 0 ? parseFloat(row.outQty) : 0
@@ -745,6 +749,8 @@ export default function StockInout() {
           specification: spec,
           type: cat || row?.type || '',
           supplier: hit?.supplier ? String(hit.supplier) : '',
+          // 进货 → 收货单位同步为该家供应商（与 onPickCode 一致；换供应商时跟着换）
+          receiver: hit?.supplier ? String(hit.supplier) : row?.receiver,
           stockOptions: priceList || [],
           price: dp !== null ? dp : '0.00',
           priceMode: 'manual',
@@ -844,11 +850,14 @@ export default function StockInout() {
     setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }))
   }
   /** 编辑模式：选择货品 → 按货品种类自动回填（对齐新增行 onPickProduct） */
-  const onEditPickProduct = async (id: number, name: string) => {
+  const onEditPickProduct = async (id: number, name: string, hintCode?: string) => {
     if (!name) return
     try {
       const list = await getProducts()
-      const hit = (list || []).find((p: any) => p.product_name === name)
+      // 同名多供应商时按所点那条的编号定位（与新增行同口径），否则退回第一行
+      const wantCode = String(hintCode || (editDrafts[id] || {}).codeNumber || '').toUpperCase()
+      const byName = (list || []).filter((p: any) => p.product_name === name)
+      const hit = (wantCode && byName.find((p: any) => String(p.product_code || '').toUpperCase() === wantCode)) || byName[0]
       if (!hit) return
       await applyProductToEdit(id, hit, name, hit.product_code || (editDrafts[id] || {}).codeNumber || '')
     } catch { /* ignore */ }
@@ -1524,7 +1533,7 @@ export default function StockInout() {
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : (r.codeNumber || '-')}</td>
                       <td className="product-name-cell">{isEditing
-                        ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v) => onEditPickProduct(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
+                        ? <Combobox options={productOptions} value={editDraft.productName || ''} onChange={(v) => patchEdit({ productName: v })} onSelect={(v, o) => onEditPickProduct(Number(r.id), v, (o as any)?.code)} style={{ width: '100%', minWidth: 0 }} />
                         : <b>{r.productName}</b>}</td>
                       <td>{isEditing
                         ? <input type="number" className="table-input" min={0} step="0.001" value={editDraft.inQuantity || ''}
@@ -1656,7 +1665,7 @@ export default function StockInout() {
                       onSelect={(v) => onPickCode(nr.key, v)} /></td>
                     <td><Combobox options={productOptions} value={nr.productName} placeholder="货品"
                       onChange={(v) => patchNew(nr.key, { productName: v })}
-                      onSelect={(v) => onPickProduct(nr.key, v)} /></td>
+                      onSelect={(v, o) => onPickProduct(nr.key, v, (o as any)?.code)} /></td>
                     <td><input type="number" className="table-input" min={0} step="0.001" placeholder="0" value={nr.inQty}
                       disabled={parseFloat(nr.outQty) > 0} /* 对齐旧系统 enforceQuantityMutex：出>0 时禁用进货 */
                       onChange={(e) => handleInQty(nr.key, e.target.value)} /></td>

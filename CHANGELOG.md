@@ -7,6 +7,24 @@
 ---
 ## 🗓️ 2026-09-17
 
+### 3. 进出货：同名多供应商货品，改选后编号/供应商/收货单位不跟着变（用户反馈）
+
+- **现象**：库里有多个供应商的货品（台账一个供应商一行），在下拉的货品列表里点另一家的那条，编号还是老的、供应商也不变；输入数量后换货品，收货单位同样不变
+- **根因**：
+  1. **回填取台账第一行**：`onPickProduct` / `onEditPickProduct` 只按 `product_name` 找台账行，命中台账里的第一行（编号最小的那家供应商）——点谁都套用别人的编号与供应商。实测 CHICKEN FEET 在流水里 `FI 0164`(KCX JAYA) 用了 112 次，前端却固定回填 `FI 0020`(STANDARD COLD STORAGE)
+  2. **换货品后收货单位不同步**：`onPickProduct` 的进货分支只更新 supplier，没同步 receiver（`onPickCode` 本来就有），所以先输数量再换货品时，收货单位停留在上一家
+  3. **实体未解码**：进出口下拉接口返回的 supplier 是 `L&amp;L FROZEN` / `MST IMPORT &amp; EXPORT`（货品种类页同字段是解码后的），同一供应商两套写法对不上
+- **影响面（实测）**：台账 610 行 / 485 个货品名 → **92 个名字有多个供应商编号**（217 行）；CHICKEN FEET 5 家、ASARI 4 家
+- **修复（只改数据一致性，不动任何显示）**：
+  - 后端进出货下拉（`StockEditService.products()/codeNumbers()`）解码 HTML 实体（新增 `common/HtmlText.java`，对齐货品种类页口径）
+  - 前端下拉选项内部带 `code`；点选后按**所点那条的编号**定位台账行（`onPickProduct`/`onEditPickProduct`），编号与供应商（收货单位）随之回填
+  - 进货分支补 `receiver` 同步：与 `onPickCode` 一致，换供应商时收货单位跟着换
+  - 显示维持原样（货品框只显示货品名、编号框只显示编号，下拉里仍是「货品名 (供应商)」）；保存/校验/写库口径不变
+- **验证（端到端，实测后清理测试数据）**：
+  - 新增行：进货 3 + 点 `AKA EBI (SENRI)` → 编号 `FRI 0001`、收货单位 `SENRI`；改点 `(TAC)` → `FRI 0002` / `TAC` ✅
+  - 编辑行：CHICKEN GYOZA `FI 0023`(SENRI) → 改点 `CHICKEN GYOZA (TAC)` → 编号 `FI 0161`、收货人 `TAC` → **保存后查库为 `FI 0161 / TAC`** ✅
+- **jar**：`backend/target/inventory-backend-1.0.0.jar` 已重编译（含实体解码）；前端产物同步 `backend/static/`
+
 ### 1. 导入 live 最新数据库（9/17 09:40 dump (11)，分发包更新）
 
 - **dump**：`u690174784_kunzz (11).sql`（25.0MB，Generation Time Sep 17 01:40 UTC = 马来 09:40，Hostinger MariaDB 11.8.9）
