@@ -97,6 +97,36 @@ public class StockEditService {
         return stockEditMapper.remarkCodes(productName);
     }
 
+    /** 在库备注编号 + 剩余量/单位（出货时下拉选择用；编号自然排序 SA-9 < SA-10） */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> remarkCodeOptions(String productName) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> r : stockEditMapper.remarkCodeOptions(productName)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("remark_number", str(r.get("remark_number")));
+            m.put("available", r.get("net"));
+            m.put("specification", HtmlText.decode(str(r.get("specification"))));
+            out.add(m);
+        }
+        out.sort((a, b) -> naturalCompare(str(a.get("remark_number")), str(b.get("remark_number"))));
+        return out;
+    }
+
+    /** 备注编号自然排序：同前缀按数字比大小（SA-9 < SA-10），前缀不同按字典序 */
+    private int naturalCompare(String a, String b) {
+        int da = a.lastIndexOf('-'), db = b.lastIndexOf('-');
+        String pa = da >= 0 ? a.substring(0, da) : a;
+        String pb = db >= 0 ? b.substring(0, db) : b;
+        if (!pa.equals(pb)) return pa.compareTo(pb);
+        String na = da >= 0 ? a.substring(da + 1) : "";
+        String nb = db >= 0 ? b.substring(db + 1) : "";
+        try {
+            return Integer.compare(Integer.parseInt(na.trim()), Integer.parseInt(nb.trim()));
+        } catch (NumberFormatException e) {
+            return a.compareTo(b);
+        }
+    }
+
     private String str(Object o) {
         return o == null ? "" : String.valueOf(o);
     }

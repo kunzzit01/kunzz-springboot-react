@@ -170,4 +170,10 @@ public class StockEnhanceController {
     public ApiResponse<List<String>> remarkCodes(@RequestParam String productName) {
         return ApiResponse.ok(stockEditService.remarkCodes(productName));
     }
+
+    /** 在库备注编号 + 剩余量/单位（出货时下拉选择：用户不必再去货品备注页看/扣数量） */
+    @GetMapping("/remark-code-options")
+    public ApiResponse<List<Map<String, Object>>> remarkCodeOptions(@RequestParam String productName) {
+        return ApiResponse.ok(stockEditService.remarkCodeOptions(productName));
+    }
 }

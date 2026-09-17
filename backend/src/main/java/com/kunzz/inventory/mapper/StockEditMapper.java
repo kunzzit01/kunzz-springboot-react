@@ -34,4 +34,7 @@ public interface StockEditMapper {
 
     /** 在库备注编号（净库存 > 0，供备注编号前缀/后缀生成） */
     List<String> remarkCodes(@Param("productName") String productName);
+
+    /** 在库备注编号 + 各自剩余量/单位（出货时下拉选择，不必再去货品备注页看余量） */
+    List<Map<String, Object>> remarkCodeOptions(@Param("productName") String productName);
 }

@@ -914,3 +914,50 @@
   font-size: 15px;
   font-weight: 600;
 }
+
+/* ---------- 备注编号选择器（出货时挑在库编号 + 剩余量，不必再跑货品备注页） ---------- */
+.sio-root .remark-pick-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  align-self: stretch;
+  border: none;
+  border-left: 1px solid #e5e7eb;
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+.sio-root .remark-pick-btn:hover { background: #f3f4f6; color: #111827; }
+.sio-root .remark-pick-btn.open { background: #fef3c7; color: #92400e; }
+
+.sio-root .remark-pick {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 190px;
+  max-height: 240px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+  text-align: left;
+}
+.sio-root .remark-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.sio-root .remark-pick-item:hover { background: #f8f5eb; }
+.sio-root .remark-pick-item .rp-code { font-weight: 600; }
+.sio-root .remark-pick-item .rp-qty { color: #6b7280; font-size: 12px; }
+.sio-root .remark-pick-empty { padding: 8px 10px; color: #9ca3af; font-size: 13px; }

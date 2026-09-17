@@ -74,4 +74,26 @@
         ORDER BY remark_number
     </select>
 
+    <!-- 在库备注编号 + 剩余量/单位（出货时下拉：编号 + 剩余量，取代跑货品备注页看数量）
+         剩余量 = 该编号所有流水的净库存（与 remarkCodes 同口径）；单位取该编号最近一条流水的规格 -->
+    <select id="remarkCodeOptions" resultType="java.util.LinkedHashMap">
+        SELECT t.remark_number,
+               t.net,
+               (SELECT s.specification FROM stockinout_data s
+                 WHERE s.product_name = #{productName} AND s.remark_number = t.remark_number
+                   AND s.product_remark_checked = 1 AND s.deleted_at IS NULL
+                 ORDER BY s.date DESC, s.id DESC LIMIT 1) AS specification
+        FROM (
+            SELECT remark_number, COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS net
+            FROM stockinout_data
+            WHERE product_name = #{productName}
+              AND product_remark_checked = 1
+              AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
+              AND deleted_at IS NULL
+            GROUP BY remark_number
+            HAVING net &gt; 0
+        ) t
+        ORDER BY t.remark_number
+    </select>
+
 </mapper>

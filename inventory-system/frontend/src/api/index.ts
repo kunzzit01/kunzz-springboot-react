@@ -91,6 +91,10 @@ export const getProductDefaultPrice = (productName: string, codeNumber?: string)
   http.get<unknown, number | null>('/stock/products/default-price', { params: { productName, codeNumber } })
 export const getRemarkCodes = (productName: string) =>
   http.get<unknown, string[]>('/stock/remark-codes', { params: { productName } })
+/** 在库备注编号 + 剩余量/单位（出货时下拉选择：编号 + 还剩多少） */
+export const getRemarkCodeOptions = (productName: string) =>
+  http.get<unknown, { remark_number: string; available: number; specification?: string }[]>(
+    '/stock/remark-code-options', { params: { productName } })
 export const getStockRecords = (params: StockQuery) =>
   http.get<unknown, PageResult<StockData>>('/stock/records', { params })
 export const createStockRecord = (data: Partial<StockData>) =>

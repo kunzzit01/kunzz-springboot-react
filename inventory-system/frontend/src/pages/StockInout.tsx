@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProductDefaultPrice, getProducts,
-  getRemarkCodes, getShippers, getStaff, getStockInout, getStockPerms, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
+  getRemarkCodes, getRemarkCodeOptions, getShippers, getStaff, getStockInout, getStockPerms, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
 import { useRowHighlight } from '../utils/rowHighlight'
 import { generateInvoiceNumber, generateInvoicePdf } from '../utils/invoicePdf'
 import { useRealtime } from '../utils/useRealtime'
@@ -301,6 +301,10 @@ export default function StockInout() {
   const [productOptions, setProductOptions] = useState<{ label: string; value: string }[]>([])
   const [codeOptions, setCodeOptions] = useState<{ label: string; value: string }[]>([])
   const [shipperOptions, setShipperOptions] = useState<string[]>([])
+  // 备注编号选择器：某行「有哪些编号可选 + 各剩多少」（按 货品|行键 缓存，出货时点开才拉）
+  const [remarkPickFor, setRemarkPickFor] = useState<string | null>(null)
+  const [remarkPickOpts, setRemarkPickOpts] = useState<{ remark_number: string; available: number; specification?: string }[]>([])
+  const [remarkPickLoading, setRemarkPickLoading] = useState(false)
   // 创建人昵称映射（对齐旧系统 resolveCreatedByNicknames：nickname > username_cn > username）
   const [nicknameMap, setNicknameMap] = useState<Map<string, string>>(new Map())
   const [currentUser, setCurrentUser] = useState('')
@@ -402,6 +406,8 @@ export default function StockInout() {
       // 点击快速选择（时段）菜单外部时关闭
       const qd = document.querySelector('.sio-root .quick-dropdown')
       if (qd && !t.closest('.quick-dropdown')) setQuickOpen(false)
+      // 点击备注编号选择器外部时关闭
+      if (!t.closest('.remark-pick') && !t.closest('.remark-pick-btn')) setRemarkPickFor(null)
       const w = document.querySelector('.sio-root .header-search .smartSearchWrapper')
       if (w && w.contains(t)) return
       if (!searchInputRef.current?.value) setSearchExpanded(false)
@@ -721,6 +727,40 @@ export default function StockInout() {
     const alnum = (s: string) => (s.replace(/[^\p{L}\p{N}]/gu, ''))
     if (words.length === 1) return alnum(words[0]).substring(0, 2)
     return (alnum(words[0])[0] || '') + (alnum(words[1])[0] || '')
+  }
+  /** 备注编号选择器：拉取该货品在库的编号 + 各自剩余量（key = 行键，用于定位是哪一行在选）
+   *  出货时用户直接从这里挑一个在库编号，不必再跑到「货品备注」页看/扣数量 */
+  const openRemarkPicker = async (key: string, productName: string) => {
+    if (!productName) { showMsg('请先选择货品', 'info'); return }
+    if (remarkPickFor === key) { setRemarkPickFor(null); return }  // 再点一次收起
+    setRemarkPickFor(key)
+    setRemarkPickLoading(true)
+    setRemarkPickOpts([])
+    try {
+      const list = await getRemarkCodeOptions(productName)
+      setRemarkPickOpts(list || [])
+    } catch { setRemarkPickOpts([]) } finally { setRemarkPickLoading(false) }
+  }
+  /** 备注编号选择器浮层（新增行/编辑行共用） */
+  const renderRemarkPicker = (key: string, onPick: (remarkNumber: string) => void) => {
+    if (remarkPickFor !== key) return null
+    return (
+      <div className="remark-pick" onMouseDown={(e) => e.preventDefault()}>
+        {remarkPickLoading && <div className="remark-pick-empty">加载中…</div>}
+        {!remarkPickLoading && remarkPickOpts.length === 0 && (
+          <div className="remark-pick-empty">该货品当前没有在库备注编号</div>
+        )}
+        {!remarkPickLoading && remarkPickOpts.map(o => (
+          <div key={o.remark_number} className="remark-pick-item"
+            onClick={() => { onPick(o.remark_number); setRemarkPickFor(null) }}>
+            <span className="rp-code">{o.remark_number}</span>
+            <span className="rp-qty">
+              剩余 {Number(o.available).toFixed(3)}{o.specification ? ' ' + o.specification : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
   }
   const onPickProduct = async (key: string, name: string, hintCode?: string) => {
     if (!name) return
@@ -1609,15 +1649,28 @@ export default function StockInout() {
                         const suf = dash > 0 ? rn.slice(dash + 1) : ''
                         const checked = editDraft.productRemarkChecked === '1'
                         const hasOut = parseFloat(editDraft.outQuantity || '0') > 0
+                        const pickKey = 'edit-' + r.id
                         return (
-                          <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: checked ? 1 : 0.5 }}>
-                            <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!checked}
-                              value={pre} onChange={(e) => patchEdit({ remarkNumber: e.target.value.toUpperCase() + '-' + suf })} />
-                            <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
-                            <input className="table-input" style={{ width: 42, textAlign: 'center', border: 'none', color: checked && !hasOut ? '#9ca3af' : undefined }}
-                              placeholder={checked && !hasOut ? '自动' : '编号'}
-                              disabled={!checked || !hasOut}
-                              value={suf} onChange={(e) => patchEdit({ remarkNumber: pre + '-' + e.target.value.toUpperCase() })} />
+                          <div style={{ position: 'relative' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: checked ? 1 : 0.5 }}>
+                              <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!checked}
+                                value={pre} onChange={(e) => patchEdit({ remarkNumber: e.target.value.toUpperCase() + '-' + suf })} />
+                              <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
+                              <input className="table-input" style={{ flex: 1, minWidth: 0, textAlign: 'center', border: 'none', color: checked && !hasOut ? '#9ca3af' : undefined }}
+                                placeholder={checked && !hasOut ? '自动' : '编号'}
+                                disabled={!checked || !hasOut}
+                                value={suf} onChange={(e) => patchEdit({ remarkNumber: pre + '-' + e.target.value.toUpperCase() })} />
+                              {/* 出货时点这里挑在库编号（显示各编号剩余量），不必再跑货品备注页 */}
+                              {checked && hasOut && (
+                                <button type="button" className={'remark-pick-btn' + (remarkPickFor === pickKey ? ' open' : '')}
+                                  onMouseDown={(e) => e.preventDefault()}
+                                  onClick={() => openRemarkPicker(pickKey, editDraft.productName || '')}
+                                  title="选择在库备注编号（含剩余量）">
+                                  <i className={'fas ' + (remarkPickFor === pickKey ? 'fa-caret-up' : 'fa-caret-down')} />
+                                </button>
+                              )}
+                            </div>
+                            {renderRemarkPicker(pickKey, (rn) => patchEdit({ remarkNumber: rn.toUpperCase() }))}
                           </div>
                         )
                       })() : (r.remarkNumber || '-')}</td>
@@ -1728,15 +1781,32 @@ export default function StockInout() {
                     <td><input type="checkbox" className="remark-checkbox" checked={nr.remarkChecked}
                       onChange={(e) => patchNew(nr.key, { remarkChecked: e.target.checked, remarkPrefix: e.target.checked ? nr.remarkPrefix || computePrefix(nr.productName) : '' })} /></td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: nr.remarkChecked ? 1 : 0.5 }}>
-                        <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!nr.remarkChecked}
-                          value={nr.remarkPrefix} onChange={(e) => patchNew(nr.key, { remarkPrefix: e.target.value.toUpperCase() })} />
-                        <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
-                        {/* 对齐旧系统：进货时编号由后端自动生成（输入框禁用），出货时手动填写 */}
-                        <input className="table-input" style={{ width: 42, textAlign: 'center', border: 'none', color: !(parseFloat(nr.outQty || '0') > 0) && nr.remarkChecked ? '#9ca3af' : undefined }}
-                          placeholder={nr.remarkChecked && !(parseFloat(nr.outQty || '0') > 0) ? '自动' : '编号'}
-                          disabled={!nr.remarkChecked || !(parseFloat(nr.outQty || '0') > 0)}
-                          value={nr.remarkSuffix} onChange={(e) => patchNew(nr.key, { remarkSuffix: e.target.value.toUpperCase() })} />
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: nr.remarkChecked ? 1 : 0.5 }}>
+                          <input className="table-input" style={{ width: 30, textAlign: 'center', border: 'none' }} placeholder="前缀" disabled={!nr.remarkChecked}
+                            value={nr.remarkPrefix} onChange={(e) => patchNew(nr.key, { remarkPrefix: e.target.value.toUpperCase() })} />
+                          <span style={{ color: '#6b7280', fontWeight: 700 }}>-</span>
+                          {/* 对齐旧系统：进货时编号由后端自动生成（输入框禁用），出货时手动填写 */}
+                          <input className="table-input" style={{ flex: 1, minWidth: 0, textAlign: 'center', border: 'none', color: !(parseFloat(nr.outQty || '0') > 0) && nr.remarkChecked ? '#9ca3af' : undefined }}
+                            placeholder={nr.remarkChecked && !(parseFloat(nr.outQty || '0') > 0) ? '自动' : '编号'}
+                            disabled={!nr.remarkChecked || !(parseFloat(nr.outQty || '0') > 0)}
+                            value={nr.remarkSuffix} onChange={(e) => patchNew(nr.key, { remarkSuffix: e.target.value.toUpperCase() })} />
+                          {/* 出货时点这里挑在库编号（显示各编号剩余量），不必再跑货品备注页 */}
+                          {nr.remarkChecked && parseFloat(nr.outQty || '0') > 0 && (
+                            <button type="button" className={'remark-pick-btn' + (remarkPickFor === nr.key ? ' open' : '')}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => openRemarkPicker(nr.key, nr.productName)}
+                              title="选择在库备注编号（含剩余量）">
+                              <i className={'fas ' + (remarkPickFor === nr.key ? 'fa-caret-up' : 'fa-caret-down')} />
+                            </button>
+                          )}
+                        </div>
+                        {renderRemarkPicker(nr.key, (rn) => {
+                          const d = rn.indexOf('-')
+                          patchNew(nr.key, d > 0
+                            ? { remarkPrefix: rn.slice(0, d).toUpperCase(), remarkSuffix: rn.slice(d + 1).toUpperCase() }
+                            : { remarkSuffix: rn.toUpperCase() })
+                        })}
                       </div>
                     </td>
                     <td><Combobox options={shipperOptions} value={nr.receiver} placeholder="请输入或选择收货人"
