@@ -1,8 +1,9 @@
 # 任务 2026-09-17-pin-freezer
 
-- 状态：进行中
+- 状态：已完成（2026-09-17，已推送 e21b68e）
 - 分支：main
 - 白名单（只允许改这些文件）：
+  - AGENTS.md
   - add_new_tables.sql
   - backend/src/main/java/com/kunzz/inventory/entity/FreezerCategory.java
   - backend/src/main/java/com/kunzz/inventory/repository/FreezerCategoryRepository.java

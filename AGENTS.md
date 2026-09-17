@@ -94,6 +94,15 @@ git status --porcelain                 # 看全部改动
 git diff --cached --name-only          # 看当前索引里到底有什么
 ```
 
+> **本仓库特有：`git status` 会大量误报（已实测定性）。** 仓库位于 OneDrive 目录下，
+> `backend/static/**` 等约 113 个文件是 OneDrive 的「仅在线」占位文件（ReparsePoint）——
+> git 每次 stat 都对不上索引缓存，于是**永远报「已修改」，其实内容与 HEAD 逐字节相同**
+> （用 `git hash-object` 与 `git rev-parse HEAD:<文件>` 比对可自证）。
+> 判断真实改动要用 `git diff --name-only`：实测 `git status` 报 125 个，真实改动只有 12 个。
+> 所以在这个仓库里 **`git add -A` 格外危险**——它会让 OneDrive 强行下载这一百多个占位文件，
+> 并把索引搅乱。一律用显式路径提交。
+> 根治：把仓库移出 OneDrive，或对该文件夹选「始终保留在此设备上」。
+
 逐条核对索引里的每个路径：
 
 - 属于我的白名单 → 保留。
