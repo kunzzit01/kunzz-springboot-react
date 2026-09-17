@@ -934,12 +934,8 @@
 .sio-root .remark-pick-btn.open { background: #fef3c7; color: #92400e; }
 
 .sio-root .remark-pick {
-  position: absolute;
-  z-index: 30;
-  top: calc(100% + 2px);
-  left: 0;
+  /* 浮层由组件 portal 到 body 并 fixed 定位（td 有 overflow:hidden，absolute 会被裁掉） */
   min-width: 190px;
-  max-height: 240px;
   overflow: auto;
   background: #fff;
   border: 1px solid #d1d5db;

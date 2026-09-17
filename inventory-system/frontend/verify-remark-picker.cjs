@@ -52,6 +52,22 @@ async function run() {
   console.log('选项数:', list.length)
   list.slice(0, 4).forEach(t => console.log('  ' + t))
 
+  // 确认浮层真的在视口内可见（而不是被裁掉/在屏幕外）
+  const vis = await p.evaluate(() => {
+    const box = document.querySelector('.remark-pick')
+    if (!box) return { err: 'no .remark-pick' }
+    const r = box.getBoundingClientRect()
+    const cs = getComputedStyle(box)
+    return {
+      位置: { top: Math.round(r.top), left: Math.round(r.left), w: Math.round(r.width), h: Math.round(r.height) },
+      在视口内: r.top >= 0 && r.left >= 0 && r.bottom <= window.innerHeight && r.right <= window.innerWidth,
+      display: cs.display, visibility: cs.visibility, position: cs.position, zIndex: cs.zIndex,
+      屏高: window.innerHeight,
+    }
+  })
+  console.log('浮层可见性:', JSON.stringify(vis, null, 1))
+  await p.screenshot({ path: '../../runtime/remark_picker.png' })
+
   const chosen = await p.evaluate(() => {
     const it = document.querySelectorAll('.remark-pick .remark-pick-item')[2]
     if (!it) return null

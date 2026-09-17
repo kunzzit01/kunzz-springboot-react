@@ -20,6 +20,8 @@
 - **验证（浏览器实测）**：SALMON 出货 → 选择器列出 11 个编号（SA-194…，含各自的剩余 Kilo）；点 SA-196 → 回填 `SA`/`196`；
   再点开改选 SA-194 → 回填随之更新；未勾备注时不出现按钮；无 JS 错误
   （回归脚本 `inventory-system/frontend/verify-remark-picker.cjs`）
+- **踩坑（已修）**：首版用 `position:absolute` 挂在单元格里，被 `td { overflow:hidden }` 裁掉——用户点了按钮只看到箭头变色、看不到清单。
+  改为与其他下拉一致的做法：**portal 到 body + fixed 定位**，上下空间不足时自动向上展开并限高（沿用 Combobox 的同一套算法）
 
 ### 3. 进出货：同名多供应商货品，改选后编号/供应商/收货单位不跟着变（用户反馈）
 

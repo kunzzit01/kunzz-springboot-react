@@ -305,6 +305,8 @@ export default function StockInout() {
   const [remarkPickFor, setRemarkPickFor] = useState<string | null>(null)
   const [remarkPickOpts, setRemarkPickOpts] = useState<{ remark_number: string; available: number; specification?: string }[]>([])
   const [remarkPickLoading, setRemarkPickLoading] = useState(false)
+  // 浮层坐标（td 有 overflow:hidden，必须 portal 到 body + fixed 定位，否则被裁掉）
+  const [remarkPickPos, setRemarkPickPos] = useState<{ top?: number; bottom?: number; left: number; minWidth: number; maxHeight: number } | null>(null)
   // 创建人昵称映射（对齐旧系统 resolveCreatedByNicknames：nickname > username_cn > username）
   const [nicknameMap, setNicknameMap] = useState<Map<string, string>>(new Map())
   const [currentUser, setCurrentUser] = useState('')
@@ -730,9 +732,24 @@ export default function StockInout() {
   }
   /** 备注编号选择器：拉取该货品在库的编号 + 各自剩余量（key = 行键，用于定位是哪一行在选）
    *  出货时用户直接从这里挑一个在库编号，不必再跑到「货品备注」页看/扣数量 */
-  const openRemarkPicker = async (key: string, productName: string) => {
+  const openRemarkPicker = async (key: string, productName: string, btn?: HTMLElement | null) => {
     if (!productName) { showMsg('请先选择货品', 'info'); return }
     if (remarkPickFor === key) { setRemarkPickFor(null); return }  // 再点一次收起
+    if (btn) {
+      const r = btn.getBoundingClientRect()
+      const GAP = 4, MIN_H = 120
+      const below = window.innerHeight - r.bottom - GAP - 8
+      const above = r.top - GAP - 8
+      // 上下都放不下时，按空间大的一侧展开并限高（与 Combobox 同一套算法）
+      const up = above > below && above >= MIN_H
+      setRemarkPickPos({
+        top: up ? undefined : Math.round(r.bottom + GAP),
+        bottom: up ? Math.round(window.innerHeight - r.top + GAP) : undefined,
+        left: Math.round(r.left),
+        minWidth: 190,
+        maxHeight: Math.round(Math.max(MIN_H, Math.min(260, up ? above : below))),
+      })
+    }
     setRemarkPickFor(key)
     setRemarkPickLoading(true)
     setRemarkPickOpts([])
@@ -743,9 +760,14 @@ export default function StockInout() {
   }
   /** 备注编号选择器浮层（新增行/编辑行共用） */
   const renderRemarkPicker = (key: string, onPick: (remarkNumber: string) => void) => {
-    if (remarkPickFor !== key) return null
-    return (
-      <div className="remark-pick" onMouseDown={(e) => e.preventDefault()}>
+    if (remarkPickFor !== key || !remarkPickPos) return null
+    return createPortal(
+      <div className="remark-pick" onMouseDown={(e) => e.preventDefault()}
+        style={{
+          position: 'fixed', zIndex: 9999,
+          top: remarkPickPos.top ?? 'auto', bottom: remarkPickPos.bottom ?? 'auto',
+          left: remarkPickPos.left, minWidth: remarkPickPos.minWidth, maxHeight: remarkPickPos.maxHeight,
+        }}>
         {remarkPickLoading && <div className="remark-pick-empty">加载中…</div>}
         {!remarkPickLoading && remarkPickOpts.length === 0 && (
           <div className="remark-pick-empty">该货品当前没有在库备注编号</div>
@@ -759,7 +781,8 @@ export default function StockInout() {
             </span>
           </div>
         ))}
-      </div>
+      </div>,
+      document.body,
     )
   }
   const onPickProduct = async (key: string, name: string, hintCode?: string) => {
@@ -1664,7 +1687,7 @@ export default function StockInout() {
                               {checked && hasOut && (
                                 <button type="button" className={'remark-pick-btn' + (remarkPickFor === pickKey ? ' open' : '')}
                                   onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => openRemarkPicker(pickKey, editDraft.productName || '')}
+                                  onClick={(e) => openRemarkPicker(pickKey, editDraft.productName || '', e.currentTarget)}
                                   title="选择在库备注编号（含剩余量）">
                                   <i className={'fas ' + (remarkPickFor === pickKey ? 'fa-caret-up' : 'fa-caret-down')} />
                                 </button>
@@ -1795,7 +1818,7 @@ export default function StockInout() {
                           {nr.remarkChecked && parseFloat(nr.outQty || '0') > 0 && (
                             <button type="button" className={'remark-pick-btn' + (remarkPickFor === nr.key ? ' open' : '')}
                               onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => openRemarkPicker(nr.key, nr.productName)}
+                              onClick={(e) => openRemarkPicker(nr.key, nr.productName, e.currentTarget)}
                               title="选择在库备注编号（含剩余量）">
                               <i className={'fas ' + (remarkPickFor === nr.key ? 'fa-caret-up' : 'fa-caret-down')} />
                             </button>
