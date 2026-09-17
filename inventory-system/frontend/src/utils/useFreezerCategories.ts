@@ -19,31 +19,28 @@ const FALLBACK_LIST: FreezerCategoryItem[] = FREEZER_FALLBACK.map((name, i) => (
 /**
  * 冰箱分类（按业务顺序）—— 替代原先硬编码在页面里的 FREEZER_OPTIONS
  *
- * names = 启用中的分类名，两个用途：
+ * names = 全部分类名（按业务顺序），两个用途：
  *   1) 货品种类页「冰箱分类」多选的选项
  *   2) 总库存按冰箱分类排序时的顺序表（indexOf 取下标）
  * 顺序来自 sort_order，所以改名之后位置不变 —— 这正是硬编码数组做不到的。
  *
- * includeInactive=true 时 list 里含已停用项（管理面板要能恢复它们），但 names 始终只给启用中的。
+ * 没有「停用」概念：分类要么在用，要么删掉。所以不做任何过滤，能出现在面板上就一定能选。
  */
-export function useFreezerCategories(includeInactive = false) {
+export function useFreezerCategories() {
   const [list, setList] = useState<FreezerCategoryItem[]>(FALLBACK_LIST)
   /** 接口是否成功返回过（false = 后端还没有这个接口，或暂时不可用）——
-   *  管理面板以此为准：拿不到字典时不要提供「改名/停用/删除」入口，否则会显示成 20 个待登记项 */
+   *  管理面板以此为准：拿不到字典时不要提供「改名/删除」入口，否则会显示成 20 个待登记项 */
   const [ready, setReady] = useState(false)
 
   const reload = useCallback(() => {
-    getFreezerCategories(includeInactive)
+    getFreezerCategories()
       .then((rows) => { if (Array.isArray(rows)) { setList(rows); setReady(true) } })
       .catch(() => { /* 接口不可用（含后端未升级）：保持兜底清单，页面照常能用 */ })
-  }, [includeInactive])
+  }, [])
 
   useEffect(() => { reload() }, [reload])
 
-  const names = useMemo(
-    () => list.filter(c => c.is_active !== false).map(c => c.name),
-    [list],
-  )
+  const names = useMemo(() => list.map(c => c.name), [list])
 
   return { list, names, ready, reload }
 }

@@ -101,7 +101,7 @@
 }
 .sp-root .btn.btn-freezer.is-open > i { color: #fff; }
 
-/* 冰箱分类面板里的小按钮（↑ ↓ 停用/启用 🗑 ＋加入 收起）
+/* 冰箱分类面板里的小按钮（🗑 ＋加入 收起）
    刻意不挂 .btn 类 —— .sp-root .btn 会把边框清掉，而这些小按钮靠边框才看得出可点；
    全部样式自带，不依赖 index.css / media.css 的全局按钮规则。 */
 .sp-root .fc-mini {

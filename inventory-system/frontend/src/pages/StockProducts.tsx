@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms, createFreezerCategory, renameFreezerCategory, setFreezerCategoryActive, reorderFreezerCategories, deleteFreezerCategory } from '../api'
+import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms, createFreezerCategory, renameFreezerCategory, reorderFreezerCategories, deleteFreezerCategory } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import { useFreezerCategories } from '../utils/useFreezerCategories'
@@ -179,10 +179,10 @@ export default function StockProducts() {
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
-  // 冰箱分类字典（含已停用项 —— 管理面板要能恢复它们）；freezerOptions 只给启用中的，用于多选选项
+  // 冰箱分类字典（按业务顺序，全部返回 —— 没有「停用」概念）；freezerOptions 用于多选选项
   // freezerReady：后端字典接口是否可用。不可用时仍能用兜底清单选分类，但不提供维护入口 ——
   // 否则面板会把这 20 项当成「货品上在用但没登记」而显示成 20 个待加入项，误导人。
-  const { list: freezerList, names: freezerOptions, ready: freezerReady, reload: reloadFreezer } = useFreezerCategories(true)
+  const { list: freezerList, names: freezerOptions, ready: freezerReady, reload: reloadFreezer } = useFreezerCategories()
   const [showFreezerMgr, setShowFreezerMgr] = useState(false)
   const [fcDrafts, setFcDrafts] = useState<Record<number, string>>({})
   const [fcNewName, setFcNewName] = useState('')
@@ -235,22 +235,11 @@ export default function StockProducts() {
     }
   }
 
-  const toggleFreezerCatActive = async (id: number, name: string, active: boolean) => {
-    if (!active && !window.confirm(`停用冰箱分类「${name}」？\n\n停用后它不再出现在下拉选项里，已经用了它的货品保持不变。随时可以再启用。`)) return
-    setFcBusy(true)
-    try {
-      await setFreezerCategoryActive(id, active)
-      reloadFreezer()
-      showMsg(active ? `已启用「${name}」` : `已停用「${name}」`, 'success')
-    } catch { /* 拦截器已提示 */ }
-    finally { setFcBusy(false) }
-  }
-
   /** 删除分类：没有货品在用时直接删；有货品在用时弹确认框说明「会同时去掉这些货品上的该分类」再删 */
   const removeFreezerCat = async (id: number, name: string, usage: number) => {
     const tip = usage > 0
       ? `删除冰箱分类「${name}」？\n\n有 ${usage} 个货品在用这个分类。删除会同时把这些货品上的「${name}」去掉`
-        + `（挂了多个冰箱的货品，其余冰箱保持不变）。\n\n如果只是不想让它再出现在下拉选项里，请点「停用」——那样已用的货品完全不受影响。`
+        + `（挂了多个冰箱的货品，其余冰箱保持不变）。`
       : `删除冰箱分类「${name}」？`
     if (!window.confirm(tip)) return
     setFcBusy(true)
@@ -843,7 +832,7 @@ export default function StockProducts() {
               <button className={'btn btn-freezer' + (showFreezerMgr ? ' is-open' : '')}
                 aria-expanded={showFreezerMgr}
                 onClick={() => { setShowFreezerMgr(v => !v); reloadFreezer() }}
-                title="维护冰箱分类：改名 / 调顺序 / 停用 / 删除 / 新增">
+                title="维护冰箱分类：改名 / 拖动调顺序 / 删除 / 新增">
                 <i className="fas fa-snowflake" /> 冰箱分类
               </button>
             )}
@@ -868,7 +857,7 @@ export default function StockProducts() {
               <span style={{ fontSize: 12, color: '#92400e' }}>
                 <b>按住 ⠿ 拖动</b>即可调整顺序（= 走冰箱的拣货顺序，也是总库存的排序依据）；
                 <b>直接改名字再按回车</b>即可重命名（会同步更新所有用了它的货品）；
-                数字 = 有多少货品在用；「停用」= 不在下拉里出现但货品保持不变；🗑 = 删除。
+                数字 = 有多少货品在用；🗑 = 删除（只删分类本身，货品上不再使用它时才建议删）。
               </span>
               <button className="fc-mini" style={{ marginLeft: 'auto', padding: '3px 10px' }} onClick={() => setShowFreezerMgr(false)}>收起</button>
             </div>
@@ -877,7 +866,6 @@ export default function StockProducts() {
               {freezerPanelList.map((c, idx) => {
                 // 序号取「显示顺序」的下标（不是服务端顺序）：拖动过程中就跟着实时变，像真的在挪位置
                 const pos = c.registered === false ? -1 : idx
-                const inactive = c.is_active === false
                 const unregistered = c.registered === false
                 const dragging = c.id != null && c.id === fcDragId
                 return (
@@ -885,8 +873,7 @@ export default function StockProducts() {
                     className={'fc-chip' + (dragging ? ' is-dragging' : '')}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 4, background: '#fff',
-                      border: '1px solid ' + (inactive ? '#e5e7eb' : '#ffe8d1'), borderRadius: 8, padding: '4px 8px',
-                      opacity: inactive ? 0.65 : 1,
+                      border: '1px solid #ffe8d1', borderRadius: 8, padding: '4px 8px',
                     }}>
                     {!unregistered && (
                       <span className="fc-grip" tabIndex={0} role="button"
@@ -915,13 +902,10 @@ export default function StockProducts() {
                           style={{ width: 88, padding: '2px 6px', fontSize: 13 }} />
                         <span style={{ fontSize: 11, color: '#9ca3af', minWidth: 20, textAlign: 'center' }}
                           title={`被 ${c.usage_count || 0} 个货品使用`}>{c.usage_count || 0}</span>
-                        <button className="fc-mini" disabled={fcBusy}
-                          onClick={() => toggleFreezerCatActive(c.id!, c.name, inactive)}
-                          title={inactive ? '重新启用' : '停用后不再出现在下拉选项'}>{inactive ? '启用' : '停用'}</button>
                         <button className="fc-mini fc-danger" disabled={fcBusy}
                           onClick={() => removeFreezerCat(c.id!, c.name, c.usage_count || 0)}
                           title={c.usage_count > 0
-                            ? `删除（会让 ${c.usage_count} 个货品失去这个分类；只想隐藏请用「停用」）`
+                            ? `删除（会让 ${c.usage_count} 个货品失去这个分类）`
                             : '删除'}><i className="fas fa-trash-alt" /></button>
                       </>
                     )}

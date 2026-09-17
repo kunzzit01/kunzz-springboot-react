@@ -29,8 +29,8 @@ public class FreezerCategoryService {
     private final StockProductMapper stockProductMapper;
 
     /**
-     * 下拉选项 / 管理面板列表
-     * includeInactive=true 时连已停用的也返回（管理面板要能恢复它们）
+     * 下拉选项 / 管理面板列表（按业务顺序，全部返回）
+     * 没有「停用」概念：分类要么在用，要么删掉（删除会级联清掉货品上的引用）
      */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> list() {
@@ -95,8 +95,7 @@ public class FreezerCategoryService {
 
         FreezerCategory same = findIgnoreCase(name);
         if (same != null && !same.getId().equals(id)) {
-            throw new BusinessException("冰箱分类「" + name + "」已经存在了（"
-                    + (Boolean.TRUE.equals(same.getIsActive()) ? "启用中" : "已停用") + "）");
+            throw new BusinessException("冰箱分类「" + name + "」已经存在了");
         }
 
         List<Map<String, Object>> rows = stockProductMapper.findByFreezerToken(oldName);
@@ -143,7 +142,7 @@ public class FreezerCategoryService {
      * - 没有被货品引用 → 直接删
      * - 还有货品在用 → 必须带 force=true（前端会弹确认框说明影响），
      *   删除的同时把这些货品上的这个分类一并去掉（多冰箱货品的其余分类保持不变）
-     * 不带 force 时拒绝并提示：让它从下拉消失只需「停用」，不必删除
+     * 不带 force 时拒绝：这是给直接调接口的人留的护栏，避免一次误调就把几十个货品的冰箱标注清掉
      */
     @Transactional
     public Map<String, Object> delete(Integer id, boolean force) {
@@ -153,7 +152,7 @@ public class FreezerCategoryService {
         List<Map<String, Object>> rows = stockProductMapper.findByFreezerToken(name);
         if (!rows.isEmpty() && !force) {
             throw new BusinessException("还有 " + rows.size() + " 个货品在用「" + name
-                    + "」。删除会同时把这些货品上的这个分类去掉；如果只是不想让它再出现在下拉选项里，请改用「停用」。");
+                    + "」。删除会同时把这些货品上的这个分类去掉；确认无误请带 force=true 重试。");
         }
 
         int cleared = 0;

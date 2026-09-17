@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 冰箱分类字典：可改名 / 调顺序 / 停用
+ * 冰箱分类字典：可改名 / 拖拽调顺序 / 增删
  *
  * 读接口对所有登录用户开放（货品种类页的下拉选项要用）；
  * 写接口要求货品种类页的「批准」权限 —— 改名会同时改写全公司的货品，和批准同级。
@@ -63,7 +63,7 @@ public class FreezerCategoryController {
         return ApiResponse.ok();
     }
 
-    /** 删除（force=true 时连同货品上的引用一起去掉；否则有货品在用会被拒绝，提示改用停用） */
+    /** 删除（force=true 时连同货品上的引用一起去掉；否则有货品在用会被拒绝） */
     @DeleteMapping("/{id}")
     public ApiResponse<Map<String, Object>> delete(@PathVariable Integer id,
                                                   @RequestParam(defaultValue = "false") boolean force,
