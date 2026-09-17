@@ -31,3 +31,4 @@
 | 任务 ID | 状态 | 白名单要点 | 分支 |
 |---|---|---|---|
 | 2026-09-17-anti-collision-rules | 已完成 | AGENTS.md、.githooks/、.gitattributes | main |
+| 2026-09-17-updater-guard | 进行中 | git-update.ps1、AGENTS.md、docs/tasks/ | main |

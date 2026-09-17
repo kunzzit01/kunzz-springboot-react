@@ -84,6 +84,32 @@ if ($LASTEXITCODE -ne 0) {
     Pause-Exit 1
 }
 
+# ---------- 防撞：本地有未推送的提交时，绝不 reset --hard ----------
+# reset --hard 会把本地 $BRANCH 退到 origin/$BRANCH：本地已提交但未推送的提交会被从分支上
+# 摘掉（只剩 reflog 能捞）。部署机 / 普通使用者的 $BRANCH 永远与 origin 一致，下面不会触发；
+# 只有开发机上还有 task 没推送时才会中止。此检查位于任何 reset 之前，中止时未做任何改动。
+$localHead  = @(git rev-parse --verify $BRANCH 2>$null)[0]
+$remoteHead = @(git rev-parse --verify ("origin/" + $BRANCH) 2>$null)[0]
+if ($localHead -and $remoteHead -and ($localHead -ne $remoteHead)) {
+    git merge-base --is-ancestor ("origin/" + $BRANCH) $BRANCH 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        $aheadList = @(git rev-list --count ("origin/" + $BRANCH + ".." + $BRANCH) 2>$null)
+        $aheadText = if ($aheadList.Count -gt 0 -and $aheadList[0]) { $aheadList[0].ToString() } else { "若干" }
+        Write-Host ""
+        Write-Host ("  [!!] 本机有 {0} 个提交还没推送到 origin/{1}，已中止更新，未做任何改动。" -f $aheadText, $BRANCH) -ForegroundColor Red
+        Write-Host "       继续执行「对齐到最新代码」会把这些提交从本地分支上摘掉（只剩 reflog 能捞）。" -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "       正在开发的电脑：先推送 / 整合，再更新" -ForegroundColor Gray
+        Write-Host ("         git fetch origin {0}" -f $BRANCH) -ForegroundColor Gray
+        Write-Host ("         git pull --rebase origin {0}" -f $BRANCH) -ForegroundColor Gray
+        Write-Host ("         git push origin {0}" -f $BRANCH) -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "       确实要放弃这些提交（危险）：先 git log --oneline 记下哈希，再手动执行" -ForegroundColor Gray
+        Write-Host ("         git reset --hard origin/{0}" -f $BRANCH) -ForegroundColor Gray
+        Pause-Exit 1
+    }
+}
+
 # ---------- 4. 备份本地改动 → 对齐到最新 ----------
 # 先把索引对齐到 origin/main（不动工作区），这样就能看清本机与最新代码的差异
 git reset -q --mixed ("origin/" + $BRANCH)
@@ -103,8 +129,8 @@ $untracked = @($statusLines | Where-Object { $_.StartsWith('??') })
 
 if ($tracked.Count -gt 0) {
     $tracked -join "`r`n" | Out-File -FilePath $listTxt -Encoding utf8
-    # 备份可文本恢复的改动；排除 jar / 数据包等大文件（不会有手工改动，且会让备份暴涨到几十 MB）
-    $patchText = (git diff --binary -- . ':(exclude)*.jar' ':(exclude)*.sql') -join "`r`n"
+    # 备份可文本恢复的改动；只排除 jar 与 22MB 的数据包 database\*.sql（手写的 add_new_tables.sql 等要照常备份，否则改动会无声消失）
+    $patchText = (git diff --binary -- . ':(exclude)*.jar' ':(exclude)database/*.sql') -join "`r`n"
     if ($patchText.Trim().Length -gt 0) { $patchText | Out-File -FilePath $patch -Encoding utf8 }
     Write-Host ("  [i] 本机有 {0} 个仓库内文件与最新代码不同（首次接入时旧版本文件都会算进来，属正常）：" -f $tracked.Count) -ForegroundColor Yellow
     Write-Host ("      差异清单：{0}" -f (Split-Path $listTxt -Leaf)) -ForegroundColor Gray
