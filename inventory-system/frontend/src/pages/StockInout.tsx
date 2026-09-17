@@ -334,6 +334,8 @@ export default function StockInout() {
   const [remarkPickLoading, setRemarkPickLoading] = useState(false)
   // 浮层坐标（td 有 overflow:hidden，必须 portal 到 body + fixed 定位，否则被裁掉）
   const [remarkPickPos, setRemarkPickPos] = useState<{ top?: number; bottom?: number; left: number; minWidth: number; maxHeight: number } | null>(null)
+  // 一次选择只回填一次（同时挂了 mousedown / click 两条路，避免浏览器差异导致漏填或重复填）
+  const remarkPickFiredRef = useRef(false)
   // 创建人昵称映射（对齐旧系统 resolveCreatedByNicknames：nickname > username_cn > username）
   const [nicknameMap, setNicknameMap] = useState<Map<string, string>>(new Map())
   const [currentUser, setCurrentUser] = useState('')
@@ -765,6 +767,7 @@ export default function StockInout() {
   const openRemarkPicker = async (key: string, productName: string, btn?: HTMLElement | null) => {
     if (!productName) { showMsg('请先选择货品', 'info'); return }
     if (remarkPickFor === key) { setRemarkPickFor(null); return }  // 再点一次收起
+    remarkPickFiredRef.current = false
     if (btn) {
       const r = btn.getBoundingClientRect()
       const GAP = 4, MIN_H = 140
@@ -813,7 +816,17 @@ export default function StockInout() {
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', borderRadius: 8, cursor: 'pointer', fontSize: 16, lineHeight: 1.35, whiteSpace: 'nowrap', borderTop: i > 0 ? '1px solid #f1ece2' : 'none', transition: 'background .12s ease, box-shadow .12s ease' }}
             onMouseEnter={e => { e.currentTarget.style.background = '#fff4e0'; e.currentTarget.style.boxShadow = 'inset 3px 0 0 #f99e00' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.boxShadow = 'none' }}
-            onClick={() => { onPick(o.remark_number); setRemarkPickFor(null) }}>
+            onMouseDown={(e) => {
+              e.preventDefault(); e.stopPropagation()
+              if (remarkPickFiredRef.current) return
+              remarkPickFiredRef.current = true
+              onPick(o.remark_number); setRemarkPickFor(null)
+            }}
+            onClick={() => {
+              if (remarkPickFiredRef.current) return
+              remarkPickFiredRef.current = true
+              onPick(o.remark_number); setRemarkPickFor(null)
+            }}>
             <span style={{ fontWeight: 600 }}>{o.remark_number}</span>
             <span style={{ color: '#6b7280', fontSize: 14 }}>
               剩余 {Number(o.available).toFixed(3)}{o.specification ? ' ' + o.specification : ''}
