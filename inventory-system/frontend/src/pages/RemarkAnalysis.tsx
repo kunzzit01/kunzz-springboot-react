@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { getStockRemarkAnalysis } from '../api'
 import type { RemarkProduct, RemarkVariant } from '../api'
 import '../styles/stockremark.css'
@@ -12,8 +12,11 @@ const SYSTEM_NAMES: Record<string, string> = { central: '中央', j1: 'J1', j2: 
 
 export default function RemarkAnalysis() {
   const navigate = useNavigate()
-  // 从 URL 读取系统（对齐 ?system=central）
-  const urlSystem = new URL(window.location.href).searchParams.get('system')
+  // 从 URL 读取系统（对齐 ?system=central）。
+  // 用 useSearchParams 而不是 window.location：页头切换系统走的是前端路由跳转（不刷新页面），
+  // 必须用响应式来源，下面的取数 effect 才会在切系统时重跑
+  const [searchParams] = useSearchParams()
+  const urlSystem = searchParams.get('system')
   const system = urlSystem && SYSTEM_NAMES[urlSystem] ? urlSystem : 'central'
   const [viewOpen, setViewOpen] = useState(false)
   const [sysOpen, setSysOpen] = useState(false)
@@ -51,8 +54,11 @@ export default function RemarkAnalysis() {
     })
   }, [])
 
+  // 防重入用 ref：loading 若进了 useCallback 依赖，会跟着 setLoading 反复重建（转圈）
+  const loadingRef = useRef(false)
   const load = useCallback(async () => {
-    if (loading) return
+    if (loadingRef.current) return
+    loadingRef.current = true
     setLoading(true)
     try {
       const d = await getStockRemarkAnalysis(system)
@@ -66,11 +72,13 @@ export default function RemarkAnalysis() {
       setFiltered([])
       showMsg('获取数据失败，请检查连接', 'error')
     } finally {
+      loadingRef.current = false
       setLoading(false)
     }
-  }, [loading, sortProducts])
+  }, [system, sortProducts])
 
-  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // 首次加载 + 切换系统时重新取数（system 变了 load 就变，这里会重跑一次）
+  useEffect(() => { load() }, [load])
 
   // 10 分钟自动刷新（对齐线上）
   useEffect(() => {
