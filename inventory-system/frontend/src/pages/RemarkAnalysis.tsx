@@ -113,13 +113,19 @@ export default function RemarkAnalysis() {
 
   // 卡片统计（根据货品判断展示：规格 kilo/kg → ⚖️总量；名称/规格含 N PCS → 📦总量=编号数×N；
   // 其余只显示 # 总数。推广自旧系统的 SALMON BELLY/HEAD 10PCS 硬编码）
+  // 数量/重量显示：按数据库精度（decimal(10,3)）去尾零、**不进位**（0.338 → 0.338，不是 0.34）；
+  // 顺带清掉浮点求和的尾巴（0.30000000000000004 → 0.3）
+  const fmtQty = (v: any) => {
+    const n = Number(v)
+    return isFinite(n) ? String(Number(n.toFixed(3))) : '0'
+  }
   const statsOf = (p: RemarkProduct) => {
     const name = (p.product_name || '').trim()
     const specs = ((p.variants || []).map(v => (v.specification || '').toLowerCase().trim()).filter(Boolean)).join(' ')
     const hasKilo = specs.includes('kilo') || specs.includes('kg')
     const pcsMatch = /(\d+)\s*pcs/i.exec(name) || /(\d+)\s*pcs/i.exec(specs)
     if (hasKilo) {
-      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">⚖️</span> 总重量: {Number(p.total_quantity).toFixed(2)} Kilo</span></div>
+      return <div className="card-stats"><span><span className="card-stats-icon">#</span> 总数: {(p.variants || []).length}</span><span><span className="card-stats-icon">⚖️</span> 总重量: {fmtQty(p.total_quantity)} Kilo</span></div>
     }
     if (pcsMatch) {
       const n = parseInt(pcsMatch[1], 10) || 1

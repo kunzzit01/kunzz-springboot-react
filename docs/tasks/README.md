@@ -44,3 +44,4 @@
 | 2026-09-18-stockrecords-silent-refresh | 已完成 | 总库存：别人保存后静默更新，不跳顶部/不清筛选；只改 StockRecords.tsx | main |
 | 2026-09-18-products-assign-preserve | 已完成 | 单系统页保存不再覆盖「系统分配」；总览外不展示该列 | main |
 | 2026-09-18-products-assign-column-restore | 已完成 | 纠正上一任务：中央/分店恢复「系统分配」列并改显真实值；数据修复保留 | main |
+| 2026-09-18-remark-total-no-round | 已完成 | 货品备注「总重量」不再进位到 2 位（0.338 不再显示成 0.34）；只改 RemarkAnalysis.tsx | main |
