@@ -19,8 +19,5 @@ public interface StockDataRepository extends JpaRepository<StockData, Integer>, 
     @Query("select d.productName, d.category from StockData d where d.category is not null and d.category != ''")
     List<Object[]> productCategories();
 
-    /** 全量产品名 → 冰箱分类/位次（总库存「冰箱分类+位次」排序用；同名多记录取 id 最小一条，稳定） */
-    @Query("select d.productName, d.freezerCategory, d.freezerPosition from StockData d " +
-           "where d.freezerCategory is not null and d.freezerCategory != '' order by d.id asc")
-    List<Object[]> productFreezerInfo();
+    // 冰箱分类/位次：2026-09-18 起存在 stock_data_system（按系统各一份），改由 StockDataSystemMapper.freezerRows(system) 取
 }

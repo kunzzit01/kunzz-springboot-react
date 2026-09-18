@@ -58,6 +58,11 @@ export interface StockProductRow {
   approver?: string
   system_assign?: string
   freezer_category?: string
+  /** 保存时带上「当前页所属系统」：单价/冰箱分类/位次按系统各存一份（2026-09-18）。总览不传 */
+  system?: string
+  /** 总览只读展示用：各系统各自的单价/冰箱分类文本（后端拼好） */
+  price_by_system?: string
+  freezer_by_system?: string
 }
 export const getStockProducts = (systemAssign?: string, keyword?: string, exact?: boolean) =>
   http.get<unknown, { total: number; approved: number; pending: number; items: StockProductRow[] }>('/stock/products', { params: { systemAssign, keyword, exact: exact || undefined } })
@@ -101,11 +106,11 @@ export const deleteFreezerCategory = (id: number, force?: boolean) =>
 export interface PriceLogEntry { changeDate: string; oldPrice: number | null; newPrice: number; changedBy?: string }
 export interface PriceLogLatest { productName: string; changeDate: string; newPrice: number }
 /** 某货品改价历史（从旧到最新） */
-export const getPriceChangeLog = (productName: string) =>
-  http.get<unknown, PriceLogEntry[]>('/stock/products/price-log', { params: { productName } })
+export const getPriceChangeLog = (productName: string, system?: string) =>
+  http.get<unknown, PriceLogEntry[]>('/stock/products/price-log', { params: { productName, system } })
 /** 每个货品最近一次改价（列表列展示） */
-export const getPriceChangeLogLatest = () =>
-  http.get<unknown, PriceLogLatest[]>('/stock/products/price-log-latest')
+export const getPriceChangeLogLatest = (system?: string) =>
+  http.get<unknown, PriceLogLatest[]>('/stock/products/price-log-latest', { params: { system } })
 
 // ---------- 进出货辅助选项（stockeditapi.php） ----------
 export const getCodeNumbers = () =>
@@ -119,8 +124,8 @@ export const getPriceBatches = (productName: string, codeNumber?: string, system
 export const getPriceStock = (productName: string, codeNumber?: string, requiredQty?: number, system?: string) =>
   http.get<unknown, { price: string; available_stock: number; total_in: number; total_out: number; is_sufficient: boolean }[]>('/stock/price-stock', { params: { productName, codeNumber, requiredQty, system } })
 /** 进货默认单价（货品种类里最新维护的 price；无则 null） */
-export const getProductDefaultPrice = (productName: string, codeNumber?: string) =>
-  http.get<unknown, number | null>('/stock/products/default-price', { params: { productName, codeNumber } })
+export const getProductDefaultPrice = (productName: string, codeNumber?: string, system?: string) =>
+  http.get<unknown, number | null>('/stock/products/default-price', { params: { productName, codeNumber, system } })
 export const getRemarkCodes = (productName: string) =>
   http.get<unknown, string[]>('/stock/remark-codes', { params: { productName } })
 /** 在库备注编号 + 剩余量/单位（出货时下拉选择：编号 + 还剩多少） */

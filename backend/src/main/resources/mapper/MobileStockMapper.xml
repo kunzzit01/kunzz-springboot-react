@@ -205,7 +205,8 @@
                x.specification,
                x.total_qty,
                (SELECT s.category FROM stock_data s WHERE s.product_name = x.product_name LIMIT 1) AS type,
-               (SELECT s.freezer_category FROM stock_data s WHERE s.product_name = x.product_name LIMIT 1) AS freezer_category
+               (SELECT ss.freezer_category FROM stock_data_system ss JOIN stock_data s ON s.id = ss.stock_data_id
+                WHERE s.product_name = x.product_name AND ss.stock_system = #{stockSystem} LIMIT 1) AS freezer_category
         FROM (
             SELECT REPLACE(product_name, '&amp;amp;', '&amp;') AS product_name,
                    code_number,
@@ -232,7 +233,8 @@
     <select id="listTotals" resultType="java.util.LinkedHashMap">
         SELECT t.*,
                (SELECT s.category FROM stock_data s WHERE s.product_name = t.product_name LIMIT 1) AS type,
-               (SELECT s.freezer_category FROM stock_data s WHERE s.product_name = t.product_name LIMIT 1) AS freezer_category
+               (SELECT ss.freezer_category FROM stock_data_system ss JOIN stock_data s ON s.id = ss.stock_data_id
+               WHERE s.product_name = t.product_name AND ss.stock_system = #{stockSystem} LIMIT 1) AS freezer_category
         FROM ${table} t ORDER BY t.product_name ASC
     </select>
 </mapper>

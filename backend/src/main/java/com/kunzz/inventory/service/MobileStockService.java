@@ -70,7 +70,7 @@ public class MobileStockService {
     public Map<String, Object> totals(String system) {
         String sys = sys(system);
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("items", mobileStockMapper.phoneStockList(editTable(sys)));
+        out.put("items", mobileStockMapper.phoneStockList(editTable(sys), sys));
         out.put("summaryCount", mobileStockMapper.summaryCount(editTable(sys)));
         return out;
     }

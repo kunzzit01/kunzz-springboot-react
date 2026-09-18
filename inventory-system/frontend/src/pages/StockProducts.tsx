@@ -21,6 +21,9 @@ interface ProductRow {
   approver?: string
   system_assign?: string
   freezer_category?: string
+  /** 总览用：各系统各自的单价/冰箱分类只读文本（后端拼好：4 套相同给一个值，否则「中央 x · J1 y …」） */
+  price_by_system?: string
+  freezer_by_system?: string
   /** 位次：同冰箱分类内排序（0/空 = 未设置；总库存排序用，货品资料可编辑） */
   freezer_position?: number | string | null
   /** 新增行稳定标识：行增删/列表重载后仍能精确摘掉那一行（不能用下标，删行后下标会错位） */
@@ -550,7 +553,8 @@ export default function StockProducts() {
       const approver = system === 'overview' ? (d.approver || '') : ''
       // 系统分配：一律传这一行自己的值。原来在单系统页强制写成 currentSys.value，
       // 会把 Central,J1,J2,J3 这样的多系统分配覆盖成当前页那一个系统（分店从此看不到该货品）。
-      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || currentUser, approver })
+      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || currentUser, approver,
+        system: system === 'overview' ? undefined : currentSys.key })
       // 只摘掉这一行：其他编辑中行与草稿原样保留（点其中一行的保存，不影响其他行已改的内容）
       setEditing(prev => { const n = new Set(prev); n.delete(id); return n })
       setDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
@@ -601,7 +605,8 @@ export default function StockProducts() {
     }
     try {
       // 同上：系统分配用这一行自己的值（单系统页由 addRow 预置成当前系统，不再强制覆盖）
-      await createStockProduct({ ...r, system_assign: r.system_assign || '', applicant: r.applicant || currentUser })
+      await createStockProduct({ ...r, system_assign: r.system_assign || '', applicant: r.applicant || currentUser,
+        system: system === 'overview' ? undefined : currentSys.key })
       return null
     } catch (e: any) { return e?.response?.data?.message || '保存失败' }
   }
@@ -961,8 +966,11 @@ export default function StockProducts() {
                       </select>
                     </td>
                     <td>
-                      <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
-                        value={r.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { price: e.target.value })} />
+                      {/* 总览：单价按系统各存一份，这里只读展示 4 套；要改到中央/J1/J2/J3 页面 */}
+                      {system === 'overview'
+                        ? <input className="excel-input" readOnly value={r.price_by_system || ''} title="各系统各自的单价：到中央/J1/J2/J3 页面修改" />
+                        : <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
+                            value={r.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { price: e.target.value })} />}
                     </td>
                     <td>
                       <select className="excel-select" value={r.category || ''} onChange={(e) => setNew(idx, { category: e.target.value })}>
@@ -979,7 +987,12 @@ export default function StockProducts() {
                         ? <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
                         : <input className="excel-input text-input readonly" readOnly value={r.system_assign || ''} title="仅总览可设置系统分配" />}
                     </td>
-                    <td><MultiSelect value={r.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
+                    <td>
+                      {/* 同上：总览只读展示 4 套 */}
+                      {system === 'overview'
+                        ? <input className="excel-input" readOnly value={r.freezer_by_system || ''} title="各系统各自的冰箱分类：到中央/J1/J2/J3 页面修改" />
+                        : <MultiSelect value={r.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setNew(idx, { freezer_category: v })} />}
+                    </td>
                     {system !== 'overview' && <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>}
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
                     <td className="action-cell">
@@ -1015,10 +1028,12 @@ export default function StockProducts() {
                           : <input className="excel-input" readOnly value={r.specification || ''} />}
                       </td>
                       <td>
-                        {isEditing
-                          ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
-                              value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
-                          : <input className="excel-input" readOnly value={r.price || ''} />}
+                        {system === 'overview'
+                          ? <input className="excel-input" readOnly value={r.price_by_system || ''} title="各系统各自的单价：到中央/J1/J2/J3 页面修改" />
+                          : isEditing
+                            ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
+                                value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
+                            : <input className="excel-input" readOnly value={r.price || ''} />}
                       </td>
                       <td>
                         {isEditing
@@ -1045,9 +1060,11 @@ export default function StockProducts() {
                         )}
                       </td>
                       <td>
-                        {isEditing
-                          ? <MultiSelect value={draft.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setDraft(id, { freezer_category: v })} />
-                          : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
+                        {system === 'overview'
+                          ? <input className="excel-input" readOnly value={r.freezer_by_system || ''} title="各系统各自的冰箱分类：到中央/J1/J2/J3 页面修改" />
+                          : isEditing
+                            ? <MultiSelect value={draft.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setDraft(id, { freezer_category: v })} />
+                            : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
                       </td>
                       {system !== 'overview' && (
                         <td>

@@ -372,20 +372,20 @@ export default function StockRecords() {
 
   // 改价日志：一次拉全量最近改价（按货品名匹配；失败静默，不影响页面）
   useEffect(() => {
-    getPriceChangeLogLatest()
+    getPriceChangeLogLatest(system)
       .then(list => {
         const m: Record<string, { date: string; price: number }> = {}
         for (const e of list || []) m[String(e.productName || '').trim()] = { date: String(e.changeDate || ''), price: Number(e.newPrice) || 0 }
         setPriceLatest(m)
       })
       .catch(() => { /* ignore */ })
-  }, [])
+  }, [system])
 
   /** 点击货品名：弹窗展示该货品从旧到最新的单价改动记录 */
   const openPriceLog = async (name: string) => {
     setLogModal({ name, entries: [], loading: true })
     try {
-      const entries = await getPriceChangeLog(name)
+      const entries = await getPriceChangeLog(name, system)
       setLogModal({ name, entries: entries || [], loading: false })
     } catch {
       setLogModal({ name, entries: [], loading: false })

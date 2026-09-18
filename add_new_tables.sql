@@ -176,3 +176,72 @@ SET @ddl := IF(IFNULL(@price_scale, 5) < 5,
 PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+
+-- 7) 冰箱分类 / 位次 / 默认单价 改为「每个系统各存一份」（2026-09-18）
+--    原来这三列都在 stock_data 上、一行货品一个值：在中央页改完，J1/J2/J3 跟着一起变
+--    （用户实测反馈）。新建 stock_data_system（照 stock_minimum_settings 的先例：按系统一行 +
+--    联合唯一键），并把现有值按每个货品**已分配的系统**复制进去。
+--    ⚠ 跑完补丁后各系统看到的仍是原来那一套（位次原本全为 NULL，复制过去也是 NULL），
+--      直到你到中央/分店页分别设置 —— 这是刻意的，方便灰度。
+--    stock_data 里旧的三列保留、代码不再读写（留回滚余地，**不做删除**）。
+CREATE TABLE IF NOT EXISTS `stock_data_system` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `stock_data_id` int(11) NOT NULL COMMENT '指向 stock_data.id',
+  `stock_system` varchar(20) NOT NULL COMMENT '系统：central/j1/j2/j3',
+  `freezer_category` varchar(50) DEFAULT NULL COMMENT '该系统的冰箱分类（多选逗号分隔）',
+  `freezer_position` int(11) DEFAULT NULL COMMENT '该系统的位次：同冰箱分类内排序（NULL/0=未设置，排最后）',
+  `price` decimal(15,5) DEFAULT NULL COMMENT '该系统的货品种类默认单价（进货自动抓取；与台账同精度）',
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_data_system` (`stock_data_id`,`stock_system`),
+  KEY `idx_system` (`stock_system`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 初始化：按 system_assign 逐系统复制现值（幂等：已存在的行跳过，重复执行安全）
+INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
+SELECT d.id, 'central', d.freezer_category, d.freezer_position, d.price FROM stock_data d
+WHERE FIND_IN_SET('CENTRAL', UPPER(d.system_assign)) > 0
+  AND NOT EXISTS (SELECT 1 FROM stock_data_system s WHERE s.stock_data_id = d.id AND s.stock_system = 'central');
+
+INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
+SELECT d.id, 'j1', d.freezer_category, d.freezer_position, d.price FROM stock_data d
+WHERE FIND_IN_SET('J1', UPPER(d.system_assign)) > 0
+  AND NOT EXISTS (SELECT 1 FROM stock_data_system s WHERE s.stock_data_id = d.id AND s.stock_system = 'j1');
+
+INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
+SELECT d.id, 'j2', d.freezer_category, d.freezer_position, d.price FROM stock_data d
+WHERE FIND_IN_SET('J2', UPPER(d.system_assign)) > 0
+  AND NOT EXISTS (SELECT 1 FROM stock_data_system s WHERE s.stock_data_id = d.id AND s.stock_system = 'j2');
+
+INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
+SELECT d.id, 'j3', d.freezer_category, d.freezer_position, d.price FROM stock_data d
+WHERE FIND_IN_SET('J3', UPPER(d.system_assign)) > 0
+  AND NOT EXISTS (SELECT 1 FROM stock_data_system s WHERE s.stock_data_id = d.id AND s.stock_system = 'j3');
+
+-- 8) 改价日志加「哪个系统改的价」（2026-09-18）
+SET @pcl_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE table_schema='u690174784_kunzz' AND table_name='price_change_log' AND column_name='stock_system');
+SET @ddl := IF(@pcl_col = 0,
+  'ALTER TABLE price_change_log ADD COLUMN stock_system VARCHAR(20) NULL COMMENT ''改价所属系统：central/j1/j2/j3'' AFTER code_number',
+  'SELECT ''price_change_log.stock_system 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 8.1) 改价日志的两个价格列精度 3 位 → 5 位（与货品种类/台账一致，2026-09-18）
+--      否则改价记录里 2.6666 会显示成 2.667
+SET @pcl_scale := (SELECT NUMERIC_SCALE FROM information_schema.COLUMNS
+                   WHERE table_schema='u690174784_kunzz' AND table_name='price_change_log' AND column_name='new_price');
+SET @ddl := IF(IFNULL(@pcl_scale, 5) < 5,
+  'ALTER TABLE price_change_log MODIFY COLUMN old_price DECIMAL(15,5) NULL, MODIFY COLUMN new_price DECIMAL(15,5) NULL',
+  'SELECT ''price_change_log 价格列已是 5 位小数，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 验证（应能看到 4 行，且各系统的货品数 = 该系统的已分配货品数）
+SELECT stock_system, COUNT(*) AS rows_count,
+       SUM(freezer_category IS NOT NULL AND freezer_category <> '') AS with_category,
+       SUM(price IS NOT NULL) AS with_price
+FROM stock_data_system GROUP BY stock_system ORDER BY stock_system;

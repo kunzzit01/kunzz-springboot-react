@@ -4,34 +4,50 @@
 
     <!-- 货品种类列表：对齐旧系统 stockapi.php —— FIND_IN_SET 逗号精确匹配 -->
     <!-- 总览（systemAssign 为空）返回全部货品；总览的权限交集过滤/打码由前端按登录人做（见 StockProducts.tsx load()），后端 API 无用户上下文 -->
+    <!-- 冰箱分类/位次/单价（2026-09-18 起按系统各存一份）：有系统就取该系统那一行的值（别名保持原字段名，前端不用改）；
+         总览（无系统）返回空 —— 总览改用 service 拼好的「4 套」文本（price_by_system / freezer_by_system） -->
     <select id="listRows" resultType="java.util.LinkedHashMap">
-        SELECT id, date, time, product_code, product_name, specification, price, category,
-               supplier, applicant, approver, system_assign, freezer_category, freezer_position,
-               created_at, updated_at
-        FROM stock_data
+        SELECT d.id, d.date, d.time, d.product_code, d.product_name, d.specification, d.category,
+               d.supplier, d.applicant, d.approver, d.system_assign,
+        <choose>
+            <when test="systemAssign != null and systemAssign != ''">
+               ss.freezer_category AS freezer_category, ss.freezer_position AS freezer_position, ss.price AS price,
+            </when>
+            <otherwise>
+               NULL AS freezer_category, NULL AS freezer_position, NULL AS price,
+            </otherwise>
+        </choose>
+               d.created_at, d.updated_at
+        FROM stock_data d
+        <if test="systemAssign != null and systemAssign != ''">
+            LEFT JOIN stock_data_system ss
+                   ON ss.stock_data_id = d.id AND ss.stock_system = #{systemAssign}
+        </if>
         <where>
             <if test="systemAssign != null and systemAssign != ''">
-                AND (FIND_IN_SET(#{systemAssign}, system_assign) &gt; 0 OR system_assign = #{systemAssign})
+                AND (FIND_IN_SET(#{systemAssign}, d.system_assign) &gt; 0 OR d.system_assign = #{systemAssign})
             </if>
             <if test="keyword != null and keyword != ''">
                 <choose>
                     <!-- 精确搜索：货品名完全等于关键字（不区分大小写，对齐总库存 smartSearch 精确模式） -->
                     <when test="exact">
-                        AND LOWER(product_name) = LOWER(#{keyword})
+                        AND LOWER(d.product_name) = LOWER(#{keyword})
                     </when>
                     <otherwise>
-                        <!-- 全能搜索：名称/编号/规格/类型/供应商/冰箱分类 任一包含关键字 -->
-                        AND (product_name LIKE CONCAT('%', #{keyword}, '%')
-                          OR product_code LIKE CONCAT('%', #{keyword}, '%')
-                          OR specification LIKE CONCAT('%', #{keyword}, '%')
-                          OR category LIKE CONCAT('%', #{keyword}, '%')
-                          OR supplier LIKE CONCAT('%', #{keyword}, '%')
-                          OR freezer_category LIKE CONCAT('%', #{keyword}, '%'))
+                        <!-- 全能搜索：名称/编号/规格/类型/供应商/冰箱分类 任一包含关键字（冰箱分类按所有系统搜） -->
+                        AND (d.product_name LIKE CONCAT('%', #{keyword}, '%')
+                          OR d.product_code LIKE CONCAT('%', #{keyword}, '%')
+                          OR d.specification LIKE CONCAT('%', #{keyword}, '%')
+                          OR d.category LIKE CONCAT('%', #{keyword}, '%')
+                          OR d.supplier LIKE CONCAT('%', #{keyword}, '%')
+                          OR EXISTS (SELECT 1 FROM stock_data_system x
+                                     WHERE x.stock_data_id = d.id
+                                       AND x.freezer_category LIKE CONCAT('%', #{keyword}, '%')))
                     </otherwise>
                 </choose>
             </if>
         </where>
-        ORDER BY id
+        ORDER BY d.id
     </select>
 
     <!-- 按 id 查单行（改价日志：取旧价/旧名） -->
@@ -41,45 +57,37 @@
         WHERE id = #{id}
     </select>
 
+    <!-- 插入新记录（price/冰箱分类/位次 不在本表写：2026-09-18 起由 StockDataSystemMapper 按系统写进 stock_data_system） -->
     <insert id="insertRow" parameterType="map">
         INSERT INTO stock_data
-            (date, time, product_code, product_name, specification, price, category,
-             supplier, applicant, approver, system_assign, freezer_category, freezer_position)
+            (date, time, product_code, product_name, specification, category,
+             supplier, applicant, approver, system_assign)
         VALUES
-            (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.price}, #{r.category},
-             #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign}, #{r.freezerCategory}, #{r.freezerPosition})
+            (#{r.date}, #{r.time}, #{r.productCode}, #{r.productName}, #{r.specification}, #{r.category},
+             #{r.supplier}, #{r.applicant}, #{r.approver}, #{r.systemAssign})
     </insert>
 
-    <!-- 部分字段安全更新：service 只放行请求里实际携带的字段，null 的列不动 -->
+    <!-- 刚插入行的自增 id：@Transactional 内与 insertRow 同一条连接，LAST_INSERT_ID() 可靠 -->
+    <select id="lastInsertId" resultType="java.lang.Integer">
+        SELECT LAST_INSERT_ID()
+    </select>
+
+    <!-- 部分字段安全更新：service 只放行请求里实际携带的字段，null 的列不动。
+         price/冰箱分类/位次 不在这里（按系统存进 stock_data_system，见 StockDataSystemMapper） -->
     <update id="updateRow" parameterType="map">
         UPDATE stock_data
         <set>
             <if test="r.productCode != null">product_code = #{r.productCode},</if>
             <if test="r.productName != null">product_name = #{r.productName},</if>
             <if test="r.specification != null">specification = #{r.specification},</if>
-            <if test="r.price != null">price = #{r.price},</if>
             <if test="r.category != null">category = #{r.category},</if>
             <if test="r.supplier != null">supplier = #{r.supplier},</if>
             <if test="r.applicant != null">applicant = #{r.applicant},</if>
             <if test="r.approver != null">approver = #{r.approver},</if>
             <if test="r.systemAssign != null">system_assign = #{r.systemAssign},</if>
-            <if test="r.freezerCategory != null">freezer_category = #{r.freezerCategory},</if>
-            <if test="r.freezerPosition != null">freezer_position = #{r.freezerPosition},</if>
         </set>
         WHERE id = #{id}
     </update>
-
-    <!-- 进货默认单价：按货品名（+编号）取货品种类里最新维护的单价（updated_at/id 降序取第一条） -->
-    <select id="defaultPrice" resultType="java.lang.Double">
-        SELECT price FROM stock_data
-        WHERE price IS NOT NULL AND price &gt; 0
-        <if test="codeNumber != null and codeNumber != ''">
-            AND product_code = #{codeNumber}
-        </if>
-        AND product_name = #{productName}
-        ORDER BY updated_at DESC, id DESC
-        LIMIT 1
-    </select>
 
     <update id="approveRow">
         UPDATE stock_data SET approver = #{approver} WHERE id = #{id}
@@ -89,29 +97,7 @@
         DELETE FROM stock_data WHERE id = #{id}
     </delete>
 
-    <!-- 冰箱分类改名：引用该分类的货品行（FIND_IN_SET 精确匹配逗号 token；LIKE '%K1-1%' 会误命中 K1-10） -->
-    <select id="findByFreezerToken" resultType="java.util.LinkedHashMap">
-        SELECT id, product_name, freezer_category
-        FROM stock_data
-        WHERE FIND_IN_SET(#{name}, freezer_category) &gt; 0
-        ORDER BY id
-    </select>
-
-    <!-- 冰箱分类改名 / 删除时清理引用：只改 freezer_category 一列。
-         「updated_at = updated_at」是刻意的自赋值 —— 显式赋值可抑制该列上的
-         ON UPDATE CURRENT_TIMESTAMP，让分类改名这类全局维护不顶掉货品的最后修改时间。
-         否则：货品种类页会按 updated_at 重新排序（被改的分类整批跑到列表末尾），
-         进货取默认单价（ORDER BY updated_at DESC）也可能换一条来源。 -->
-    <update id="updateFreezerOnly">
-        UPDATE stock_data SET freezer_category = #{value}, updated_at = updated_at WHERE id = #{id}
-    </update>
-
-    <!-- 冰箱分类使用量：按原始串分组（多值行在 service 里再拆开累加） -->
-    <select id="freezerUsageGroups" resultType="java.util.LinkedHashMap">
-        SELECT freezer_category, COUNT(*) AS cnt
-        FROM stock_data
-        WHERE freezer_category IS NOT NULL AND freezer_category &lt;&gt; ''
-        GROUP BY freezer_category
-    </select>
+    <!-- 进货默认单价 / 冰箱分类改名·删分类·用量统计，2026-09-18 起都改打 stock_data_system
+         （按系统各存一份），见 StockDataSystemMapper.xml -->
 
 </mapper>

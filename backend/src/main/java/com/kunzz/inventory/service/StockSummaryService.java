@@ -25,6 +25,7 @@ public class StockSummaryService {
 
     private final StockSummaryMapper stockSummaryMapper;
     private final StockDataRepository stockDataRepository;
+    private final com.kunzz.inventory.mapper.StockDataSystemMapper stockDataSystemMapper;
     private static final DecimalFormat THOUSANDS = new DecimalFormat("#,##0.00");
 
     /** 产品名 → 类型(category) 映射（中央无 type 列，从台账补全；8/24 新增） */
@@ -36,11 +37,15 @@ public class StockSummaryService {
         return m;
     }
 
-    /** 产品名 → [冰箱分类, 位次]（总库存「冰箱分类」列+排序用；同名多记录取 id 最小一条，稳定；9/3 新增） */
-    private Map<String, Object[]> productFreezerMap() {
+    /** 产品名 → [冰箱分类, 位次]（总库存「冰箱分类」列+排序用；同名多记录取 stock_data.id 最小一条，稳定）
+     *  2026-09-18 起**按系统**取：同一货品在中央/J1/J2/J3 各有一套分类与位次（原来只有一份，改哪都跟着变） */
+    private Map<String, Object[]> productFreezerMap(String system) {
         Map<String, Object[]> m = new java.util.HashMap<>();
-        for (Object[] row : stockDataRepository.productFreezerInfo()) {
-            if (row[0] != null) m.putIfAbsent(String.valueOf(row[0]), row);
+        for (Map<String, Object> r : stockDataSystemMapper.freezerRows(system)) {
+            Object name = r.get("productName");
+            if (name == null) continue;
+            m.putIfAbsent(String.valueOf(name),
+                    new Object[]{name, r.get("freezerCategory"), r.get("freezerPosition")});
         }
         return m;
     }
@@ -60,7 +65,7 @@ public class StockSummaryService {
         // 中央无 type 列：从台账补全（8/24，对齐分店显示类型）
         Map<String, String> productType = isCentral ? productTypeMap() : Map.of();
         // 冰箱分类+位次（全系统通用台账字段；总库存选中类型后显示分类+排序；9/3 新增）
-        Map<String, Object[]> freezerMap = productFreezerMap();
+        Map<String, Object[]> freezerMap = productFreezerMap(ts);
         java.util.function.Function<String, String> normalizeType = t -> {
             if (t == null || t.isBlank()) return "";
             return "Drinks".equalsIgnoreCase(t) ? "Service Line" : t;

@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.StockDataSystemMapper">
+
+    <!-- 按系统写入：只更新调用方传了值（非 null）的列，未携带的字段保持原样 -->
+    <insert id="upsert" parameterType="map">
+        INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
+        VALUES (#{dataId}, #{system}, #{category}, #{pos}, #{price})
+        ON DUPLICATE KEY UPDATE
+            id = id
+        <if test="category != null">, freezer_category = #{category}</if>
+        <if test="pos != null">, freezer_position = #{pos}</if>
+        <if test="price != null">, price = #{price}</if>
+    </insert>
+
+    <!-- 某系统下每个货品的冰箱分类/位次（总库存排序用）。
+         ORDER BY d.id：同一货品名有多条台账时取 id 最小那条，与 9/3 以来的旧行为一致 -->
+    <select id="freezerRows" resultType="java.util.LinkedHashMap">
+        SELECT d.product_name AS productName,
+               s.freezer_category AS freezerCategory,
+               s.freezer_position AS freezerPosition
+        FROM stock_data_system s
+        JOIN stock_data d ON d.id = s.stock_data_id
+        WHERE s.stock_system = #{system}
+        ORDER BY d.id ASC
+    </select>
+
+    <!-- 全量各系统三件套（总览只读展示 4 套；小表，一次拉全，前端按 stock_data_id 归组） -->
+    <select id="allRows" resultType="java.util.LinkedHashMap">
+        SELECT stock_data_id AS dataId,
+               stock_system AS stockSystem,
+               freezer_category AS freezerCategory,
+               freezer_position AS freezerPosition,
+               price
+        FROM stock_data_system
+        ORDER BY stock_data_id ASC, id ASC
+    </select>
+
+    <!-- 进货默认单价：该货品在该系统下维护的价（只认 > 0，与旧 defaultPrice 语义一致） -->
+    <select id="defaultPrice" resultType="java.lang.Double">
+        SELECT s.price
+        FROM stock_data_system s
+        JOIN stock_data d ON d.id = s.stock_data_id
+        WHERE s.stock_system = #{system}
+          AND s.price IS NOT NULL AND s.price &gt; 0
+          AND d.product_name = #{productName}
+        <if test="codeNumber != null and codeNumber != ''">
+            AND d.product_code = #{codeNumber}
+        </if>
+        ORDER BY d.updated_at DESC, d.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 改价前旧价（改价日志用；这里不过滤 > 0） -->
+    <select id="priceOf" resultType="java.lang.Double">
+        SELECT price FROM stock_data_system
+        WHERE stock_data_id = #{dataId} AND stock_system = #{system}
+    </select>
+
+    <!-- 冰箱分类改名/删分类：引用该分类的行（token 精确匹配，避免 LIKE 误命中前缀） -->
+    <select id="findByFreezerToken" resultType="java.util.LinkedHashMap">
+        SELECT s.id, s.stock_data_id AS stockDataId, s.stock_system AS stockSystem,
+               s.freezer_category AS freezer_category,
+               d.product_name AS product_name
+        FROM stock_data_system s
+        JOIN stock_data d ON d.id = s.stock_data_id
+        WHERE FIND_IN_SET(#{name}, REPLACE(s.freezer_category, ' ', '')) &gt; 0
+    </select>
+
+    <update id="updateFreezerOnly">
+        UPDATE stock_data_system SET freezer_category = #{value} WHERE id = #{id}
+    </update>
+
+    <!-- 用量统计：service 按 token 拆开、按货品去重后计数（一个货品挂 4 个系统只算 1 个货品） -->
+    <select id="usageRows" resultType="java.util.LinkedHashMap">
+        SELECT stock_data_id AS stockDataId, freezer_category AS freezer_category
+        FROM stock_data_system
+        WHERE freezer_category IS NOT NULL AND freezer_category &lt;&gt; ''
+    </select>
+
+</mapper>

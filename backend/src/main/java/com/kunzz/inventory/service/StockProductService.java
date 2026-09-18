@@ -2,6 +2,7 @@ package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.mapper.PriceChangeLogMapper;
+import com.kunzz.inventory.mapper.StockDataSystemMapper;
 import com.kunzz.inventory.mapper.StockProductMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class StockProductService {
 
     private final StockProductMapper stockProductMapper;
+    private final StockDataSystemMapper stockDataSystemMapper;
     private final PriceChangeLogMapper priceChangeLogMapper;
 
     /** 列表 + 统计（exact=true 货品名精确匹配，false 全能多字段模糊） */
@@ -52,6 +54,9 @@ public class StockProductService {
             items.add(item);
         }
 
+        // 总览（无系统）看不到单独的单价/冰箱分类：补上「各系统 4 套」的只读文本，前端直接展示
+        if (sys == null) attachPerSystemTexts(items);
+
         long approved = items.stream().filter(i -> !((String) i.get("approver")).isBlank()).count();
         long pending = items.size() - approved;
 
@@ -63,12 +68,13 @@ public class StockProductService {
         return out;
     }
 
-    /** 进货默认单价（货品种类里最新维护的 price；无则返回 null） */
+    /** 进货默认单价（该货品在**该系统**下维护的 price；无则返回 null） */
     @Transactional(readOnly = true)
-    public Double getDefaultPrice(String productName, String codeNumber) {
+    public Double getDefaultPrice(String productName, String codeNumber, String system) {
         if (productName == null || productName.isBlank()) return null;
-        return stockProductMapper.defaultPrice(productName.trim(),
-                (codeNumber == null || codeNumber.isBlank()) ? null : codeNumber.trim());
+        return stockDataSystemMapper.defaultPrice(productName.trim(),
+                (codeNumber == null || codeNumber.isBlank()) ? null : codeNumber.trim(),
+                systemKey(system));
     }
 
     /** 单价清洗：空串/空白/非法数字 → null（避免 '' 写入 DECIMAL 列报 Data truncation） */
@@ -102,9 +108,9 @@ public class StockProductService {
         r.put("applicant", body.getOrDefault("applicant", ""));
         r.put("approver", body.getOrDefault("approver", ""));
         r.put("systemAssign", body.getOrDefault("system_assign", ""));
-        r.put("freezerCategory", body.getOrDefault("freezer_category", ""));
-        r.put("freezerPosition", parsePos(body.get("freezer_position")));
         stockProductMapper.insertRow(r);
+        // 单价/冰箱分类/位次 按系统写进 stock_data_system（stock_data 上那三列保留但不再读写）
+        writePerSystemFields(stockProductMapper.lastInsertId(), body);
         return Map.of("success", true);
     }
 
@@ -117,23 +123,104 @@ public class StockProductService {
         if (body.containsKey("product_code"))  r.put("productCode", str(body.get("product_code")));
         if (body.containsKey("product_name"))  r.put("productName", str(body.get("product_name")));
         if (body.containsKey("specification")) r.put("specification", str(body.get("specification")));
-        if (body.containsKey("price"))         r.put("price", cleanPrice(body.get("price")));
         if (body.containsKey("category"))      r.put("category", str(body.get("category")));
         if (body.containsKey("supplier"))      r.put("supplier", str(body.get("supplier")));
         if (body.containsKey("applicant"))     r.put("applicant", str(body.get("applicant")));
         if (body.containsKey("approver"))      r.put("approver", str(body.get("approver")));
         if (body.containsKey("system_assign")) r.put("systemAssign", str(body.get("system_assign")));
-        if (body.containsKey("freezer_category")) r.put("freezerCategory", str(body.get("freezer_category")));
-        if (body.containsKey("freezer_position")) r.put("freezerPosition", parsePos(body.get("freezer_position")));
-        if (r.isEmpty()) return Map.of("success", true);
+
+        // 单价/冰箱分类/位次 走 stock_data_system（按系统）；只携带这三个字段时也要照常处理
+        boolean perSystem = body.containsKey("price")
+                || body.containsKey("freezer_category") || body.containsKey("freezer_position");
+        if (r.isEmpty() && !perSystem) return Map.of("success", true);
         // 改价日志必须用【改价前】的旧价：update 前先取旧值（9/3 修复：原来 update 后才 findById，
         // 拿到的是新价，与 body 相等 → “价格未变不记录” → 日志从未写入）
         Map<String, Object> before = stockProductMapper.findById(id);
-        int n = stockProductMapper.updateRow(id, r);
-        if (n == 0) throw new BusinessException(404, "记录不存在");
-        // 改价日志：body 携带 price 且与旧值不同 → 记录当天一条（总库存改价历史展示用）
-        if (r.containsKey("price")) logPriceChange(before, body);
+        if (before == null) throw new BusinessException(404, "记录不存在");
+        // 旧价必须在**写之前**取：按系统的三件套也是下面这一步写的，写后再读拿到的就是新价，
+        // 会变成"价格未变不记录"（与 9/3 那起 update 后才 findById 的坑同一类，这里直接把值传下去，结构上防住）
+        String logSys = explicitSystem(body.get("system"));
+        Object beforeId = before.get("id");
+        Double oldPriceBefore = (beforeId instanceof Number bn && logSys != null)
+                ? stockDataSystemMapper.priceOf(bn.intValue(), logSys) : null;
+        if (!r.isEmpty()) stockProductMapper.updateRow(id, r);
+        writePerSystemFields(id, body);
+        // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
+        if (body.containsKey("price")) logPriceChange(before, body, logSys, oldPriceBefore);
         return Map.of("success", true);
+    }
+
+    /** 系统名归一：central/j1/j2/j3；总览、空 → central（进出货页 system=overview 也指中央） */
+    private String systemKey(Object raw) {
+        String v = raw == null ? "" : String.valueOf(raw).trim().toLowerCase();
+        if (v.isEmpty() || "overview".equals(v)) return "central";
+        if (v.equals("central") || v.equals("j1") || v.equals("j2") || v.equals("j3")) return v;
+        return null;
+    }
+
+    /** 显式系统名（只认 central/j1/j2/j3）。总览、空、不认识的一律 null —— 总览编辑绝不能写到某个系统去 */
+    private String explicitSystem(Object raw) {
+        String v = raw == null ? "" : String.valueOf(raw).trim().toLowerCase();
+        return (v.equals("central") || v.equals("j1") || v.equals("j2") || v.equals("j3")) ? v : null;
+    }
+
+    /** 把请求里携带的「按系统」三件套写进 stock_data_system；没带 system 或值为 null 的字段都不写 */
+    private void writePerSystemFields(Integer dataId, Map<String, Object> body) {
+        if (dataId == null) return;
+        String system = explicitSystem(body.get("system"));
+        if (system == null) return;
+        Object fc = body.get("freezer_category"), fp = body.get("freezer_position"), pr = body.get("price");
+        if (fc == null && fp == null && pr == null) return;
+        stockDataSystemMapper.upsert(dataId, system,
+                fc != null ? str(fc) : null,
+                fp != null ? parsePos(fp) : null,
+                pr != null ? cleanPrice(pr) : null);
+    }
+
+    /** 总览用：给每行补「各系统」的单价/冰箱分类只读文本（前端在单价、冰箱分类列直接展示） */
+    private void attachPerSystemTexts(List<Map<String, Object>> items) {
+        if (items.isEmpty()) return;
+        Map<Object, Map<String, Map<String, Object>>> byData = new LinkedHashMap<>();
+        for (Map<String, Object> r : stockDataSystemMapper.allRows()) {
+            byData.computeIfAbsent(r.get("dataId"), k -> new LinkedHashMap<>())
+                  .put(str(r.get("stockSystem")), r);
+        }
+        for (Map<String, Object> item : items) {
+            Map<String, Map<String, Object>> per = byData.get(item.get("id"));
+            item.put("price_by_system", joinBySystem(per, "price"));
+            item.put("freezer_by_system", joinBySystem(per, "freezerCategory"));
+        }
+    }
+
+    /** 4 套值拼成一行：4 个系统完全一样（含全空）→ 只给一个值；否则「中央 x · J1 y · J2 - · J3 z」 */
+    private String joinBySystem(Map<String, Map<String, Object>> per, String key) {
+        String[] sysKeys = {"central", "j1", "j2", "j3"};
+        String[] labels = {"中央", "J1", "J2", "J3"};
+        List<String> vals = new ArrayList<>();
+        for (String sk : sysKeys) {
+            Map<String, Object> row = per == null ? null : per.get(sk);
+            Object v = row == null ? null : row.get(key);
+            vals.add(v == null ? "" : formatVal(key, v));
+        }
+        boolean allSame = true;
+        for (String v : vals) if (!v.equals(vals.get(0))) { allSame = false; break; }
+        if (allSame) return vals.get(0);
+        List<String> parts = new ArrayList<>();
+        for (int i = 0; i < sysKeys.length; i++) {
+            parts.add(labels[i] + " " + (vals.get(i).isEmpty() ? "-" : vals.get(i)));
+        }
+        return String.join(" · ", parts);
+    }
+
+    /** 单价去尾零（2.67000 → 2.67；4~5 位小数原样保留）；其它字段原样 */
+    private String formatVal(String key, Object v) {
+        String txt = str(v);
+        if (!"price".equals(key) || txt.isEmpty()) return txt;
+        try {
+            return new java.math.BigDecimal(txt).stripTrailingZeros().toPlainString();
+        } catch (Exception e) {
+            return txt;
+        }
     }
 
     /** 位次解析：空/非法 → 0（=未设置，排序时排该冰箱最后；9/3 新增） */
@@ -144,9 +231,9 @@ public class StockProductService {
 
     /** 改价日志：货品种类每次更改单价 → 当天记一条（从旧到最新展示在总库存） */
     /** 改价日志：用改价前的旧值判断/记录（before 为 null = 货品不存在，静默跳过） */
-    private void logPriceChange(Map<String, Object> before, Map<String, Object> body) {
+    private void logPriceChange(Map<String, Object> before, Map<String, Object> body,
+                                String system, Double oldPrice) {
         if (before == null) return;
-        Double oldPrice = cleanPrice(before.get("price"));
         Double newPrice = cleanPrice(body.get("price"));
         if (newPrice == null) return;
         if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) return; // 价格未变不记录
@@ -155,6 +242,7 @@ public class StockProductService {
         log.put("productName", body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
                 ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name"))));
         log.put("codeNumber", str(before.get("product_code")));
+        log.put("stockSystem", system);
         log.put("oldPrice", oldPrice);
         log.put("newPrice", newPrice);
         log.put("changeDate", java.time.LocalDate.now().toString());

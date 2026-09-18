@@ -16,9 +16,10 @@ public interface PriceChangeLogMapper {
     /** 插入一条改价记录 */
     int insertLog(@Param("l") Map<String, Object> log);
 
-    /** 某货品的改价历史（从旧到最新） */
-    List<Map<String, Object>> listByProduct(@Param("productName") String productName);
+    /** 某货品的改价历史（从旧到最新）；system 为空/总览 → 不过滤 */
+    List<Map<String, Object>> listByProduct(@Param("productName") String productName,
+                                            @Param("system") String system);
 
-    /** 每个货品的最近一次改价（总库存「最近改价」列用） */
-    List<Map<String, Object>> latestAll();
+    /** 每个货品的最近一次改价（总库存「最近改价」列用）；按当前系统过滤 */
+    List<Map<String, Object>> latestAll(@Param("system") String system);
 }

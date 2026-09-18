@@ -71,12 +71,13 @@ public class StockEnhanceController {
         return ApiResponse.ok(stockProductService.list(systemAssign, keyword, exact));
     }
 
-    /** 进货默认单价（货品种类里最新维护的 price；无则 null） */
+    /** 进货默认单价（该货品在**该系统**下维护的 price；无则 null）。system 省略按中央 */
     @GetMapping("/products/default-price")
     public ApiResponse<Double> productDefaultPrice(
             @RequestParam String productName,
-            @RequestParam(required = false) String codeNumber) {
-        return ApiResponse.ok(stockProductService.getDefaultPrice(productName, codeNumber));
+            @RequestParam(required = false) String codeNumber,
+            @RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockProductService.getDefaultPrice(productName, codeNumber, system));
     }
 
     /** 新增记录 */
@@ -91,14 +92,15 @@ public class StockEnhanceController {
 
     /** 某货品改价历史（从旧到最新） */
     @GetMapping("/products/price-log")
-    public ApiResponse<List<Map<String, Object>>> priceLog(@RequestParam String productName) {
-        return ApiResponse.ok(priceChangeLogMapper.listByProduct(productName));
+    public ApiResponse<List<Map<String, Object>>> priceLog(@RequestParam String productName,
+                                                           @RequestParam(required = false) String system) {
+        return ApiResponse.ok(priceChangeLogMapper.listByProduct(productName, system));
     }
 
     /** 每个货品最近一次改价（总库存「最近改价」列；一次拉全量，前端按货品名匹配） */
     @GetMapping("/products/price-log-latest")
-    public ApiResponse<List<Map<String, Object>>> priceLogLatest() {
-        return ApiResponse.ok(priceChangeLogMapper.latestAll());
+    public ApiResponse<List<Map<String, Object>>> priceLogLatest(@RequestParam(required = false) String system) {
+        return ApiResponse.ok(priceChangeLogMapper.latestAll(system));
     }
 
     /** 更新记录 */

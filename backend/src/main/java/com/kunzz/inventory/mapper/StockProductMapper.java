@@ -16,36 +16,25 @@ public interface StockProductMapper {
     /** 按 id 查单行（改价日志取旧价用） */
     Map<String, Object> findById(@Param("id") Integer id);
 
-    /** 列表（systemAssign 为 null/空 = 总览全部；keyword：exact=false 多字段模糊（名称/编号/规格/类型/供应商/冰箱分类），exact=true 货品名完全等于） */
+    /** 列表（systemAssign 为 null/空 = 总览全部；keyword：exact=false 多字段模糊（名称/编号/规格/类型/供应商/冰箱分类），exact=true 货品名完全等于）
+     *  systemAssign 非空时：冰箱分类/位次/单价 取自 stock_data_system 里**该系统**那一行（2026-09-18 起按系统各存一份）；
+     *  为空（总览）时这三个字段返回空，总览改用 service 拼好的「4 套」文本 */
     List<Map<String, Object>> listRows(@Param("systemAssign") String systemAssign,
                                        @Param("keyword") String keyword,
                                        @Param("exact") boolean exact);
 
-    /** 插入新记录 */
+    /** 插入新记录（price/冰箱分类/位次 不在这里写：2026-09-18 起改由 StockDataSystemMapper 按系统写） */
     int insertRow(@Param("r") Map<String, Object> r);
 
-    /** 更新记录 */
-    int updateRow(@Param("id") Integer id, @Param("r") Map<String, Object> r);
+    /** 刚插入行的自增 id（@Transactional 内与 insertRow 同一连接） */
+    Integer lastInsertId();
 
-    /** 进货默认单价（货品种类里最新维护的 price，无则 null） */
-    Double defaultPrice(@Param("productName") String productName,
-                        @Param("codeNumber") String codeNumber);
+    /** 更新记录（price/冰箱分类/位次 同上，不在这里写） */
+    int updateRow(@Param("id") Integer id, @Param("r") Map<String, Object> r);
 
     /** 批准记录（设置 approver） */
     int approveRow(@Param("id") Integer id, @Param("approver") String approver);
 
     /** 删除记录 */
     int deleteRow(@Param("id") Integer id);
-
-    /** 冰箱分类改名用：找出所有引用该分类的货品（FIND_IN_SET 按逗号 token 精确匹配，避免 LIKE 误命中前缀） */
-    List<Map<String, Object>> findByFreezerToken(@Param("name") String name);
-
-    /** 冰箱分类改名用：只更新 freezer_category 单列（不整行覆写，避免覆盖并发编辑的其它字段） */
-    int updateFreezerOnly(@Param("id") Integer id, @Param("value") String value);
-
-    /**
-     * 冰箱分类使用量：按原始串分组计数，service 再按逗号拆开累加到每个分类上
-     * （不能直接 GROUP BY 单值，多值行如 'K1-6,S1-2' 会被当成一个独立值）
-     */
-    List<Map<String, Object>> freezerUsageGroups();
 }

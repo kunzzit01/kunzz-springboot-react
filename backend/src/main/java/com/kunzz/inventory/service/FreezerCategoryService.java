@@ -2,7 +2,7 @@ package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.entity.FreezerCategory;
-import com.kunzz.inventory.mapper.StockProductMapper;
+import com.kunzz.inventory.mapper.StockDataSystemMapper;
 import com.kunzz.inventory.repository.FreezerCategoryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -13,9 +13,9 @@ import java.util.*;
 /**
  * 冰箱分类字典维护（freezer_categories）
  *
- * 货品上的冰箱分类仍然是 stock_data.freezer_category 里的纯文本（逗号分隔多选），
- * 本服务只维护【名字 + 顺序】这一层，改名时级联改写货品上的文本 ——
- * 表结构、字段类型、存储格式都不变，总库存/手机版靠这一列派生，会自动跟着新名字走。
+ * 货品上的冰箱分类是纯文本（逗号分隔多选），2026-09-18 起存在 stock_data_system 表里
+ * **每个系统一行**；字典只维护【名字 + 顺序】这一层，改名时级联改写各系统行上的文本
+ * （名字是字典与数据之间唯一的联系，所以改名对所有系统一起生效）。
  */
 @Service
 @RequiredArgsConstructor
@@ -26,7 +26,7 @@ public class FreezerCategoryService {
     private static final String SEP = ",";
 
     private final FreezerCategoryRepository repo;
-    private final StockProductMapper stockProductMapper;
+    private final StockDataSystemMapper stockDataSystemMapper;
 
     /**
      * 下拉选项 / 管理面板列表（按业务顺序，全部返回）
@@ -98,7 +98,7 @@ public class FreezerCategoryService {
             throw new BusinessException("冰箱分类「" + name + "」已经存在了");
         }
 
-        List<Map<String, Object>> rows = stockProductMapper.findByFreezerToken(oldName);
+        List<Map<String, Object>> rows = stockDataSystemMapper.findByFreezerToken(oldName);
         List<Object[]> pending = new ArrayList<>();
         List<String> overflow = new ArrayList<>();
         for (Map<String, Object> r : rows) {
@@ -113,7 +113,7 @@ public class FreezerCategoryService {
         }
         if (!overflow.isEmpty()) throw new BusinessException(overflowMessage(name, overflow));
 
-        for (Object[] u : pending) stockProductMapper.updateFreezerOnly(toInt(u[0]), (String) u[1]);
+        for (Object[] u : pending) stockDataSystemMapper.updateFreezerOnly(toInt(u[0]), (String) u[1]);
 
         c.setName(name);
         repo.save(c);
@@ -149,7 +149,7 @@ public class FreezerCategoryService {
         FreezerCategory c = repo.findById(id).orElseThrow(() -> new BusinessException(404, "冰箱分类不存在"));
         String name = c.getName();
 
-        List<Map<String, Object>> rows = stockProductMapper.findByFreezerToken(name);
+        List<Map<String, Object>> rows = stockDataSystemMapper.findByFreezerToken(name);
         if (!rows.isEmpty() && !force) {
             throw new BusinessException("还有 " + rows.size() + " 个货品在用「" + name
                     + "」。删除会同时把这些货品上的这个分类去掉；确认无误请带 force=true 重试。");
@@ -160,7 +160,7 @@ public class FreezerCategoryService {
             String cur = str(r.get("freezer_category"));
             String next = removeToken(cur, name);
             if (next.equals(cur)) continue;
-            stockProductMapper.updateFreezerOnly(toInt(r.get("id")), next);
+            stockDataSystemMapper.updateFreezerOnly(toInt(r.get("id")), next);
             cleared++;
         }
         repo.delete(c);
@@ -222,19 +222,19 @@ public class FreezerCategoryService {
                 + "这些货品同时挂了多个冰箱，请换个短一点的名字。本次没有做任何修改。";
     }
 
-    /** 每个分类被多少个货品使用（多值行按逗号拆开分别累加） */
+    /** 每个分类被多少个货品使用：按 token 收集货品 id（多值行按逗号拆开；同一货品挂多个系统只算一个货品） */
     private Map<String, Integer> usageCounts() {
-        Map<String, Integer> counts = new LinkedHashMap<>();
-        for (Map<String, Object> g : stockProductMapper.freezerUsageGroups()) {
-            String csv = str(g.get("freezer_category"));
-            int cnt = toInt(g.get("cnt"));
-            Set<String> tokens = new LinkedHashSet<>(); // 同一行里重复写同一个分类只算一次
+        Map<String, Set<Integer>> byToken = new LinkedHashMap<>();
+        for (Map<String, Object> r : stockDataSystemMapper.usageRows()) {
+            String csv = str(r.get("freezer_category"));
+            Integer dataId = toInt(r.get("stockDataId"));
             for (String part : csv.split(SEP)) {
                 String t = part.trim();
-                if (!t.isEmpty()) tokens.add(t);
+                if (!t.isEmpty()) byToken.computeIfAbsent(t, k -> new LinkedHashSet<>()).add(dataId);
             }
-            for (String t : tokens) counts.merge(t, cnt, Integer::sum);
         }
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        for (Map.Entry<String, Set<Integer>> e : byToken.entrySet()) counts.put(e.getKey(), e.getValue().size());
         return counts;
     }
 

@@ -104,10 +104,10 @@ public interface MobileStockMapper {
                     @Param("qty") BigDecimal qty);
 
     /** 电话版列表：按 (product, code, spec) 实时计算（对齐旧 stocklist_total action） */
-    List<Map<String, Object>> phoneStockList(@Param("table") String table);
+    List<Map<String, Object>> phoneStockList(@Param("table") String table, @Param("stockSystem") String stockSystem);
 
     /** 总记录数（对齐旧 stats 总记录口径） */
     Integer summaryCount(@Param("table") String table);
 
-    List<Map<String, Object>> listTotals(@Param("table") String table);
+    List<Map<String, Object>> listTotals(@Param("table") String table, @Param("stockSystem") String stockSystem);
 }

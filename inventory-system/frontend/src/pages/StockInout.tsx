@@ -1062,7 +1062,7 @@ export default function StockInout() {
   /** 进货默认单价：优先货品种类里维护的 price，无则返回 null（回退 HIFO 最高单价） */
   const fetchDefaultPrice = async (productName: string, codeNumber?: string): Promise<string | null> => {
     try {
-      const dp = await getProductDefaultPrice(productName, codeNumber)
+      const dp = await getProductDefaultPrice(productName, codeNumber, system)
       // 单价 0 也是合法单价（RM0 货品需要记录）
       if (dp !== null && dp !== undefined && Number(dp) >= 0) return String(dp)
     } catch { /* ignore */ }
