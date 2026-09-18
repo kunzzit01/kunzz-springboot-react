@@ -1536,3 +1536,108 @@ curl -s -o /dev/null -w "redirect=%{http_code}\n"  https://www.kunzzgroup.com/fr
 - ❌ 不要停旧 Hostinger 主机
 - ❌ 不要动 NS（会把 MX 邮件记录一起带走）
 - ❌ 不要重启 VPS（会重启 18 个容器）
+
+---
+
+# 🔄 修订版完整步骤（2026-09-18 起生效）
+
+> **本节取代上面的 §1（子域名方案）。** 用户决定**直接切 kunzzgroup.com，不用子域名**。
+> 彩排改由 `curl --resolve` 完成 —— 同样不碰 DNS，但不需要子域名。
+>
+> **另一处改进**：不用启用 Traefik 的 file provider（那要改 Traefik 的 compose 并重启它，
+> 会造成 5–15 秒中断）。改用**新增一个带 labels 的转发容器** —— 不动 Traefik 配置、不重启、
+> 完全附加式，回滚就是 `docker compose down`。
+
+## 阶段 0 · 准备（零风险，先做）
+
+**0.1 导出 DNS 记录** —— DNS 面板 → `Export` → 存档（回滚资产）
+同时确认记录列表里 **MX（邮箱）** 存在并记下值。
+
+**0.2 把 `@` 和 `www` 的 A 记录 TTL 改成 300（IP 保持不变）**
+> 目的：Let's Encrypt 有自己的 DNS 缓存。若 TTL 是 3600，切完 A 记录后 LE 可能仍在用
+> 缓存里的旧 IP 做 HTTP-01 验证 → 验证失败 → 证书拖延（最坏拖到缓存过期）。
+> 理想做法：改完 TTL 后等一个「旧 TTL 时长」再继续。
+
+**0.3 记下回滚值**
+```
+kunzzgroup.com      → 145.79.24.162
+www.kunzzgroup.com  → 145.79.29.154
+```
+
+**0.4 查出 Traefik 所在的 Docker 网络名**
+```bash
+docker inspect traefik-traefik-1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{"\n"}}{{end}}'
+```
+
+## 阶段 1 · 打通 Traefik → KUNZZ（不碰 DNS）
+
+**1.1** 建 `/opt/kunzz-bridge/docker-compose.yml`（把 `<网络名>` 换成 0.4 的结果）：
+```yaml
+services:
+  kunzz-bridge:
+    image: alpine/socat
+    container_name: kunzz-bridge
+    restart: unless-stopped
+    command: tcp-listen:80,fork,reuseaddr tcp-connect:host.docker.internal:8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - <网络名>
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=<网络名>"
+      - "traefik.http.routers.kunzz.rule=Host(`kunzzgroup.com`) || Host(`www.kunzzgroup.com`)"
+      - "traefik.http.routers.kunzz.entrypoints=websecure"
+      - "traefik.http.routers.kunzz.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kunzz.loadbalancer.server.port=80"
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  <网络名>:
+    external: true
+```
+
+**1.2** 启动：`cd /opt/kunzz-bridge && docker compose up -d`
+
+**1.3** 验证（**DNS 还没动，用户无感**）：
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" --resolve www.kunzzgroup.com:443:127.0.0.1 -k https://www.kunzzgroup.com/
+```
+期望 `200`。此时证书是 Traefik 默认自签的（正常，`-k` 就是为此）。
+
+**1.4** 证书要等 DNS 切过来之后才会自动签发（HTTP-01 需要域名公网可达）。
+
+## 阶段 2 · 数据迁移（不可省略）
+
+按上面 §2 执行：通知停用旧系统 → 导最终 dump + uploads → 导库 → 补 `add_new_tables.sql`
+→ **重新封堵 demo** → 校验行数。
+
+> ⚠️ 不做这步，9/17 之后旧站上的所有业务记录都不会进新系统。
+
+## 阶段 3 · 切 DNS（最后一步）
+
+**3.1** 改 A 记录 → `187.127.125.136`（`@` 和 `www` 都改）
+
+**3.2** 等证书：Traefik 会在首个请求时自动发起 ACME 挑战，**1–5 分钟**内签发。
+期间 HTTPS 可能报证书警告（自签证书）—— 属预期。
+
+**3.3** 验证：
+```bash
+curl -s -o /dev/null -w "root=%{http_code}\n"      https://www.kunzzgroup.com/
+curl -s -o /dev/null -w "home=%{http_code}\n"      https://www.kunzzgroup.com/home/
+curl -s -o /dev/null -w "mobile=%{http_code}\n"    https://www.kunzzgroup.com/mobile/login
+curl -s -o /dev/null -w "api=%{http_code}\n"       https://www.kunzzgroup.com/api/auth/me
+```
+期望 `200 / 200 / 200 / 401`，且证书有效（不再需要 `-k`）。
+
+## 阶段 4 · 回滚
+
+```
+① DNS：@ → 145.79.24.162 ／ www → 145.79.29.154
+② cd /opt/kunzz-bridge && docker compose down          （移除新路由）
+③ 后端：cp /etc/inventory-backend.env.bak /etc/inventory-backend.env && systemctl restart inventory-backend
+```
+
+> 🔴 旧 Hostinger 主机**至少保留 2 周**。它是唯一的回滚退路。
