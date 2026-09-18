@@ -23,6 +23,12 @@ location = /home → 不匹配上面任何一条 → 落进 location / → 后�
 - inventory-system/frontend/src/components/AppLayout.tsx ← 登出目标 `/home` → `/home/`
 - inventory-system/frontend/src/pages/Login.tsx ← 返回箭头改为固定跳 `/home/`；登录后默认落点改为 `/dashboard`
 - inventory-system/frontend/src/App.tsx ← 新增 `/dashboard` 路由；`/` 索引路由改为重定向到 `/dashboard`
+- 修复缓存.bat ← 新增：给员工双击用的「清 DNS 缓存 + 关浏览器 + 重开官网」一键脚本
+
+> **追加 `修复缓存.bat` 的原因（2026-09-18）**：切域名后，员工的设备仍缓存着旧站的
+> 页面与旧 IP（操作系统 DNS 缓存 + 浏览器自己的 host cache）。
+> 服务端已无问题（Google DNS 全球已是新 IP，TTL 300），纯粹是设备级缓存，
+> 所以提供一个一键脚本给非技术员工使用。
 
 > **追加 App.tsx 的原因（2026-09-18）**：为切域名做准备，根路径要让给公司官网
 > （现在 `kunzzgroup.com/` 会显示后台登录页，顾客看到的是登录框）。
