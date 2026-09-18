@@ -888,7 +888,7 @@ export default function StockInout() {
       const spec = (hit && hit.specification) ? hit.specification : (row?.specification || '')
       let cat = (hit && hit.category) ? hit.category : (row?.type || '')
       if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
-      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，无则 0.00）；出货/未填数量 → 下拉（HIFO/自行选价）
+      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，抓不到留空由保存校验拦下）；出货/未填数量 → 下拉（HIFO/自行选价）
       const isIncoming = parseFloat(row?.inQty || '0') > 0
       if (isIncoming) {
         const dp = await fetchDefaultPrice(name, autoCode || undefined)
@@ -900,7 +900,7 @@ export default function StockInout() {
           // 进货 → 收货单位同步为该家供应商（与 onPickCode 一致；换供应商时跟着换）
           receiver: hit?.supplier ? String(hit.supplier) : row?.receiver,
           stockOptions: priceList || [],
-          price: dp !== null ? dp : '0.00',
+          price: dp !== null ? dp : '',
           priceMode: 'manual',
         })
       } else {
@@ -934,7 +934,7 @@ export default function StockInout() {
       const spec = hit?.specification ? String(hit.specification) : (row?.specification || '')
       let cat = hit?.category ? String(hit.category) : (row?.type || '')
       if (cat === 'Drinks' || (cat && cat.toLowerCase() === 'service line')) cat = 'Service Line'
-      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，无则 0.00）；出货/未填数量 → 下拉
+      // 方向决定价格模式：进货 → 手动单价（货品种类有单价则抓取，抓不到留空由保存校验拦下）；出货/未填数量 → 下拉
       const isIncoming = parseFloat(row?.inQty || '0') > 0
       if (isIncoming) {
         const dp = await fetchDefaultPrice(name, code || undefined)
@@ -946,7 +946,7 @@ export default function StockInout() {
           type: cat || row?.type || '',
           supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
           stockOptions: priceList || [],
-          price: dp !== null ? dp : '0.00',
+          price: dp !== null ? dp : '',
           priceMode: 'manual',
           receiver: hit?.supplier ? String(hit.supplier) : row?.receiver,
         })
@@ -968,7 +968,7 @@ export default function StockInout() {
     } catch { /* ignore */ }
   }
   /** 编辑行：按货品种类（第一次新增创建货品保存的资料）自动回填 —— 与新增行 onPickProduct/onPickCode 同一套逻辑：
-   *  编号、规格、类型、供应商；进货 → 抓取货品默认单价（无则 0.00）并把收货单位锁为供应商；
+   *  编号、规格、类型、供应商；进货 → 抓取货品默认单价（抓不到留空，由保存校验拦下）并把收货单位锁为供应商；
    *  出货 → 清空单价进入价格批次下拉模式，并按出货数量加载价格+库存选项 */
   const applyProductToEdit = async (id: number, hit: any, name: string, code: string) => {
     const draft = editDrafts[id] || {}
@@ -985,9 +985,9 @@ export default function StockInout() {
       supplier: sup,
     }
     if (inQ > 0) {
-      // 进货：单价抓取货品种类默认单价（8/23 同款），收货单位自动填入供应商（锁死）
+      // 进货：单价抓取货品种类默认单价；换货品后旧单价已失效，抓不到就留空由保存校验拦下
       const dp = await fetchDefaultPrice(name, code || undefined)
-      patch.price = dp !== null ? dp : '0.00'
+      patch.price = dp !== null ? dp : ''
       patch.priceMode = 'manual'
       if (sup) patch.receiver = sup
     } else if (outQ > 0) {
@@ -1024,7 +1024,7 @@ export default function StockInout() {
       await applyProductToEdit(id, hit, String(hit.product_name), code)
     } catch { /* ignore */ }
   }
-  /** 编辑行：进货数量变化 → 单价自动抓取：优先货品种类默认单价，无则回退 HIFO 最高单价 */
+  /** 编辑行：进货数量变化 → 单价自动抓取货品种类默认单价；抓不到就保持这一行原单价不动 */
   const handleEditInQty = async (id: number, v: string) => {
     const draft = editDrafts[id] || {}
     setEditDrafts(prev => ({
@@ -1037,9 +1037,10 @@ export default function StockInout() {
         receiver: parseFloat(v) > 0 && prev[id].supplier ? prev[id].supplier : prev[id].receiver,
       },
     }))
+    // 抓不到默认单价 → 不动这一行已有的单价（编辑数量不该把已记好的单价擦掉）
     if (draft.productName && parseFloat(v) > 0) {
       const dp = await fetchDefaultPrice(draft.productName, draft.codeNumber || undefined)
-      setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], price: dp !== null ? dp : '0.00' } }))
+      if (dp !== null) setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], price: dp } }))
     }
   }
   /** HIFO 拆行（对齐 hifoAutoSplit） */
@@ -1084,10 +1085,11 @@ export default function StockInout() {
       // 明确进货 → 自动填入货品供应商（锁死）
       receiver: parseFloat(v) > 0 && row?.supplier ? row.supplier : row?.receiver,
     })
-    // 进货数量变化 → 单价自动抓取（所有系统生效）：有单价用货品种类单价，无单价显示 0.00
+    // 进货数量变化 → 单价自动抓取（所有系统生效）：抓不到货品种类默认单价就留空，
+    // 交给保存校验拦住「忘填单价」；想记 RM0 的人手打 0，仍然合法
     if (row && row.productName && parseFloat(v) > 0) {
       const dp = await fetchDefaultPrice(row.productName, row.codeNumber || undefined)
-      patchNew(key, { price: dp !== null ? dp : '0.00', priceMode: 'manual' })
+      patchNew(key, { price: dp !== null ? dp : '', priceMode: 'manual' })
     }
   }
   /** 取某新增行当前出货量：DOM 优先（刚输入的最新值），state 兜底 */
@@ -1911,7 +1913,7 @@ export default function StockInout() {
                           </select>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
-                            <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="0.00"
+                            <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="必填"
                               value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
                             {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
                             {nr.productName && parseFloat(nr.outQty) > 0 && !(nr.stockOptions || []).length && (
