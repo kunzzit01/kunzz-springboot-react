@@ -548,7 +548,9 @@ export default function StockProducts() {
     try {
       // 对齐 saveSingleRowData：总览页保持原批准状态；系统页编辑后清除批准状态需重新批准
       const approver = system === 'overview' ? (d.approver || '') : ''
-      await updateStockProduct(id, { ...d, system_assign: system === 'overview' ? (d.system_assign || '') : currentSys.value, applicant: d.applicant || currentUser, approver })
+      // 系统分配：一律传这一行自己的值。原来在单系统页强制写成 currentSys.value，
+      // 会把 Central,J1,J2,J3 这样的多系统分配覆盖成当前页那一个系统（分店从此看不到该货品）。
+      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || currentUser, approver })
       // 只摘掉这一行：其他编辑中行与草稿原样保留（点其中一行的保存，不影响其他行已改的内容）
       setEditing(prev => { const n = new Set(prev); n.delete(id); return n })
       setDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
@@ -598,7 +600,8 @@ export default function StockProducts() {
       return '请填写完整的货品编号、名称、规格、类型、供应商'
     }
     try {
-      await createStockProduct({ ...r, system_assign: system === 'overview' ? (r.system_assign || '') : currentSys.value, applicant: r.applicant || currentUser })
+      // 同上：系统分配用这一行自己的值（单系统页由 addRow 预置成当前系统，不再强制覆盖）
+      await createStockProduct({ ...r, system_assign: r.system_assign || '', applicant: r.applicant || currentUser })
       return null
     } catch (e: any) { return e?.response?.data?.message || '保存失败' }
   }
@@ -937,7 +940,7 @@ export default function StockProducts() {
                   <th>货品类型</th>
                   <th>供应商</th>
                   <th>申请人</th>
-                  <th>系统分配</th>
+                  {system === 'overview' && <th>系统分配</th>}
                   <th>冰箱分类</th>
                   {system !== 'overview' && <th>位次</th>}
                   <th>{statusColTitle}</th>
@@ -969,11 +972,12 @@ export default function StockProducts() {
                     </td>
                     <td><input className="excel-input text-input" placeholder="供应商名称" value={r.supplier || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { supplier: e.target.value })} /></td>
                     <td><input className="excel-input text-input readonly" readOnly value={r.applicant || ''} placeholder="申请人" /></td>
-                    <td>
-                      {system === 'overview'
-                        ? <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
-                        : <input className="excel-input text-input readonly" readOnly value={currentSys.value} title="仅总览可设置系统分配" />}
-                    </td>
+                    {/* 系统分配只在总览可设可见；单系统页不展示（该页所有货品都属于当前系统） */}
+                    {system === 'overview' && (
+                      <td>
+                        <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
+                      </td>
+                    )}
                     <td><MultiSelect value={r.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
                     {system !== 'overview' && <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>}
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
@@ -1029,15 +1033,14 @@ export default function StockProducts() {
                           : <input className="excel-input text-input" readOnly value={r.supplier || ''} />}
                       </td>
                       <td><input className="excel-input text-input" readOnly value={draft.applicant || r.applicant || ''} /></td>
-                      <td>
-                        {system === 'overview' ? (
-                          isEditing
+                      {/* 同上：系统分配列只在总览展示 */}
+                      {system === 'overview' && (
+                        <td>
+                          {isEditing
                             ? <MultiSelect value={draft.system_assign || ''} options={assignableOptions} onChange={(v) => setDraft(id, { system_assign: v })} />
-                            : <input className="excel-input" readOnly value={r.system_assign || ''} />
-                        ) : (
-                          <input className="excel-input" readOnly value={currentSys.value} title="仅总览可设置系统分配" />
-                        )}
-                      </td>
+                            : <input className="excel-input" readOnly value={r.system_assign || ''} />}
+                        </td>
+                      )}
                       <td>
                         {isEditing
                           ? <MultiSelect value={draft.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setDraft(id, { freezer_category: v })} />
