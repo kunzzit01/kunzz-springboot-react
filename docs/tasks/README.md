@@ -43,3 +43,4 @@
 | 2026-09-18-stockdata-price-scale | 已完成 | stock_data.price 精度 3→5 位（SQL 补丁），货品种类单价框 step 0.00001 | main |
 | 2026-09-18-stockrecords-silent-refresh | 已完成 | 总库存：别人保存后静默更新，不跳顶部/不清筛选；只改 StockRecords.tsx | main |
 | 2026-09-18-products-assign-preserve | 已完成 | 单系统页保存不再覆盖「系统分配」；总览外不展示该列 | main |
+| 2026-09-18-products-assign-column-restore | 已完成 | 纠正上一任务：中央/分店恢复「系统分配」列并改显真实值；数据修复保留 | main |

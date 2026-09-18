@@ -940,7 +940,7 @@ export default function StockProducts() {
                   <th>货品类型</th>
                   <th>供应商</th>
                   <th>申请人</th>
-                  {system === 'overview' && <th>系统分配</th>}
+                  <th>系统分配</th>
                   <th>冰箱分类</th>
                   {system !== 'overview' && <th>位次</th>}
                   <th>{statusColTitle}</th>
@@ -972,12 +972,13 @@ export default function StockProducts() {
                     </td>
                     <td><input className="excel-input text-input" placeholder="供应商名称" value={r.supplier || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { supplier: e.target.value })} /></td>
                     <td><input className="excel-input text-input readonly" readOnly value={r.applicant || ''} placeholder="申请人" /></td>
-                    {/* 系统分配只在总览可设可见；单系统页不展示（该页所有货品都属于当前系统） */}
-                    {system === 'overview' && (
-                      <td>
-                        <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
-                      </td>
-                    )}
+                    {/* 系统分配：总览可编辑；其它系统页只读，且显示**真实分配**（原来显示 currentSys.value 是假值，
+                        既误导用户"这货只属于当前系统"，又和被保存覆盖的问题相互掩盖） */}
+                    <td>
+                      {system === 'overview'
+                        ? <MultiSelect value={r.system_assign || ''} options={assignableOptions} onChange={(v) => setNew(idx, { system_assign: v })} />
+                        : <input className="excel-input text-input readonly" readOnly value={r.system_assign || ''} title="仅总览可设置系统分配" />}
+                    </td>
                     <td><MultiSelect value={r.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setNew(idx, { freezer_category: v })} /></td>
                     {system !== 'overview' && <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>}
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
@@ -1033,14 +1034,16 @@ export default function StockProducts() {
                           : <input className="excel-input text-input" readOnly value={r.supplier || ''} />}
                       </td>
                       <td><input className="excel-input text-input" readOnly value={draft.applicant || r.applicant || ''} /></td>
-                      {/* 同上：系统分配列只在总览展示 */}
-                      {system === 'overview' && (
-                        <td>
-                          {isEditing
+                      {/* 同上：总览可编辑；其它系统页只读并显示真实分配 */}
+                      <td>
+                        {system === 'overview' ? (
+                          isEditing
                             ? <MultiSelect value={draft.system_assign || ''} options={assignableOptions} onChange={(v) => setDraft(id, { system_assign: v })} />
-                            : <input className="excel-input" readOnly value={r.system_assign || ''} />}
-                        </td>
-                      )}
+                            : <input className="excel-input" readOnly value={r.system_assign || ''} />
+                        ) : (
+                          <input className="excel-input" readOnly value={r.system_assign || ''} title="仅总览可设置系统分配" />
+                        )}
+                      </td>
                       <td>
                         {isEditing
                           ? <MultiSelect value={draft.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setDraft(id, { freezer_category: v })} />
