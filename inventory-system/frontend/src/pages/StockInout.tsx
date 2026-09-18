@@ -1063,6 +1063,12 @@ export default function StockInout() {
     if (need <= 0 || !list || list.length === 0) return null
     return Number(list[0].available_stock) >= need ? String(list[0].price) : null
   }
+  /** 金额框点一次即全选（对齐旧系统 handleInputFocus / 货品种类页 selectAllOnFocus）：
+   *  框里已有数字时可以直接打新金额整段替换，不用先双击。
+   *  setTimeout(0) 必须有：onFocus 早于浏览器把光标落到点击位置，直接 select() 会被随后的落位取消。 */
+  const selectAllOnFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setTimeout(() => e.target.select(), 0)
+  }
   /** 进货数量变化（互斥 + 单价自动抓取：货品种类有单价则抓取，无单价则 0.00） */
   /** 编辑行：出货数量变化 → 互斥 + 按该数量重新加载价格+库存选项（对齐新增行 handleOutQty，不拆行） */
   const handleEditOutQty = (id: number, v: string) => {
@@ -1782,7 +1788,7 @@ export default function StockInout() {
                             </select>
                           ) : isEditing ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
-                              <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 60, minWidth: 0 }} step="0.00001" value={editDraft.price || ''} onChange={(e) => patchEdit({ price: e.target.value, priceMode: 'manual' })} />
+                              <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 60, minWidth: 0 }} step="0.00001" value={editDraft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => patchEdit({ price: e.target.value, priceMode: 'manual' })} />
                               {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
                               {parseFloat(editDraft.outQuantity || '0') > 0 && !rowPriceOptions.length && (
                                 <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
@@ -1928,7 +1934,7 @@ export default function StockInout() {
                           </select>
                         ) : (
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
-                            <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="必填"
+                            <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="必填" onFocus={selectAllOnFocus}
                               value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
                             {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
                             {nr.productName && parseFloat(nr.outQty) > 0 && !(nr.stockOptions || []).length && (

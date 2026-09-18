@@ -38,3 +38,4 @@
 | 2026-09-18-forgot-password | 已完成 | 忘记密码：后端 8 文件（新增 5 改 3）+ 前端 5 文件；不碰构建产物与数据库结构 | main |
 | 2026-09-18-inout-price-required | 已完成 | 进出货单价不再自动填 0.00；只改 StockInout.tsx 一个文件 | main |
 | 2026-09-18-inout-hifo-autoprice | 已完成 | 出货单价自动带出 HIFO 最高价那层；只改 StockInout.tsx 一个文件 | main |
+| 2026-09-18-inout-price-selectall | 已完成 | 金额框点一次即全选，可直接打新金额；只改 StockInout.tsx 一个文件 | main |
