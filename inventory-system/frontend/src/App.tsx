@@ -112,7 +112,8 @@ export default function App() {
       <Route path="/m/out" element={<MobileRedirect to="/mobile/out" />} />
       <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
       <Route path="/" element={<RequireAuth><RequirePage><AppLayout /></RequirePage></RequireAuth>}>
-        <Route index element={<Dashboard />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="records" element={<StockRecords />} />
         <Route path="sot" element={<StockSot />} />
         <Route path="products" element={<StockProducts />} />

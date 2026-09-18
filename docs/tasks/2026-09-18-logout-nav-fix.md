@@ -18,10 +18,17 @@ location = /home → 不匹配上面任何一条 → 落进 location / → 后�
 `AppLayout.tsx` 的登出用的是裸 `window.location.href = '/home'`（**没有 onClick 能拦截**），
 少了结尾斜杠，于是落到后台去了。
 
-## 白名单（本任务只改这两个文件）
+## 白名单（本任务只改这几个文件）
 
 - inventory-system/frontend/src/components/AppLayout.tsx ← 登出目标 `/home` → `/home/`
-- inventory-system/frontend/src/pages/Login.tsx ← 返回箭头改为固定跳 `/home/`
+- inventory-system/frontend/src/pages/Login.tsx ← 返回箭头改为固定跳 `/home/`；登录后默认落点改为 `/dashboard`
+- inventory-system/frontend/src/App.tsx ← 新增 `/dashboard` 路由；`/` 索引路由改为重定向到 `/dashboard`
+
+> **追加 App.tsx 的原因（2026-09-18）**：为切域名做准备，根路径要让给公司官网
+> （现在 `kunzzgroup.com/` 会显示后台登录页，顾客看到的是登录框）。
+> 让 SPA 的 `/` 索引路由重定向到 `/dashboard` 后，代码里其余 5 处 `navigate('/')`
+> （BgMusic / ChangePassword / CorporateEdit / JobPositions）**无需逐个修改**，
+> 都会自动落到 `/dashboard`，地址栏正确、F5 不会丢。
 
 ## 明确不碰
 

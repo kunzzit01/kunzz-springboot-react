@@ -37,7 +37,7 @@ export default function Login() {
         return
       }
       const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
-      navigate((from?.pathname || '/') + (from?.search || ''), { replace: true })
+      navigate((from?.pathname || '/dashboard') + (from?.search || ''), { replace: true })
     } catch {
       /* 拦截器已提示 */
     } finally {
