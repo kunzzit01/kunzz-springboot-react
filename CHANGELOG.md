@@ -5,6 +5,49 @@
 
 ---
 ---
+## 🗓️ 2026-09-18
+
+### [2026-09-18-stockrecords-silent-refresh] 总库存：别人保存后改为静默更新，不再跳回顶部 / 清空筛选
+
+- **需求（用户反馈）**：同事A在做数据时，同事B在总库存检查货品；A 一保存，B 的页面就自动刷新，
+  **看到一半被弹回顶部**，搜索关键字和类型筛选也没了。要求的不是「停止更新」，
+  而是「数据照常更新、但整个过程没感觉」。
+- **根因（三处，都在 `StockRecords.tsx` 的 `load()` 里）**：
+  1. **跳顶部的真正原因**：`setLoading[sys]=true` 会把 tbody 换成单行「加载中...」，
+     `.table-scroll-container`（`styles/stocklist.css:383` 的 `overflow-y:auto` 滚轮区）内容高度瞬间小于视口，
+     浏览器把 `scrollTop` **夹成 0**，数据回来后停在顶部 —— 不是「刷新」本身，是占位把表格高度抽空了
+  2. `setFilters[sys]=''` / `setTypeSel[sys]=new Set()`：B 打的搜索关键字、选的类型卡被清空
+  3. `openVariants` 存的是后端行号 `no`，刷新后行号整体位移 → 展开的「多个单价」明细挂到别的货品上
+- **做法（纯前端，不新增任何 UI）**：`load(sys, opts)` 增加 `resetFilters` / `silent` / `keepScroll` 三个可选项，
+  **默认值 = 旧行为**，所以挂载、URL 初始化、`switchSystem`、导出等调用点一行未改；
+  只有实时回调改走静默通道：`load(system, { resetFilters:false, silent:true, keepScroll:true })`
+  - `silent` 不设 loading（表格不塌陷）—— 主修复；`keepScroll` 另把 `scrollTop` 存进 ref，
+    由 `useLayoutEffect([data])` 在渲染后还原（极端情况的补网）
+  - 刷新时按**货品名**迁移 `openVariants`（`carryVariantKeys()`），明细跟着货品走
+- **踩坑（值得记）**：迁移函数最初写成 `setOpenVariants(prev => carryVariantKeys(rowsRef.current[sys], ...))`，
+  updater 要等下一次渲染才执行，那时 `rowsRef` 已被改成**新**数据 → 等价于拿新行做迁移，展开永远被清掉。
+  浏览器实测抓到了这个 bug（展开明细在刷新后消失），改为在 setState 之前把旧行存进局部变量后才通过
+- **验证（mock 后端 + mock `/ws/realtime`，真实浏览器操作）**：
+
+  | 场景 | 结果 |
+  |---|---|
+  | 滚到 400 后收广播 | `scrollTop` 400 → 400；无一次滚动事件；MutationObserver 全程 0 次「加载中」；数字 10.000 → 11.000（确认是真更新，不是冻住） |
+  | 搜索「MOCK-PRODUCT-00」后收广播 | 关键字保留、仍显示 9 条（筛选未被清） |
+  | 选中 Kitchen 类型卡后收广播 | 卡片仍激活、`显示记录 20` 不变、冰箱分类列还在 |
+  | 展开「多个单价」+ 行号整体位移（插/删一行） | 明细仍挂在同一货品（MOCK-PRODUCT-019，序号 20 → 19 说明行号**确实**位移了） |
+  | 刷新前后给 DOM 打标记 | 标记全部存活 → 表格容器/tbody 没有被重建 |
+  | 切换系统（中央 → J1） | 搜索框与类型筛选仍会被清空（原有行为未被改坏） |
+
+  另一处记录：`useRealtime` 的节流/防抖参数未改，仍是最多 3 秒一次 + 1 秒尾部补刷。
+- **后端、数据库**：未改动。仍照常广播 `stock_changed`，如何响应由前端决定。
+- **已知边界**：A 的操作若真的新增/删除/清零了货品，列表行数与排序位置本来就会变（数据变了，
+  不是刷新的锅）；能保证的是不再闪、不再跳顶部、不再清输入。后端广播固定发 `system:"all"`，
+  所以看中央时别人写 J1 也会触发一次静默刷新（中央的 J1/J2/J3 供应值本就依赖 J1 数据）。
+- **同类页面（本次未改，留待后续）**：`MobileRecords.tsx:124`（电话版-记录）、
+  `StockSot.tsx:256`（货品异常）与总库存一样是无保护调用，收到信号就整表重载
+- **部署**：只用 `npm run build` 重新构建前端并 rsync 到 `/var/www/admin/`；不用重建后端、不用动数据库
+
+---
 ## 🗓️ 2026-09-17
 
 ### 9. 移除冰箱分类的「停用」功能

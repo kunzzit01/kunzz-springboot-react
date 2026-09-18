@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getStockSummary, getMinimums, getPriceChangeLogLatest, getPriceChangeLog, getStockPerms } from '../api'
 import { useFreezerCategories } from '../utils/useFreezerCategories'
@@ -154,6 +154,33 @@ const mergeSummaryItems = (items: SummaryItem[]): SummaryItem[] => {
   return out
 }
 
+/**
+ * 某系统页面的表格滚动容器（总库存表格自己的滚轮区，不是整页滚动）
+ * 静默刷新前后要读/写它的 scrollTop
+ */
+const scrollerOf = (sys: string) =>
+  document.getElementById(sys + '-page')?.querySelector('.table-scroll-container') as HTMLElement | null
+
+/**
+ * 「多个单价」展开状态按货品名迁移。
+ * openVariants 存的是后端行号 no，刷新后行号会整体位移，
+ * 直接沿用 Set<no> 会把展开的明细挂到别的货品上。
+ * oldRows / newRows 都传 mergeSummaryItems 之后的行（渲染用的就是这份）。
+ */
+const carryVariantKeys = (oldRows: SummaryItem[], newRows: SummaryItem[], prev: Set<number>): Set<number> => {
+  if (prev.size === 0) return prev
+  const names = new Set<string>()
+  oldRows.forEach(it => {
+    if (prev.has(Number(it.no)) && (it.price_count || 0) > 1) names.add((it.product_name || '').trim())
+  })
+  const next = new Set<number>()
+  if (names.size === 0) return next
+  newRows.forEach(it => {
+    if ((it.price_count || 0) > 1 && names.has((it.product_name || '').trim())) next.add(Number(it.no))
+  })
+  return next
+}
+
 const formatStockQuantity = (item: SummaryItem) => {
   const spec = (item.specification || '').trim().toLowerCase()
   const raw = parseFloat(String(item.total_stock))
@@ -288,22 +315,57 @@ export default function StockRecords() {
     return n
   })
   const searchRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  // 上次加载后的合并行（按系统）：静默刷新时按货品名迁移展开状态
+  const rowsRef = useRef<Record<string, SummaryItem[]>>({})
+  // 静默刷新前记下的滚动位置，渲染后还原
+  const scrollMemoRef = useRef<{ sys: string; top: number } | null>(null)
   const navigate = useNavigate()
 
   useRawPriceTooltip()
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
-  // 加载某系统数据
-  const load = async (sys: string) => {
-    setLoading(prev => ({ ...prev, [sys]: true }))
+  // 静默刷新落定后把滚动位置还回去（layout 阶段执行，用户看不到位移）
+  useLayoutEffect(() => {
+    const memo = scrollMemoRef.current
+    if (!memo) return
+    scrollMemoRef.current = null
+    const el = scrollerOf(memo.sys)
+    if (el) el.scrollTop = memo.top
+  }, [data])
+
+  /**
+   * 加载某系统数据
+   * - resetFilters：清空搜索关键字与类型筛选。默认 true = 原有行为，只在首次加载/切换系统时用
+   * - silent：不显示「加载中」占位。占位只留一行时表格高度塌陷，浏览器会把滚动容器的
+   *   scrollTop 夹成 0 —— 这正是「别人保存后自己页面跳回顶部」的原因
+   * - keepScroll：刷新前记下当前滚动位置，数据渲染后还原
+   */
+  const load = async (sys: string, opts: { resetFilters?: boolean; silent?: boolean; keepScroll?: boolean } = {}) => {
+    const { resetFilters = true, silent = false, keepScroll = false } = opts
+    const scroller = keepScroll ? scrollerOf(sys) : null
+    if (scroller) scrollMemoRef.current = { sys, top: scroller.scrollTop }
+    if (!silent) setLoading(prev => ({ ...prev, [sys]: true }))
     try {
       const d = await getStockSummary(sys)
+      const rows = mergeSummaryItems(d.summary || [])
+      // 必须在 setState 之前取旧行：updater 要等下一次渲染才执行，
+      // 那时 rowsRef 已经被下面改成新数据了（迁移会拿不到展开过的货品名）
+      const prevRows = rowsRef.current[sys] || []
       setData(prev => ({ ...prev, [sys]: d }))
-      setFilters(prev => ({ ...prev, [sys]: '' }))
-      setTypeSel(prev => ({ ...prev, [sys]: new Set() }))
-    } catch { /* ignore */ }
-    setLoading(prev => ({ ...prev, [sys]: false }))
+      if (resetFilters) {
+        setFilters(prev => ({ ...prev, [sys]: '' }))
+        setTypeSel(prev => ({ ...prev, [sys]: new Set() }))
+      } else {
+        // 刷新：保留搜索与类型筛选；展开的「多个单价」明细跟着货品名走
+        setOpenVariants(prev => carryVariantKeys(prevRows, rows, prev))
+      }
+      rowsRef.current = { ...rowsRef.current, [sys]: rows }
+    } catch {
+      // 拉取失败：清掉滚动备忘，免得下次别的系统加载时误还原到此位置
+      scrollMemoRef.current = null
+    }
+    if (!silent) setLoading(prev => ({ ...prev, [sys]: false }))
   }
 
   useEffect(() => { load('central'); load('j1'); load('j2'); load('j3'); }, [])
@@ -341,7 +403,12 @@ export default function StockRecords() {
   const fmtRm = (v: number | null | undefined) => 'RM' + (Number(v) || 0).toFixed(2)
 
   // 全站实时更新：只刷当前查看的系统（任何写入都广播 all → 当前视图刷新；切换系统时 switchSystem 会补拉）
-  useRealtime(system, () => { load(system); reloadFreezer() })
+  // 静默原地更新：不显示「加载中」、不清搜索与类型筛选、滚动位置不动
+  // —— 别人保存时，正在逐行核对货品的人应当完全无感
+  useRealtime(system, () => {
+    load(system, { resetFilters: false, silent: true, keepScroll: true })
+    reloadFreezer()
+  })
 
   // 加载最低库存设置（8/24 修复：按系统分别加载，各分店设置独立，互不影响）
   // 同名产品多记录取最大，对齐线上 loadLowStockSettings；老库 product_name 含 HTML 实体需解码
