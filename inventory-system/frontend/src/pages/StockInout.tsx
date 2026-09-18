@@ -910,7 +910,8 @@ export default function StockInout() {
           type: cat || row?.type || '',
           supplier: hit?.supplier ? String(hit.supplier) : '',
           stockOptions: priceList || [],
-          price: '',
+          // 出货：换货品后旧价失效，直接带出 HIFO 最高价那层（不够跨层时留空让用户选/拆行）
+          price: autoPickHifoPrice(priceList, qtyAtPick) ?? '',
           priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
         })
         // 出货量已填、货品后选 → 刷新 HIFO 拆行提示
@@ -959,7 +960,8 @@ export default function StockInout() {
           type: cat || row?.type || '',
           supplier: hit?.supplier ? String(hit.supplier) : (row?.supplier || ''),
           stockOptions: priceList || [],
-          price: '',
+          // 出货：选编号后同 onPickProduct，带出 HIFO 最高价那层
+          price: autoPickHifoPrice(priceList, qtyAtPick) ?? '',
           priceMode: 'batch', // 出货：显示价格下拉（无库存显示「暂无库存价格」+ 手动输入选项，对齐旧系统）
           receiver: parseFloat(row?.inQty || '0') > 0 && hit?.supplier ? String(hit.supplier) : row?.receiver,
         })
@@ -991,12 +993,13 @@ export default function StockInout() {
       patch.priceMode = 'manual'
       if (sup) patch.receiver = sup
     } else if (outQ > 0) {
-      // 出货：切换货品后旧单价失效 → 清空进入价格批次下拉（无库存显示「暂无库存价格」+ 手动输入）
+      // 出货：切换货品后旧单价失效 → 重拉价格批次，并带出 HIFO 最高价那层（要跨层则留空）
       patch.price = ''
       patch.priceMode = 'batch'
       try {
         const list = await getPriceStock(name, code || undefined, outQ, system)
         setEditPriceOptions(prev => ({ ...prev, [id]: list || [] }))
+        patch.price = autoPickHifoPrice(list, String(outQ)) ?? ''
       } catch { setEditPriceOptions(prev => ({ ...prev, [id]: [] })) }
     }
     setEditDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }))
@@ -1052,6 +1055,13 @@ export default function StockInout() {
       if (dp !== null && dp !== undefined && Number(dp) >= 0) return String(dp)
     } catch { /* ignore */ }
     return null
+  }
+  /** 出货自动带价：HIFO 最高价那层库存够 → 返回它的价格；要跨多层或没库存 → null（留给用户选/拆行）。
+   *  列表来自后端 price-stock / price-batches，两者都按价格降序，故第一条即最高价那层。 */
+  const autoPickHifoPrice = (list: { price: string; available_stock: number }[] | undefined, qtyRaw: string): string | null => {
+    const need = parseFloat(qtyRaw) || 0
+    if (need <= 0 || !list || list.length === 0) return null
+    return Number(list[0].available_stock) >= need ? String(list[0].price) : null
   }
   /** 进货数量变化（互斥 + 单价自动抓取：货品种类有单价则抓取，无单价则 0.00） */
   /** 编辑行：出货数量变化 → 互斥 + 按该数量重新加载价格+库存选项（对齐新增行 handleOutQty，不拆行） */
@@ -1172,7 +1182,12 @@ export default function StockInout() {
     // 出库数量变化 → 用该数量重新加载价格+库存列表（对齐旧系统 loadNewRowProductPricesWithStock，所有系统生效）
     if (row && row.productName && parseFloat(v) > 0) {
       getPriceStock(row.productName, row.codeNumber || undefined, parseFloat(v), system)
-        .then((list) => { if (list && list.length) patchNew(key, { stockOptions: list }) })
+        .then((list) => {
+          if (!list || !list.length) return
+          // 最高价那层够用就自动带价（HIFO 先出最高价）；该行已手选过价格则不覆盖用户的选择
+          const auto = row.price ? null : autoPickHifoPrice(list, v)
+          patchNew(key, auto ? { stockOptions: list, price: auto } : { stockOptions: list })
+        })
         .catch(() => {})
     }
     if (!row?.productName) return
