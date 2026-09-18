@@ -1641,3 +1641,75 @@ curl -s -o /dev/null -w "api=%{http_code}\n"       https://www.kunzzgroup.com/ap
 ```
 
 > 🔴 旧 Hostinger 主机**至少保留 2 周**。它是唯一的回滚退路。
+
+---
+
+# ✅ 2026-09-18 切域名实战记录（已完成）
+
+**结果**：`https://kunzzgroup.com` 与 `https://www.kunzzgroup.com` 已完整跑在新系统上，
+Let's Encrypt 证书有效，WebSocket / 手机版 / 旧 URL 301 全部验证通过。
+
+## 实际做了什么（与上面的计划有出入）
+
+| 项 | 实际做法 |
+|---|---|
+| 数据迁移 | ❌ **完全没做，也不需要** —— 用户已在 VPS 上录了真实数据，用旧 dump 覆盖会全部抹掉 |
+| Traefik | ✅ 启用 file provider（`/docker/traefik/dynamic/`），路由写在 `kunzz.md`→`kunzz.yml` |
+| DNS | ✅ `@` 与 `www` 由 ALIAS / CNAME **改成 A 记录** → `187.127.125.136` |
+| 环境变量 | `CORS_ALLOWED_ORIGINS` 改成 `https://kunzzgroup.com,https://www.kunzzgroup.com` |
+| nginx | 根路径 302 → `/home/`；加 `absolute_redirect off;`；加旧 URL 301 snippet |
+
+**回滚值（务必保留）**
+```
+kunzzgroup.com      → ALIAS  kunzzgroup.com.cdn.hstgr.net
+www.kunzzgroup.com  → CNAME  www.kunzzgroup.com.cdn.hstgr.net
+```
+
+## 🚨 必须记住的 7 个坑
+
+1. **`DROP DATABASE` 事故（最严重）**
+   我在计划里给了"导旧站 dump"的步骤，但**用户场景根本不需要迁移**（他已经在用新系统录数据）。
+   `DROP DATABASE` 执行了、`CREATE DATABASE` 因粘贴截断而语法报错 → **库没了** ✗
+   **救回来的原因**：用户在 11:17 手动跑过一次 `mysqldump` 备份 ✓
+   📌 **教训**：给删除/覆盖类命令前，先确认「这个步骤是否真的需要」+「备份是否存在」。
+   给复原命令时，**"撤销"命令必须单独标注为"仅在上一步失败时才跑"**（用户曾把撤销命令也执行了）。
+
+2. **DNS：ALIAS/CNAME → A 必须先删后建**
+   Hostinger 校验：`RRset X IN ALIAS must not be used with A on the same name`。
+   直接改类型会报错；必须删掉原记录再新建 A 记录（中间有几秒无记录窗口，正常）。
+
+3. **nginx `location = /` 里用 `root` 不生效**
+   `index` 指令会做**内部重定向** `/` → `/index.html`，重新匹配 location 后落回 `location /`。
+   正确写法：`location = / { return 302 /home/; }`
+
+4. **重定向会带上内部端口和 http**
+   nginx `absolute_redirect` 默认 `on`，`return 301 /login` 会变成 `http://host:8080/login` ✗
+   **修法**：`server` 块里加一行 **`absolute_redirect off;`** → 发相对地址，浏览器自动补成正确的 https 域名。
+
+5. **ACME 失败后不会自动立即重试**
+   DNS 切过来之后，Traefik 不会自己重试之前失败的证书；**`docker compose restart traefik`** 会立刻重新申请 ✓
+   （重启前先确认 DNS 已生效，否则又是一次失败计数；LE 限每域名每小时 5 次失败）
+
+6. **CORS 白名单必须跟着域名改**
+   `CORS_ALLOWED_ORIGINS` 还是旧 IP 时，从域名登录会 **403 Forbidden**（跨域被拒），
+   而 403 很容易被误判成"密码错"。**看到 403 先查 CORS。**
+
+7. **登录日志里 `does not look like BCrypt` 对 Argon2 账号是正常的**
+   老库 23 个账号里有 10 个是 `$argon2id`（长度 97）。`AuthService` 会先试 BCrypt、
+   失败再试 Argon2 ✓ 这句 WARN **不代表出问题**。
+   若两条路径都失败 → 就是密码不对，用「职员管理 → 编辑 → 设新密码」重置（`PUT /api/staff/{id}` 支持 `newPassword`）。
+
+## 应急通道：重置密码（本机没有 bcrypt 工具时）
+
+应用自己能生成标准 BCrypt 哈希（`DataInitializer` 用 `passwordEncoder.encode("demo123")`）：
+
+```bash
+sudo sed -i 's|^APP_INIT_DEMO=.*|APP_INIT_DEMO=true|' /etc/inventory-backend.env
+sudo mariadb u690174784_kunzz -e "UPDATE users SET username=CONCAT(username,'_old') WHERE username='demo_disabled';"
+sudo systemctl restart inventory-backend && sleep 10
+# → 现在可以用 demo / demo123 登录，去职员页改目标账号的密码
+# 🔴 用完立刻封堵（邮箱必须用唯一值，否则 ERROR 1062 duplicate entry）
+sudo sed -i 's|^APP_INIT_DEMO=.*|APP_INIT_DEMO=false|' /etc/inventory-backend.env
+sudo mariadb u690174784_kunzz -e "UPDATE users SET username='demo_disabled', email=CONCAT('demo_disabled_',id,'@kunzz.local'), password='disabled' WHERE username='demo';"
+sudo systemctl restart inventory-backend
+```
