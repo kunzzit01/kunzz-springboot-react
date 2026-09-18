@@ -1447,12 +1447,27 @@ location = /about.php                  { return 301 /home/about; }
 location = /joinus.php                 { return 301 /home/joinus; }
 location = /tokyo-japanese-cuisine.php { return 301 /home/tokyo; }
 location = /tokyo-izakaya.php          { return 301 /home/tokyo; }
+location = /login.php                  { return 301 /login; }
 location = /frontend/login.html        { return 301 /login; }
 location = /frontend/success.html      { return 301 /home/; }
 location /frontend/                    { return 301 /home/; }
 location /backend/                     { return 301 /home/; }
+
+# 旧手机版：员工收藏的是 /mobile/ch/stocklistjX.php
+# （2026-09-18 从旧站实测确认：未登录会 302 到 /mobile/ch/login.html?redirect=...）
+location = /mobile/ch/stocklistj1.php  { return 301 /mobile/inout; }
+location = /mobile/ch/stocklistj2.php  { return 301 /mobile/inout; }
+location = /mobile/ch/stocklistj3.php  { return 301 /mobile/inout; }
+location = /mobile/ch/login.html       { return 301 /mobile/login; }
+location /mobile/ch/                   { return 301 /mobile/login; }
+location = /j1/j1stockeditmobile.php   { return 301 /mobile/inout; }
+location = /j2/j2stockeditmobile.php   { return 301 /mobile/inout; }
+location = /j3/j3stockeditmobile.php   { return 301 /mobile/inout; }
 NGINX
 ```
+
+> ⚠️ `location /mobile/ch/` 与 SPA 自己的 `/mobile/login`、`/mobile/inout` **不冲突**
+> （前缀不同），后者仍由 `location /` 的 SPA 回退处理。
 
 然后在 `/etc/nginx/sites-available/kunzz` 的 `server {}` 内加一行引用，并 `nginx -t && systemctl reload nginx`：
 ```nginx
