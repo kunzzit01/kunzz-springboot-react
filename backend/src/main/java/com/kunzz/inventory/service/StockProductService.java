@@ -229,7 +229,7 @@ public class StockProductService {
         try { return Integer.parseInt(String.valueOf(v).trim()); } catch (Exception e) { return 0; }
     }
 
-    /** 改价日志：货品种类每次更改单价 → 当天记一条（从旧到最新展示在总库存） */
+    /** 改价日志：货品每次改单价 → 当天记一条（同一天同一货品同一系统只保留一条，从旧到最新展示在总库存） */
     /** 改价日志：用改价前的旧值判断/记录（before 为 null = 货品不存在，静默跳过） */
     private void logPriceChange(Map<String, Object> before, Map<String, Object> body,
                                 String system, Double oldPrice) {
@@ -237,16 +237,27 @@ public class StockProductService {
         Double newPrice = cleanPrice(body.get("price"));
         if (newPrice == null) return;
         if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) return; // 价格未变不记录
-        Map<String, Object> log = new LinkedHashMap<>();
         // 名字与流水/总库存保持一致（decoded 纯文本）：改价同时改名 → 取新名
-        log.put("productName", body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
-                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name"))));
+        String productName = body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
+                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name")));
+        String changedBy = decodeHtml(str(body.getOrDefault("applicant", "")));
+        String today = java.time.LocalDate.now().toString();
+        // 同一天同一货品同一系统只保留一条：库里已有当天那一条 → 只把「改价后」更新成最新价，不再追加新行
+        // old_price 保持当天起点价不动，所以这条记录始终读作「当天开始时是多少 → 现在是多少」
+        Map<String, Object> todayRow = priceChangeLogMapper.findToday(productName,
+                system == null ? "central" : system, today);
+        if (todayRow != null && todayRow.get("id") instanceof Number tid) {
+            priceChangeLogMapper.updateTodayPrice(tid.intValue(), newPrice, changedBy);
+            return;
+        }
+        Map<String, Object> log = new LinkedHashMap<>();
+        log.put("productName", productName);
         log.put("codeNumber", str(before.get("product_code")));
         log.put("stockSystem", system);
         log.put("oldPrice", oldPrice);
         log.put("newPrice", newPrice);
-        log.put("changeDate", java.time.LocalDate.now().toString());
-        log.put("changedBy", decodeHtml(str(body.getOrDefault("applicant", ""))));
+        log.put("changeDate", today);
+        log.put("changedBy", changedBy);
         priceChangeLogMapper.insertLog(log);
     }
 

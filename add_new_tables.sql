@@ -284,3 +284,34 @@ WHERE table_schema='u690174784_kunzz'
   AND TABLE_NAME IN ('j1stockedit_data','j2stockedit_data','j3stockedit_data')
   AND COLUMN_NAME IN ('remark_number','product_remark_checked')
 GROUP BY TABLE_NAME ORDER BY TABLE_NAME;
+
+-- 10) 改价记录：同一天同一货品同一系统只保留一条（2026-09-18）
+--     代码已改为「当天已有记录 → 更新新价、不再追加」，新数据不会堆；这一节清掉**历史**堆积的当天重复行。
+--     每组（货品 + 系统 + 日期）保留 id 最小的那条：new_price 改成当天最后一次的价格、changed_by 跟着走，
+--     old_price 天然就是当天起点价（不用动），其余重复行删除。
+--     幂等：没有重复行时 0 行受影响，可重复执行。老数据 stock_system 是 NULL（当年单价全局一份）→ 并入 central。
+--     跑之前建议先备份这一张表（很小，几秒）：
+--       mariadb-dump -u root -p u690174784_kunzz price_change_log > /opt/backups/price_change_log_$(date +%F).sql
+SET @pcl_sys_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                     WHERE table_schema='u690174784_kunzz' AND table_name='price_change_log' AND column_name='stock_system');
+
+-- 10a) 每组保留行（id 最小）的新价 = 当天最后一条的价格（没有重复行时 0 行受影响）
+SET @ddl := IF(@pcl_sys_col = 0, 'SELECT ''price_change_log 无 stock_system 列，跳过改价记录合并''',
+             'UPDATE price_change_log k JOIN (SELECT product_name, IFNULL(stock_system,''central'') AS sys, change_date, MIN(id) AS keep_id, MAX(id) AS last_id FROM price_change_log GROUP BY product_name, IFNULL(stock_system,''central''), change_date HAVING COUNT(*) > 1) g ON k.id = g.keep_id JOIN price_change_log z ON z.id = g.last_id SET k.new_price = z.new_price, k.changed_by = z.changed_by');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 10b) 删掉每组里除保留行以外的重复行（没有重复行时 0 行受影响）
+SET @ddl := IF(@pcl_sys_col = 0, 'SELECT ''price_change_log 无 stock_system 列，跳过改价记录合并''',
+             'DELETE l FROM price_change_log l JOIN (SELECT product_name, IFNULL(stock_system,''central'') AS sys, change_date, MIN(id) AS keep_id FROM price_change_log GROUP BY product_name, IFNULL(stock_system,''central''), change_date HAVING COUNT(*) > 1) g ON l.product_name = g.product_name AND IFNULL(l.stock_system,''central'') = g.sys AND l.change_date = g.change_date AND l.id <> g.keep_id');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 10c) 验证：应返回空集（= 已无「同一天同一货品同一系统」的重复行）
+SET @ddl := IF(@pcl_sys_col = 0, 'SELECT ''price_change_log 无 stock_system 列，跳过改价记录合并''',
+             'SELECT product_name, IFNULL(stock_system,''central'') AS sys, change_date, COUNT(*) AS rows_per_day FROM price_change_log GROUP BY product_name, IFNULL(stock_system,''central''), change_date HAVING rows_per_day > 1');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

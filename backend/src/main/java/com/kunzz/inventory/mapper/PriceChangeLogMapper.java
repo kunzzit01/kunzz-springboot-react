@@ -16,6 +16,16 @@ public interface PriceChangeLogMapper {
     /** 插入一条改价记录 */
     int insertLog(@Param("l") Map<String, Object> log);
 
+    /** 当天该货品在该系统下的改价记录（同一天只保留一条：先查再决定更新还是插入）；system 传归一后的系统名 */
+    Map<String, Object> findToday(@Param("productName") String productName,
+                                  @Param("system") String system,
+                                  @Param("changeDate") String changeDate);
+
+    /** 更新当天那条记录的新价（old_price 保持当天起点价不变） */
+    int updateTodayPrice(@Param("id") Integer id,
+                         @Param("newPrice") Double newPrice,
+                         @Param("changedBy") String changedBy);
+
     /** 某货品的改价历史（从旧到最新）；system 为空/总览 → 不过滤 */
     List<Map<String, Object>> listByProduct(@Param("productName") String productName,
                                             @Param("system") String system);

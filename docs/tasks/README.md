@@ -49,3 +49,4 @@
 | 2026-09-18-per-system-delete-cleanup | 已完成 | 删货品时级联清掉 stock_data_system 的行（不留孤儿行） | main |
 | 2026-09-18-branch-remark-codes | 已完成 | 备注编号支持分店：分店台账加两列，取数/校验/生成按系统 | main |
 | 2026-09-18-remark-page-system-reload | 已完成 | 备注页切系统后自动重新取数（此前要手动刷新）；只改 RemarkAnalysis.tsx | main |
+| 2026-09-18-price-log-daily | 已完成 | 改价记录同一天同一货品同一系统只留一条（当天只更新新价，old 保持当天起点价）；补丁第 10 节清历史重复 | main |

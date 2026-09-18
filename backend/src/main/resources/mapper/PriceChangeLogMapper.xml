@@ -21,6 +21,25 @@
         ORDER BY change_date ASC, id ASC
     </select>
 
+    <!-- 当天该货品在该系统的改价记录（同一天只保留一条：有则改成新价，无则插入）
+         IFNULL(stock_system,'central')：老数据那一列是 NULL（当年单价全局一份），并入中央 -->
+    <select id="findToday" resultType="java.util.LinkedHashMap">
+        SELECT id, old_price AS oldPrice, new_price AS newPrice
+        FROM price_change_log
+        WHERE product_name = #{productName}
+          AND change_date = #{changeDate}
+          AND IFNULL(stock_system, 'central') = #{system}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 当天那条只更新「改价后」：old_price 保持当天起点价，记录读作「当天开始时 → 现在」 -->
+    <update id="updateTodayPrice">
+        UPDATE price_change_log
+        SET new_price = #{newPrice}, changed_by = #{changedBy}
+        WHERE id = #{id}
+    </update>
+
     <!-- 每个货品最近一次改价（总库存列表列展示；同货品多行取 id 最大即最新）；按当前系统过滤 -->
     <select id="latestAll" resultType="java.util.LinkedHashMap">
         SELECT l.product_name AS productName, l.change_date AS changeDate, l.new_price AS newPrice
