@@ -667,7 +667,7 @@ export default function StockProducts() {
     finally { setApprovingId(null) }
   }
 
-  // ---- 快捷键（对齐进出货页：Ctrl+Shift+S 批量保存、Ctrl+S 保存光标所在行、Ctrl+A 新增一行） ----
+  // ---- 快捷键（对齐进出货页：Ctrl+S 从最上面逐行保存、Ctrl+Shift+S 批量保存、Ctrl+A 新增一行） ----
   // 用 ref 存最新处理函数：监听器只挂一次，不因 rows/drafts 变化反复解绑（对齐 StockInout 做法）
   const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {})
   useEffect(() => {
@@ -681,20 +681,15 @@ export default function StockProducts() {
         e.preventDefault(); e.stopPropagation()
         saveAll(); return
       }
-      // A2. 保存光标所在行 (Ctrl+S)：只保存这一行，其他行不受影响。
-      // 光标不在表格行里时不做事——但仍要 preventDefault，否则会弹出浏览器的"保存网页"对话框。
+      // A2. 保存 (Ctrl+S)：从上往下存**第一条**待存行，不用先点光标。
+      // 渲染顺序：新增行在上，已有记录（含编辑中的）在下 —— 所以先存第一条新增行，再存编辑中的。
+      // 连按 Ctrl+S 即一条一条往下存（存掉的那条会离开待存列表）。
       if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
         e.preventDefault(); e.stopPropagation()
-        const tr = active?.closest('tr') as HTMLElement | null
-        if (!tr || !inTable) return
-        const newKey = tr.getAttribute('data-new-key')
-        if (newKey) {
-          const row = newRows.find(r => String(r._key) === newKey)
-          if (row) saveNewRow(row)
-          return
-        }
-        const rowId = tr.getAttribute('data-row-id')
-        if (rowId) saveEdit(Number(rowId))
+        if (newRows.length > 0) { saveNewRow(newRows[0]); return }
+        const firstEditing = rows.find(r => editing.has(Number(r.id)))
+        if (firstEditing) { saveEdit(Number(firstEditing.id)); return }
+        showMsg('没有需要保存的记录', 'info')
         return
       }
       // B. 新增一行 (Ctrl+A)：表格内可连续按；不在输入框里时也可用（不抢输入框内全选）
@@ -846,7 +841,7 @@ export default function StockProducts() {
               <div className="stat-item"><i className="fas fa-clock" /> <span>待批准: <span className="stat-value" style={{ color: '#92400e' }}>{stats.pending}</span></span></div>
             </div>
             <span className="sp-shortcut-hint" title="可多行同时进入编辑，逐行保存或一次全部保存；保存一行不会影响其他行未保存的修改">
-              <i className="fas fa-keyboard" /> Ctrl+S 保存当前行 · Ctrl+Shift+S 全部保存 · Ctrl+A 新增行
+              <i className="fas fa-keyboard" /> Ctrl+S 从最上面逐行保存 · Ctrl+Shift+S 全部保存 · Ctrl+A 新增行
             </span>
           </div>
         </div>
@@ -983,7 +978,7 @@ export default function StockProducts() {
                     {system !== 'overview' && <td><input className="excel-input" type="number" min={0} placeholder="如 1" value={r.freezer_position ?? ''} onChange={(e) => setNew(idx, { freezer_position: e.target.value === '' ? '' : Number(e.target.value) })} /></td>}
                     <td style={{ padding: 8 }}><span style={{ color: '#92400e', fontWeight: 600 }}>待批准</span></td>
                     <td className="action-cell">
-                      <button className="edit-btn save-mode" onClick={() => saveNewRow(r)} title="保存这一行 (Ctrl+S)" disabled={saving}><i className="fas fa-save" /></button>
+                      <button className="edit-btn save-mode" onClick={() => saveNewRow(r)} title="保存这一行" disabled={saving}><i className="fas fa-save" /></button>
                       <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
                     </td>
                   </tr>
@@ -1069,12 +1064,12 @@ export default function StockProducts() {
                       <td className="action-cell">
                         {canApply && !(system === 'overview' && r._assignMasked) && (isEditing ? (
                           <>
-                            <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存这一行 (Ctrl+S)" disabled={saving}><i className="fas fa-save" /></button>
+                            <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存这一行" disabled={saving}><i className="fas fa-save" /></button>
                             <button className="delete-row-btn" onClick={() => cancelEdit(id)} title="取消这一行的修改"><i className="fas fa-times" /></button>
                           </>
                         ) : (
                           <>
-                            <button className="edit-btn" onClick={() => startEdit(r)} title="编辑记录（可多行一起改，改完逐行保存或 Ctrl+Shift+S 全部保存）"><i className="fas fa-edit" /></button>
+                            <button className="edit-btn" onClick={() => startEdit(r)} title="编辑记录（可多行一起改，改完按 Ctrl+S 从最上面逐行保存，或 Ctrl+Shift+S 一次全存）"><i className="fas fa-edit" /></button>
                             <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
                           </>
                         ))}

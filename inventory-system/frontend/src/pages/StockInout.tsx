@@ -494,16 +494,15 @@ export default function StockInout() {
         if (newRows.length > 0) saveNewRows()
         return
       }
-      // B2. 保存当前行 (Ctrl+S)：只保存光标所在的那一行，其他行不受影响。
-      // 光标不在表格行里时不做事——但仍要 preventDefault，否则会弹出浏览器的"保存网页"对话框。
+      // B2. 保存 (Ctrl+S)：从上往下存**第一条**待存行，不用先点光标。
+      // 渲染顺序：已有记录（含编辑中的）在上，新增行在下 —— 所以先看编辑中的，没有就存第一条新增行。
+      // 连按 Ctrl+S 即一条一条往下存（存掉的那条会离开待存列表）。
       if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
         e.preventDefault()
-        const tr = active?.closest('tr') as HTMLElement | null
-        if (!tr) return
-        const newKey = tr.getAttribute('data-key')          // 新增行（未保存）
-        if (newKey) { saveNewRows([newKey]); return }
-        const rowId = tr.getAttribute('data-row-id')        // 已有记录（编辑态才真会存）
-        if (rowId) saveEdit(Number(rowId))
+        const firstEditing = rows.find(r => editingIds.has(Number(r.id)))
+        if (firstEditing) { saveEdit(Number(firstEditing.id)); return }
+        if (newRows.length > 0) { saveNewRows([newRows[0].key]); return }
+        showMsg('没有需要保存的记录', 'info')
         return
       }
     }
