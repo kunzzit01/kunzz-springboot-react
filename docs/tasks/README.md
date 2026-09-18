@@ -36,4 +36,4 @@
 | 2026-09-17-push-all | 已完成 | 固化全部剩余改动（代码 / 构建产物 / 文档），分 4 个提交 | main |
 | 2026-09-17-verify-script-cleanup | 已完成 | 提交被取代的旧验证脚本删除 | main |
 | 2026-09-18-forgot-password | 已完成 | 忘记密码：后端 8 文件（新增 5 改 3）+ 前端 5 文件；不碰构建产物与数据库结构 | main |
-| 2026-09-18-inout-price-required | 进行中 | 进出货单价不再自动填 0.00；只改 StockInout.tsx 一个文件 | main |
+| 2026-09-18-inout-price-required | 已完成 | 进出货单价不再自动填 0.00；只改 StockInout.tsx 一个文件 | main |
