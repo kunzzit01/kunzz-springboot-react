@@ -255,6 +255,8 @@ public class StockProductService {
     public Map<String, Object> delete(Integer id) {
         int n = stockProductMapper.deleteRow(id);
         if (n == 0) throw new BusinessException(404, "记录不存在");
+        // 顺手清掉该货品的按系统行，避免留下看不见也删不掉的孤儿行
+        stockDataSystemMapper.deleteByDataId(id);
         return Map.of("success", true);
     }
 

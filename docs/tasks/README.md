@@ -46,3 +46,4 @@
 | 2026-09-18-products-assign-column-restore | 已完成 | 纠正上一任务：中央/分店恢复「系统分配」列并改显真实值；数据修复保留 | main |
 | 2026-09-18-remark-total-no-round | 已完成 | 货品备注「总重量」不再进位到 2 位（0.338 不再显示成 0.34）；只改 RemarkAnalysis.tsx | main |
 | 2026-09-18-per-system-fields | 已完成 | 冰箱分类/位次/默认单价改为按系统各存一份（新表 stock_data_system）；总览只读展示 4 套 | main |
+| 2026-09-18-per-system-delete-cleanup | 已完成 | 删货品时级联清掉 stock_data_system 的行（不留孤儿行） | main |

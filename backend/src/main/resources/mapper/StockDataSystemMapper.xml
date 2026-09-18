@@ -51,6 +51,11 @@
         LIMIT 1
     </select>
 
+    <!-- 货品被删除时清掉它的全部按系统行 -->
+    <delete id="deleteByDataId">
+        DELETE FROM stock_data_system WHERE stock_data_id = #{dataId}
+    </delete>
+
     <!-- 改价前旧价（改价日志用；这里不过滤 > 0） -->
     <select id="priceOf" resultType="java.lang.Double">
         SELECT price FROM stock_data_system

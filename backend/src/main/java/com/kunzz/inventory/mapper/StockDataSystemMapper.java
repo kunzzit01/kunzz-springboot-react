@@ -34,6 +34,9 @@ public interface StockDataSystemMapper {
                         @Param("codeNumber") String codeNumber,
                         @Param("system") String system);
 
+    /** 货品被删除时清掉它的全部按系统行（避免留孤儿行） */
+    int deleteByDataId(@Param("dataId") Integer dataId);
+
     /** 某货品在某系统当前的默认单价（改价日志取"改前旧价"用；不看 > 0 过滤） */
     Double priceOf(@Param("dataId") Integer dataId, @Param("system") String system);
 
