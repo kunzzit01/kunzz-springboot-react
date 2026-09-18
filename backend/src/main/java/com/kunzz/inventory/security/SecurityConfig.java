@@ -55,7 +55,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/login", "/api/jobs/website", "/api/timeline_api.php", "/api/comphotos_api.php", "/api/timeline-files/**", "/api/comphotos-files/**", "/media/files/**", "/media/page-files/**", "/api/media/files/**", "/api/media/page-files/**", "/api/media/bgmusic-file/**", "/media/**", "/uploads/**", "/ws/realtime").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/jobs/website", "/api/timeline_api.php", "/api/comphotos_api.php", "/api/timeline-files/**", "/api/comphotos-files/**", "/media/files/**", "/media/page-files/**", "/api/media/files/**", "/api/media/page-files/**", "/api/media/bgmusic-file/**", "/media/**", "/uploads/**", "/ws/realtime").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/applications").permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // 前端静态资源（SPA 页面/脚本/样式/字体等）公开访问，API 需登录

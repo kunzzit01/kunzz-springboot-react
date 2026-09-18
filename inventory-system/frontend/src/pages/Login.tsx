@@ -71,7 +71,7 @@ export default function Login() {
             <label className="remember-me">
               <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> 记住我
             </label>
-            <a href="#" onClick={(e) => { e.preventDefault(); message.info('请联系管理员重置密码') }}>忘记密码？</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); navigate('/forgot-password') }}>忘记密码？</a>
           </div>
           <button type="submit" disabled={loading}>{loading ? '登入中…' : '登入'}</button>
         </form>

@@ -134,7 +134,7 @@ export default function MobileLogin() {
                   记住我
                 </label>
                 <div className="forgot-password">
-                  <a href="/change-password" onClick={e => { e.preventDefault(); showToast('忘记密码请联系管理员重置', 'info') }}>忘记密码？</a>
+                  <a href="/forgot-password" onClick={e => { e.preventDefault(); navigate('/forgot-password') }}>忘记密码？</a>
                 </div>
               </div>
               <button type="submit" disabled={loading}>{loading ? '登入中…' : '登入'}</button>

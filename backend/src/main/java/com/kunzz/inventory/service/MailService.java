@@ -116,4 +116,65 @@ public class MailService {
             return false;
         }
     }
+
+    /** 发送忘记密码的 6 位验证码。成功返回 true，失败记日志返回 false（由调用方决定如何提示） */
+    public boolean sendResetCodeEmail(String email, String code, int ttlMinutes) {
+        String html = """
+            <html>
+            <head>
+                <meta charset='utf-8'>
+                <title>Kunzz Group 密码重设验证码</title>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+                    .wrapper { max-width: 600px; margin: 30px auto; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+                    .header { background: #f97316; color: white; padding: 28px 32px; text-align: center; }
+                    .header h1 { margin: 0; font-size: 22px; }
+                    .content { padding: 32px; }
+                    .code-box { background: #fff8f0; padding: 22px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #f97316; text-align: center; }
+                    .code { font-family: monospace; font-size: 34px; font-weight: bold; color: #f97316; background: #fdebd0; padding: 12px 24px; border-radius: 6px; letter-spacing: 8px; display: inline-block; }
+                    .footer { background: #f9f9f9; padding: 20px 32px; font-size: 12px; color: #999; border-top: 1px solid #eee; text-align: center; }
+                </style>
+            </head>
+            <body>
+                <div class='wrapper'>
+                    <div class='header'><h1>🔒 密码重设验证码</h1></div>
+                    <div class='content'>
+                        <p>您正在重设 Kunzz Group 库存系统的登录密码。请在页面上输入以下验证码：</p>
+                        <div class='code-box'><div class='code'>%s</div></div>
+                        <p><strong>验证码 %d 分钟内有效</strong>，请尽快完成重设。</p>
+                        <p style='margin-top:24px;'><strong style='color:#f97316;'>如果这不是您本人的操作：</strong></p>
+                        <ul>
+                            <li>请忽略本邮件，您的密码不会被修改</li>
+                            <li>请勿把验证码转发给任何人（包括自称管理员的人）</li>
+                            <li>如需协助，请联系管理员</li>
+                        </ul>
+                    </div>
+                    <div class='footer'>
+                        <p>此邮件由系统自动发送，请勿回复。</p>
+                        <p>&copy; %d Kunzz Group. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """.formatted(code, ttlMinutes, Year.now().getValue());
+
+        String alt = "您正在重设 Kunzz Group 库存系统的登录密码。\n\n验证码：" + code
+                + "\n\n验证码 " + ttlMinutes + " 分钟内有效，请尽快完成重设。"
+                + "\n\n如果这不是您本人的操作，请忽略本邮件，您的密码不会被修改。"
+                + "\n请勿把验证码转发给任何人。\n\n请勿回复此邮件。";
+
+        try {
+            MimeMessage mime = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mime, true, "UTF-8");
+            helper.setFrom(from, "Kunzz Group");
+            helper.setTo(email);
+            helper.setSubject("密码重设验证码 - Kunzz Group");
+            helper.setText(alt, html);
+            mailSender.send(mime);
+            return true;
+        } catch (Exception e) {
+            log.error("[MailService] 验证码邮件发送失败 email={}: {}", email, e.getMessage());
+            return false;
+        }
+    }
 }

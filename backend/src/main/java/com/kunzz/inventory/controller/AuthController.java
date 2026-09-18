@@ -2,11 +2,14 @@ package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.dto.ChangePasswordRequest;
+import com.kunzz.inventory.dto.ForgotPasswordRequest;
 import com.kunzz.inventory.dto.LoginRequest;
 import com.kunzz.inventory.dto.LoginResponse;
+import com.kunzz.inventory.dto.ResetPasswordRequest;
 import com.kunzz.inventory.dto.UserVO;
 import com.kunzz.inventory.entity.User;
 import com.kunzz.inventory.service.AuthService;
+import com.kunzz.inventory.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final PasswordResetService passwordResetService;
 
     // ---- 登录限速（对齐 Web security basics 第 5 节：15 分钟内最多 5 次失败尝试/IP）----
     private static final int MAX_FAILS = 5;
@@ -70,6 +74,21 @@ public class AuthController {
                                             Authentication authentication) {
         User user = (User) authentication.getPrincipal();
         authService.changePassword(user, request.oldPassword(), request.newPassword());
+        return ApiResponse.ok();
+    }
+
+    /** 忘记密码第一步：往邮箱发 6 位验证码（未登录可访问，路径在 SecurityConfig 白名单里） */
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request,
+                                            jakarta.servlet.http.HttpServletRequest req) {
+        passwordResetService.requestCode(request.email(), clientIp(req));
+        return ApiResponse.ok();
+    }
+
+    /** 忘记密码第二步：校验验证码 → 设置新密码 */
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.resetPassword(request.email(), request.code(), request.newPassword());
         return ApiResponse.ok();
     }
 }

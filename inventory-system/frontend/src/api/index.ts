@@ -11,6 +11,11 @@ export const login = (data: { username: string; password: string }) =>
   http.post<unknown, LoginResponse>('/auth/login', data)
 export const changePassword = (data: { oldPassword: string; newPassword: string }) =>
   http.post<unknown, void>('/auth/change-password', data)
+// 忘记密码：先申请验证码，再凭验证码设新密码（两个接口均无需登录）
+export const forgotPassword = (data: { email: string }) =>
+  http.post<unknown, void>('/auth/forgot-password', data)
+export const resetPassword = (data: { email: string; code: string; newPassword: string }) =>
+  http.post<unknown, void>('/auth/reset-password', data)
 export const getMe = () => http.get<unknown, UserInfo>('/auth/me')
 export const getStockPerms = () =>
   http.get<unknown, { canApply: boolean; canApprove: boolean; systems: string[]; views: string[] }>('/auth/me/stock-perms')

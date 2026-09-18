@@ -5,6 +5,7 @@ import AppLayout from './components/AppLayout'
 import { loadPagePerms, canAccess, resetPagePerms } from './utils/pagePerms'
 import Login from './pages/Login'
 import ChangePassword from './pages/ChangePassword'
+import ForgotPassword from './pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import StockRecords from './pages/StockRecords'
 import StockProducts from './pages/StockProducts'
@@ -99,6 +100,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       {/* 电话版（手机端专用，无侧边栏）：
           /mobile/login 手机用户专用登录（登录后自动去到有权限的分店）；
           /mobile/out 库存列表改量出货（对齐旧 /mobile/ch/stocklistjX.php）；
