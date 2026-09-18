@@ -3,12 +3,14 @@ package com.kunzz.inventory.controller;
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.mapper.PriceChangeLogMapper;
 import com.kunzz.inventory.entity.StockInout;
+import com.kunzz.inventory.entity.User;
 import com.kunzz.inventory.realtime.RealtimeService;
 import com.kunzz.inventory.service.StockEditService;
 import com.kunzz.inventory.service.StockEnhanceService;
 import com.kunzz.inventory.service.StockProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -105,10 +107,19 @@ public class StockEnhanceController {
 
     /** 更新记录 */
     @PutMapping("/products/{id}")
-    public ApiResponse<Map<String, Object>> updateProduct(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
-        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.update(id, body));
+    public ApiResponse<Map<String, Object>> updateProduct(@PathVariable Integer id, @RequestBody Map<String, Object> body,
+                                                          Authentication authentication) {
+        // 改价记录里的「谁改的」用登录态：请求体里的 applicant 是货品申请人（当初建这条记录的人），不是改价人
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.update(id, body, operatorOf(authentication)));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
+    }
+
+    /** 当前登录用户显示名（昵称 → 中文名 → 用户名，与 /auth/me 的 displayName 一致）；取不到 → null */
+    private String operatorOf(Authentication authentication) {
+        if (authentication == null) return null;
+        Object principal = authentication.getPrincipal();
+        return principal instanceof User u ? u.getDisplayName() : authentication.getName();
     }
 
     /** 删除记录 */

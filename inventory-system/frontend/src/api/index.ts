@@ -104,7 +104,7 @@ export const deleteFreezerCategory = (id: number, force?: boolean) =>
 
 // ---------- 改价日志（总库存：最近改价列 + 点击货品名弹窗看历史） ----------
 export interface PriceLogEntry { changeDate: string; oldPrice: number | null; newPrice: number; changedBy?: string }
-export interface PriceLogLatest { productName: string; changeDate: string; newPrice: number }
+export interface PriceLogLatest { productName: string; changeDate: string; newPrice: number; changedBy?: string }
 /** 某货品改价历史（从旧到最新） */
 export const getPriceChangeLog = (productName: string, system?: string) =>
   http.get<unknown, PriceLogEntry[]>('/stock/products/price-log', { params: { productName, system } })

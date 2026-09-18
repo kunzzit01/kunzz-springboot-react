@@ -286,8 +286,8 @@ export default function StockRecords() {
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
   // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
   const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
-  // 改价日志：每货品最近一次改价（列展示）+ 弹窗历史（从旧到最新）
-  const [priceLatest, setPriceLatest] = useState<Record<string, { date: string; price: number }>>({})
+  // 改价日志：每货品最近一次改价（列展示 + 悬浮提示的「谁改的」）+ 弹窗历史（从旧到最新）
+  const [priceLatest, setPriceLatest] = useState<Record<string, { date: string; price: number; by?: string }>>({})
   const [logModal, setLogModal] = useState<{ name: string; entries: PriceLogEntry[]; loading: boolean } | null>(null)
   // 导出日期范围弹窗（对齐旧 live 系统 export-date-modal：默认本月，快捷 今天/本月/上月/全部）
   const [exportModal, setExportModal] = useState<{ sys: string } | null>(null)
@@ -374,8 +374,11 @@ export default function StockRecords() {
   useEffect(() => {
     getPriceChangeLogLatest(system)
       .then(list => {
-        const m: Record<string, { date: string; price: number }> = {}
-        for (const e of list || []) m[String(e.productName || '').trim()] = { date: String(e.changeDate || ''), price: Number(e.newPrice) || 0 }
+        const m: Record<string, { date: string; price: number; by?: string }> = {}
+        for (const e of list || []) {
+          const by = String(e.changedBy || '').trim()
+          m[String(e.productName || '').trim()] = { date: String(e.changeDate || ''), price: Number(e.newPrice) || 0, by: by || undefined }
+        }
         setPriceLatest(m)
       })
       .catch(() => { /* ignore */ })
@@ -881,8 +884,8 @@ export default function StockRecords() {
                         <strong
                           style={{ cursor: priceLatest[productName] ? 'pointer' : 'default' }}
                           title={priceLatest[productName]
-                            ? `最近改价：${fmtDmy(priceLatest[productName].date)} ${fmtRm(priceLatest[productName].price)}
-点击查看完整改价记录（从旧到最新）`
+                            ? `最近改价：${fmtDmy(priceLatest[productName].date)} ${fmtRm(priceLatest[productName].price)}${priceLatest[productName].by ? `（${priceLatest[productName].by}）` : ''}
+点击查看完整改价记录（从旧到最新，含改价人）`
                             : undefined}
                           onClick={() => { if (priceLatest[productName]) openPriceLog(productName) }}
                         >
@@ -1044,7 +1047,15 @@ export default function StockRecords() {
           <div style={{ maxHeight: 420, overflowY: 'auto' }}>
             {(logModal?.entries || []).map((e, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '9px 2px', borderBottom: i < (logModal?.entries.length || 0) - 1 ? '1px dashed #e5e7eb' : 'none' }}>
-                <span style={{ color: '#374151' }}>{fmtCn(e.changeDate)}</span>
+                <span style={{ color: '#374151' }}>
+                  {fmtCn(e.changeDate)}
+                  {e.changedBy && (
+                    <span title={`操作人：${e.changedBy}`}
+                      style={{ marginLeft: 8, padding: '1px 7px', borderRadius: 9, background: '#f3f4f6', color: '#4b5563', fontSize: 12 }}>
+                      <i className="fas fa-user" style={{ marginRight: 4, fontSize: 10 }} />{e.changedBy}
+                    </span>
+                  )}
+                </span>
                 <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                   {e.oldPrice != null && <span style={{ color: '#9ca3af', fontSize: 12, textDecoration: 'line-through' }}>{fmtRm(e.oldPrice)}</span>}
                   <span style={{ fontWeight: 700, color: '#c2410c' }}>{fmtRm(e.newPrice)}</span>

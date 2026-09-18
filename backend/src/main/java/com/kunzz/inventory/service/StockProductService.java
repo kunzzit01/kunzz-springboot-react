@@ -114,9 +114,10 @@ public class StockProductService {
         return Map.of("success", true);
     }
 
-    /** 更新记录（对齐 PUT stockapi.php；approver 由前端传，系统页编辑时清空重新批准） */
+    /** 更新记录（对齐 PUT stockapi.php；approver 由前端传，系统页编辑时清空重新批准）
+     *  operator = 当前登录用户显示名，只用于改价记录的「谁改的」（改价人不等于货品申请人） */
     @Transactional
-    public Map<String, Object> update(Integer id, Map<String, Object> body) {
+    public Map<String, Object> update(Integer id, Map<String, Object> body, String operator) {
         // 部分字段安全：只更新请求里实际携带的字段（未携带的不动），
         // 防止部分字段的 PUT 把其余列清空（数据丢失风险；前端全量发送时行为不变）
         Map<String, Object> r = new LinkedHashMap<>();
@@ -146,7 +147,7 @@ public class StockProductService {
         if (!r.isEmpty()) stockProductMapper.updateRow(id, r);
         writePerSystemFields(id, body);
         // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
-        if (body.containsKey("price")) logPriceChange(before, body, logSys, oldPriceBefore);
+        if (body.containsKey("price")) logPriceChange(before, body, logSys, oldPriceBefore, operator);
         return Map.of("success", true);
     }
 
@@ -232,7 +233,7 @@ public class StockProductService {
     /** 改价日志：货品每次改单价 → 当天记一条（同一天同一货品同一系统只保留一条，从旧到最新展示在总库存） */
     /** 改价日志：用改价前的旧值判断/记录（before 为 null = 货品不存在，静默跳过） */
     private void logPriceChange(Map<String, Object> before, Map<String, Object> body,
-                                String system, Double oldPrice) {
+                                String system, Double oldPrice, String operator) {
         if (before == null) return;
         Double newPrice = cleanPrice(body.get("price"));
         if (newPrice == null) return;
@@ -240,7 +241,10 @@ public class StockProductService {
         // 名字与流水/总库存保持一致（decoded 纯文本）：改价同时改名 → 取新名
         String productName = body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
                 ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name")));
-        String changedBy = decodeHtml(str(body.getOrDefault("applicant", "")));
+        // 「谁改的」= 当前登录用户（服务端取，前端伪造不了）。请求体里的 applicant 是货品申请人
+        // （当初建这条货品记录的人，可能是很久以前、别人），拿它当改价人是错的 —— 只在没有登录态时兜底
+        String changedBy = operator != null && !operator.isBlank()
+                ? decodeHtml(operator) : decodeHtml(str(body.getOrDefault("applicant", "")));
         String today = java.time.LocalDate.now().toString();
         // 同一天同一货品同一系统只保留一条：库里已有当天那一条 → 只把「改价后」更新成最新价，不再追加新行
         // old_price 保持当天起点价不动，所以这条记录始终读作「当天开始时是多少 → 现在是多少」
