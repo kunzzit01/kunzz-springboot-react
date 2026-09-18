@@ -41,4 +41,4 @@
 | 2026-09-18-inout-price-selectall | 已完成 | 金额框点一次即全选，可直接打新金额；只改 StockInout.tsx 一个文件 | main |
 | 2026-09-18-shortcut-keys | 已完成 | Ctrl+S 存当前行 / Ctrl+Shift+S 批量存 / 去掉 Ctrl+Enter；改进出货 + 货品种类两个页面 | main |
 | 2026-09-18-stockdata-price-scale | 已完成 | stock_data.price 精度 3→5 位（SQL 补丁），货品种类单价框 step 0.00001 | main |
-| 2026-09-18-stockrecords-silent-refresh | 进行中 | 总库存：别人保存后静默更新，不跳顶部/不清筛选；只改 StockRecords.tsx | main |
+| 2026-09-18-stockrecords-silent-refresh | 已完成 | 总库存：别人保存后静默更新，不跳顶部/不清筛选；只改 StockRecords.tsx | main |
