@@ -799,7 +799,7 @@ export default function StockInout() {
     setRemarkPickLoading(true)
     setRemarkPickOpts([])
     try {
-      const list = await getRemarkCodeOptions(productName)
+      const list = await getRemarkCodeOptions(productName, system)
       setRemarkPickOpts(list || [])
     } catch { setRemarkPickOpts([]) } finally { setRemarkPickLoading(false) }
   }
@@ -1269,11 +1269,12 @@ export default function StockInout() {
         // 备注编号（对齐旧系统：前缀-编号 拼接）——前缀和编号都填写才算完整编号，否则视为未填写（触发自动生成）
         const remarkNumber = row.remarkChecked && row.remarkPrefix && row.remarkSuffix
           ? `${row.remarkPrefix.toUpperCase()}-${row.remarkSuffix.toUpperCase()}` : undefined
-        // 出货备注校验（8/23 修复：仅 Central 系统有在库备注码；同一产品只查询一次）
-        if (isOutgoing && row.productName && system === 'central') {
+        // 出货备注校验（同一产品只查询一次）。2026-09-18 起分店也各有自己的备注编号，
+        // 所以不再限定中央，一律按当前页面的系统查
+        if (isOutgoing && row.productName) {
           let codes = remarkCodesCache.get(row.productName)
           if (codes === undefined) {
-            codes = (await getRemarkCodes(row.productName)) || []
+            codes = (await getRemarkCodes(row.productName, system)) || []
             remarkCodesCache.set(row.productName, codes)
           }
           if (codes.length > 0) {
@@ -1386,9 +1387,9 @@ export default function StockInout() {
       // 该编号可能已被本记录自身消耗，对齐后端 updateInout 与旧系统编辑行为）
       const origRow = rows.find(r => Number(r.id) === id)
       const origRemark = origRow ? String(origRow.remarkNumber || '').trim().toUpperCase() : ''
-      // 出货备注校验（8/23 修复：仅 Central 系统有在库备注码，分店查 central 表无意义）
-      if (outQ > 0 && editDraft.productName && system === 'central') {
-        const codes = await getRemarkCodes(editDraft.productName)
+      // 出货备注校验（2026-09-18 起分店也各有编号，不再限定中央）
+      if (outQ > 0 && editDraft.productName) {
+        const codes = await getRemarkCodes(editDraft.productName, system)
         const rn = (editDraft.remarkNumber || '').trim().toUpperCase()
         if ((codes || []).length > 0) {
           if (!rn) {

@@ -93,11 +93,11 @@ public interface StockInoutMapper {
     // ---------- 备注编号（对齐旧系统 generateRemarkCode / product_remark_codes） ----------
 
     /** 同前缀所有备注编号 + 净库存（用于计算下一个可用编号，避让在库） */
-    List<Map<String, Object>> remarkCodePool(@Param("prefix") String prefix);
+    List<Map<String, Object>> remarkCodePool(@Param("table") String table, @Param("prefix") String prefix);
 
     /** 产品是否存在在库（净库存>0）备注编号 */
-    long countInStockRemarkNumber(@Param("productName") String productName);
+    long countInStockRemarkNumber(@Param("table") String table, @Param("productName") String productName);
 
     /** 备注编号是否在库（净库存>0） */
-    long countRemarkNumberInStock(@Param("productName") String productName, @Param("remarkNumber") String remarkNumber);
+    long countRemarkNumberInStock(@Param("table") String table, @Param("productName") String productName, @Param("remarkNumber") String remarkNumber);
 }

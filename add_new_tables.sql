@@ -245,3 +245,42 @@ SELECT stock_system, COUNT(*) AS rows_count,
        SUM(freezer_category IS NOT NULL AND freezer_category <> '') AS with_category,
        SUM(price IS NOT NULL) AS with_price
 FROM stock_data_system GROUP BY stock_system ORDER BY stock_system;
+
+-- 9) 分店台账支持货品备注编号（2026-09-18）
+--    原来 remark_number / product_remark_checked 只在中央 stockinout_data 上，
+--    分店的 jXstockedit_data 没有这两列 → 分店进出货填了编号也无处可存、货品备注页分店看不到东西。
+--    给三张分店台账表各加两列：分店从此有自己的编号序列（中央调拨给分店时会把编号继承过去）。
+SET @rm_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE table_schema='u690174784_kunzz' AND table_name='j1stockedit_data' AND column_name='remark_number');
+SET @ddl := IF(@rm_col = 0,
+  'ALTER TABLE j1stockedit_data ADD COLUMN remark_number VARCHAR(50) NULL COMMENT ''备注编号（前缀-编号）'' AFTER price, ADD COLUMN product_remark_checked TINYINT(1) NULL DEFAULT 0 COMMENT ''是否勾选货品备注'' AFTER remark_number',
+  'SELECT ''j1stockedit_data 备注列已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @rm_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE table_schema='u690174784_kunzz' AND table_name='j2stockedit_data' AND column_name='remark_number');
+SET @ddl := IF(@rm_col = 0,
+  'ALTER TABLE j2stockedit_data ADD COLUMN remark_number VARCHAR(50) NULL COMMENT ''备注编号（前缀-编号）'' AFTER price, ADD COLUMN product_remark_checked TINYINT(1) NULL DEFAULT 0 COMMENT ''是否勾选货品备注'' AFTER remark_number',
+  'SELECT ''j2stockedit_data 备注列已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @rm_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE table_schema='u690174784_kunzz' AND table_name='j3stockedit_data' AND column_name='remark_number');
+SET @ddl := IF(@rm_col = 0,
+  'ALTER TABLE j3stockedit_data ADD COLUMN remark_number VARCHAR(50) NULL COMMENT ''备注编号（前缀-编号）'' AFTER price, ADD COLUMN product_remark_checked TINYINT(1) NULL DEFAULT 0 COMMENT ''是否勾选货品备注'' AFTER remark_number',
+  'SELECT ''j3stockedit_data 备注列已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 验证（三张表都应各出现 remark_number / product_remark_checked）
+SELECT TABLE_NAME, GROUP_CONCAT(COLUMN_NAME ORDER BY COLUMN_NAME) AS remark_cols
+FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz'
+  AND TABLE_NAME IN ('j1stockedit_data','j2stockedit_data','j3stockedit_data')
+  AND COLUMN_NAME IN ('remark_number','product_remark_checked')
+GROUP BY TABLE_NAME ORDER BY TABLE_NAME;

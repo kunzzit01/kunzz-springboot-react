@@ -47,3 +47,4 @@
 | 2026-09-18-remark-total-no-round | 已完成 | 货品备注「总重量」不再进位到 2 位（0.338 不再显示成 0.34）；只改 RemarkAnalysis.tsx | main |
 | 2026-09-18-per-system-fields | 已完成 | 冰箱分类/位次/默认单价改为按系统各存一份（新表 stock_data_system）；总览只读展示 4 套 | main |
 | 2026-09-18-per-system-delete-cleanup | 已完成 | 删货品时级联清掉 stock_data_system 的行（不留孤儿行） | main |
+| 2026-09-18-branch-remark-codes | 进行中 | 备注编号支持分店：分店台账加两列，取数/校验/生成按系统 | main |

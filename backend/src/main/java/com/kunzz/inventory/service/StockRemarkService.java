@@ -23,7 +23,14 @@ public class StockRemarkService {
     private final StockRemarkMapper stockRemarkMapper;
 
     public Map<String, Object> analysis() {
-        List<Map<String, Object>> rows = stockRemarkMapper.analysisRows();
+        return analysis(null);
+    }
+
+    /** 按系统分析（2026-09-18 起分店也记备注编号）：中央查 stockinout_data，分店查各自 jXstockedit_data */
+    public Map<String, Object> analysis(String system) {
+        String sys = system == null ? "" : system.trim().toLowerCase();
+        String table = ("j1".equals(sys) || "j2".equals(sys) || "j3".equals(sys)) ? sys + "stockedit_data" : "stockinout_data";
+        List<Map<String, Object>> rows = stockRemarkMapper.analysisRows(table);
 
         // 按产品名分组（SQL 已按 product_name 排序，保持字母序与线上一致）
         Map<String, List<Map<String, Object>>> groups = new LinkedHashMap<>();

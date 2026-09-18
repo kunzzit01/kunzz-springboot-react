@@ -14,7 +14,8 @@ public interface StockRemarkMapper {
 
     /**
      * 多价格/备注货品分析行：
-     * 每个 remark_number（备注编号）一条，净库存 = SUM(in) - SUM(out)，仅保留净库存 > 0 的记录
+     * 每个 remark_number（备注编号）一条，净库存 = SUM(in) - SUM(out)，仅保留净库存 > 0 的记录。
+     * table 由 service 白名单给出（中央 stockinout_data / 分店 jXstockedit_data，2026-09-18 起分店也记编号）
      */
-    List<Map<String, Object>> analysisRows();
+    List<Map<String, Object>> analysisRows(@org.apache.ibatis.annotations.Param("table") String table);
 }

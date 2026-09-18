@@ -37,8 +37,8 @@ public class StockController {
 
     /** 多价格/备注货品分析（对齐线上 stockremarkapi.php?action=analysis） */
     @GetMapping("/stock/remark-analysis")
-    public ApiResponse<Map<String, Object>> stockRemarks() {
-        return ApiResponse.ok(stockRemarkService.analysis());
+    public ApiResponse<Map<String, Object>> stockRemarks(@RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockRemarkService.analysis(system));
     }
 
     // ---------- 库存台账 ----------

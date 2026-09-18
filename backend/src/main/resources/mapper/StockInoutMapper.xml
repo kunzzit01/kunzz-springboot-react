@@ -83,11 +83,13 @@
         INSERT INTO ${table}
             (date, time, product_name, code_number, in_quantity, out_quantity,
              specification, price, receiver, remark,
-             type, created_by, target_system, main_record_id)
+             type, created_by, target_system, main_record_id,
+             remark_number, product_remark_checked)
         VALUES
             (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.inQuantity}, #{r.outQuantity},
              #{r.specification}, #{r.price}, #{r.receiver}, #{r.remark},
-             #{r.type}, #{r.createdBy}, #{r.targetSystem}, #{r.mainRecordId})
+             #{r.type}, #{r.createdBy}, #{r.targetSystem}, #{r.mainRecordId},
+             #{r.remarkNumber}, #{r.productRemarkChecked})
     </insert>
 
     <update id="updateBranch" parameterType="map">
@@ -97,7 +99,8 @@
             in_quantity = #{r.inQuantity}, out_quantity = #{r.outQuantity},
             specification = #{r.specification}, price = #{r.price},
             receiver = #{r.receiver}, remark = #{r.remark},
-            type = #{r.type}
+            type = #{r.type},
+            remark_number = #{r.remarkNumber}, product_remark_checked = #{r.productRemarkChecked}
         WHERE id = #{id} AND deleted_at IS NULL
     </update>
 
@@ -191,11 +194,12 @@
         ORDER BY date ASC, time ASC, id ASC
     </select>
 
+    <!-- 备注编号池：2026-09-18 起按系统取表（中央 stockinout_data / 分店 jXstockedit_data，各自一套编号） -->
     <select id="remarkCodePool" resultType="java.util.LinkedHashMap">
         SELECT remark_number,
                SUM(in_quantity) AS total_in,
                SUM(out_quantity) AS total_out
-        FROM stockinout_data
+        FROM ${table}
         WHERE remark_number LIKE CONCAT(#{prefix}, '-%') AND deleted_at IS NULL
         GROUP BY remark_number
     </select>
@@ -204,7 +208,7 @@
     <select id="countInStockRemarkNumber" resultType="long">
         SELECT COUNT(*) FROM (
             SELECT remark_number
-            FROM stockinout_data
+            FROM ${table}
             WHERE product_name = #{productName}
               AND product_remark_checked = 1
               AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
@@ -218,7 +222,7 @@
     <select id="countRemarkNumberInStock" resultType="long">
         SELECT COUNT(*) FROM (
             SELECT remark_number
-            FROM stockinout_data
+            FROM ${table}
             WHERE product_name = #{productName}
               AND remark_number = #{remarkNumber}
               AND product_remark_checked = 1

@@ -167,15 +167,17 @@ public class StockEnhanceController {
         return ApiResponse.ok(stockEditService.priceStock(system, productName, codeNumber, requiredQty));
     }
 
-    /** 在库备注编号（备注编号前缀/后缀生成） */
+    /** 在库备注编号（备注编号前缀/后缀生成）。system 省略按中央；分店各查自己的台账 */
     @GetMapping("/remark-codes")
-    public ApiResponse<List<String>> remarkCodes(@RequestParam String productName) {
-        return ApiResponse.ok(stockEditService.remarkCodes(productName));
+    public ApiResponse<List<String>> remarkCodes(@RequestParam String productName,
+                                                @RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockEditService.remarkCodes(productName, system));
     }
 
-    /** 在库备注编号 + 剩余量/单位（出货时下拉选择：用户不必再去货品备注页看/扣数量） */
+    /** 在库备注编号 + 剩余量/单位（出货时下拉选择：用户不必再去货品备注页看/扣数量）；按系统 */
     @GetMapping("/remark-code-options")
-    public ApiResponse<List<Map<String, Object>>> remarkCodeOptions(@RequestParam String productName) {
-        return ApiResponse.ok(stockEditService.remarkCodeOptions(productName));
+    public ApiResponse<List<Map<String, Object>>> remarkCodeOptions(@RequestParam String productName,
+                                                                   @RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockEditService.remarkCodeOptions(productName, system));
     }
 }

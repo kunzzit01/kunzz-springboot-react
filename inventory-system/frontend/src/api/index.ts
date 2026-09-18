@@ -41,8 +41,8 @@ export const getStockSummary = (system: string, endDate?: string) =>
 // ---------- 货品备注分析（stockremark） ----------
 export interface RemarkVariant { code_number?: string; specification?: string; in_quantity?: number; out_quantity?: number; current_stock?: number; formatted_quantity?: string; price?: number; formatted_price?: string; remark_number?: string }
 export interface RemarkProduct { product_name?: string; variants: RemarkVariant[]; total_quantity?: number }
-export const getStockRemarkAnalysis = () =>
-  http.get<unknown, { products: RemarkProduct[] }>('/stock/remark-analysis')
+export const getStockRemarkAnalysis = (system?: string) =>
+  http.get<unknown, { products: RemarkProduct[] }>('/stock/remark-analysis', { params: { system } })
 
 // ---------- 货品种类台账（stockproductname / stockapi.php） ----------
 export interface StockProductRow {
@@ -126,12 +126,12 @@ export const getPriceStock = (productName: string, codeNumber?: string, required
 /** 进货默认单价（货品种类里最新维护的 price；无则 null） */
 export const getProductDefaultPrice = (productName: string, codeNumber?: string, system?: string) =>
   http.get<unknown, number | null>('/stock/products/default-price', { params: { productName, codeNumber, system } })
-export const getRemarkCodes = (productName: string) =>
-  http.get<unknown, string[]>('/stock/remark-codes', { params: { productName } })
+export const getRemarkCodes = (productName: string, system?: string) =>
+  http.get<unknown, string[]>('/stock/remark-codes', { params: { productName, system } })
 /** 在库备注编号 + 剩余量/单位（出货时下拉选择：编号 + 还剩多少） */
-export const getRemarkCodeOptions = (productName: string) =>
+export const getRemarkCodeOptions = (productName: string, system?: string) =>
   http.get<unknown, { remark_number: string; available: number; specification?: string }[]>(
-    '/stock/remark-code-options', { params: { productName } })
+    '/stock/remark-code-options', { params: { productName, system } })
 export const getStockRecords = (params: StockQuery) =>
   http.get<unknown, PageResult<StockData>>('/stock/records', { params })
 export const createStockRecord = (data: Partial<StockData>) =>

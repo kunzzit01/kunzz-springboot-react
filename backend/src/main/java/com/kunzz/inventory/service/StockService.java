@@ -195,6 +195,8 @@ public class StockService {
         }
 
         // ====== 备注编号处理（对齐旧系统 stockeditapi.php） ======
+        // 按系统取表：中央/分店各自一套编号（分店 2026-09-18 起支持）
+        String rmTable = remarkTable(system);
         String remarkNumber = req.remarkNumber();
         if (remarkNumber != null) remarkNumber = remarkNumber.trim().toUpperCase();
         boolean checked = Boolean.TRUE.equals(req.productRemarkChecked());
@@ -204,16 +206,16 @@ public class StockService {
             String prefix = (req.prefix() == null || req.prefix().isBlank())
                     ? computePrefix(req.productName()) : req.prefix().trim().toUpperCase();
             if (prefix.isBlank()) throw new BusinessException("无法计算前缀，请确认货品名称不为空");
-            remarkNumber = generateRemarkCode(prefix);
+            remarkNumber = generateRemarkCode(prefix, rmTable);
             checked = true;
         }
 
         // 出货备注校验：产品有在库备注编号时，必须填编号且编号必须在库
-        if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(req.productName()) > 0) {
+        if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(rmTable, req.productName()) > 0) {
             if (remarkNumber == null || remarkNumber.isBlank()) {
                 throw new BusinessException("货品 [" + req.productName() + "] 有备注编码在库，出货时必须填写备注编号");
             }
-            if (stockInoutMapper.countRemarkNumberInStock(req.productName(), remarkNumber) == 0) {
+            if (stockInoutMapper.countRemarkNumberInStock(rmTable, req.productName(), remarkNumber) == 0) {
                 throw new BusinessException("备注编号 [" + remarkNumber + "] 不在库中");
             }
         }
@@ -259,7 +261,7 @@ public class StockService {
             // A2. 分店 jXstockinout_data：入库记录（target_system='from_main'，main_record_id 关联）
             insertBranchInout(target, req, s.getId());
             // A3. 分店 jXstockedit_data：入库记录（target_system=jX，type 用台账 category）
-            insertBranchEdit(target, req, s.getId());
+            insertBranchEdit(target, req, s.getId(), remarkNumber, checked, rmTable);
             return s;
         }
 
@@ -279,6 +281,8 @@ public class StockService {
             r.put("type", req.type());
             r.put("createdBy", req.createdBy());
             r.put("targetSystem", sys);
+            r.put("remarkNumber", remarkNumber);
+            r.put("productRemarkChecked", checked ? 1 : 0);
             stockInoutMapper.insertBranch(sys + "stockedit_data", r);
             StockInout s = new StockInout();
             s.setId(toInt(r.get("id")));
@@ -312,8 +316,10 @@ public class StockService {
         stockInoutMapper.insertBranchInout(branch + "stockinout_data", r);
     }
 
-    /** 中央出库 → 分店 jXstockedit_data 入库记录（对齐 saveToJ1EditTable） */
-    private void insertBranchEdit(String branch, StockInoutRequest req, Integer mainId) {
+    /** 中央出库 → 分店 jXstockedit_data 入库记录（对齐 saveToJ1EditTable）。
+     *  备注编号一并继承（中央给这家店的这批货，在分店台账里也带上同一个编号） */
+    private void insertBranchEdit(String branch, StockInoutRequest req, Integer mainId,
+                                  String remarkNumber, boolean checked, String rmTable) {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("date", req.date());
         r.put("time", req.time());
@@ -329,6 +335,8 @@ public class StockService {
         r.put("type", categoryOf(req.productName(), req.codeNumber()));
         r.put("createdBy", req.createdBy());
         r.put("targetSystem", branch);
+        r.put("remarkNumber", remarkNumber);
+        r.put("productRemarkChecked", checked ? 1 : 0);
         stockInoutMapper.insertBranch(branch + "stockedit_data", r);
     }
 
@@ -346,8 +354,8 @@ public class StockService {
     }
 
     /** 备注编号自动生成（对齐旧系统 generateRemarkCode：MAX+1 循环递增 1-999，避让在库编号） */
-    private String generateRemarkCode(String prefix) {
-        List<Map<String, Object>> rows = stockInoutMapper.remarkCodePool(prefix);
+    private String generateRemarkCode(String prefix, String table) {
+        List<Map<String, Object>> rows = stockInoutMapper.remarkCodePool(table, prefix);
         int lastVal = 0;
         java.util.Set<Integer> inStockSet = new java.util.HashSet<>();
         for (Map<String, Object> h : rows) {
@@ -411,6 +419,13 @@ public class StockService {
         throw new BusinessException("无效的系统：" + system);
     }
 
+    /** 备注编号所在台账表（白名单）：中央 stockinout_data / 分店 jXstockedit_data。
+     *  2026-09-18 起分店也各自记备注编号，所以编号的生成、在库校验、下拉都必须按系统取表 */
+    private String remarkTable(String system) {
+        String sys = system == null ? "central" : system.trim().toLowerCase();
+        return List.of("j1", "j2", "j3").contains(sys) ? sys + "stockedit_data" : "stockinout_data";
+    }
+
     @Transactional
     public StockInout updateInout(Integer id, StockInoutRequest req, String system) {
         // ====== 单价校验（对齐旧系统：不能为空且不能小于 0；0 合法） ======
@@ -430,6 +445,8 @@ public class StockService {
             r.put("receiver", req.receiver());
             r.put("remark", req.remark());
             r.put("type", req.type());
+            r.put("remarkNumber", req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase());
+            r.put("productRemarkChecked", Boolean.TRUE.equals(req.productRemarkChecked()) ? 1 : 0);
             int n = stockInoutMapper.updateBranch(system + "stockedit_data", id, r);
             if (n == 0) throw new BusinessException(404, "记录不存在");
             return new StockInout();
@@ -452,10 +469,10 @@ public class StockService {
             String prefix = (req.prefix() == null || req.prefix().isBlank())
                     ? computePrefix(req.productName()) : req.prefix().trim().toUpperCase();
             if (prefix.isBlank()) throw new BusinessException("无法计算前缀，请确认货品名称不为空");
-            remarkNumber = generateRemarkCode(prefix);
+            remarkNumber = generateRemarkCode(prefix, remarkTable(system));
         }
 
-        if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(req.productName()) > 0) {
+        if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(remarkTable(system), req.productName()) > 0) {
             if (remarkNumber == null || remarkNumber.isBlank()) {
                 if (oldRemark == null || oldRemark.isBlank()) {
                     throw new BusinessException("货品 [" + req.productName() + "] 有备注编码在库，出货时必须填写备注编号");
@@ -463,7 +480,7 @@ public class StockService {
                 // 原记录已有备注编号但本次提交为空 → 保留原编号（避免编辑误清）
                 remarkNumber = oldRemark;
             } else if (!remarkNumber.equals(oldRemark)
-                    && stockInoutMapper.countRemarkNumberInStock(req.productName(), remarkNumber) == 0) {
+                    && stockInoutMapper.countRemarkNumberInStock(remarkTable(system), req.productName(), remarkNumber) == 0) {
                 throw new BusinessException("备注编号 [" + remarkNumber + "] 不在库中");
             }
         }
@@ -498,7 +515,8 @@ public class StockService {
             stockInoutMapper.softDeleteBranchInoutByMainId(newTarget + "stockinout_data", id, "System");
             stockInoutMapper.softDeleteBranchEditByMainId(newTarget + "stockedit_data", id, newTarget, "System");
             insertBranchInout(newTarget, req, id);
-            insertBranchEdit(newTarget, req, id);
+            insertBranchEdit(newTarget, req, id, s.getRemarkNumber(), Boolean.TRUE.equals(s.getProductRemarkChecked()),
+                    remarkTable(newTarget));
         }
         return s;
     }

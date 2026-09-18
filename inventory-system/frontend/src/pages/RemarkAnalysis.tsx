@@ -16,6 +16,7 @@ export default function RemarkAnalysis() {
   const urlSystem = new URL(window.location.href).searchParams.get('system')
   const system = urlSystem && SYSTEM_NAMES[urlSystem] ? urlSystem : 'central'
   const [viewOpen, setViewOpen] = useState(false)
+  const [sysOpen, setSysOpen] = useState(false)
   const [products, setProducts] = useState<RemarkProduct[]>([])
   const [filtered, setFiltered] = useState<RemarkProduct[]>([])
   const [kw, setKw] = useState('')
@@ -54,7 +55,7 @@ export default function RemarkAnalysis() {
     if (loading) return
     setLoading(true)
     try {
-      const d = await getStockRemarkAnalysis()
+      const d = await getStockRemarkAnalysis(system)
       const sorted = sortProducts(d.products || [])
       setProducts(sorted)
       setFiltered(sorted)
@@ -192,11 +193,11 @@ export default function RemarkAnalysis() {
   // 点击外部关闭视图下拉（对齐线上 document click handler）
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (viewOpen && !(e.target as HTMLElement)?.closest('.view-selector')) setViewOpen(false)
+      if ((viewOpen || sysOpen) && !(e.target as HTMLElement)?.closest('.view-selector')) { setViewOpen(false); setSysOpen(false) }
     }
     document.addEventListener('click', h)
     return () => document.removeEventListener('click', h)
-  }, [viewOpen])
+  }, [viewOpen, sysOpen])
 
   return (
     <div className="remark-page">
@@ -230,9 +231,19 @@ export default function RemarkAnalysis() {
               ))}
             </div>
           </div>
-          <button className="selector-button" style={{ justifyContent: 'center' }}>
-            <span id="current-stock-type">{SYSTEM_NAMES[system] || '中央'}</span>
-          </button>
+          {/* 系统切换（2026-09-18 起分店也有自己的备注编号，切系统看各自的数据） */}
+          <div className="view-selector">
+            <button className="selector-button" style={{ justifyContent: 'center' }} onClick={() => setSysOpen(!sysOpen)}>
+              <span id="current-stock-type">{SYSTEM_NAMES[system] || '中央'}</span>
+              <i className="fas fa-chevron-down" />
+            </button>
+            <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
+              {Object.entries(SYSTEM_NAMES).map(([k, v]) => (
+                <div key={k} className={'dropdown-item' + (k === system ? ' active' : '')}
+                  onClick={() => { setSysOpen(false); if (k !== system) navigate('/remark?system=' + k) }}>{v}</div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 

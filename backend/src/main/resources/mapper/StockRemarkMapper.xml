@@ -13,7 +13,7 @@
                SUM(out_quantity)  AS out_quantity,
                (IFNULL(SUM(in_quantity), 0) - IFNULL(SUM(out_quantity), 0)) AS current_stock,
                MAX(price)         AS price
-        FROM stockinout_data
+        FROM ${table}
         WHERE product_remark_checked = 1
           AND deleted_at IS NULL
           AND remark_number IS NOT NULL

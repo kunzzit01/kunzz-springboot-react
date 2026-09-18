@@ -91,17 +91,17 @@ public class StockEditService {
         return out;
     }
 
-    /** 在库备注编号 */
+    /** 在库备注编号（按系统：中央 stockinout_data / 分店 jXstockedit_data） */
     @Transactional(readOnly = true)
-    public List<String> remarkCodes(String productName) {
-        return stockEditMapper.remarkCodes(productName);
+    public List<String> remarkCodes(String productName, String system) {
+        return stockEditMapper.remarkCodes(stockTable(system), productName);
     }
 
     /** 在库备注编号 + 剩余量/单位（出货时下拉选择用；编号自然排序 SA-9 < SA-10） */
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> remarkCodeOptions(String productName) {
+    public List<Map<String, Object>> remarkCodeOptions(String productName, String system) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (Map<String, Object> r : stockEditMapper.remarkCodeOptions(productName)) {
+        for (Map<String, Object> r : stockEditMapper.remarkCodeOptions(stockTable(system), productName)) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("remark_number", str(r.get("remark_number")));
             m.put("available", r.get("net"));

@@ -60,10 +60,11 @@
     </select>
 
     <!-- 在库备注编号（净库存 > 0，对齐线上 product_remark_codes） -->
+    <!-- 在库备注编号：2026-09-18 起按系统取表（中央/分店各自一套编号） -->
     <select id="remarkCodes" resultType="string">
         SELECT remark_number FROM (
             SELECT remark_number, COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS net
-            FROM stockinout_data
+            FROM ${table}
             WHERE product_name = #{productName}
               AND product_remark_checked = 1
               AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
@@ -79,13 +80,13 @@
     <select id="remarkCodeOptions" resultType="java.util.LinkedHashMap">
         SELECT t.remark_number,
                t.net,
-               (SELECT s.specification FROM stockinout_data s
+               (SELECT s.specification FROM ${table} s
                  WHERE s.product_name = #{productName} AND s.remark_number = t.remark_number
                    AND s.product_remark_checked = 1 AND s.deleted_at IS NULL
                  ORDER BY s.date DESC, s.id DESC LIMIT 1) AS specification
         FROM (
             SELECT remark_number, COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0) AS net
-            FROM stockinout_data
+            FROM ${table}
             WHERE product_name = #{productName}
               AND product_remark_checked = 1
               AND remark_number IS NOT NULL AND remark_number &lt;&gt; ''
