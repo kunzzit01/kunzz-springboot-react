@@ -159,3 +159,20 @@ SELECT * FROM (
   UNION ALL SELECT 'SBDI-2',20
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM `freezer_categories`);
+
+-- 6) 货品种类单价列精度提升 decimal(10,3) → decimal(15,5)（2026-09-18）
+--    业务上确实在用 4~5 位小数单价（台账里已有 4.16666 / 1.93333 / 33.33330 / 0.89999 这类值），
+--    但货品种类这列只存得下 3 位：输入 2.16666 会被数据库四舍五入成 2.167，
+--    进货自动抓取的默认单价也跟着变成 2.167，总价随之偏差。
+--    改成与进出货台账 stockinout_data.price decimal(15,5) 一致的精度。
+--    （本列由上面第 3) 节创建；若已跑到 5 位则跳过，重复执行安全）
+SET @price_scale := (
+  SELECT NUMERIC_SCALE FROM information_schema.COLUMNS
+  WHERE table_schema = 'u690174784_kunzz' AND table_name = 'stock_data' AND column_name = 'price'
+);
+SET @ddl := IF(IFNULL(@price_scale, 5) < 5,
+  'ALTER TABLE stock_data MODIFY COLUMN price DECIMAL(15,5) NULL DEFAULT NULL',
+  'SELECT ''stock_data.price 已是 5 位小数，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

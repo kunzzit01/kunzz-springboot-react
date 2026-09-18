@@ -958,7 +958,7 @@ export default function StockProducts() {
                       </select>
                     </td>
                     <td>
-                      <input className="excel-input text-input" type="number" min={0} step="0.001" placeholder="0.00"
+                      <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
                         value={r.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setNew(idx, { price: e.target.value })} />
                     </td>
                     <td>
@@ -1011,7 +1011,7 @@ export default function StockProducts() {
                       </td>
                       <td>
                         {isEditing
-                          ? <input className="excel-input text-input" type="number" min={0} step="0.001" placeholder="0.00"
+                          ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
                               value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
                           : <input className="excel-input" readOnly value={r.price || ''} />}
                       </td>
