@@ -453,7 +453,7 @@ export default function StockInout() {
     }
   }, [])
 
-  // ---- 快捷键（对齐旧系统 stockeditall.js 全局快捷键：Ctrl+S 保存、Ctrl+Shift+Z 撤销、Ctrl+D 批量删除、Ctrl+A 加行、Ctrl+Shift+A 新增弹窗） ----
+  // ---- 快捷键（对齐旧系统 stockeditall.js 全局快捷键：Ctrl+S 保存当前行、Ctrl+Shift+S 批量保存、Ctrl+Shift+Z 撤销、Ctrl+D 批量删除、Ctrl+A 加行、Ctrl+Shift+A 新增弹窗） ----
   const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {})
   useEffect(() => {
     shortcutRef.current = (e: KeyboardEvent) => {
@@ -487,11 +487,24 @@ export default function StockInout() {
         }
         return
       }
-      // B. 保存 (Ctrl+S)：有编辑中行→逐行保存全部；有待保存新增行→批量保存
-      if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
+      // B. 批量保存 (Ctrl+Shift+S)：有编辑中行→逐行保存全部；否则保存全部待存新增行
+      if (e.shiftKey && (e.code === 'KeyS' || e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         if (editingIds.size > 0) { saveAllEdits(); return }
         if (newRows.length > 0) saveNewRows()
+        return
+      }
+      // B2. 保存当前行 (Ctrl+S)：只保存光标所在的那一行，其他行不受影响。
+      // 光标不在表格行里时不做事——但仍要 preventDefault，否则会弹出浏览器的"保存网页"对话框。
+      if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        const tr = active?.closest('tr') as HTMLElement | null
+        if (!tr) return
+        const newKey = tr.getAttribute('data-key')          // 新增行（未保存）
+        if (newKey) { saveNewRows([newKey]); return }
+        const rowId = tr.getAttribute('data-row-id')        // 已有记录（编辑态才真会存）
+        if (rowId) saveEdit(Number(rowId))
+        return
       }
     }
   })
@@ -1200,17 +1213,18 @@ export default function StockInout() {
     await refreshHifoSplitHint(key, v, row.productName, row.codeNumber || undefined)
   }
 
-  /** 批量保存新增行（对齐 batchSaveNewRows） */
-  const saveNewRows = async () => {
+  /** 批量保存新增行（对齐 batchSaveNewRows）。传 onlyKeys 则只保存这几行（Ctrl+S 保存当前行用） */
+  const saveNewRows = async (onlyKeys?: string[]) => {
     if (saving) return // 防连点/重复提交
-    if (newRows.length === 0) { showMsg('没有需要保存的新记录', 'info'); return }
+    const targets = onlyKeys ? newRows.filter(r => onlyKeys.includes(r.key)) : newRows
+    if (targets.length === 0) { showMsg('没有需要保存的新记录', 'info'); return }
     setSaving(true)
     try {
       // ====== 校验（对齐旧系统 batchSaveNewRows）======
       // 完全空行跳过；有内容的行必须：货品/规格/收货人齐全、数量非负且至少一项>0、
       // 货品与编号必须存在于货品种类、中央出货必须选择目标单位、单价合法
       const valid: NewRow[] = []
-      for (const row of newRows) {
+      for (const row of targets) {
         const inQ0 = parseFloat(row.inQty || '0') || 0
         const outQ0 = parseFloat(row.outQty || '0') || 0
         const priceStr0 = (row.price ?? '').toString().trim()
@@ -1291,7 +1305,8 @@ export default function StockInout() {
         }, system === 'central' ? 'central' : system)
         if (created?.id) savedIds.push(Number(created.id))
       }
-      setNewRows([])
+      // 只存了部分行（Ctrl+S）时，只把这几个 key 从待存列表里移除，其余行保留
+      setNewRows(prev => (onlyKeys ? prev.filter(r => !onlyKeys.includes(r.key)) : []))
       const items = await load(page)
       setTimeout(() => {
         if (savedIds.length) {
@@ -1667,7 +1682,7 @@ export default function StockInout() {
             <button className="btn btn-warning" onClick={openExport}><i className="fas fa-download" /> 导出数据</button>
             <div className="batch-actions" style={{ display: 'flex', gap: 8 }}>
               {newRows.length >= 2 && (
-                <button className="btn btn-primary" onClick={saveNewRows} disabled={saving}>
+                <button className="btn btn-primary" onClick={() => saveNewRows()} disabled={saving}>
                   {saving ? <><i className="fas fa-spinner fa-spin"></i> 保存中...</> : <><i className="fas fa-save" /> 批量保存 ({newRows.length})</>}
                 </button>
               )}
@@ -1739,7 +1754,7 @@ export default function StockInout() {
                   const editPriceValue = editPriceMatch ? editPriceMatch.price : editDraft.price
                   const patchEdit = (patch: Record<string, string>) => setEditDrafts(prev => ({ ...prev, [Number(r.id)]: { ...prev[Number(r.id)], ...patch } }))
                   return (
-                    <tr key={r.id} data-vi={useVirtual ? gi : undefined} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
+                    <tr key={r.id} data-row-id={r.id} data-vi={useVirtual ? gi : undefined} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
                       <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => patchEdit({ date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
                       <td>{isEditing
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
