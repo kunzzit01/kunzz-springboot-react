@@ -20,23 +20,22 @@
       #boot-hint { font-size: 12.5px; }
       @keyframes bootspin { to { transform: rotate(360deg); } }
     </style>
-    <!-- 外部资源一律不阻塞首屏：网络慢时先出上面的加载提示，而不是一直白屏。
-         CSS 用 media=print + onload 切回来（noscript 兜底）；脚本用 defer（保持原有执行顺序）。 -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-          media="print" onload="this.media='all'" />
-    <noscript>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
-    </noscript>
+    <!-- 外部资源：字体走 Google Fonts（异步，纯观感不阻塞）；其余库全部自托管在 /vendor/
+         —— 不再依赖外网 CDN，弱网或 CDN 抽风也不会卡首屏、不会白屏。
+         （jQuery / Chart.js / jspdf+autotable / html2canvas 仍以全局变量暴露：页面里用 window.jQuery / window.Chart /
+          window.jspdf / window.html2canvas，所以文件名与版本刻意保持和原来一致，方便日后升级对照。）
+         脚本用 defer：不阻塞首屏渲染，执行顺序保持原样。 -->
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
     <link rel="stylesheet" href="/vendor/orgchart.min.css" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"
           media="print" onload="this.media='all'" />
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"
           media="print" onload="this.media='all'" />
-    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script defer src="/vendor/jquery-3.6.0.min.js"></script>
+    <script defer src="/vendor/html2canvas-1.4.1.min.js"></script>
+    <script defer src="/vendor/jspdf-2.5.1.umd.min.js"></script>
+    <script defer src="/vendor/jspdf-autotable-3.5.31.min.js"></script>
+    <script defer src="/vendor/chart-3.9.1.min.js"></script>
     <script defer src="/vendor/orgchart.min.js"></script>
     <script defer src="/pdf-lib.min.js"></script>
     <script defer src="/fontkit.umd.min.js"></script>

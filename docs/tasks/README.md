@@ -66,3 +66,4 @@
 | 2026-09-19-settings-minimum-perms | 已完成 | 最低库存设置页补「系统权限」：标签只列有权限的系统 + 自动跳转 + 锁定态，后端三个端点也拦 | main |
 | 2026-09-19-overview-tip-simplify | 已完成 | 总览单价/冰箱分类悬浮简化：去掉「最近改价（中央）」与「要修改」两行，单价带 RM 单位 | main |
 | 2026-09-19-whitescreen-hardening | 已完成 | 网络不好不再白屏：启动加载提示 + CDN 全部 defer/异步 + 全局 ErrorBoundary + 权限加载转圈 | main |
+| 2026-09-19-vendor-selfhost | 已完成 | jQuery/Chart.js/jspdf+autotable/html2canvas/Font Awesome 全部自托管到 public/vendor，不再依赖外网 CDN | main |
