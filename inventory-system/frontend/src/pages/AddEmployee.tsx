@@ -107,7 +107,7 @@ export default function AddEmployee() {
       if (res.emailSent) {
         msg += ` 临时密码已发送到 ${res.user.email}（首次登录需重设密码）`
       } else {
-        msg += ` 申请码：${res.code}，临时密码：${res.defaultPassword}（请手动告知，首次登录需重设）`
+        msg += ` ⚠ 邮件发送失败（服务器 SMTP_PASS 未配置或已失效）——请手动告知：申请码 ${res.code}，临时密码 ${res.defaultPassword}（首次登录需重设）`
       }
       showMsg(msg)
       // 记录新员工名，返回列表后自动定位高亮

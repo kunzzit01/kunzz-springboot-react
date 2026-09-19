@@ -112,7 +112,14 @@ public class MailService {
             mailSender.send(mime);
             return true;
         } catch (Exception e) {
-            log.error("[MailService] 欢迎邮件发送失败 email={}: {}", email, e.getMessage());
+            // JavaMail 常把真正的原因包在 cause 里，只打 e.getMessage() 会看不出问题 → 一并打出来，
+            // 并直接点出「检查 SMTP_PASS」：这个功能最常挂的原因就是应用密码没配/失效
+            Throwable root = e;
+            while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+            log.error("[MailService] 欢迎邮件发送失败 email={} —— 请确认服务器环境变量 SMTP_PASS（Gmail 应用密码）已配置且未失效；"
+                            + "{}: {}（根因 {}: {}）",
+                    email, e.getClass().getSimpleName(), e.getMessage(),
+                    root.getClass().getSimpleName(), root.getMessage());
             return false;
         }
     }
@@ -173,7 +180,13 @@ public class MailService {
             mailSender.send(mime);
             return true;
         } catch (Exception e) {
-            log.error("[MailService] 验证码邮件发送失败 email={}: {}", email, e.getMessage());
+            // 同 sendWelcomeEmail：带上根因 + 提示检查 SMTP_PASS
+            Throwable root = e;
+            while (root.getCause() != null && root.getCause() != root) root = root.getCause();
+            log.error("[MailService] 验证码邮件发送失败 email={} —— 请确认服务器环境变量 SMTP_PASS（Gmail 应用密码）已配置且未失效；"
+                            + "{}: {}（根因 {}: {}）",
+                    email, e.getClass().getSimpleName(), e.getMessage(),
+                    root.getClass().getSimpleName(), root.getMessage());
             return false;
         }
     }
