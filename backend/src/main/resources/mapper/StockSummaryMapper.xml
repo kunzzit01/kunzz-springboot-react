@@ -10,12 +10,16 @@
                  导致 J2 总额 28377.725 → 新系统四舍五入得 .73、老 live 逐行舍入得 .72。
                  分组先 ROUND(...,2) 后 SUM 即与老 live 完全一致）
          单价显示 = ROUND(price, 2)；type 仅展示（MAX，不参与分组）
-         price_raw / price_raw_max = 组内原始单价范围（用于前端悬浮提示差异） -->
+         price_raw / price_raw_max = 组内原始单价范围
+         price_raw_dec / price_raw_dec_max = 组内**带小数位**（price <> ROUND(price,2)）的原始单价范围
+           —— 悬浮提示只显示这几档真实原始价（等于显示价的那档是"转换后"的，用户要求不展示） -->
     <select id="summaryRows" resultType="java.util.LinkedHashMap">
         SELECT product_name, code_number, specification,
                ROUND(price, 2) AS price,
                MIN(price) AS price_raw,
                MAX(price) AS price_raw_max,
+               MIN(CASE WHEN price &lt;&gt; ROUND(price, 2) THEN price END) AS price_raw_dec,
+               MAX(CASE WHEN price &lt;&gt; ROUND(price, 2) THEN price END) AS price_raw_dec_max,
                <!-- type 归属对齐旧 live stocklistapi.php：MAX(type)（字典序最大，9/3 实测对账纠正——
                     之前用 GROUP_CONCAT 取 price 最小一条的 type 是误判，导致 J1 分类统计与 live 差 754.30/701.80/52.50） -->
                MAX(COALESCE(type, '')) AS type,

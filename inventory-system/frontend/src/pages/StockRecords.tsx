@@ -20,12 +20,12 @@ interface SummaryItem {
   formatted_price?: string
   formatted_total_price?: string
   type?: string
-  /** 原始单价范围（数据库实存值，可能多位小数）：显示价与原始价有差异时悬浮提示用 */
-  price_raw?: number | string
-  price_raw_max?: number | string
+  /** 组内**带小数位**的原始单价（等于显示价的那档不算）：悬浮提示只显示这几档真实原始价 */
+  price_raw_dec?: number | string
+  price_raw_dec_max?: number | string
   /** 同货品多单价：合并展示（库存合并，单价变体明细） */
   price_count?: number
-  price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; code_nos?: string[]; price_raw?: number | string; price_raw_max?: number | string }[]
+  price_variants?: { price: number; stock: number; total_price: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; code_nos?: string[]; price_raw_dec?: number | string; price_raw_dec_max?: number | string }[]
   /** 冰箱分类（台账 stock_data.freezer_category，多选逗号分隔；9/3 新增，仅选中类型后显示） */
   freezer_category?: string
   /** 位次（台账 stock_data.freezer_position；仅后台排序，绝不出现在 UI） */
@@ -134,8 +134,8 @@ const mergeSummaryItems = (items: SummaryItem[]): SummaryItem[] => {
         e.stock += parseFloat(String(v.stock)) || 0
         e.total_price += parseFloat(String(v.total_price)) || 0
         if (selfCode && !e.code_nos.includes(selfCode)) e.code_nos.push(selfCode)
-        // 原始单价范围（同一显示价下可能有多档实存价，如 1.45 / 1.4541 / 1.45416）
-        const lo = parseFloat(String(v.price_raw ?? '')), hi = parseFloat(String(v.price_raw_max ?? ''))
+        // 组内带小数位的原始单价（等于显示价的那档不算，如 1.45 组里取 1.4541 ~ 1.45416）
+        const lo = parseFloat(String(v.price_raw_dec ?? '')), hi = parseFloat(String(v.price_raw_dec_max ?? ''))
         if (!isNaN(lo)) e.rawMin = isNaN(e.rawMin) ? lo : Math.min(e.rawMin, lo)
         if (!isNaN(hi)) e.rawMax = isNaN(e.rawMax) ? hi : Math.max(e.rawMax, hi)
       })
@@ -144,8 +144,8 @@ const mergeSummaryItems = (items: SummaryItem[]): SummaryItem[] => {
       const e = pmap.get(p)!
       return {
         price: e.price, stock: e.stock, total_price: e.total_price, code_nos: e.code_nos,
-        price_raw: isNaN(e.rawMin) ? undefined : e.rawMin,
-        price_raw_max: isNaN(e.rawMax) ? undefined : e.rawMax,
+        price_raw_dec: isNaN(e.rawMin) ? undefined : e.rawMin,
+        price_raw_dec_max: isNaN(e.rawMax) ? undefined : e.rawMax,
         formatted_stock: e.stock.toFixed(decimals),
         formatted_price: p.toFixed(2),
         formatted_total_price: e.total_price.toLocaleString('en-MY', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -197,21 +197,18 @@ const formatStockQuantity = (item: SummaryItem) => {
   return item.formatted_stock || '0.00'
 }
 
-/** 原始单价文本：显示价按 2 位四舍五入，原始价有更多小数位时才需要悬浮提示（否则返回 null） */
+/** 原始单价文本：只取**带小数位**的那几档（等于显示价的那档是"转换后"的价，不显示）
+ *  一档 → "1.4541"；多档 → "1.4541 ~ 1.45416"；这一组没有带小数的价 → null（不提示） */
 const rawPriceLabel = (lo?: number | string, hi?: number | string): string | null => {
   const a = parseFloat(String(lo ?? ''))
   if (isNaN(a)) return null
   const b = parseFloat(String(hi ?? ''))
   const fmt = (v: number) => String(parseFloat(v.toFixed(6)))
-  const rounded = Math.round(a * 100) / 100
-  const differs = (v: number) => Math.abs(v - rounded) >= 0.0001
-  if (!differs(a) && (isNaN(b) || !differs(b))) return null
   if (isNaN(b) || Math.abs(b - a) < 0.0000005) return fmt(a)
   return `${fmt(a)} ~ ${fmt(b)}`
 }
 
-// 渲染价格：无差异时直接显示；有差异时标记悬浮（8/23 线上修复：悬浮显示数据库原始单价）
-// 条件 = 原始价与显示价（2 位）不同，不是"有几个价格变体" —— 后者会让单价唯一的货品永远不显示提示
+// 渲染价格：无差异时直接显示；有小数位原始价时标记悬浮（虚线下划线 + 悬浮卡片看真实原始单价）
 const renderPriceRawTip = (lo: number | string | undefined, hi: number | string | undefined, disp: string) => {
   const label = rawPriceLabel(lo, hi)
   if (!label) return disp
@@ -937,7 +934,7 @@ export default function StockRecords() {
                         ) : (
                           <div className="currency-display">
                             <span className="currency-symbol">RM</span>
-                            <span className="currency-amount">{renderPriceRawTip(item.price_raw, item.price_raw_max, item.formatted_price || '')}</span>
+                            <span className="currency-amount">{renderPriceRawTip(item.price_raw_dec, item.price_raw_dec_max, item.formatted_price || '')}</span>
                           </div>
                         )}
                       </td>
@@ -971,7 +968,7 @@ export default function StockRecords() {
                         <td className="price-cell">
                           <div className="currency-display">
                             <span className="currency-symbol">RM</span>
-                            <span className="currency-amount">{renderPriceRawTip(v.price_raw, v.price_raw_max, v.formatted_price || Number(v.price).toFixed(2))}</span>
+                            <span className="currency-amount">{renderPriceRawTip(v.price_raw_dec, v.price_raw_dec_max, v.formatted_price || Number(v.price).toFixed(2))}</span>
                           </div>
                         </td>
                         <td className="price-cell">

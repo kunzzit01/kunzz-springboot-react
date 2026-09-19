@@ -118,6 +118,9 @@ public class StockSummaryService {
             // 前端「显示 2 位、悬浮看原始价」用。以前这两列查了却没带出去 → 悬浮提示失效
             v.put("price_raw", toD(r.get("price_raw")));
             v.put("price_raw_max", toD(r.get("price_raw_max")));
+            // 只带小数位的那几档（等于显示价的"转换后"价不显示）；没有则 null，前端据此决定要不要提示
+            v.put("price_raw_dec", r.get("price_raw_dec") == null ? null : toD(r.get("price_raw_dec")));
+            v.put("price_raw_dec_max", r.get("price_raw_dec_max") == null ? null : toD(r.get("price_raw_dec_max")));
             variants.add(v);
         }
 
@@ -144,15 +147,20 @@ public class StockSummaryService {
             item.put("price_count", variants.size());
             item.put("price_variants", variants);
             // 该行用到的原始单价范围（跨变体取最小/最大）：前端单价格子的悬浮提示用
-            Double rawMin = null, rawMax = null;
+            Double rawMin = null, rawMax = null, decMin = null, decMax = null;
             for (Map<String, Object> v : variants) {
                 double lo = toD(v.get("price_raw"));
                 double hi = toD(v.get("price_raw_max"));
                 if (rawMin == null || lo < rawMin) rawMin = lo;
                 if (rawMax == null || hi > rawMax) rawMax = hi;
+                Object dl = v.get("price_raw_dec"), dh = v.get("price_raw_dec_max");
+                if (dl != null) { double d = toD(dl); if (decMin == null || d < decMin) decMin = d; }
+                if (dh != null) { double d = toD(dh); if (decMax == null || d > decMax) decMax = d; }
             }
             item.put("price_raw", rawMin);
             item.put("price_raw_max", rawMax);
+            item.put("price_raw_dec", decMin);
+            item.put("price_raw_dec_max", decMax);
             item.put("type", type);
             // 冰箱分类+位次（多值如 "K1-6,S1-2" 原样带出，前端排序取首个；未登记货品为空串/null）
             Object[] fz = freezerMap.get(str(m.get("product_name")));
