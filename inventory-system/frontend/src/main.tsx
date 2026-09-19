@@ -6,6 +6,7 @@ import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import './styles/toast.css' // 全局 toast：1:1 对齐旧 live 系统（backend/css/toast.css）
 
@@ -38,7 +39,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     >
       <AntApp>
         <BrowserRouter>
-          <App />
+          {/* 全局兜底：渲染期异常显示"页面出错了 + 重新加载"，而不是整页白屏 */}
+          <ErrorBoundary>
+            <App />
+          </ErrorBoundary>
         </BrowserRouter>
       </AntApp>
     </ConfigProvider>

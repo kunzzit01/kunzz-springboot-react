@@ -5,21 +5,50 @@
     <link rel="icon" type="image/png" href="/static/images/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KUNZZ HOLDINGS</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <!-- 启动加载提示的内联样式：随 HTML 立刻生效，不用等任何 CSS/JS 下载（React 挂载后整块被替换） -->
+    <style>
+      #boot {
+        position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 12px; background: #f7f2ea; color: #6b7280;
+        font-family: system-ui, -apple-system, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      }
+      #boot-spin {
+        width: 34px; height: 34px; border: 3px solid #ffd9bf; border-top-color: #ff5c00; border-radius: 50%;
+        animation: bootspin 0.9s linear infinite;
+      }
+      #boot-title { font-size: 15px; font-weight: 600; color: #374151; }
+      #boot-hint { font-size: 12.5px; }
+      @keyframes bootspin { to { transform: rotate(360deg); } }
+    </style>
+    <!-- 外部资源一律不阻塞首屏：网络慢时先出上面的加载提示，而不是一直白屏。
+         CSS 用 media=print + onload 切回来（noscript 兜底）；脚本用 defer（保持原有执行顺序）。 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          media="print" onload="this.media='all'" />
+    <noscript>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    </noscript>
     <link rel="stylesheet" href="/vendor/orgchart.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet" />
-      <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
-    <script src="/vendor/orgchart.min.js"></script>
-    <script src="/pdf-lib.min.js"></script>
-    <script src="/fontkit.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"
+          media="print" onload="this.media='all'" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet"
+          media="print" onload="this.media='all'" />
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script defer src="/vendor/orgchart.min.js"></script>
+    <script defer src="/pdf-lib.min.js"></script>
+    <script defer src="/fontkit.umd.min.js"></script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot">
+        <div id="boot-spin"></div>
+        <div id="boot-title">正在加载库存系统…</div>
+        <div id="boot-hint">如果长时间停在这里，请检查网络后刷新页面</div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

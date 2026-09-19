@@ -82,7 +82,18 @@ function RequirePage({ children }: { children: ReactElement }) {
       .then(({ perms, isSpecial }) => setState(canAccess(perms, location.pathname, location.search, isSpecial) ? 'ok' : 'denied'))
       .catch(() => setState('ok')) // 权限接口异常时不误伤（与 AppLayout 语义一致）
   }, [location.pathname, location.search])
-  if (state === 'loading') return null
+  if (state === 'loading') {
+    // 网络慢时权限接口要等：这里给个加载提示，不要 return null（那样这段时间整页空白 = 白屏）
+    return (
+      <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, color: '#6b7280' }}>
+        <div style={{
+          width: 32, height: 32, border: '3px solid #ffd9bf', borderTopColor: '#ff5c00',
+          borderRadius: '50%', animation: 'bootspin 0.9s linear infinite',
+        }} />
+        <div style={{ fontSize: 13.5 }}>正在加载…</div>
+      </div>
+    )
+  }
   if (state === 'denied') {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14 }}>
