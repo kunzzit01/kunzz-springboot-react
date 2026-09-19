@@ -356,13 +356,6 @@ export interface CreateStaffResult {
   emailSent: boolean
 }
 export const createStaff = (data: Record<string, unknown>) => http.post<unknown, CreateStaffResult>('/staff', data)
-/** 重发登录邮件：生成新的临时密码并发到该职员邮箱（旧密码作废），返回 { user, defaultPassword, emailSent } */
-export interface ResendWelcomeResult {
-  user: StaffUser
-  defaultPassword: string
-  emailSent: boolean
-}
-export const resendStaffWelcome = (id: number) => http.post<unknown, ResendWelcomeResult>('/staff/' + id + '/resend-welcome')
 export const updateStaff = (id: number, data: Record<string, unknown>) => http.put<unknown, StaffUser>('/staff/' + id, data)
 export const deleteStaff = (id: number) => http.delete<unknown, void>('/staff/' + id)
 export const getStaffPermissions = (userId: number) =>

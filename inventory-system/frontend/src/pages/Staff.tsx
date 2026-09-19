@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getStaff, createStaff, updateStaff, deleteStaff, getStaffPermissions, saveStaffPermissions, resendStaffWelcome } from '../api'
+import { getStaff, createStaff, updateStaff, deleteStaff, getStaffPermissions, saveStaffPermissions } from '../api'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/staff.css'
 import '../styles/perm-tree.css'
@@ -620,25 +620,6 @@ export default function Staff() {
     deleteStaff(u.id).then(() => { showMsg('职员已删除'); load() }).catch(() => showMsg('删除失败', 'error'))
   }
 
-  /** 重发登录邮件：生成新的临时密码发到该职员邮箱（他现在的密码立刻作废） */
-  const resendWelcome = async (u: StaffUser) => {
-    if (!u.email) { showMsg('该职员没有填邮箱，无法发送登录邮件', 'error'); return }
-    if (!window.confirm(
-      `给 "${u.username}" 重发登录邮件？\n\n` +
-      `会生成一个全新的临时密码发到 ${u.email}；\n` +
-      `他现在用的密码会立刻作废（需要用新临时密码登录后再重设）。`)) return
-    try {
-      const res = await resendStaffWelcome(u.id)
-      if (res.emailSent) {
-        showMsg(`登录信息已重新发送到 ${u.email}`)
-      } else {
-        showMsg(`⚠ 邮件发送失败（服务器发信异常，原因见后端日志）——请手动告知：临时密码 ${res.defaultPassword}`, 'error')
-      }
-    } catch (e: any) {
-      showMsg(e?.message || '重发失败', 'error')
-    }
-  }
-
   const openPermModal = async (u: StaffUser) => {
     setPermUser(u)
     setPermState(defaultPerms())
@@ -798,9 +779,6 @@ export default function Staff() {
                         </button>
                         <button className="btn-action btn-save" title="权限设定" style={{ background: '#ff8019' }} onClick={() => openPermModal(item)}>
                           <i className="fas fa-user-shield"></i>
-                        </button>
-                        <button className="btn-action btn-save" title="重发登录邮件（生成新的临时密码发到他的邮箱）" style={{ background: '#0284c7' }} onClick={() => resendWelcome(item)}>
-                          <i className="fas fa-paper-plane"></i>
                         </button>
                         <button className="btn-action btn-delete" title="删除" onClick={() => confirmDelete(item)}>
                           <i className="fas fa-trash"></i>

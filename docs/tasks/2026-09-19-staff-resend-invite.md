@@ -43,3 +43,9 @@
 
 `/api/staff`（列表/创建/更新）返回的 `user` 对象里**带着 password 的 bcrypt 哈希**（实体 `User.password` 没有 `@JsonIgnore`），
 属于旧代码一直以来的行为 —— 建议后续给该字段加 `@JsonIgnore` 挡掉（需新增文件 `entity/User.java` 到白名单）。
+
+## 当日撤除（2026-09-19 21:15）
+
+用户要求「把那个发送临时密码的按键和功能全部去除」→ 本功能已**整体移除**
+（前端按钮 + `api/index.ts` 封装 + 后端端点 + Service 方法），见任务 `2026-09-19-remove-resend-invite`。
+git 历史里仍保留完整实现（提交 5347f18），需要时可以取回。
