@@ -426,7 +426,7 @@ tr:hover{
     margin-right: 10px;
 }
 
-@keyframes spin {.staff-root to{
+@keyframes spin {to{
         transform: rotate(360deg);
     }
 }.staff-root /* 操作按钮样式 */
@@ -513,9 +513,9 @@ tr:hover{
     overflow-y: auto;
 }
 
-@keyframes fadeIn {.staff-root from{
+@keyframes fadeIn {from{
         opacity: 0;
-    }.staff-root to{
+    }to{
         opacity: 1;
     }
 }.staff-root .modal-content{
@@ -531,10 +531,10 @@ tr:hover{
     overflow-y: auto;
 }
 
-@keyframes slideIn {.staff-root from{
+@keyframes slideIn {from{
         transform: translateY(-50px);
         opacity: 0;
-    }.staff-root to{
+    }to{
         transform: translateY(0);
         opacity: 1;
     }
@@ -633,10 +633,10 @@ tr:hover{
     animation: dropdownFadeIn 0.2s ease-out;
 }
 
-@keyframes dropdownFadeIn {.staff-root from{
+@keyframes dropdownFadeIn {from{
         opacity: 0;
         transform: translateY(-4px);
-    }.staff-root to{
+    }to{
         opacity: 1;
         transform: translateY(0);
     }
@@ -1270,9 +1270,9 @@ tr:hover{
     animation: toastProgress 4s linear forwards;
 }
 
-@keyframes toastProgress {.staff-root from{
+@keyframes toastProgress {from{
         transform: scaleX(1);
-    }.staff-root to{
+    }to{
         transform: scaleX(0);
     }
 }.staff-root /* 权限弹窗内“全选/清空”按钮为长方形 */
@@ -1317,10 +1317,10 @@ tr:hover{
     display: none !important;
 }
 
-@keyframes permSlideDown {.staff-root from{
+@keyframes permSlideDown {from{
         opacity: 0;
         transform: translateY(-10px);
-    }.staff-root to{
+    }to{
         opacity: 1;
         transform: translateY(0);
     }
@@ -1517,10 +1517,10 @@ tr:hover{
     animation: dropdownPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
 }
 
-@keyframes dropdownPop {.staff-root from{
+@keyframes dropdownPop {from{
         opacity: 0;
         transform: translateY(-12px) scale(0.98);
-    }.staff-root to{
+    }to{
         opacity: 1;
         transform: translateY(0) scale(1);
     }

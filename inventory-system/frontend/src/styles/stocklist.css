@@ -446,9 +446,9 @@
     border-top: 3px solid #583e04;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-}@keyframes spin{.stl-root 0%{
+}@keyframes spin{0%{
         transform: rotate(0deg);
-    }.stl-root 100%{
+    }100%{
         transform: rotate(360deg);
     }
 }.stl-root .total-row{
@@ -799,15 +799,15 @@
 }.stl-root .alert-summary{
     color: #6b7280;
     font-size: clamp(8px, 0.74vw, 14px);
-}@keyframes fadeIn{.stl-root from{
+}@keyframes fadeIn{from{
         opacity: 0;
-    }.stl-root to{
+    }to{
         opacity: 1;
     }
-}@keyframes slideIn{.stl-root from{
+}@keyframes slideIn{from{
         opacity: 0;
         transform: translateY(-50px) scale(0.9);
-    }.stl-root to{
+    }to{
         opacity: 1;
         transform: translateY(0) scale(1);
     }
@@ -915,9 +915,9 @@
     border-radius: 0 0 8px 8px;
     transform-origin: left;
     animation: toastProgress 4s linear forwards;
-}@keyframes toastProgress{.stl-root 0%{
+}@keyframes toastProgress{0%{
         transform: scaleX(1);
-    }.stl-root 100%{
+    }100%{
         transform: scaleX(0);
     }
 }/* 响应式调整 */

@@ -530,10 +530,10 @@
            animation: dropdownFadeIn 0.2s ease-out;
        }
 
-       @keyframes dropdownFadeIn {.cost-root from{
+       @keyframes dropdownFadeIn {from{
                opacity: 0;
                transform: translateY(-5px);
-           }.cost-root to{
+           }to{
                opacity: 1;
                transform: translateY(0);
            }
@@ -647,9 +647,9 @@
            animation: spin 1s linear infinite;
        }
 
-       @keyframes spin {.cost-root 0%{
+       @keyframes spin {0%{
                transform: rotate(0deg);
-           }.cost-root 100%{
+           }100%{
                transform: rotate(360deg);
            }
        }.cost-root .alert{
@@ -980,7 +980,7 @@
             animation: pulse-mini 2s infinite;
         }
 
-        @keyframes pulse-mini {.cost-root 0%{ transform: scale(1); opacity: 1; }.cost-root 50%{ transform: scale(1.05); opacity: 0.9; }.cost-root 100%{ transform: scale(1); opacity: 1; }
+        @keyframes pulse-mini {0%{ transform: scale(1); opacity: 1; }50%{ transform: scale(1.05); opacity: 0.9; }100%{ transform: scale(1); opacity: 1; }
         }.cost-root .delivery-tables-container{
             display: grid;
             grid-template-columns: repeat(3, 1fr);

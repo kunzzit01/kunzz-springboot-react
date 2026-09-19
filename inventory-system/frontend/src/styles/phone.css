@@ -161,10 +161,10 @@
        }.ph-root .date-dropdown.show{
            display: block;
            animation: dropdownFadeIn 0.2s ease-out;
-       }@keyframes dropdownFadeIn{.ph-root from{
+       }@keyframes dropdownFadeIn{from{
                opacity: 0;
                transform: translateY(-5px);
-           }.ph-root to{
+           }to{
                opacity: 1;
                transform: translateY(0);
            }
@@ -323,7 +323,7 @@
            border-radius: 50%;
            border-top-color: #ff5c00;
            animation: spin 1s ease-in-out infinite;
-       }@keyframes spin{.ph-root to{
+       }@keyframes spin{to{
                transform: rotate(360deg);
            }
        }.ph-root .alert{
@@ -364,9 +364,9 @@
            height: 100%;
            background-color: rgba(0, 0, 0, 0.4);
            animation: fadeIn 0.3s ease;
-       }@keyframes fadeIn{.ph-root from{
+       }@keyframes fadeIn{from{
                opacity: 0;
-           }.ph-root to{
+           }to{
                opacity: 1;
            }
        }.ph-root .modal-content{
@@ -378,10 +378,10 @@
            max-width: 600px;
            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
            animation: slideIn 0.3s ease;
-       }@keyframes slideIn{.ph-root from{
+       }@keyframes slideIn{from{
                transform: translateY(-50px);
                opacity: 0;
-           }.ph-root to{
+           }to{
                transform: translateY(0);
                opacity: 1;
            }

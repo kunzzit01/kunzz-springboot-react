@@ -525,10 +525,10 @@
        }.kpi-root .date-dropdown.show{
            display: block;
            animation: dropdownFadeIn 0.2s ease-out;
-       }@keyframes dropdownFadeIn{.kpi-root from{
+       }@keyframes dropdownFadeIn{from{
                opacity: 0;
                transform: translateY(-5px);
-           }.kpi-root to{
+           }to{
                opacity: 1;
                transform: translateY(0);
            }
@@ -643,9 +643,9 @@
            border-top: 3px solid #3498db;
            border-radius: 50%;
            animation: spin 1s linear infinite;
-       }@keyframes spin{.kpi-root 0%{
+       }@keyframes spin{0%{
                transform: rotate(0deg);
-           }.kpi-root 100%{
+           }100%{
                transform: rotate(360deg);
            }
        }.kpi-root .alert{

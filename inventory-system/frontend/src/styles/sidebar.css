@@ -558,8 +558,8 @@
   from { opacity: 0; transform: translateX(-6px) scale(0.985); }
   to   { opacity: 1; transform: translateX(0) scale(1); }
 }
-}
-}
+/* 2026-09-19：这里原本多出两个 }（某次批量改 CSS 留下的），会让构建报 css-syntax-error，
+   浏览器还会因此在附近丢规则 —— 已删除。 */
 .informationmenu.collapsed .informationmenu-section-title.active {
   box-shadow: 0 3px 10px rgba(255, 92, 0, 0.3);
   border-radius: 12px;

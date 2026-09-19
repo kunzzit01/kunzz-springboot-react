@@ -1732,10 +1732,14 @@
             flex: 1;
         
 }
+/* ⚠ 历史遗留（2026-09-19 记录）：这条规则的**选择器**在一次批量改 CSS 时被吃掉了，
+   变成了下面这个样子，浏览器一直当无效规则丢掉（连带后面的 color/font-weight 一起失效），
+   构建时还会报 css-syntax-error。原文先注释保留，等确认原来挂的是哪个子元素再恢复。
 .mobrec-root font-size: clamp(6px, .mobrec-root 0.63vw, .mobrec-root 12px);
             color: #6b7280;
             font-weight: 600;
         }
+*/
 
         .date-info {
 

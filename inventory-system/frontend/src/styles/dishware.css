@@ -251,11 +251,11 @@
 }
 
 @keyframes toastProgress {
-.dw-root 0%{
+0%{
         transform: scaleX(1);
     }
 
-.dw-root 100%{
+100%{
         transform: scaleX(0);
     }
 }
@@ -1335,11 +1335,11 @@
 }
 
 @keyframes spin {
-.dw-root 0%{
+0%{
         transform: rotate(0deg);
     }
 
-.dw-root 100%{
+100%{
         transform: rotate(360deg);
     }
 }

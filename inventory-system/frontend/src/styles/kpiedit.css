@@ -437,9 +437,9 @@
     border-top: 3px solid #583e04;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-}@keyframes spin{.ke-root 0%{
+}@keyframes spin{0%{
         transform: rotate(0deg);
-    }.ke-root 100%{
+    }100%{
         transform: rotate(360deg);
     }
 }.ke-root /* 提示信息 */
@@ -686,9 +686,9 @@
     border-radius: 0 0 8px 8px;
     transform-origin: left;
     animation: toastProgress 4s linear forwards;
-}@keyframes toastProgress{.ke-root 0%{
+}@keyframes toastProgress{0%{
         transform: scaleX(1);
-    }.ke-root 100%{
+    }100%{
         transform: scaleX(0);
     }
 }/* 响应式调整 */
