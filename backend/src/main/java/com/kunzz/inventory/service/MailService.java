@@ -39,8 +39,8 @@ public class MailService {
                     impl.setPassword(cleaned);
                 }
             }
-            log.info("[MailService] 邮件发送配置：host={} port={} user={} password={}",
-                    impl.getHost(), impl.getPort(), impl.getUsername(),
+            log.info("[MailService] 邮件发送配置：host={} port={} user={} 发件人={} password={}",
+                    impl.getHost(), impl.getPort(), impl.getUsername(), from,
                     (impl.getPassword() == null || impl.getPassword().isEmpty()) ? "（空！邮件会发送失败，请配置 SMTP_PASS）" : "已配置(" + impl.getPassword().length() + "位)");
         }
     }
@@ -48,7 +48,7 @@ public class MailService {
     @Value("${app.base-url:http://localhost:5174}")
     private String baseUrl;
 
-    @Value("${spring.mail.username:kunzzsup@gmail.com}")
+    @Value("${app.mail.from:${spring.mail.username:kunzzsup@gmail.com}}")
     private String from;
 
     /** 账户类型 → 中文名（对齐旧系统 sendWelcomeEmail 的 typeNames） */
@@ -136,13 +136,12 @@ public class MailService {
             return true;
         } catch (Exception e) {
             // JavaMail 常把真正的原因包在 cause 里，只打 e.getMessage() 会看不出问题 → 一并打出来，
-            // 并直接点出「检查 SMTP_PASS」：这个功能最常挂的原因就是应用密码没配/失效
+            // 并给一句按原因区分的建议（配额超限 / 密码被拒 / 其它）
             Throwable root = e;
             while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-            log.error("[MailService] 欢迎邮件发送失败 email={} —— 请确认服务器环境变量 SMTP_PASS（Gmail 应用密码）已配置且未失效；"
-                            + "{}: {}（根因 {}: {}）",
+            log.error("[MailService] 欢迎邮件发送失败 email={}；{}: {}（根因 {}: {}）{}",
                     email, e.getClass().getSimpleName(), e.getMessage(),
-                    root.getClass().getSimpleName(), root.getMessage());
+                    root.getClass().getSimpleName(), root.getMessage(), hintOf(root));
             return false;
         }
     }
@@ -203,14 +202,30 @@ public class MailService {
             mailSender.send(mime);
             return true;
         } catch (Exception e) {
-            // 同 sendWelcomeEmail：带上根因 + 提示检查 SMTP_PASS
+            // 同 sendWelcomeEmail：带上根因 + 按原因区分的建议
             Throwable root = e;
             while (root.getCause() != null && root.getCause() != root) root = root.getCause();
-            log.error("[MailService] 验证码邮件发送失败 email={} —— 请确认服务器环境变量 SMTP_PASS（Gmail 应用密码）已配置且未失效；"
-                            + "{}: {}（根因 {}: {}）",
+            log.error("[MailService] 验证码邮件发送失败 email={}；{}: {}（根因 {}: {}）{}",
                     email, e.getClass().getSimpleName(), e.getMessage(),
-                    root.getClass().getSimpleName(), root.getMessage());
+                    root.getClass().getSimpleName(), root.getMessage(), hintOf(root));
             return false;
         }
+    }
+
+    /**
+     * 把 SMTP 的拒绝原因翻译成一句中文建议。2026-09-19 加：
+     * Gmail 免费账号有每日发信上限（约 500 个收件人/天），超了会回 550-5.4.5「Daily user sending limit exceeded」——
+     * 这是**认证成功之后**才出现的错误，以前会被当成"SMTP_PASS 配错"白排查半天。
+     */
+    private static String hintOf(Throwable root) {
+        String msg = String.valueOf(root.getMessage());
+        if (msg.contains("5.4.5") || msg.toLowerCase().contains("sending limit")) {
+            return " → 发信账号今日配额已用完（免费 Gmail 约 500 个收件人/天，通常 24 小时内重置）："
+                    + "等待配额重置，或改用第三方发信服务（只改 SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS 环境变量即可）";
+        }
+        if (msg.contains("535") || msg.contains("Authentication")) {
+            return " → SMTP 账号或密码被拒：确认 SMTP_PASS 是最新的应用密码（16 位、无空格）";
+        }
+        return "";
     }
 }

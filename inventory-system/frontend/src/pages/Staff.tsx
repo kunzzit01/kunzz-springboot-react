@@ -561,7 +561,7 @@ export default function Staff() {
       if (res.emailSent) {
         msg += ` 登录信息已发送到 ${res.user.email}`
       } else {
-        msg += ` ⚠ 邮件发送失败（服务器 SMTP_PASS 未配置或已失效）——请手动告知：申请码 ${res.code}，临时密码 ${res.defaultPassword}`
+        msg += ` ⚠ 邮件发送失败（服务器发信异常，原因见后端日志）——请手动告知：申请码 ${res.code}，临时密码 ${res.defaultPassword}`
       }
       showMsg(msg)
       setShowAdd(false)

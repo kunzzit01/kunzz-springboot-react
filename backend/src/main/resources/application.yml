@@ -30,8 +30,11 @@ spring:
       mail:
         smtp:
           auth: true
+          # 587 端口用 STARTTLS（默认）；服务商只给 465 时把 SMTP_SSL 设为 true
           starttls:
-            enable: true
+            enable: ${SMTP_STARTTLS:true}
+          ssl:
+            enable: ${SMTP_SSL:false}
           timeout: 10000
           connectiontimeout: 10000
 
@@ -43,6 +46,10 @@ jwt:
 # 前端登录地址（欢迎邮件里的登录按钮）
 app:
   base-url: ${APP_BASE_URL:http://localhost:5174}
+  mail:
+    # 发件人地址：换第三方发信服务（Brevo/SMTP2GO 等）时，「SMTP 登录名」往往不是「发件地址」，
+    # 用 MAIL_FROM 指定（默认 = SMTP 登录名，即 Gmail 时的行为不变）
+    from: ${MAIL_FROM:${spring.mail.username:kunzzsup@gmail.com}}
 
 # 生产环境 CORS 允许域名（逗号分隔，如 https://admin.example.com,https://www.example.com）
 cors:
