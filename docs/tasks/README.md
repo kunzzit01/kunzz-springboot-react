@@ -71,4 +71,4 @@
 | 2026-09-19-products-delete-needs-approve | 已完成 | 货品种类的删除按钮只给「批准」权限（申请权限看不到）；后端 DELETE 也加校验（403） | main |
 | 2026-09-19-products-inactive | 已完成 | 货品种类加「启用/停用」（按系统）：停用后不进进出货下拉/总库存/手机版；有库存不让停用；需批准权限；补丁第 12 节加列 | main |
 | 2026-09-19-mail-smtp-diagnosis | 已完成 | 查清「添加职员收不到临时密码邮件」= VPS 的 SMTP_PASS 故意留空（旧应用密码泄露）；补强失败日志与前端提示 | main |
-| 2026-09-19-mail-provider-switch | 进行中 | 真因是 Gmail 550-5.4.5 每日发信配额超限（认证已通过）；加 MAIL_FROM 与 SMTP_SSL 开关，换服务商只改 env 不改代码；失败日志按真实原因给建议 | main |
+| 2026-09-19-mail-provider-switch | 已完成 | 真因是 Gmail 550-5.4.5 每日发信配额超限（认证已通过）；加 MAIL_FROM 与 SMTP_SSL 开关，换服务商只改 env 不改代码；失败日志按真实原因给建议 | main |

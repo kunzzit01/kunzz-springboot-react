@@ -1,6 +1,6 @@
 # 任务 2026-09-19-mail-provider-switch
 
-- 状态：进行中
+- 状态：已完成（2026-09-19 19:07，推送 39ca0fb）
 - 开始时间：2026-09-19 19:20
 - 分支：main
 - 目标：Gmail 账号 `kunzzsup@gmail.com` 报 `550-5.4.5 Daily user sending limit exceeded`（发信配额超限）
@@ -59,10 +59,15 @@
 ## 验证
 
 - 后端：本地起假 SMTP（`fake_smtp.py`）→ `SMTP_HOST=127.0.0.1 SMTP_PORT=2525 MAIL_FROM=noreply@kunzzgroup.com`
-  → 添加职员返回 `emailSent=true`，`maildrop.txt` 里 `From:` 是 `noreply@kunzzgroup.com`（证明 MAIL_FROM 生效）
-- 回归：不设 `MAIL_FROM` 时 `From:` 仍是 SMTP 登录名（默认行为未变）
-- 编译：`mvn -DskipTests package` 通过
+  → 走「忘记密码」端点真发一封，`maildrop.txt` 里 `From: Kunzz Group <noreply@kunzzgroup.com>` ✓
+- 回归：不设 `MAIL_FROM` 时启动日志 `发件人=testuser@example.com`（= SMTP 登录名，默认行为未变）✓
+- 失败提示：用「登录成功但 DATA 回 `550-5.4.5 Daily user sending limit exceeded`」的假 SMTP（`fake_smtp_quota.py`）
+  再发一封 → 日志尾部出现配额建议（含 `SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS` 字样）✓
+- 编译：`mvn -DskipTests package` BUILD SUCCESS ✓
+- 生产日志里的中文在本机 Windows 控制台会被打成 `?`（本地验证用的假 SMTP 场景）；VPS 是 UTF-8，中文正常显示
 
 ## 部署提示（给用户）
 
-换服务商不需要改代码、不需要重新构建：只改 `/etc/inventory-backend.env` 里那几行 + 重启。
+换服务商不需要改代码：只改 `/etc/inventory-backend.env` 里那几行 + 重启。
+但 **`MAIL_FROM` 只有在部署了本次后端构建之后才生效**；还没部署时，发件人 = `SMTP_USER`（所以用 Brevo 且发件人就用
+`kunzzsup@gmail.com` 的话，连 `MAIL_FROM` 都不用设）。
