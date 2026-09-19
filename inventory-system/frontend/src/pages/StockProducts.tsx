@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms, createFreezerCategory, renameFreezerCategory, reorderFreezerCategories, deleteFreezerCategory } from '../api'
+import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms, createFreezerCategory, renameFreezerCategory, reorderFreezerCategories, deleteFreezerCategory, getPriceChangeLogLatest } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import { useFreezerCategories } from '../utils/useFreezerCategories'
@@ -171,6 +171,8 @@ export default function StockProducts() {
   const [saving, setSaving] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState('')
+  // 单价格的悬浮提示用：每货品最近一次改价（含改价人）——来自改价日志接口，按当前系统取
+  const [priceLogLatest, setPriceLogLatest] = useState<Record<string, { date: string; price: number; by?: string }>>({})
   const [showTop, setShowTop] = useState(false)
   // 页面权限（对齐旧系统 check_permissions.php：无记录时默认全部可用，兼容 demo）
   const [canApply, setCanApply] = useState(true)
@@ -411,6 +413,37 @@ export default function StockProducts() {
     }).catch(() => {})
   }, [])
 
+  // 最近改价（含改价人）：单价格子悬浮提示用。按当前系统取——单价本来就是按系统各存一份；
+  // 总览取中央的那份并标明。失败静默（只是提示，不影响页面）
+  const loadPriceLog = useCallback(async () => {
+    const logSys = system === 'overview' ? 'central' : system
+    try {
+      const list = await getPriceChangeLogLatest(logSys)
+      const m: Record<string, { date: string; price: number; by?: string }> = {}
+      for (const e of list || []) {
+        const by = String(e.changedBy || '').trim()
+        m[String(e.productName || '').trim()] = { date: String(e.changeDate || ''), price: Number(e.newPrice) || 0, by: by || undefined }
+      }
+      setPriceLogLatest(m)
+    } catch { /* ignore */ }
+  }, [system])
+  useEffect(() => { loadPriceLog() }, [loadPriceLog])
+
+  /** 日期显示：2026-09-18 → 18/09/2026（与总库存页一致） */
+  const fmtDmy = (iso: string) => {
+    const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(iso || '')
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '-')
+  }
+  /** 单价格子的悬浮提示：最近一次改价记录（什么时候、改成多少、谁改的） */
+  const priceTip = (r: ProductRow) => {
+    const hit = priceLogLatest[(r.product_name || '').trim()]
+    const label = system === 'overview' ? '最近改价（中央）' : '最近改价'
+    const body = hit
+      ? `${label}: ${fmtDmy(hit.date)} RM${hit.price.toFixed(2)}${hit.by ? `（${hit.by}）` : ''}`
+      : `${label}: 暂无记录`
+    return system === 'overview' ? `${body}\n各系统各自的单价：到中央/J1/J2/J3 页面修改` : body
+  }
+
   // kwArg/exactArg：防抖/切模式时直传最新值，避免旧渲染闭包读到上一拍的关键字（搜索慢一拍 bug）
   // keepMissingArg：列表里已没有的行，其编辑草稿保留还是丢弃 —— 默认「搜索过滤中才保留」；
   //   切系统必须显式传 false：跨系统草稿若留着，Ctrl+Shift+S 会把别系统的货品按当前系统存回去
@@ -478,7 +511,8 @@ export default function StockProducts() {
   useEffect(() => { if (permsLoaded) load(undefined, undefined, false) }, [permsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 实时：货品种类变更（新增/编辑/删除/批准）自动刷新；编辑/保存/批准中不打断，结束后补刷
-  useRealtime('*', () => { load(); reloadFreezer() }, 1000, 3000, () => saving || approvingId !== null || editing.size > 0 || newRows.length > 0)
+  // （改价也会广播 → 最近改价提示跟着更新，hover 到的是最新那条）
+  useRealtime('*', () => { load(); reloadFreezer(); loadPriceLog() }, 1000, 3000, () => saving || approvingId !== null || editing.size > 0 || newRows.length > 0)
 
   // smartSearch：点击外部且输入为空时折叠
   useEffect(() => {
@@ -1034,11 +1068,11 @@ export default function StockProducts() {
                       </td>
                       <td>
                         {system === 'overview'
-                          ? <input className="excel-input" readOnly value={r.price_by_system || ''} title="各系统各自的单价：到中央/J1/J2/J3 页面修改" />
+                          ? <input className="excel-input" readOnly value={r.price_by_system || ''} title={priceTip(r)} />
                           : isEditing
-                            ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00"
+                            ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00" title={priceTip(r)}
                                 value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
-                            : <input className="excel-input" readOnly value={r.price || ''} />}
+                            : <input className="excel-input" readOnly value={r.price || ''} title={priceTip(r)} />}
                       </td>
                       <td>
                         {isEditing

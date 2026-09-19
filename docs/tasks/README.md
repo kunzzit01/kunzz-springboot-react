@@ -53,3 +53,4 @@
 | 2026-09-18-price-log-who | 已完成 | 改价记录显示是谁改的：改价人改取登录用户（原为货品申请人）；弹窗+悬浮提示 | main |
 | 2026-09-19-mobile-tier-rounding | 已完成 | 手机版出货价格层口径改为显示价 ROUND(price,2)，与电脑一致；修「手机出完货电脑总库存倒扣」；只改 MobileStockMapper.xml | main |
 | 2026-09-19-editor-tracking | 已完成 | 编辑不再清掉创建人；新增 updated_by 记「编辑人」，进出货/货品种类悬浮提示显示；补丁第 11 节给 5 张表加列 | main |
+| 2026-09-19-products-price-log-tip | 已完成 | 货品种类单价悬浮显示「最近改价 + 改价人」（按系统取，改价后实时更新）；只改 StockProducts.tsx | main |
