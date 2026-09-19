@@ -179,10 +179,19 @@ export default function StockProducts() {
   const [canApprove, setCanApprove] = useState(true)
   const [allowedSystems, setAllowedSystems] = useState<string[]>([])
   const [allowedViews, setAllowedViews] = useState<string[]>([])
-  // 权限加载完成后重刷一次列表（总览需按员工系统权限过滤）
-  const [permsLoaded, setPermsLoaded] = useState(false)
+  // 权限到底有没有配置过（allowedSystems=[] 既可能是"没配置"，也可能是"配置了但全关"，要分开判断）
+  const [permConfigured, setPermConfigured] = useState(false)
+  // 权限请求是否已经跑完（成功或失败都算）——跑完之前不取列表，避免先按"无限制"拉一次全量
+  const [permsSettled, setPermsSettled] = useState(false)
+  // 总览 = 跨系统只读视图：只有"没配置权限"或"能看到 2 个以上系统"时才展示。
+  // 只勾了一间分店的账号不该看到别家分店的单价（2026-09-19 用户要求；旧行为是"总览始终可见"）
+  const showOverview = !permConfigured || allowedSystems.length > 1
+  // 配置了权限但一个系统都没勾 → 整页锁定（不取数）
+  const locked = permConfigured && allowedSystems.length === 0
   const searchRef = useRef<HTMLInputElement>(null)
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** 列表请求序号：只认最后一次请求的结果（切系统时的竞态防护） */
+  const loadSeq = useRef(0)
   /** 新增行序号：给每行一个稳定 _key（保存成功后就按 key 摘行，不受删行影响） */
   const newKeySeq = useRef(0)
 
@@ -398,19 +407,22 @@ export default function StockProducts() {
         const perms = p?.systems || []
         setAllowedSystems(perms)
         setAllowedViews(p?.views || [])
+        setPermConfigured(true)
         // 无权限的系统不展示：当前 system 不在权限内 → 自动切到第一个有权限的系统（按 SYSTEMS 顺序）
-        // 总览始终可见（对齐旧系统 stockproductname.js rebuildProductSystemDropdown：
-        // 总览是跨店共用货品查阅功能，不受分店权限限制）
+        // 总览只在"没配置权限"或"能看到 2 个以上系统"时算作可用项：只勾一间分店的账号默认落到自己那间
+        const showOv = perms.length === 0 || perms.length > 1
         setSystem(prev => {
           const allowedKeys = SYSTEMS
-            .filter(s => s.key === 'overview' || perms.includes(s.key) || perms.some((x: string) => x.toLowerCase() === s.value.toLowerCase()))
+            .filter(s => s.key === 'overview'
+              ? showOv
+              : (perms.includes(s.key) || perms.some((x: string) => x.toLowerCase() === s.value.toLowerCase())))
             .map(s => s.key)
           if (allowedKeys.includes(prev)) return prev
           return allowedKeys.length > 0 ? allowedKeys[0] : prev
         })
-        setPermsLoaded(true)
+        setPermsSettled(true)
       }
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setPermsSettled(true))
   }, [])
 
   // 最近改价（含改价人）：单价格子悬浮提示用。按当前系统取——单价本来就是按系统各存一份；
@@ -448,9 +460,14 @@ export default function StockProducts() {
   // keepMissingArg：列表里已没有的行，其编辑草稿保留还是丢弃 —— 默认「搜索过滤中才保留」；
   //   切系统必须显式传 false：跨系统草稿若留着，Ctrl+Shift+S 会把别系统的货品按当前系统存回去
   const load = async (kwArg?: string, exactArg?: boolean, keepMissingArg?: boolean) => {
+    if (locked) { setLoading(false); return } // 权限全关：不取数（列表只会是空的）
+    const seq = ++loadSeq.current
     setLoading(true)
     try {
       const d = await getStockProducts(system === 'overview' ? '' : system, (kwArg ?? kw) || undefined, exactArg ?? exactMatch)
+      // 竞态防护：切系统/权限到达时，先发的旧请求可能后到（实测"总览 611 条"会覆盖掉"J1 110 条"）
+      // → 只认最后一次请求的结果
+      if (seq !== loadSeq.current) return
       // 总览 = 全部货品总目录（不再按 ≥2 间过滤；单一间的也展示）
       // 权限过滤：有权限配置的员工只看与自己系统权限有交集 ≥ 1 间的货品，
       // 且「系统分配」列只展示交集部分（打码，如 Central,J1,J2,J3 → J2+J3 员工只看到 J2,J3）；
@@ -506,9 +523,7 @@ export default function StockProducts() {
     }
   }
 
-  useEffect(() => { load(undefined, undefined, false) }, [system]) // eslint-disable-line react-hooks/exhaustive-deps
-  // 权限到达后重刷：总览按员工系统权限过滤（首次加载时权限尚未返回，先按无限制渲染）
-  useEffect(() => { if (permsLoaded) load(undefined, undefined, false) }, [permsLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (permsSettled) load(undefined, undefined, false) }, [system, permsSettled]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // 实时：货品种类变更（新增/编辑/删除/批准）自动刷新；编辑/保存/批准中不打断，结束后补刷
   // （改价也会广播 → 最近改价提示跟着更新，hover 到的是最新那条）
@@ -810,6 +825,22 @@ export default function StockProducts() {
       onChange={(e) => setDraft(id, { [field]: e.target.value } as any)} />
   )
 
+  // 权限全关（配置过、一个系统都没勾）→ 整页锁定，不渲染任何库存数据
+  if (locked) {
+    return (
+      <div className="sp-root">
+        <div className="container">
+          <div className="header"><div><h1>库存货品管理后台</h1></div></div>
+          <div className="no-data" style={{ padding: '48px 20px', textAlign: 'center', color: '#6b7280' }}>
+            <i className="fas fa-lock" style={{ fontSize: 34, color: '#d1d5db' }} />
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#374151', marginTop: 10 }}>无权限访问</div>
+            <div style={{ fontSize: 13.5, marginTop: 4 }}>权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="sp-root">
       <div className="container">
@@ -833,8 +864,10 @@ export default function StockProducts() {
                 <i className="fas fa-chevron-down"></i>
               </button>
               <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
-                {/* 对齐旧系统：总览始终可见（跨店共用货品查阅，不受分店权限限制） */}
-                {SYSTEMS.filter(s => s.key === 'overview' || allowedSystems.length === 0 || allowedSystems.includes(s.key) || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase())).map(s => (
+                {/* 总览：只有"没配置权限"或"能看到 2 个以上系统"时才列出（只勾一间分店的账号不显示总览） */}
+                {SYSTEMS.filter(s => s.key === 'overview'
+                  ? showOverview
+                  : (allowedSystems.length === 0 || allowedSystems.includes(s.key) || allowedSystems.some(x => x.toLowerCase() === s.value.toLowerCase()))).map(s => (
                   <div key={s.key} className={'dropdown-item' + (s.key === system ? ' active' : '')} onClick={() => { setSysOpen(false); setSystem(s.key); window.history.replaceState(null, '', '/products?system=' + s.key) }}>{s.label}</div>
                 ))}
               </div>
