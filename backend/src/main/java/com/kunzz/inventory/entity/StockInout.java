@@ -77,9 +77,13 @@ public class StockInout {
     @Column(name = "type", length = 100)
     private String type;
 
-    /** 创建人 */
+    /** 创建人（只在新增时写入；编辑不覆盖，用户反馈：编辑保存后创建人不见了） */
     @Column(name = "created_by", length = 100)
     private String createdBy;
+
+    /** 最后编辑人（编辑保存时由后端写入登录用户；新增时为空） */
+    @Column(name = "updated_by", length = 100)
+    private String updatedBy;
 
     /** 软删除时间 */
     @Column(name = "deleted_at")

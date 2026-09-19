@@ -9,6 +9,7 @@ import com.kunzz.inventory.service.StockSummaryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -106,10 +107,19 @@ public class StockController {
 
     @PutMapping("/stock/inout/{id}")
     public ApiResponse<StockInout> updateInout(@PathVariable Integer id, @Valid @RequestBody StockInoutRequest req,
-                                               @RequestParam(required = false) String system) {
-        ApiResponse<StockInout> resp = ApiResponse.ok(stockService.updateInout(id, req, system));
+                                               @RequestParam(required = false) String system,
+                                               Authentication authentication) {
+        // 编辑人（updated_by）取登录态；请求体里的 createdBy 是创建人，编辑时不许改
+        ApiResponse<StockInout> resp = ApiResponse.ok(stockService.updateInout(id, req, system, operatorOf(authentication)));
         realtimeService.notifyStockChanged("all");
         return resp;
+    }
+
+    /** 当前登录用户显示名（昵称 → 中文名 → 用户名，与 /auth/me 的 displayName 一致）；取不到 → null */
+    private String operatorOf(Authentication authentication) {
+        if (authentication == null) return null;
+        Object principal = authentication.getPrincipal();
+        return principal instanceof User u ? u.getDisplayName() : authentication.getName();
     }
 
     /** 软删除（保留历史审计） */

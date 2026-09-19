@@ -642,6 +642,14 @@ export default function StockInout() {
     if (!u) return '-'
     return nicknameMap.get(u) || u
   }
+  /** 时间戳显示（2026-09-19T11:22:33 → 2026-09-19 11:22:33） */
+  const stampOf = (v?: string) => (v ? String(v).replace('T', ' ').substring(0, 19) : '-')
+  /** 创建人那一格的悬浮提示：创建人/创建时间 + 编辑人/编辑时间（编辑过才显示后两行） */
+  const creatorTip = (r: any) => {
+    const lines = [`创建人: ${nickOf(r.createdBy)}`, `创建时间: ${stampOf(r.createdAt)}`]
+    if (r.updatedBy) lines.push(`编辑人: ${nickOf(r.updatedBy)}`, `编辑时间: ${stampOf(r.updatedAt)}`)
+    return lines.join('\n')
+  }
 
   // ---- 日历（对齐 calendar-popup） ----
   const datePickerRef = useRef<HTMLDivElement>(null)
@@ -1864,7 +1872,7 @@ export default function StockInout() {
                             disabled={parseFloat(editDraft.inQuantity || '0') > 0} style={{ width: '100%', minWidth: 0 }} />
                         : (r.receiver || '-')}</td>
                       <td>{isEditing ? <input className="table-input" value={editDraft.remark || ''} onChange={(e) => patchEdit({ remark: e.target.value })} /> : (r.remark || '-')}</td>
-                      <td className="created-user" title={`${r.createdBy || '-'}\n创建时间: ${r.createdAt ? String(r.createdAt).replace('T', ' ').substring(0, 19) : '-'}`}>{nickOf(r.createdBy)}</td>
+                      <td className="created-user" title={creatorTip(r)}>{nickOf(r.createdBy)}</td>
                       <td>
                         {batchMode ? (
                           <input type="checkbox" className="batch-select-checkbox"

@@ -30,6 +30,10 @@ interface ProductRow {
   _key?: string
   /** 总览打码行（真实分配超出员工权限，只显示交集；只读防覆盖） */
   _assignMasked?: boolean
+  /** 创建/编辑信息（后端已转成文本）：悬浮提示显示创建时间 + 编辑人（改价记录里的「谁改的」同理） */
+  created_at?: string
+  updated_at?: string
+  updated_by?: string
 }
 
 const SYSTEMS = [
@@ -553,7 +557,8 @@ export default function StockProducts() {
       const approver = system === 'overview' ? (d.approver || '') : ''
       // 系统分配：一律传这一行自己的值。原来在单系统页强制写成 currentSys.value，
       // 会把 Central,J1,J2,J3 这样的多系统分配覆盖成当前页那一个系统（分店从此看不到该货品）。
-      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || currentUser, approver,
+      // 申请人：保持这一行原本的申请人（创建人），不再用"当前用户"顶替 —— 谁改的另记 updated_by（编辑人）
+      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || '', approver,
         system: system === 'overview' ? undefined : currentSys.key })
       // 只摘掉这一行：其他编辑中行与草稿原样保留（点其中一行的保存，不影响其他行已改的内容）
       setEditing(prev => { const n = new Set(prev); n.delete(id); return n })
@@ -1048,7 +1053,11 @@ export default function StockProducts() {
                           ? <EditableInput id={id} field="supplier" value={draft.supplier} placeholder="供应商名称" />
                           : <input className="excel-input text-input" readOnly value={r.supplier || ''} />}
                       </td>
-                      <td><input className="excel-input text-input" readOnly value={draft.applicant || r.applicant || ''} /></td>
+                      <td><input className="excel-input text-input" readOnly title={[
+                        `申请人: ${r.applicant || '-'}`,
+                        `创建时间: ${r.created_at || '-'}`,
+                        ...(r.updated_by ? [`编辑人: ${r.updated_by}`, `编辑时间: ${r.updated_at || '-'}`] : []),
+                      ].join('\n')} value={draft.applicant || r.applicant || ''} /></td>
                       {/* 同上：总览可编辑；其它系统页只读并显示真实分配 */}
                       <td>
                         {system === 'overview' ? (

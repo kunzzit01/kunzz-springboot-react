@@ -17,7 +17,7 @@
                NULL AS freezer_category, NULL AS freezer_position, NULL AS price,
             </otherwise>
         </choose>
-               d.created_at, d.updated_at
+               d.created_at, d.updated_at, d.updated_by
         FROM stock_data d
         <if test="systemAssign != null and systemAssign != ''">
             LEFT JOIN stock_data_system ss
@@ -85,6 +85,7 @@
             <if test="r.applicant != null">applicant = #{r.applicant},</if>
             <if test="r.approver != null">approver = #{r.approver},</if>
             <if test="r.systemAssign != null">system_assign = #{r.systemAssign},</if>
+            <if test="r.updatedBy != null">updated_by = #{r.updatedBy},</if>
         </set>
         WHERE id = #{id}
     </update>

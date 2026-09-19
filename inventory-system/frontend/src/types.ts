@@ -59,6 +59,9 @@ export interface StockInout {
   prefix?: string
   createdBy?: string
   createdAt?: string
+  /** 最后编辑人 / 编辑时间（编辑保存时后端写入登录用户；新增记录为空） */
+  updatedBy?: string
+  updatedAt?: string
 }
 
 // ---------- 最低库存 / 异常扣除 ----------

@@ -51,6 +51,10 @@ public class StockProductService {
             item.put("system_assign", decodeHtml(str(r.get("system_assign"))));
             item.put("freezer_category", decodeHtml(str(r.get("freezer_category"))));
             item.put("freezer_position", r.get("freezer_position"));
+            // 创建/编辑信息（前端悬浮提示显示：创建时间 + 编辑人 updated_by）
+            item.put("created_at", fmtStamp(r.get("created_at")));
+            item.put("updated_at", fmtStamp(r.get("updated_at")));
+            item.put("updated_by", decodeHtml(str(r.get("updated_by"))));
             items.add(item);
         }
 
@@ -134,6 +138,8 @@ public class StockProductService {
         boolean perSystem = body.containsKey("price")
                 || body.containsKey("freezer_category") || body.containsKey("freezer_position");
         if (r.isEmpty() && !perSystem) return Map.of("success", true);
+        // 编辑人：真的改动了才记（登录用户；新增时没有编辑人）
+        if (operator != null && !operator.isBlank()) r.put("updatedBy", operator);
         // 改价日志必须用【改价前】的旧价：update 前先取旧值（9/3 修复：原来 update 后才 findById，
         // 拿到的是新价，与 body 相等 → “价格未变不记录” → 日志从未写入）
         Map<String, Object> before = stockProductMapper.findById(id);
@@ -149,6 +155,14 @@ public class StockProductService {
         // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
         if (body.containsKey("price")) logPriceChange(before, body, logSys, oldPriceBefore, operator);
         return Map.of("success", true);
+    }
+
+    /** 时间字段转文本（yyyy-MM-dd HH:mm:ss）：MyBatis 取回来是 Timestamp，直接给前端会变成数字 */
+    private String fmtStamp(Object v) {
+        if (v == null) return null;
+        if (v instanceof java.sql.Timestamp ts) return ts.toLocalDateTime().withNano(0).toString().replace('T', ' ');
+        if (v instanceof java.time.LocalDateTime dt) return dt.withNano(0).toString().replace('T', ' ');
+        return String.valueOf(v).replace('T', ' ').replace(".0", "");
     }
 
     /** 系统名归一：central/j1/j2/j3；总览、空 → central（进出货页 system=overview 也指中央） */

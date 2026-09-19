@@ -133,8 +133,12 @@ public class StockService {
                 s.setProductRemarkChecked(toBool(r.get("product_remark_checked")));
                 s.setType(str(r.get("type")));
                 s.setCreatedBy(str(r.get("created_by")));
+                s.setUpdatedBy(str(r.get("updated_by")));
                 if (r.get("created_at") != null) {
                     try { s.setCreatedAt(java.time.LocalDateTime.parse(String.valueOf(r.get("created_at")).replace(' ', 'T'))); } catch (Exception ignored) {}
+                }
+                if (r.get("updated_at") != null) {
+                    try { s.setUpdatedAt(java.time.LocalDateTime.parse(String.valueOf(r.get("updated_at")).replace(' ', 'T'))); } catch (Exception ignored) {}
                 }
                 s.setTargetSystem(str(r.get("target_system")));
                 items.add(s);
@@ -426,8 +430,9 @@ public class StockService {
         return List.of("j1", "j2", "j3").contains(sys) ? sys + "stockedit_data" : "stockinout_data";
     }
 
+    /** 编辑进出货记录；operator = 当前登录用户显示名（只用于记录「编辑人」updated_by） */
     @Transactional
-    public StockInout updateInout(Integer id, StockInoutRequest req, String system) {
+    public StockInout updateInout(Integer id, StockInoutRequest req, String system, String operator) {
         // ====== 单价校验（对齐旧系统：不能为空且不能小于 0；0 合法） ======
         if (req.price() == null || req.price().signum() < 0) {
             throw new BusinessException("单价不能为空且不能小于0");
@@ -447,6 +452,7 @@ public class StockService {
             r.put("type", req.type());
             r.put("remarkNumber", req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase());
             r.put("productRemarkChecked", Boolean.TRUE.equals(req.productRemarkChecked()) ? 1 : 0);
+            r.put("updatedBy", operator);
             int n = stockInoutMapper.updateBranch(system + "stockedit_data", id, r);
             if (n == 0) throw new BusinessException(404, "记录不存在");
             return new StockInout();
@@ -493,6 +499,7 @@ public class StockService {
         applyInout(s, req);
         s.setRemarkNumber(remarkNumber);
         s.setProductRemarkChecked(req.productRemarkChecked());
+        s.setUpdatedBy(operator); // 编辑人（登录用户）；创建人不在这里动
         s = stockInoutRepository.save(s);
 
         // ====== 分店同步：编辑时目标单位/货品/数量变化 → 中央 ↔ 分店保持一致 ======
@@ -612,7 +619,9 @@ public class StockService {
         s.setRemark(req.remark());
         s.setTargetSystem(req.targetSystem());
         s.setType(req.type());
-        s.setCreatedBy(req.createdBy());
+        // 创建人只在新增时写：编辑请求不带 createdBy，无条件覆盖会把创建人清空（用户反馈的 bug：
+        // 编辑保存后创建人名字不见了）。编辑人另记 updated_by，由 updateInout 写入。
+        if (req.createdBy() != null && !req.createdBy().isBlank()) s.setCreatedBy(req.createdBy());
     }
 
     // ---------- 最低库存 ----------

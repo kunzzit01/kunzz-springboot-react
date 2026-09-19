@@ -315,3 +315,60 @@ SET @ddl := IF(@pcl_sys_col = 0, 'SELECT ''price_change_log 无 stock_system 列
 PREPARE stmt FROM @ddl;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
+
+-- 11) 记录「编辑人」updated_by（2026-09-19）
+--     编辑保存后创建人（created_by / 申请人）保持原样、不再被清掉，另外单独记是谁改的。
+--     进出货：stockinout_data + 三张分店台账；货品种类：stock_data。
+--     时间不用新列：这几张表都有 updated_at（ON UPDATE CURRENT_TIMESTAMP），编辑时会自动更新。
+--     幂等：已存在会跳过；加列不改任何数据。
+SET @u_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='stockinout_data' AND column_name='updated_by');
+SET @ddl := IF(@u_col = 0,
+  'ALTER TABLE stockinout_data ADD COLUMN updated_by VARCHAR(100) NULL COMMENT ''最后编辑人（谁改过这条记录）'' AFTER created_by',
+  'SELECT ''stockinout_data.updated_by 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @u_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='j1stockedit_data' AND column_name='updated_by');
+SET @ddl := IF(@u_col = 0,
+  'ALTER TABLE j1stockedit_data ADD COLUMN updated_by VARCHAR(100) NULL COMMENT ''最后编辑人（谁改过这条记录）'' AFTER created_by',
+  'SELECT ''j1stockedit_data.updated_by 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @u_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='j2stockedit_data' AND column_name='updated_by');
+SET @ddl := IF(@u_col = 0,
+  'ALTER TABLE j2stockedit_data ADD COLUMN updated_by VARCHAR(100) NULL COMMENT ''最后编辑人（谁改过这条记录）'' AFTER created_by',
+  'SELECT ''j2stockedit_data.updated_by 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @u_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='j3stockedit_data' AND column_name='updated_by');
+SET @ddl := IF(@u_col = 0,
+  'ALTER TABLE j3stockedit_data ADD COLUMN updated_by VARCHAR(100) NULL COMMENT ''最后编辑人（谁改过这条记录）'' AFTER created_by',
+  'SELECT ''j3stockedit_data.updated_by 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @u_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='stock_data' AND column_name='updated_by');
+SET @ddl := IF(@u_col = 0,
+  'ALTER TABLE stock_data ADD COLUMN updated_by VARCHAR(100) NULL COMMENT ''最后编辑人（谁改过这条货品记录）'' AFTER updated_at',
+  'SELECT ''stock_data.updated_by 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 验证（应出现 5 行：4 张进出货表 + 货品种类表）
+SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE
+FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz' AND COLUMN_NAME='updated_by'
+  AND TABLE_NAME IN ('stockinout_data','j1stockedit_data','j2stockedit_data','j3stockedit_data','stock_data')
+ORDER BY TABLE_NAME;
