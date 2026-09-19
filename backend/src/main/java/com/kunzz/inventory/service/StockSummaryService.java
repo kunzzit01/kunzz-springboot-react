@@ -114,6 +114,10 @@ public class StockSummaryService {
             v.put("formatted_stock", fmtStock(stock, spec));
             v.put("formatted_price", String.format("%.2f", price));
             v.put("formatted_total_price", THOUSANDS.format(totalPrice));
+            // 原始单价范围（数据库实存值，可能多位小数；SQL 已按 显示价+编号+规格 分组算好 MIN/MAX）：
+            // 前端「显示 2 位、悬浮看原始价」用。以前这两列查了却没带出去 → 悬浮提示失效
+            v.put("price_raw", toD(r.get("price_raw")));
+            v.put("price_raw_max", toD(r.get("price_raw_max")));
             variants.add(v);
         }
 
@@ -139,6 +143,16 @@ public class StockSummaryService {
             item.put("formatted_total_price", THOUSANDS.format(totalPrice));
             item.put("price_count", variants.size());
             item.put("price_variants", variants);
+            // 该行用到的原始单价范围（跨变体取最小/最大）：前端单价格子的悬浮提示用
+            Double rawMin = null, rawMax = null;
+            for (Map<String, Object> v : variants) {
+                double lo = toD(v.get("price_raw"));
+                double hi = toD(v.get("price_raw_max"));
+                if (rawMin == null || lo < rawMin) rawMin = lo;
+                if (rawMax == null || hi > rawMax) rawMax = hi;
+            }
+            item.put("price_raw", rawMin);
+            item.put("price_raw_max", rawMax);
             item.put("type", type);
             // 冰箱分类+位次（多值如 "K1-6,S1-2" 原样带出，前端排序取首个；未登记货品为空串/null）
             Object[] fz = freezerMap.get(str(m.get("product_name")));

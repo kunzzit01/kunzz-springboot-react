@@ -55,3 +55,4 @@
 | 2026-09-19-editor-tracking | 已完成 | 编辑不再清掉创建人；新增 updated_by 记「编辑人」，进出货/货品种类悬浮提示显示；补丁第 11 节给 5 张表加列 | main |
 | 2026-09-19-products-price-log-tip | 已完成 | 货品种类单价悬浮显示「最近改价 + 改价人」（按系统取，改价后实时更新）；只改 StockProducts.tsx | main |
 | 2026-09-19-inout-newrow-single-save | 已完成 | 进出货新增行的单行保存只存/只摘这一行，不再把其余待存行一起清掉；只改 StockInout.tsx | main |
+| 2026-09-19-stockrecords-raw-price-tip | 已完成 | 修回总库存的原始单价悬浮提示（后端把 price_raw 带出来 + 前端按"原始价≠显示价"判断）；子行也提示 | main |
