@@ -8,6 +8,7 @@ import com.kunzz.inventory.realtime.RealtimeService;
 import com.kunzz.inventory.service.StockEditService;
 import com.kunzz.inventory.service.StockEnhanceService;
 import com.kunzz.inventory.service.StockProductService;
+import com.kunzz.inventory.service.StaffService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
@@ -26,6 +27,7 @@ public class StockEnhanceController {
     private final StockEditService stockEditService;
     private final RealtimeService realtimeService;
     private final PriceChangeLogMapper priceChangeLogMapper;
+    private final StaffService staffService;
 
     /** 回收站：软删除的出入库记录 */
     @GetMapping("/recycle")
@@ -64,13 +66,27 @@ public class StockEnhanceController {
 
     // ---------- 货品种类台账（stockproductname / stockapi.php） ----------
 
-    /** 列表 + 统计（total/approved/pending），systemAssign 支持 overview/central/j1/j2/j3 */
+    /** 列表 + 统计（total/approved/pending），systemAssign 支持 overview/central/j1/j2/j3
+     *  总览的「4 套单价/冰箱分类」文本按当前用户的系统权限收敛（无权限的系统不显示值，只给「（另有X）」标记） */
     @GetMapping("/products")
     public ApiResponse<Map<String, Object>> products(
             @RequestParam(required = false) String systemAssign,
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false, defaultValue = "false") boolean exact) {
-        return ApiResponse.ok(stockProductService.list(systemAssign, keyword, exact));
+            @RequestParam(required = false, defaultValue = "false") boolean exact,
+            Authentication authentication) {
+        return ApiResponse.ok(stockProductService.list(systemAssign, keyword, exact, allowedSystemsOf(authentication)));
+    }
+
+    /** 当前用户的库存系统权限（小写 central/j1/j2/j3）；没配置过权限 → null = 不限制（与其它页一致） */
+    private List<String> allowedSystemsOf(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User u)) return null;
+        Map<String, Object> perms = staffService.stockPerms(u.getId());
+        if (!Boolean.TRUE.equals(perms.get("configured"))) return null;
+        Object raw = perms.get("systems");
+        if (!(raw instanceof List<?> list) || list.isEmpty()) return null; // 全关 → null（前端整页锁死，这里不额外限制）
+        List<String> out = new java.util.ArrayList<>();
+        for (Object o : list) if (o != null) out.add(String.valueOf(o).trim().toLowerCase());
+        return out;
     }
 
     /** 进货默认单价（该货品在**该系统**下维护的 price；无则 null）。system 省略按中央 */

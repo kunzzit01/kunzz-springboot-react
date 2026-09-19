@@ -26,9 +26,11 @@ public class StockProductService {
     private final StockDataSystemMapper stockDataSystemMapper;
     private final PriceChangeLogMapper priceChangeLogMapper;
 
-    /** 列表 + 统计（exact=true 货品名精确匹配，false 全能多字段模糊） */
+    /** 列表 + 统计（exact=true 货品名精确匹配，false 全能多字段模糊）
+     *  allowedSystems = 当前用户有权限的系统（小写；null = 没配置权限，不限制）。
+     *  只影响总览的「4 套单价/冰箱分类」文本：无权限的系统的值不显示，只给「（另有X）」标记。 */
     @Transactional(readOnly = true)
-    public Map<String, Object> list(String systemAssign, String keyword, boolean exact) {
+    public Map<String, Object> list(String systemAssign, String keyword, boolean exact, List<String> allowedSystems) {
         String sys = (systemAssign == null || "overview".equals(systemAssign) || systemAssign.isBlank())
                 ? null : systemAssign;
         List<Map<String, Object>> rows = stockProductMapper.listRows(sys,
@@ -58,8 +60,8 @@ public class StockProductService {
             items.add(item);
         }
 
-        // 总览（无系统）看不到单独的单价/冰箱分类：补上「各系统 4 套」的只读文本，前端直接展示
-        if (sys == null) attachPerSystemTexts(items);
+        // 总览（无系统）看不到单独的单价/冰箱分类：补上「各系统」的只读文本，前端直接展示
+        if (sys == null) attachPerSystemTexts(items, allowedSystems);
 
         long approved = items.stream().filter(i -> !((String) i.get("approver")).isBlank()).count();
         long pending = items.size() - approved;
@@ -192,8 +194,9 @@ public class StockProductService {
                 pr != null ? cleanPrice(pr) : null);
     }
 
-    /** 总览用：给每行补「各系统」的单价/冰箱分类只读文本（前端在单价、冰箱分类列直接展示） */
-    private void attachPerSystemTexts(List<Map<String, Object>> items) {
+    /** 总览用：给每行补「各系统」的单价/冰箱分类只读文本（前端在单价、冰箱分类列直接展示）
+     *  allowedSystems 非空 → 只拼用户有权限的系统，无权限的系统的值不显示（末尾给「（另有X）」标记） */
+    private void attachPerSystemTexts(List<Map<String, Object>> items, List<String> allowedSystems) {
         if (items.isEmpty()) return;
         Map<Object, Map<String, Map<String, Object>>> byData = new LinkedHashMap<>();
         for (Map<String, Object> r : stockDataSystemMapper.allRows()) {
@@ -202,29 +205,58 @@ public class StockProductService {
         }
         for (Map<String, Object> item : items) {
             Map<String, Map<String, Object>> per = byData.get(item.get("id"));
-            item.put("price_by_system", joinBySystem(per, "price"));
-            item.put("freezer_by_system", joinBySystem(per, "freezerCategory"));
+            String sysAssign = str(item.get("system_assign"));
+            item.put("price_by_system", joinBySystem(per, "price", allowedSystems, sysAssign));
+            item.put("freezer_by_system", joinBySystem(per, "freezerCategory", allowedSystems, sysAssign));
         }
     }
 
-    /** 4 套值拼成一行：4 个系统完全一样（含全空）→ 只给一个值；否则「中央 x · J1 y · J2 - · J3 z」 */
-    private String joinBySystem(Map<String, Map<String, Object>> per, String key) {
+    /** 「各系统」值拼成一行：可见的系统完全一样（含全空）→ 只给一个值；否则「J1 x · J2 -」；
+     *  allowedSystems 非空时只拼这些系统，末尾按 system_assign 补「（另有中央/J3）」——
+     *  只说"还属于哪些系统"，不泄露它们的具体值（2026-09-19 用户要求） */
+    private String joinBySystem(Map<String, Map<String, Object>> per, String key,
+                                List<String> allowedSystems, String sysAssign) {
         String[] sysKeys = {"central", "j1", "j2", "j3"};
         String[] labels = {"中央", "J1", "J2", "J3"};
         List<String> vals = new ArrayList<>();
-        for (String sk : sysKeys) {
-            Map<String, Object> row = per == null ? null : per.get(sk);
+        List<String> shown = new ArrayList<>();
+        for (int i = 0; i < sysKeys.length; i++) {
+            if (allowedSystems != null && !allowedSystems.contains(sysKeys[i])) continue; // 无权限：不显示它的值
+            Map<String, Object> row = per == null ? null : per.get(sysKeys[i]);
             Object v = row == null ? null : row.get(key);
             vals.add(v == null ? "" : formatVal(key, v));
+            shown.add(labels[i]);
         }
+        if (vals.isEmpty()) return excludedMark(sysAssign, allowedSystems);
         boolean allSame = true;
         for (String v : vals) if (!v.equals(vals.get(0))) { allSame = false; break; }
-        if (allSame) return vals.get(0);
-        List<String> parts = new ArrayList<>();
-        for (int i = 0; i < sysKeys.length; i++) {
-            parts.add(labels[i] + " " + (vals.get(i).isEmpty() ? "-" : vals.get(i)));
+        String base;
+        if (allSame) {
+            base = vals.get(0);
+        } else {
+            List<String> parts = new ArrayList<>();
+            for (int i = 0; i < vals.size(); i++) {
+                parts.add(shown.get(i) + " " + (vals.get(i).isEmpty() ? "-" : vals.get(i)));
+            }
+            base = String.join(" · ", parts);
         }
-        return String.join(" · ", parts);
+        return base + excludedMark(sysAssign, allowedSystems);
+    }
+
+    /** 「（另有中央/J3）」：该货品还分配给用户没权限的系统（只列系统名，不显示它们的值）；没配置权限/没有额外系统 → 空串 */
+    private String excludedMark(String sysAssign, List<String> allowedSystems) {
+        if (allowedSystems == null || sysAssign == null || sysAssign.isBlank()) return "";
+        String[] sysKeys = {"central", "j1", "j2", "j3"};
+        String[] labels = {"中央", "J1", "J2", "J3"};
+        List<String> out = new ArrayList<>();
+        for (String token : sysAssign.split(",")) {
+            String t = token.trim().toLowerCase();
+            if (t.isEmpty() || allowedSystems.contains(t)) continue;
+            for (int i = 0; i < sysKeys.length; i++) {
+                if (sysKeys[i].equals(t) && !out.contains(labels[i])) out.add(labels[i]);
+            }
+        }
+        return out.isEmpty() ? "" : "（另有" + String.join("/", out) + "）";
     }
 
     /** 单价去尾零（2.67000 → 2.67；4~5 位小数原样保留）；其它字段原样 */

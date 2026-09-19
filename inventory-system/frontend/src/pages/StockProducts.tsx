@@ -607,8 +607,19 @@ export default function StockProducts() {
       // 系统分配：一律传这一行自己的值。原来在单系统页强制写成 currentSys.value，
       // 会把 Central,J1,J2,J3 这样的多系统分配覆盖成当前页那一个系统（分店从此看不到该货品）。
       // 申请人：保持这一行原本的申请人（创建人），不再用"当前用户"顶替 —— 谁改的另记 updated_by（编辑人）
-      await updateStockProduct(id, { ...d, system_assign: d.system_assign || '', applicant: d.applicant || '', approver,
-        system: system === 'overview' ? undefined : currentSys.key })
+      const payload: any = { ...d, applicant: d.applicant || '', approver,
+        system: system === 'overview' ? undefined : currentSys.key }
+      if (system === 'overview') {
+        // 总览下这三样是只读展示（改了要到对应系统页），发出去反而会在边角情况写出 system 为空的改价日志
+        delete payload.price; delete payload.freezer_category; delete payload.freezer_position
+        // 打码行（该货品还分配给无权限的系统）：不发 system_assign —— 后端只更新请求里带的字段，
+        // 中央/J3 的分配原样保留（代替原来"整行锁死不许编辑"的防覆盖做法）
+        if (d._assignMasked) delete payload.system_assign
+        else payload.system_assign = d.system_assign || ''
+      } else {
+        payload.system_assign = d.system_assign || ''
+      }
+      await updateStockProduct(id, payload)
       // 只摘掉这一行：其他编辑中行与草稿原样保留（点其中一行的保存，不影响其他行已改的内容）
       setEditing(prev => { const n = new Set(prev); n.delete(id); return n })
       setDrafts(prev => { const n = { ...prev }; delete n[id]; return n })
@@ -656,6 +667,10 @@ export default function StockProducts() {
   const doSaveNewRow = async (r: ProductRow): Promise<string | null> => {
     if (!r.product_code || !r.product_name || !r.specification || !r.category || !r.supplier) {
       return '请填写完整的货品编号、名称、规格、类型、供应商'
+    }
+    // 总览下必须选系统分配：不然存进去后"可见交集=0"，这行会从总览列表里消失（数据其实在，只是看不到）
+    if (system === 'overview' && !String(r.system_assign || '').trim()) {
+      return '请选择「系统分配」：总览里没选系统的货品，保存后会从列表里消失'
     }
     try {
       // 同上：系统分配用这一行自己的值（单系统页由 addRow 预置成当前系统，不再强制覆盖）
@@ -1125,12 +1140,13 @@ export default function StockProducts() {
                         `创建时间: ${r.created_at || '-'}`,
                         ...(r.updated_by ? [`编辑人: ${r.updated_by}`, `编辑时间: ${r.updated_at || '-'}`] : []),
                       ].join('\n')} value={draft.applicant || r.applicant || ''} /></td>
-                      {/* 同上：总览可编辑；其它系统页只读并显示真实分配 */}
+                      {/* 总览可编辑；打码行（还分配给无权限系统）保持只读 —— 保存时不送 system_assign，别家分配不受影响 */}
                       <td>
                         {system === 'overview' ? (
-                          isEditing
+                          isEditing && !r._assignMasked
                             ? <MultiSelect value={draft.system_assign || ''} options={assignableOptions} onChange={(v) => setDraft(id, { system_assign: v })} />
-                            : <input className="excel-input" readOnly value={r.system_assign || ''} />
+                            : <input className="excel-input" readOnly value={r.system_assign || ''}
+                                title={r._assignMasked ? '该货品还分配给其它系统（这里只显示你有权限的部分），保存不会改动系统分配' : undefined} />
                         ) : (
                           <input className="excel-input" readOnly value={r.system_assign || ''} title="仅总览可设置系统分配" />
                         )}
@@ -1161,7 +1177,8 @@ export default function StockProducts() {
                         )}
                       </td>
                       <td className="action-cell">
-                        {canApply && !(system === 'overview' && r._assignMasked) && (isEditing ? (
+                        {/* 打码行同样可操作（2026-09-19）：防覆盖改为"保存时不发 system_assign"，不再是整行锁死 */}
+                        {canApply && (isEditing ? (
                           <>
                             <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存这一行" disabled={saving}><i className="fas fa-save" /></button>
                             <button className="delete-row-btn" onClick={() => cancelEdit(id)} title="取消这一行的修改"><i className="fas fa-times" /></button>
