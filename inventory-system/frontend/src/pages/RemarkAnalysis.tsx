@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { getStockRemarkAnalysis } from '../api'
+import { getStockRemarkAnalysis, getStockPerms } from '../api'
 import type { RemarkProduct, RemarkVariant } from '../api'
 import '../styles/stockremark.css'
 import { showToast } from '../utils/toast'
@@ -20,6 +20,13 @@ export default function RemarkAnalysis() {
   const system = urlSystem && SYSTEM_NAMES[urlSystem] ? urlSystem : 'central'
   const [viewOpen, setViewOpen] = useState(false)
   const [sysOpen, setSysOpen] = useState(false)
+  // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
+  // 与总库存/进出货/货品种类同一套：只有 J1 权限的账号不该点到中央的货品备注
+  const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
+  const [permsReady, setPermsReady] = useState(false)
+  const locked = allowedSystems !== null && allowedSystems.length === 0
+  /** 该系统是否在权限内（未配置 → 全部可见） */
+  const systemAllowed = (k: string) => allowedSystems == null || allowedSystems.includes(k)
   const [products, setProducts] = useState<RemarkProduct[]>([])
   const [filtered, setFiltered] = useState<RemarkProduct[]>([])
   const [kw, setKw] = useState('')
@@ -57,6 +64,8 @@ export default function RemarkAnalysis() {
   // 防重入用 ref：loading 若进了 useCallback 依赖，会跟着 setLoading 反复重建（转圈）
   const loadingRef = useRef(false)
   const load = useCallback(async () => {
+    // 权限未就绪 / 该系统没权限时不取数：避免"先闪一下中央的数据"（越权请求后端也会返回 403）
+    if (!permsReady || locked || !systemAllowed(system)) return
     if (loadingRef.current) return
     loadingRef.current = true
     setLoading(true)
@@ -75,7 +84,26 @@ export default function RemarkAnalysis() {
       loadingRef.current = false
       setLoading(false)
     }
-  }, [system, sortProducts])
+  }, [system, sortProducts, permsReady, locked, allowedSystems]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 读库存权限（configured=false = 没配置过 → 默认全部可用，与其它页一致）
+  useEffect(() => {
+    getStockPerms()
+      .then((p: any) => {
+        const configured = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
+        if (configured) setAllowedSystems((p.systems || []).map((s: string) => String(s).toLowerCase()))
+      })
+      .catch(() => { /* 取不到权限 → 按未配置处理，不锁死页面 */ })
+      .finally(() => setPermsReady(true))
+  }, [])
+
+  // URL 上的系统没权限 → 换成有权限的第一个（只有 J1 权限的账号从书签/菜单点到中央时会被送回 J1）
+  useEffect(() => {
+    if (!permsReady || allowedSystems == null || allowedSystems.length === 0) return
+    if (allowedSystems.includes(system)) return
+    const first = Object.keys(SYSTEM_NAMES).find(k => allowedSystems.includes(k))
+    if (first) navigate('/remark?system=' + first, { replace: true })
+  }, [permsReady, allowedSystems, system, navigate])
 
   // 首次加载 + 切换系统时重新取数（system 变了 load 就变，这里会重跑一次）
   useEffect(() => { load() }, [load])
@@ -246,7 +274,7 @@ export default function RemarkAnalysis() {
               <i className="fas fa-chevron-down" />
             </button>
             <div className={'selector-dropdown' + (sysOpen ? ' show' : '')}>
-              {Object.entries(SYSTEM_NAMES).map(([k, v]) => (
+              {Object.entries(SYSTEM_NAMES).filter(([k]) => systemAllowed(k)).map(([k, v]) => (
                 <div key={k} className={'dropdown-item' + (k === system ? ' active' : '')}
                   onClick={() => { setSysOpen(false); if (k !== system) navigate('/remark?system=' + k) }}>{v}</div>
               ))}
@@ -255,7 +283,13 @@ export default function RemarkAnalysis() {
         </div>
       </div>
 
-      {loading && filtered.length === 0 ? (
+      {locked ? (
+        <div className="no-data">
+          <i className="fas fa-lock" />
+          <h3>无权限访问</h3>
+          <p>权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。</p>
+        </div>
+      ) : loading && filtered.length === 0 ? (
         <div className="remark-loading">
           <div className="loading" />
           <div style={{ marginTop: 16 }}>正在分析库存价格数据...</div>

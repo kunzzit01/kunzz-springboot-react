@@ -1,8 +1,10 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.dto.*;
 import com.kunzz.inventory.entity.*;
+import com.kunzz.inventory.service.StaffService;
 import com.kunzz.inventory.service.StockRemarkService;
 import com.kunzz.inventory.service.StockService;
 import com.kunzz.inventory.service.StockSummaryService;
@@ -24,6 +26,7 @@ public class StockController {
     private final StockService stockService;
     private final StockSummaryService stockSummaryService;
     private final StockRemarkService stockRemarkService;
+    private final StaffService staffService;
 
     // ---------- 总库存汇总（stocklistall） ----------
 
@@ -38,8 +41,29 @@ public class StockController {
 
     /** 多价格/备注货品分析（对齐线上 stockremarkapi.php?action=analysis） */
     @GetMapping("/stock/remark-analysis")
-    public ApiResponse<Map<String, Object>> stockRemarks(@RequestParam(required = false) String system) {
+    public ApiResponse<Map<String, Object>> stockRemarks(@RequestParam(required = false) String system,
+                                                         Authentication authentication) {
+        assertSystemAllowed(authentication, system);
         return ApiResponse.ok(stockRemarkService.analysis(system));
+    }
+
+    /**
+     * 货品备注按系统鉴权：权限设置里只勾了 J1 的账号，不该看到中央的备注。
+     * 与前端同一判定：没配置过 stock_inventory 权限记录（老账号/demo）→ 默认放行；
+     * 配置过 → 请求的 system 必须在 systems 列表里（大小写不敏感）。
+     */
+    private void assertSystemAllowed(Authentication auth, String system) {
+        if (auth == null || !(auth.getPrincipal() instanceof User u)) return; // 未登录由 SecurityConfig 拦截
+        Map<String, Object> perms = staffService.stockPerms(u.getId());
+        if (!Boolean.TRUE.equals(perms.get("configured"))) return;
+        String sys = (system == null || system.isBlank()) ? "central" : system.trim().toLowerCase();
+        Object raw = perms.get("systems");
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                if (o != null && String.valueOf(o).trim().toLowerCase().equals(sys)) return;
+            }
+        }
+        throw new BusinessException(403, "没有查看「" + sys.toUpperCase() + "」货品备注的权限");
     }
 
     // ---------- 库存台账 ----------

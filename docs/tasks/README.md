@@ -57,3 +57,4 @@
 | 2026-09-19-inout-newrow-single-save | 已完成 | 进出货新增行的单行保存只存/只摘这一行，不再把其余待存行一起清掉；只改 StockInout.tsx | main |
 | 2026-09-19-stockrecords-raw-price-tip | 已完成 | 修回总库存的原始单价悬浮提示（后端把 price_raw 带出来 + 前端按"原始价≠显示价"判断）；子行也提示 | main |
 | 2026-09-19-raw-price-dec-only | 已完成 | 悬浮卡片只显示带小数位的原始价（不再带"转换后"的显示价，如 1.4541 ~ 1.45416） | main |
+| 2026-09-19-remark-page-system-perms | 已完成 | 货品备注页补上「系统权限」：只勾 J1 的账号进不去中央（前端过滤+自动跳转，后端也拦） | main |
