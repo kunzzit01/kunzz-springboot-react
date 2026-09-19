@@ -89,6 +89,32 @@ public class StaffService {
         return result;
     }
 
+    /**
+     * 重发登录邮件（2026-09-19）：邮件没送到（SMTP 故障 / Gmail 发信配额超限）时的补救通道。
+     * 生成新的临时密码 → 更新密码 + is_first_login=1（旧密码立刻作废）→ 重新发一次欢迎邮件；
+     * 邮件仍发不出去时把新临时密码返回给管理员手动转告（与创建流程一致）。
+     */
+    @Transactional
+    public Map<String, Object> resendWelcome(Integer id) {
+        User u = staffMapper.findUserById(id);
+        if (u == null) throw new BusinessException(404, "职员不存在");
+        String email = u.getEmail();
+        if (email == null || email.isBlank()) throw new BusinessException("该职员没有填邮箱，无法发送登录邮件");
+
+        String password = generateStrongPassword();
+        u.setPassword(passwordEncoder.encode(password));
+        u.setIsFirstLogin(true);
+        staffMapper.updateUser(u);
+
+        boolean emailSent = mailService.sendWelcomeEmail(email, u.getUsername(), password, u.getAccountType());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("user", staffMapper.findUserById(id));
+        result.put("defaultPassword", password);
+        result.put("emailSent", emailSent);
+        return result;
+    }
+
     /** 生成10位强密码（至少1大写+1小写+1数字+1符号，对齐线上 generateRandomPassword） */
     private String generateStrongPassword() {
         String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

@@ -113,6 +113,12 @@ public class StaffController {
         return ApiResponse.ok();
     }
 
+    /** 重发登录邮件：生成新的临时密码并发送（旧密码立刻作废）；邮件没送到时用它补发 */
+    @PostMapping("/staff/{id}/resend-welcome")
+    public ApiResponse<Map<String, Object>> resendWelcome(@PathVariable Integer id) {
+        return ApiResponse.ok(staffService.resendWelcome(id));
+    }
+
     // ---------- 注册码 ----------
 
     @GetMapping("/application-codes")
