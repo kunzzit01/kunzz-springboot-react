@@ -51,3 +51,4 @@
 | 2026-09-18-remark-page-system-reload | 已完成 | 备注页切系统后自动重新取数（此前要手动刷新）；只改 RemarkAnalysis.tsx | main |
 | 2026-09-18-price-log-daily | 已完成 | 改价记录同一天同一货品同一系统只留一条（当天只更新新价，old 保持当天起点价）；补丁第 10 节清历史重复 | main |
 | 2026-09-18-price-log-who | 已完成 | 改价记录显示是谁改的：改价人改取登录用户（原为货品申请人）；弹窗+悬浮提示 | main |
+| 2026-09-19-mobile-tier-rounding | 已完成 | 手机版出货价格层口径改为显示价 ROUND(price,2)，与电脑一致；修「手机出完货电脑总库存倒扣」；只改 MobileStockMapper.xml | main |

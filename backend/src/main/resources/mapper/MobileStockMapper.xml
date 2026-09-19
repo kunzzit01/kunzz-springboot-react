@@ -63,9 +63,12 @@
         SELECT category FROM stock_data WHERE product_name = #{productName} LIMIT 1
     </select>
 
-    <!-- HIFO 分层：价格从高到低、仅可用 &gt; 0、FOR UPDATE（与旧版 tier 查询逐字对齐） -->
+    <!-- HIFO 分层：价格从高到低、仅可用 &gt; 0、FOR UPDATE（与旧版 tier 查询逐字对齐）
+         分层口径 = 显示价 ROUND(price,2)，与电脑端（进出货页价格下拉 / 出库校验 / 总库存汇总）一致：
+         台账里同一个显示价的多个原始价（1.45 / 1.4541 / 1.45416）必须合成一层，
+         否则手机把电脑看不到的那一层当可用库存，出完电脑就倒扣（2026-09-19 用户实测） -->
     <select id="hifoTiers" resultType="java.util.LinkedHashMap">
-        SELECT specification, COALESCE(price, 0) AS price, type,
+        SELECT specification, ROUND(COALESCE(price, 0), 2) AS price, type,
                (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) AS available
         FROM ${table}
         WHERE product_name = #{productName}
@@ -81,16 +84,17 @@
                 AND specification = #{specification}
             </otherwise>
         </choose>
-        GROUP BY COALESCE(price, 0), specification
+        GROUP BY ROUND(COALESCE(price, 0), 2), specification
         HAVING available &gt; 0
         ORDER BY price DESC
         FOR UPDATE
     </select>
 
 
-    <!-- 价格层（按 price+spec 分组，含超扣负数；对齐旧 product_stock_by_price） -->
+    <!-- 价格层（按 显示价ROUND(price,2)+spec 分组，含超扣负数；对齐旧 product_stock_by_price）
+         生成键与「总库存」汇总的行键一致（产品+编号+规格+显示价），手机看到的就是电脑看到的那几行 -->
     <select id="tiersWithSpec" resultType="java.util.LinkedHashMap">
-        SELECT specification, COALESCE(price, 0) AS price, type,
+        SELECT specification, ROUND(COALESCE(price, 0), 2) AS price, type,
                (COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)) AS available
         FROM ${table}
         WHERE (product_name = #{productName}
@@ -99,11 +103,11 @@
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
         </if>
-        GROUP BY COALESCE(price, 0), specification
+        GROUP BY ROUND(COALESCE(price, 0), 2), specification
         ORDER BY price DESC
     </select>
 
-    <!-- 指定价格的可用库存（跨规格汇总；对齐旧 batch 预检口径） -->
+    <!-- 指定价格的可用库存（跨规格汇总；口径 = 显示价 ROUND(price,2)，与电脑端 availableStockBranch 完全一致） -->
     <select id="availableAtPrice" resultType="java.math.BigDecimal">
         SELECT
           COALESCE(SUM(CASE WHEN in_quantity &gt; 0 THEN in_quantity ELSE 0 END), 0) -
@@ -111,20 +115,20 @@
         FROM ${table}
         WHERE (product_name = #{productName}
                OR TRIM(REPLACE(product_name, '&amp;amp;', '&amp;')) = TRIM(REPLACE(#{productName}, '&amp;amp;', '&amp;')))
-          AND CAST(COALESCE(price, 0) AS DECIMAL(15,6)) = CAST(#{price} AS DECIMAL(15,6))
+          AND ROUND(COALESCE(price, 0), 2) = ROUND(#{price}, 2)
           AND deleted_at IS NULL
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
         </if>
     </select>
 
-    <!-- 该价格层实际使用的 specification（确保出货写入同一库存桶） -->
+    <!-- 该价格层实际使用的 specification（确保出货写入同一库存桶）：按显示价 ROUND(price,2) 找净库存 > 0 的规格 -->
     <select id="resolveInboundSpecForPrice" resultType="java.lang.String">
         SELECT specification
         FROM ${table}
         WHERE (product_name = #{productName}
                OR TRIM(REPLACE(product_name, '&amp;amp;', '&amp;')) = TRIM(REPLACE(#{productName}, '&amp;amp;', '&amp;')))
-          AND CAST(COALESCE(price, 0) AS DECIMAL(15,6)) = CAST(#{price} AS DECIMAL(15,6))
+          AND ROUND(COALESCE(price, 0), 2) = ROUND(#{price}, 2)
           AND deleted_at IS NULL
         <if test="codeNumber != null and codeNumber != ''">
             AND code_number = #{codeNumber}
