@@ -1,6 +1,7 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.mapper.PriceChangeLogMapper;
 import com.kunzz.inventory.entity.StockInout;
 import com.kunzz.inventory.entity.User;
@@ -140,10 +141,21 @@ public class StockEnhanceController {
 
     /** 删除记录 */
     @DeleteMapping("/products/{id}")
-    public ApiResponse<Map<String, Object>> deleteProduct(@PathVariable Integer id) {
+    public ApiResponse<Map<String, Object>> deleteProduct(@PathVariable Integer id, Authentication authentication) {
+        assertCanApprove(authentication); // 删除货品需要「批准」权限（与前端一致，防绕过界面直接调接口）
         ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.delete(id));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
+    }
+
+    /** 需要「批准」权限（职员管理→权限设定→库存→批准）；没配置过权限的老账号/demo 默认放行，与其它页一致 */
+    private void assertCanApprove(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User u)) return; // 未登录由 SecurityConfig 拦截
+        Map<String, Object> perms = staffService.stockPerms(u.getId());
+        if (!Boolean.TRUE.equals(perms.get("configured"))) return;
+        if (!Boolean.TRUE.equals(perms.get("canApprove"))) {
+            throw new BusinessException(403, "没有删除货品的权限（需要「批准」权限，见 职员管理→权限设定→库存）");
+        }
     }
 
     /** 批准记录 */

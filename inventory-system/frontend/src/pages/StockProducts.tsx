@@ -1221,15 +1221,20 @@ export default function StockProducts() {
                       </td>
                       <td className="action-cell">
                         {/* 打码行同样可操作（2026-09-19）：防覆盖改为"保存时不发 system_assign"，不再是整行锁死 */}
-                        {canApply && (isEditing ? (
+                        {/* 权限（2026-09-19 用户要求）：编辑/保存/取消 = 申请权限；**删除 = 批准权限**（只有申请权限的人不显示垃圾桶） */}
+                        {(canApply || canApprove) && (isEditing ? (
                           <>
                             <button className="edit-btn save-mode" onClick={() => saveEdit(id)} title="保存这一行" disabled={saving}><i className="fas fa-save" /></button>
                             <button className="delete-row-btn" onClick={() => cancelEdit(id)} title="取消这一行的修改"><i className="fas fa-times" /></button>
                           </>
                         ) : (
                           <>
-                            <button className="edit-btn" onClick={() => startEdit(r)} title="编辑记录（可多行一起改，改完按 Ctrl+S 从最上面逐行保存，或 Ctrl+Shift+S 一次全存）"><i className="fas fa-edit" /></button>
-                            <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行"><i className="fas fa-trash-alt" /></button>
+                            {canApply && (
+                              <button className="edit-btn" onClick={() => startEdit(r)} title="编辑记录（可多行一起改，改完按 Ctrl+S 从最上面逐行保存，或 Ctrl+Shift+S 一次全存）"><i className="fas fa-edit" /></button>
+                            )}
+                            {canApprove && (
+                              <button className="delete-row-btn" onClick={() => removeRow(r)} title="删除此行（需要「批准」权限）"><i className="fas fa-trash-alt" /></button>
+                            )}
                           </>
                         ))}
                       </td>
