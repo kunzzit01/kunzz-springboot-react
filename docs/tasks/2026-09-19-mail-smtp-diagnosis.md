@@ -56,6 +56,18 @@ MailAuthenticationException: Authentication failed（根因 AuthenticationFailed
 
 前端提示也改成：`⚠ 邮件发送失败（服务器 SMTP_PASS 未配置或已失效）——请手动告知：申请码 XXX，临时密码 YYY`
 
+## 追加（用户仍希望自动发信）
+
+再加一道保险：**启动时自动去掉 SMTP_PASS 里的空格/换行**，并在启动日志里打出配置摘要 ——
+Google 显示的应用密码是「4 组 4 位带空格」，复制进环境文件很容易连空格（或 Windows 复制的回车）一起带上，
+这类错误 Gmail 只会回 535，看不出是"多了个空格"。
+
+实测：用 `SMTP_PASS="abcd efgh ijkl mnop"`（带空格）启动 →
+`WARN … SMTP_PASS 里含空格/换行，已自动去掉（Gmail 应用密码是 16 位、无空格）` +
+`INFO … 邮件发送配置：host=… port=… user=… password=已配置(16位)`，
+再添加职员 → `emailSent=True`，邮件进本地收件箱 ✓。
+若没配密码，启动日志会直接写 `password=（空！邮件会发送失败，请配置 SMTP_PASS）`。
+
 ## 待用户在生产环境执行（真正修邮件）
 
 1. Google 账号 `kunzzsup@gmail.com` → 安全性 → 两步验证（必须开）→ **应用密码**：

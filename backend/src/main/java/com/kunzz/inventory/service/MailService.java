@@ -22,6 +22,29 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
+    /**
+     * 启动时把 SMTP_PASS 里的空白字符去掉。
+     * Google 显示的应用密码是「4 组 4 位、带空格」（abcd efgh ijkl mnop），复制到环境文件里很容易连空格一起带上，
+     * 从 Windows 复制还可能带一个回车 —— 这些都算进密码 → Gmail 直接回 535（密码被拒），
+     * 但报错信息看不出是"多了个空格"。这里统一清掉，并把过程记进日志。
+     */
+    @jakarta.annotation.PostConstruct
+    void trimMailPassword() {
+        if (mailSender instanceof org.springframework.mail.javamail.JavaMailSenderImpl impl) {
+            String raw = impl.getPassword();
+            if (raw != null && !raw.isEmpty()) {
+                String cleaned = raw.replaceAll("\\s", "");
+                if (!cleaned.equals(raw)) {
+                    log.warn("[MailService] SMTP_PASS 里含空格/换行，已自动去掉（Gmail 应用密码是 16 位、无空格）");
+                    impl.setPassword(cleaned);
+                }
+            }
+            log.info("[MailService] 邮件发送配置：host={} port={} user={} password={}",
+                    impl.getHost(), impl.getPort(), impl.getUsername(),
+                    (impl.getPassword() == null || impl.getPassword().isEmpty()) ? "（空！邮件会发送失败，请配置 SMTP_PASS）" : "已配置(" + impl.getPassword().length() + "位)");
+        }
+    }
+
     @Value("${app.base-url:http://localhost:5174}")
     private String baseUrl;
 
