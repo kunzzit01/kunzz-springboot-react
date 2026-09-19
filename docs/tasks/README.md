@@ -60,3 +60,4 @@
 | 2026-09-19-remark-page-system-perms | 已完成 | 货品备注页补上「系统权限」：只勾 J1 的账号进不去中央（前端过滤+自动跳转，后端也拦） | main |
 | 2026-09-19-products-overview-single-system | 已完成 | 货品种类：只有一间分店权限不显示「总览」；顺带修「权限到达前先拉全量、旧响应覆盖新数据」的越权竞态 | main |
 | 2026-09-19-products-overview-masked-edit | 已完成 | 总览打码行放开编辑（保存不发 system_assign，别家分配不受影响）；4 套文本按权限收敛 +「另有中央/J3」标记；新增行必选分配 | main |
+| 2026-09-19-approve-btn-wrap | 已完成 | 修「批准」按钮在窄窗口被竖着折成两行：按钮 nowrap + 状态列改固定 88px；只改 CSS | main |

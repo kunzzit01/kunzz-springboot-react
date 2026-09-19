@@ -169,7 +169,9 @@
 /* 9/3：位次列仅中央/J1/J2/J3 视图显示（has-pos）：前 10 列沿用上方原比例，只补 11/12/13 列——
    位次窄列、状态同原第11列、操作同原第12列；总览 12 列完全走原规则。fixed 下 min-width 无效必须用 width */
 .sp-root .excel-table.has-pos th:nth-child(11), .sp-root .excel-table.has-pos td:nth-child(11) { width: 4.5%; }
-.sp-root .excel-table.has-pos th:nth-child(12), .sp-root .excel-table.has-pos td:nth-child(12) { width: 8%; }
+/* 状态列给固定宽度：状态列要放「√ 批准」/「待批准」，百分比在窄窗口下会缩到放不下 → 按钮文字折成两行
+   （9/19 用户截图反馈）；与操作列 90px 同一套路，够放按钮又不占地方 */
+.sp-root .excel-table.has-pos th:nth-child(12), .sp-root .excel-table.has-pos td:nth-child(12) { width: 88px; }
 .sp-root .excel-table.has-pos th:nth-child(13), .sp-root .excel-table.has-pos td:nth-child(13) { width: 90px; }
 .sp-root .excel-table th {
   background: #636363; color: white;
@@ -205,7 +207,8 @@
 .sp-root .excel-table th:nth-child(8), .sp-root .excel-table td:nth-child(8) { width: 7%; }
 .sp-root .excel-table th:nth-child(9), .sp-root .excel-table td:nth-child(9) { width: 8%; }
 .sp-root .excel-table th:nth-child(10), .sp-root .excel-table td:nth-child(10) { width: 9%; }
-.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 8%; }
+/* 第 11 列：总览下是「批准状态」（放按钮 → 固定宽度，见上方说明），系统页下是「位次」（被 has-pos 规则覆盖成 4.5%） */
+.sp-root .excel-table th:nth-child(11), .sp-root .excel-table td:nth-child(11) { width: 88px; }
 .sp-root .excel-table th:nth-child(12), .sp-root .excel-table td:nth-child(12) { width: 90px; }
 /* 单价列：数字右对齐 + 等宽可读性（只读/编辑一致） */
 .sp-root .excel-table td:nth-child(5) .excel-input { text-align: right; padding-right: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -241,6 +244,8 @@
   background: #10b981; color: white; border: none; border-radius: 6px;
   padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;
+  /* 状态列窄的时候不要竖着折成两行（截图反馈）；列宽见下面 nth-child(11)/(12) 的固定宽度 */
+  white-space: nowrap;
 }
 .sp-root .approve-btn:hover { background: #059669; transform: translateY(-1px); }
 .sp-root .approve-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
