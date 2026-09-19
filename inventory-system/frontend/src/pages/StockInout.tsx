@@ -2016,7 +2016,7 @@ export default function StockInout() {
                     <td><input className="table-input" placeholder="备注" value={nr.remark} onChange={(e) => patchNew(nr.key, { remark: e.target.value })} /></td>
                     <td className="created-user">-</td>
                     <td>
-                      <button className="action-btn save-btn" onClick={() => saveNewRows()} title={saving ? '保存中...' : '保存'} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
+                      <button className="action-btn save-btn" onClick={() => saveNewRows([nr.key])} title={saving ? '保存中...' : '保存这一行'} disabled={saving}><i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-save')} /></button>
                       <button className="action-btn delete-btn" onClick={() => removeNew(nr.key)} title="取消"><i className="fas fa-times" /></button>
                     </td>
                   </tr>
