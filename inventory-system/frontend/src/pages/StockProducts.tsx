@@ -23,6 +23,8 @@ interface ProductRow {
   freezer_category?: string
   /** 总览用：各系统各自的单价/冰箱分类只读文本（后端拼好：4 套相同给一个值，否则「中央 x · J1 y …」） */
   price_by_system?: string
+  /** 同上但单价带 RM 单位（悬浮提示用） */
+  price_by_system_tip?: string
   freezer_by_system?: string
   /** 位次：同冰箱分类内排序（0/空 = 未设置；总库存排序用，货品资料可编辑） */
   freezer_position?: number | string | null
@@ -482,17 +484,12 @@ export default function StockProducts() {
     return system === 'overview' ? `${body}\n各系统各自的单价：到中央/J1/J2/J3 页面修改` : body
   }
 
-  /** 总览：单价那一格的悬浮提示（列窄会被截断，悬浮看全：各系统完整文本 + 最近改价） */
-  const overviewPriceTip = (r: ProductRow) => {
-    const hit = priceLogLatest[(r.product_name || '').trim()]
-    const log = hit
-      ? `最近改价（中央）: ${fmtDmy(hit.date)} RM${hit.price.toFixed(2)}${hit.by ? `（${hit.by}）` : ''}`
-      : null
-    return [`各系统单价：${r.price_by_system || '-'}`, log, '要修改：切到中央/J1/J2/J3 页面'].filter(Boolean).join('\n')
-  }
+  /** 总览：单价那一格的悬浮提示（列窄会被截断，悬浮看全；只显示有权限系统的值 + RM 单位） */
+  const overviewPriceTip = (r: ProductRow) =>
+    `各系统单价：${r.price_by_system_tip || r.price_by_system || '-'}`
   /** 总览：冰箱分类那一格的悬浮提示（同上） */
   const overviewFreezerTip = (r: ProductRow) =>
-    `各系统冰箱分类：${r.freezer_by_system || '-'}\n要修改：切到中央/J1/J2/J3 页面`
+    `各系统冰箱分类：${r.freezer_by_system || '-'}`
 
   // kwArg/exactArg：防抖/切模式时直传最新值，避免旧渲染闭包读到上一拍的关键字（搜索慢一拍 bug）
   // keepMissingArg：列表里已没有的行，其编辑草稿保留还是丢弃 —— 默认「搜索过滤中才保留」；

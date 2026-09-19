@@ -205,14 +205,18 @@ public class StockProductService {
         }
         for (Map<String, Object> item : items) {
             Map<String, Map<String, Object>> per = byData.get(item.get("id"));
-            item.put("price_by_system", joinBySystem(per, "price", allowedSystems));
-            item.put("freezer_by_system", joinBySystem(per, "freezerCategory", allowedSystems));
+            item.put("price_by_system", joinBySystem(per, "price", allowedSystems, false));
+            // 悬浮提示用：单价带 RM 单位（单元格里不带，列头已写 单价(RM)，短一点不容易被截断）
+            item.put("price_by_system_tip", joinBySystem(per, "price", allowedSystems, true));
+            item.put("freezer_by_system", joinBySystem(per, "freezerCategory", allowedSystems, false));
         }
     }
 
     /** 「各系统」值拼成一行：可见的系统完全一样（含全空）→ 只给一个值；否则「J1 x · J2 -」；
-     *  allowedSystems 非空时只拼这些系统（用户只关心自己的分店；不显示也不提示无权限系统的值） */
-    private String joinBySystem(Map<String, Map<String, Object>> per, String key, List<String> allowedSystems) {
+     *  allowedSystems 非空时只拼这些系统（用户只关心自己的分店；不显示也不提示无权限系统的值）；
+     *  withUnit = 单价前加「RM 」（只给悬浮提示用） */
+    private String joinBySystem(Map<String, Map<String, Object>> per, String key,
+                                List<String> allowedSystems, boolean withUnit) {
         String[] sysKeys = {"central", "j1", "j2", "j3"};
         String[] labels = {"中央", "J1", "J2", "J3"};
         List<String> vals = new ArrayList<>();
@@ -227,12 +231,18 @@ public class StockProductService {
         if (vals.isEmpty()) return "";
         boolean allSame = true;
         for (String v : vals) if (!v.equals(vals.get(0))) { allSame = false; break; }
-        if (allSame) return vals.get(0);
+        if (allSame) return unit(key, vals.get(0), withUnit);
         List<String> parts = new ArrayList<>();
         for (int i = 0; i < vals.size(); i++) {
-            parts.add(shown.get(i) + " " + (vals.get(i).isEmpty() ? "-" : vals.get(i)));
+            parts.add(shown.get(i) + " " + (vals.get(i).isEmpty() ? "-" : unit(key, vals.get(i), withUnit)));
         }
         return String.join(" · ", parts);
+    }
+
+    /** 单价（price）且需要带单位时 → 「RM 2.667」；空值/其它字段原样 */
+    private String unit(String key, String v, boolean withUnit) {
+        if (!withUnit || !"price".equals(key) || v == null || v.isEmpty()) return v;
+        return "RM " + v;
     }
 
     /** 单价去尾零（2.67000 → 2.67；4~5 位小数原样保留）；其它字段原样 */
