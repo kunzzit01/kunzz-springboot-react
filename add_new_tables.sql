@@ -372,3 +372,22 @@ FROM information_schema.COLUMNS
 WHERE table_schema='u690174784_kunzz' AND COLUMN_NAME='updated_by'
   AND TABLE_NAME IN ('stockinout_data','j1stockedit_data','j2stockedit_data','j3stockedit_data','stock_data')
 ORDER BY TABLE_NAME;
+
+-- 12) 货品停用（inactive）开关（2026-09-19）
+--     需求：不想再出现在「进出货的货品下拉 / 总库存 / 手机版出货列表」的货品可以停用；
+--     还有库存（当前系统净库存 ≠ 0）的不允许停用。
+--     按系统各存一份（与单价/冰箱分类/位次同一套）：停用只需在对应系统的页面操作。
+--     **没有这一行 = 启用**（所以不用迁移，历史数据默认全部启用）。
+SET @act_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE table_schema='u690174784_kunzz' AND table_name='stock_data_system' AND column_name='active');
+SET @ddl := IF(@act_col = 0,
+  'ALTER TABLE stock_data_system ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 COMMENT ''是否启用（0=停用：不进进出货下拉/总库存/手机版）'' AFTER price',
+  'SELECT ''stock_data_system.active 已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 验证（应出现 1 行，类型 tinyint(1)，默认 1）
+SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, COLUMN_DEFAULT
+FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz' AND TABLE_NAME='stock_data_system' AND COLUMN_NAME='active';

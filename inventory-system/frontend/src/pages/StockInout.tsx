@@ -389,7 +389,7 @@ export default function StockInout() {
 
   useEffect(() => {
     // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统 generateComboboxOptions）
-    getProducts().then((list) => setProductOptions((list || []).map((p: any) => {
+    getProducts(system).then((list) => setProductOptions((list || []).map((p: any) => {
       const name = String(p?.product_name || '')
       const sup = String(p?.supplier || '').trim()
       const code = String(p?.product_code || '').trim()
@@ -397,7 +397,7 @@ export default function StockInout() {
       return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name, code }
     }))).catch(() => {})
     // 编号下拉：显示 CODE (NAME)（对齐旧系统）
-    getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => {
+    getCodeNumbers(system).then((list) => setCodeOptions((list || []).map((c: any) => {
       const code = String(c?.code_number || '')
       const name = String(c?.product_name || '').trim()
       return { value: code, label: name ? `${code} (${name})` : code }
@@ -882,7 +882,7 @@ export default function StockInout() {
     // 出货量在进入时就抓下来：后面有 await，期间实时刷新会重渲染表格，事后再读 DOM/state 可能已空
     const qtyAtPick = pickRowOutQty(key, row)
     try {
-      const list = await getProducts()
+      const list = await getProducts(system)
       // 同名多供应商（一个供应商一行）时按所点那条的编号定位，否则退回第一行（老行为）
       const wantCode = String(hintCode || row?.codeNumber || '').toUpperCase()
       const byName = (list || []).filter((p: any) => p.product_name === name)
@@ -945,7 +945,7 @@ export default function StockInout() {
     const row = newRowsRef.current.find(r => r.key === key)
     const qtyAtPick = pickRowOutQty(key, row)
     try {
-      const list = await getProducts()
+      const list = await getProducts(system)
       const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
       const name = hit?.product_name ? String(hit.product_name) : (row?.productName || '')
       if (!name) return
@@ -1028,7 +1028,7 @@ export default function StockInout() {
   const onEditPickProduct = async (id: number, name: string, hintCode?: string) => {
     if (!name) return
     try {
-      const list = await getProducts()
+      const list = await getProducts(system)
       // 同名多供应商时按所点那条的编号定位（与新增行同口径），否则退回第一行
       const wantCode = String(hintCode || (editDrafts[id] || {}).codeNumber || '').toUpperCase()
       const byName = (list || []).filter((p: any) => p.product_name === name)
@@ -1041,7 +1041,7 @@ export default function StockInout() {
   const onEditPickCode = async (id: number, code: string) => {
     if (!code) return
     try {
-      const list = await getProducts()
+      const list = await getProducts(system)
       const hit = (list || []).find((p: any) => String(p.product_code || '').toUpperCase() === String(code).toUpperCase())
       if (!hit?.product_name) return
       await applyProductToEdit(id, hit, String(hit.product_name), code)

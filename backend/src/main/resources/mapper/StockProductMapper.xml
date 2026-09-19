@@ -12,9 +12,10 @@
         <choose>
             <when test="systemAssign != null and systemAssign != ''">
                ss.freezer_category AS freezer_category, ss.freezer_position AS freezer_position, ss.price AS price,
+               ss.active AS active,
             </when>
             <otherwise>
-               NULL AS freezer_category, NULL AS freezer_position, NULL AS price,
+               NULL AS freezer_category, NULL AS freezer_position, NULL AS price, NULL AS active,
             </otherwise>
         </choose>
                d.created_at, d.updated_at, d.updated_by
@@ -93,6 +94,16 @@
     <update id="approveRow">
         UPDATE stock_data SET approver = #{approver} WHERE id = #{id}
     </update>
+
+    <!-- 某货品在某系统的净库存（停用前校验用）。口径与「总库存」一致：台账表 deleted_at IS NULL；
+         货品名匹配兼容 HTML 实体（&amp;），与 availableStockCentral 同款 -->
+    <select id="netStockByName" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(CASE WHEN in_quantity &gt; 0 THEN in_quantity ELSE 0 END), 0)
+             - COALESCE(SUM(CASE WHEN out_quantity &gt; 0 THEN out_quantity ELSE 0 END), 0)
+        FROM ${table}
+        WHERE deleted_at IS NULL
+          AND REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+    </select>
 
     <delete id="deleteRow">
         DELETE FROM stock_data WHERE id = #{id}

@@ -1,15 +1,18 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.HtmlText;
+import com.kunzz.inventory.mapper.StockDataSystemMapper;
 import com.kunzz.inventory.mapper.StockEditMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 进出货辅助选项（对齐线上 stockeditapi.php）
@@ -20,28 +23,51 @@ import java.util.Map;
 public class StockEditService {
 
     private final StockEditMapper stockEditMapper;
+    private final StockDataSystemMapper stockDataSystemMapper;
+
+    /**
+     * 某系统的停用货品集合（key = 货品名 + \u0000 + 编号）。
+     * 规则：该「名字+编号」下**所有**货品行都停用才算停用（同名多供应商只要还有一行启用就仍可用）。
+     * system 为空/不认识 → 返回空集（不过滤，保持旧行为）。
+     */
+    private Set<String> inactiveKeys(String system) {
+        Set<String> out = new HashSet<>();
+        if (system == null || system.isBlank()) return out;
+        String sys = system.trim().toLowerCase();
+        if (!List.of("central", "j1", "j2", "j3").contains(sys)) return out;
+        for (Map<String, Object> k : stockDataSystemMapper.inactiveKeys(sys)) {
+            out.add(HtmlText.decode(str(k.get("name"))) + "\u0000" + str(k.get("code")));
+        }
+        return out;
+    }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> codeNumbers() {
+    public List<Map<String, Object>> codeNumbers(String system) {
+        Set<String> inactive = inactiveKeys(system);
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : stockEditMapper.codeNumbers()) {
+            String name = HtmlText.decode(str(r.get("product_name")));
+            if (inactive.contains(name + "\u0000" + str(r.get("code_number")))) continue; // 停用货品不进下拉
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("code_number", str(r.get("code_number")));
             // 货品名解码：与货品种类页/总库存页口径一致（老库有 &amp; 实体，编码/解码两套名字会导致下拉匹配不上）
-            m.put("product_name", HtmlText.decode(str(r.get("product_name"))));
+            m.put("product_name", name);
             out.add(m);
         }
         return out;
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> products() {
+    public List<Map<String, Object>> products(String system) {
+        Set<String> inactive = inactiveKeys(system);
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : stockEditMapper.products()) {
+            String name = HtmlText.decode(str(r.get("product_name")));
+            if (inactive.contains(name + "\u0000" + str(r.get("product_code")))) continue; // 停用货品不进下拉
             Map<String, Object> m = new LinkedHashMap<>();
             // 货品名/供应商解码：货品种类页（StockProductService）本来就是解码后的值，
             // 进出货这里不解码会出现「同一条货品两套名字」（如 L&amp;L FROZEN vs L&L FROZEN）→ 下拉里认不出、搜不到
-            m.put("product_name", HtmlText.decode(str(r.get("product_name"))));
+            m.put("product_name", name);
             m.put("product_code", str(r.get("product_code")));
             m.put("supplier", HtmlText.decode(str(r.get("supplier"))));
             // 对齐旧系统 code_by_product：自动补全规格/类型用

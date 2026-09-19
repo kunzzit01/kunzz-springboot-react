@@ -53,6 +53,12 @@ public class StockProductService {
             item.put("system_assign", decodeHtml(str(r.get("system_assign"))));
             item.put("freezer_category", decodeHtml(str(r.get("freezer_category"))));
             item.put("freezer_position", r.get("freezer_position"));
+            // 启用/停用（按系统）：没有该系统的行 = 启用（1）；总览不显示这一列，给 1 即可。
+            // 注意 TINYINT(1) 被 MyBatis 读成 Boolean（不是数字），所以按字符串判断，别强转 Number
+            Object act = r.get("active");
+            item.put("active", act == null ? 1
+                    : (Boolean.TRUE.equals(act) || "1".equals(String.valueOf(act))
+                       || "true".equalsIgnoreCase(String.valueOf(act)) ? 1 : 0));
             // 创建/编辑信息（前端悬浮提示显示：创建时间 + 编辑人 updated_by）
             item.put("created_at", fmtStamp(r.get("created_at")));
             item.put("updated_at", fmtStamp(r.get("updated_at")));
@@ -136,9 +142,10 @@ public class StockProductService {
         if (body.containsKey("approver"))      r.put("approver", str(body.get("approver")));
         if (body.containsKey("system_assign")) r.put("systemAssign", str(body.get("system_assign")));
 
-        // 单价/冰箱分类/位次 走 stock_data_system（按系统）；只携带这三个字段时也要照常处理
+        // 单价/冰箱分类/位次/启用 走 stock_data_system（按系统）；只携带这几个字段时也要照常处理
         boolean perSystem = body.containsKey("price")
-                || body.containsKey("freezer_category") || body.containsKey("freezer_position");
+                || body.containsKey("freezer_category") || body.containsKey("freezer_position")
+                || body.containsKey("active");
         if (r.isEmpty() && !perSystem) return Map.of("success", true);
         // 编辑人：真的改动了才记（登录用户；新增时没有编辑人）
         if (operator != null && !operator.isBlank()) r.put("updatedBy", operator);
@@ -152,6 +159,10 @@ public class StockProductService {
         Object beforeId = before.get("id");
         Double oldPriceBefore = (beforeId instanceof Number bn && logSys != null)
                 ? stockDataSystemMapper.priceOf(bn.intValue(), logSys) : null;
+        // 停用（active=0）前先查库存：还有库存不给停（用户要求；按当前系统算）
+        if (body.containsKey("active") && Integer.valueOf(0).equals(parseActive(body.get("active")))) {
+            assertNoStockBeforeDeactivate(before, logSys);
+        }
         if (!r.isEmpty()) stockProductMapper.updateRow(id, r);
         writePerSystemFields(id, body);
         // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
@@ -181,17 +192,42 @@ public class StockProductService {
         return (v.equals("central") || v.equals("j1") || v.equals("j2") || v.equals("j3")) ? v : null;
     }
 
-    /** 把请求里携带的「按系统」三件套写进 stock_data_system；没带 system 或值为 null 的字段都不写 */
+    /** 把请求里携带的「按系统」字段（冰箱分类/位次/单价/启用）写进 stock_data_system；没带 system 或值为 null 的字段都不写 */
     private void writePerSystemFields(Integer dataId, Map<String, Object> body) {
         if (dataId == null) return;
         String system = explicitSystem(body.get("system"));
         if (system == null) return;
         Object fc = body.get("freezer_category"), fp = body.get("freezer_position"), pr = body.get("price");
-        if (fc == null && fp == null && pr == null) return;
+        Object ac = body.get("active");
+        if (fc == null && fp == null && pr == null && ac == null) return;
         stockDataSystemMapper.upsert(dataId, system,
                 fc != null ? str(fc) : null,
                 fp != null ? parsePos(fp) : null,
-                pr != null ? cleanPrice(pr) : null);
+                pr != null ? cleanPrice(pr) : null,
+                ac != null ? parseActive(ac) : null);
+    }
+
+    /** 启用标记解析：true/1/yes → 1；其余（含 false/0）→ 0；null → null（不写） */
+    private Integer parseActive(Object v) {
+        if (v == null) return null;
+        String s = String.valueOf(v).trim().toLowerCase();
+        return ("true".equals(s) || "1".equals(s) || "yes".equals(s)) ? 1 : 0;
+    }
+
+    /**
+     * 停用前的库存校验：当前系统净库存 ≠ 0 → 拒绝（口径与「总库存」一致：台账表 deleted_at IS NULL）。
+     * 用户要求"该货品还有货品就无法 inactive"。
+     */
+    private void assertNoStockBeforeDeactivate(Map<String, Object> before, String system) {
+        if (system == null) throw new BusinessException("请在具体系统页面（中央/J1/J2/J3）操作停用");
+        String name = str(before.get("product_name"));
+        if (name == null || name.isBlank()) return;
+        String table = "central".equals(system) ? "stockinout_data" : system + "stockedit_data";
+        java.math.BigDecimal net = stockProductMapper.netStockByName(table, name);
+        if (net != null && net.signum() != 0) {
+            throw new BusinessException("该货品在 " + system.toUpperCase() + " 还有库存 "
+                    + net.stripTrailingZeros().toPlainString() + "，清完库存后才能停用");
+        }
     }
 
     /** 总览用：给每行补「各系统」的单价/冰箱分类只读文本（前端在单价、冰箱分类列直接展示）

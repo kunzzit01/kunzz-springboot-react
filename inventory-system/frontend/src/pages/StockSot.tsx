@@ -256,13 +256,13 @@ export default function StockSot() {
   useRealtime('*', () => load(), 1000, 3000)
   useEffect(() => {
     // 货品下拉：显示 NAME (SUPPLIER)，无供应商回退 NAME (CODE)（对齐旧系统）
-    getProducts().then((list) => setProductOptions((list || []).map((p: any) => {
+    getProducts(system).then((list) => setProductOptions((list || []).map((p: any) => {
       const name = String(p?.product_name || '')
       const sup = String(p?.supplier || '').trim()
       const code = String(p?.product_code || '').trim()
       return { value: name, label: sup ? `${name} (${sup})` : code ? `${name} (${code})` : name }
     }))).catch(() => {})
-    getCodeNumbers().then((list) => setCodeOptions((list || []).map((c: any) => c.code_number))).catch(() => {})
+    getCodeNumbers(system).then((list) => setCodeOptions((list || []).map((c: any) => c.code_number))).catch(() => {})
   }, [])
 
   // 回到顶部按钮
@@ -344,7 +344,7 @@ export default function StockSot() {
   const onPickProduct = async (key: string, idx: number, name: string, isNew = true) => {
     if (!name) return
     try {
-      const list = await getProducts()
+      const list = await getProducts(system)
       const hit = (list || []).find((p: any) => p.product_name === name)
       const patch: Partial<SotRow> = {}
       if (hit?.product_code) patch.productCode = hit.product_code

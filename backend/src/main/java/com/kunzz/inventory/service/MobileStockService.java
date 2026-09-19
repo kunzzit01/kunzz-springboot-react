@@ -32,6 +32,7 @@ public class MobileStockService {
 
     private final MobileStockMapper mobileStockMapper;
     private final StockEditMapper stockEditMapper;
+    private final com.kunzz.inventory.mapper.StockDataSystemMapper stockDataSystemMapper;
 
     private static final BigDecimal EPS = new BigDecimal("0.0001");
 
@@ -70,7 +71,16 @@ public class MobileStockService {
     public Map<String, Object> totals(String system) {
         String sys = sys(system);
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("items", mobileStockMapper.phoneStockList(editTable(sys), sys));
+        List<Map<String, Object>> items = mobileStockMapper.phoneStockList(editTable(sys), sys);
+        // 停用货品不进手机版出货列表（按系统；key = 货品名 + 编号，该组合下所有货品行都停用才算停用）
+        java.util.Set<String> inactive = new java.util.HashSet<>();
+        for (Map<String, Object> k : stockDataSystemMapper.inactiveKeys(sys)) {
+            inactive.add(keyPart(k.get("name")) + "\u0000" + keyPart(k.get("code")));
+        }
+        if (!inactive.isEmpty()) {
+            items.removeIf(it -> inactive.contains(keyPart(it.get("product_name")) + "\u0000" + keyPart(it.get("code_number"))));
+        }
+        out.put("items", items);
         out.put("summaryCount", mobileStockMapper.summaryCount(editTable(sys)));
         return out;
     }
@@ -411,6 +421,9 @@ public class MobileStockService {
     }
 
     private String str(Object v) { return v == null ? null : String.valueOf(v); }
+
+    /** 停用名单 key 用：null/空白 → 空串（两侧口径一致，避免 "null" 与 "" 对不上） */
+    private String keyPart(Object v) { String s = str(v); return s == null ? "" : s.trim(); }
 
     private Integer toInt(Object v) {
         if (v == null) return null;

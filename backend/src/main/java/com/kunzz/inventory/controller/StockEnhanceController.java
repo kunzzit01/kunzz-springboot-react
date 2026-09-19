@@ -126,6 +126,8 @@ public class StockEnhanceController {
     @PutMapping("/products/{id}")
     public ApiResponse<Map<String, Object>> updateProduct(@PathVariable Integer id, @RequestBody Map<String, Object> body,
                                                           Authentication authentication) {
+        // 启用/停用（active）需要「批准」权限：申请权限的人只能加货品、不能自己停用（2026-09-19 用户要求）
+        if (body.containsKey("active")) assertCanApprove(authentication, "停用/启用货品");
         // 改价记录里的「谁改的」用登录态：请求体里的 applicant 是货品申请人（当初建这条记录的人），不是改价人
         ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.update(id, body, operatorOf(authentication)));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
@@ -142,19 +144,19 @@ public class StockEnhanceController {
     /** 删除记录 */
     @DeleteMapping("/products/{id}")
     public ApiResponse<Map<String, Object>> deleteProduct(@PathVariable Integer id, Authentication authentication) {
-        assertCanApprove(authentication); // 删除货品需要「批准」权限（与前端一致，防绕过界面直接调接口）
+        assertCanApprove(authentication, "删除货品"); // 与前端一致，防绕过界面直接调接口
         ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.delete(id));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
     }
 
     /** 需要「批准」权限（职员管理→权限设定→库存→批准）；没配置过权限的老账号/demo 默认放行，与其它页一致 */
-    private void assertCanApprove(Authentication authentication) {
+    private void assertCanApprove(Authentication authentication, String action) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User u)) return; // 未登录由 SecurityConfig 拦截
         Map<String, Object> perms = staffService.stockPerms(u.getId());
         if (!Boolean.TRUE.equals(perms.get("configured"))) return;
         if (!Boolean.TRUE.equals(perms.get("canApprove"))) {
-            throw new BusinessException(403, "没有删除货品的权限（需要「批准」权限，见 职员管理→权限设定→库存）");
+            throw new BusinessException(403, "没有" + action + "的权限（需要「批准」权限，见 职员管理→权限设定→库存）");
         }
     }
 
@@ -171,14 +173,14 @@ public class StockEnhanceController {
 
     /** 编号列表（下拉） */
     @GetMapping("/options/codenumbers")
-    public ApiResponse<List<Map<String, Object>>> codeNumbers() {
-        return ApiResponse.ok(stockEditService.codeNumbers());
+    public ApiResponse<List<Map<String, Object>>> codeNumbers(@RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockEditService.codeNumbers(system));
     }
 
-    /** 产品列表（下拉，含供应商） */
+    /** 产品列表（下拉，含供应商）。system 非空时过滤掉该系统下已停用的货品 */
     @GetMapping("/options/products")
-    public ApiResponse<List<Map<String, Object>>> products() {
-        return ApiResponse.ok(stockEditService.products());
+    public ApiResponse<List<Map<String, Object>>> products(@RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockEditService.products(system));
     }
 
     /** 收货人列表（下拉） */

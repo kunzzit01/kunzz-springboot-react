@@ -21,7 +21,11 @@ public interface StockDataSystemMapper {
                @Param("system") String system,
                @Param("category") String category,
                @Param("pos") Integer pos,
-               @Param("price") Double price);
+               @Param("price") Double price,
+               @Param("active") Integer active);
+
+    /** 某系统的停用名单（货品名 + 编号）：该名字+编号的所有行都停用才算停用；没有行的货品 = 启用 */
+    List<Map<String, Object>> inactiveKeys(@Param("system") String system);
 
     /** 某系统下所有货品的 [货品名, 冰箱分类, 位次]（总库存「冰箱分类+排序」用；按 stock_data.id 升序，同名取第一条） */
     List<Map<String, Object>> freezerRows(@Param("system") String system);

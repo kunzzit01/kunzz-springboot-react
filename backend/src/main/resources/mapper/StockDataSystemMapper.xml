@@ -4,14 +4,26 @@
 
     <!-- 按系统写入：只更新调用方传了值（非 null）的列，未携带的字段保持原样 -->
     <insert id="upsert" parameterType="map">
-        INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price)
-        VALUES (#{dataId}, #{system}, #{category}, #{pos}, #{price})
+        INSERT INTO stock_data_system (stock_data_id, stock_system, freezer_category, freezer_position, price, active)
+        VALUES (#{dataId}, #{system}, #{category}, #{pos}, #{price}, #{active})
         ON DUPLICATE KEY UPDATE
             id = id
         <if test="category != null">, freezer_category = #{category}</if>
         <if test="pos != null">, freezer_position = #{pos}</if>
         <if test="price != null">, price = #{price}</if>
+        <if test="active != null">, active = #{active}</if>
     </insert>
+
+    <!-- 停用名单（货品名 + 编号）：某系统下**该名字+编号的所有货品行都停用**才算停用。
+         没有 stock_data_system 行的货品 = 启用（COALESCE 兜底），所以历史数据默认全部启用 -->
+    <select id="inactiveKeys" resultType="java.util.LinkedHashMap">
+        SELECT d.product_name AS name, d.product_code AS code
+        FROM stock_data d
+        LEFT JOIN stock_data_system s
+               ON s.stock_data_id = d.id AND s.stock_system = #{system}
+        GROUP BY d.product_name, d.product_code
+        HAVING MIN(COALESCE(s.active, 1)) = 0
+    </select>
 
     <!-- 某系统下每个货品的冰箱分类/位次（总库存排序用）。
          ORDER BY d.id：同一货品名有多条台账时取 id 最小那条，与 9/3 以来的旧行为一致 -->

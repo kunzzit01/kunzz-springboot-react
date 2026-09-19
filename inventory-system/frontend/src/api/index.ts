@@ -60,6 +60,8 @@ export interface StockProductRow {
   freezer_category?: string
   /** 保存时带上「当前页所属系统」：单价/冰箱分类/位次按系统各存一份（2026-09-18）。总览不传 */
   system?: string
+  /** 启用/停用（按系统，2026-09-19）：1=启用 0=停用；停用后不进进出货下拉/总库存/手机版。改它需要「批准」权限 */
+  active?: number
   /** 总览只读展示用：各系统各自的单价/冰箱分类文本（后端拼好） */
   price_by_system?: string
   freezer_by_system?: string
@@ -113,10 +115,11 @@ export const getPriceChangeLogLatest = (system?: string) =>
   http.get<unknown, PriceLogLatest[]>('/stock/products/price-log-latest', { params: { system } })
 
 // ---------- 进出货辅助选项（stockeditapi.php） ----------
-export const getCodeNumbers = () =>
-  http.get<unknown, { code_number: string; product_name: string }[]>('/stock/options/codenumbers')
-export const getProducts = () =>
-  http.get<unknown, { product_name: string; product_code: string; supplier?: string; specification?: string; category?: string }[]>('/stock/options/products')
+// system 传当前页所属系统：后端会过滤掉该系统下已停用（inactive）的货品
+export const getCodeNumbers = (system?: string) =>
+  http.get<unknown, { code_number: string; product_name: string }[]>('/stock/options/codenumbers', { params: { system } })
+export const getProducts = (system?: string) =>
+  http.get<unknown, { product_name: string; product_code: string; supplier?: string; specification?: string; category?: string }[]>('/stock/options/products', { params: { system } })
 export const getShippers = () =>
   http.get<unknown, string[]>('/stock/options/shippers')
 export const getPriceBatches = (productName: string, codeNumber?: string, system?: string) =>

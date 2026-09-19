@@ -69,3 +69,4 @@
 | 2026-09-19-vendor-selfhost | 已完成 | jQuery/Chart.js/jspdf+autotable/html2canvas/Font Awesome 全部自托管到 public/vendor，不再依赖外网 CDN | main |
 | 2026-09-19-css-animation-fix | 已完成 | 修 83 处被污染的关键帧（十几个页面的动画其实一直是死的）+ logo 路径 + sidebar 多余大括号；构建 CSS 警告清零 | main |
 | 2026-09-19-products-delete-needs-approve | 已完成 | 货品种类的删除按钮只给「批准」权限（申请权限看不到）；后端 DELETE 也加校验（403） | main |
+| 2026-09-19-products-inactive | 已完成 | 货品种类加「启用/停用」（按系统）：停用后不进进出货下拉/总库存/手机版；有库存不让停用；需批准权限；补丁第 12 节加列 | main |

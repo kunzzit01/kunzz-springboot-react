@@ -35,6 +35,9 @@ public interface StockProductMapper {
     /** 批准记录（设置 approver） */
     int approveRow(@Param("id") Integer id, @Param("approver") String approver);
 
+    /** 某货品在某系统台账表里的净库存（停用前校验用；table 只允许 stockinout_data / jXstockedit_data） */
+    java.math.BigDecimal netStockByName(@Param("table") String table, @Param("productName") String productName);
+
     /** 删除记录 */
     int deleteRow(@Param("id") Integer id);
 }

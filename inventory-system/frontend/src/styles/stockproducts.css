@@ -171,8 +171,10 @@
 .sp-root .excel-table.has-pos th:nth-child(11), .sp-root .excel-table.has-pos td:nth-child(11) { width: 4.5%; }
 /* 状态列给固定宽度：状态列要放「√ 批准」/「待批准」，百分比在窄窗口下会缩到放不下 → 按钮文字折成两行
    （9/19 用户截图反馈）；与操作列 90px 同一套路，够放按钮又不占地方 */
-.sp-root .excel-table.has-pos th:nth-child(12), .sp-root .excel-table.has-pos td:nth-child(12) { width: 88px; }
-.sp-root .excel-table.has-pos th:nth-child(13), .sp-root .excel-table.has-pos td:nth-child(13) { width: 90px; }
+/* 12=启用（2026-09-19 新增的开关列，窄一点够放「启用/停用」两个字） */
+.sp-root .excel-table.has-pos th:nth-child(12), .sp-root .excel-table.has-pos td:nth-child(12) { width: 64px; }
+.sp-root .excel-table.has-pos th:nth-child(13), .sp-root .excel-table.has-pos td:nth-child(13) { width: 88px; }
+.sp-root .excel-table.has-pos th:nth-child(14), .sp-root .excel-table.has-pos td:nth-child(14) { width: 90px; }
 .sp-root .excel-table th {
   background: #636363; color: white;
   padding: clamp(4px, 0.42vw, 8px) clamp(6px, 0.63vw, 12px);
@@ -191,8 +193,8 @@
 .sp-root .excel-table tr:nth-child(even) { background-color: #f9fafb; }
 .sp-root .excel-table tr:hover { background-color: #f3f4f6; }
 /* 状态列色背景：已批准浅绿 / 待批准浅黄（总览 12 列 = 第11列；中央/分店 13 列 = 第12列） */
-.sp-root .excel-table tr.status-approved td:nth-child(11), .sp-root .excel-table.has-pos tr.status-approved td:nth-child(12) { background-color: #d1fae5 !important; }
-.sp-root .excel-table tr.status-pending td:nth-child(11), .sp-root .excel-table.has-pos tr.status-pending td:nth-child(12) { background-color: #fef3c7 !important; }
+.sp-root .excel-table tr.status-approved td:nth-child(11), .sp-root .excel-table.has-pos tr.status-approved td:nth-child(13) { background-color: #d1fae5 !important; }
+.sp-root .excel-table tr.status-pending td:nth-child(11), .sp-root .excel-table.has-pos tr.status-pending td:nth-child(13) { background-color: #fef3c7 !important; }
 /* 新行 / 编辑行（可编辑状态，浅绿/蓝色提示） */
 .sp-root .excel-table tr.new-row td { background-color: #f0fdf4 !important; }
 .sp-root .excel-table tr.editing-row td { background-color: #cde3ff !important; }
@@ -257,11 +259,22 @@
   background: #10b981; color: white; border: none; border-radius: 6px;
   padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
   display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;
-  /* 状态列窄的时候不要竖着折成两行（截图反馈）；列宽见下面 nth-child(11)/(12) 的固定宽度 */
+  /* 状态列窄的时候不要竖着折成两行（截图反馈）；列宽见下面 nth-child(11)/(13) 的固定宽度 */
   white-space: nowrap;
 }
 .sp-root .approve-btn:hover { background: #059669; transform: translateY(-1px); }
 .sp-root .approve-btn:disabled { background: #9ca3af; cursor: not-allowed; transform: none; }
+
+/* 启用/停用开关（货品种类·系统页）：默认灰（=点它去停用），已停用时绿色（=点它去启用） */
+.sp-root .active-btn {
+  background: #e5e7eb; color: #374151; border: none; border-radius: 6px;
+  padding: 4px 8px; font-size: 12px; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: all 0.2s;
+}
+.sp-root .active-btn:hover { background: #d1d5db; }
+.sp-root .active-btn.on { background: #10b981; color: #fff; }
+.sp-root .active-btn.on:hover { background: #059669; }
+.sp-root .active-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 .sp-root .delete-row-btn {
   background: #ef4444; color: white; border: none; border-radius: clamp(4px, 0.32vw, 6px);
   width: clamp(18px, 1.67vw, 32px); height: clamp(18px, 1.67vw, 32px);

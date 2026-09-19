@@ -28,6 +28,8 @@ interface ProductRow {
   freezer_by_system?: string
   /** 位次：同冰箱分类内排序（0/空 = 未设置；总库存排序用，货品资料可编辑） */
   freezer_position?: number | string | null
+  /** 启用/停用（按系统；1=启用，0=停用；没有该系统的行 = 启用） */
+  active?: number
   /** 新增行稳定标识：行增删/列表重载后仍能精确摘掉那一行（不能用下标，删行后下标会错位） */
   _key?: string
   /** 总览打码行（真实分配超出员工权限，只显示交集；只读防覆盖） */
@@ -198,6 +200,8 @@ export default function StockProducts() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
+  /** 正在切换启用/停用的行（防连点） */
+  const [activatingId, setActivatingId] = useState<number | null>(null)
   const [currentUser, setCurrentUser] = useState('')
   // 单价格的悬浮提示用：每货品最近一次改价（含改价人）——来自改价日志接口，按当前系统取
   const [priceLogLatest, setPriceLogLatest] = useState<Record<string, { date: string; price: number; by?: string }>>({})
@@ -769,6 +773,20 @@ export default function StockProducts() {
     finally { setApprovingId(null) }
   }
 
+  /** 启用/停用（按系统，需要「批准」权限）：停用后不进进出货下拉/总库存/手机版；有库存时后端会拒绝 */
+  const toggleActive = async (r: ProductRow) => {
+    if (!r.id || !canApprove) return
+    const next = Number(r.active ?? 1) === 0 // 当前是"已停用" → 这次是启用
+    if (!next && !window.confirm(`确定停用「${r.product_name}」吗？\n停用后它不再出现在进出货的货品下拉、总库存和手机版列表里。\n（还有库存时不能停用）`)) return
+    setActivatingId(r.id)
+    try {
+      await updateStockProduct(r.id, { active: next ? 1 : 0, system: currentSys.key })
+      await load()
+      showMsg(next ? `已启用「${r.product_name}」` : `已停用「${r.product_name}」`, 'success')
+    } catch (e: any) { showMsg(e?.response?.data?.message || (next ? '启用失败' : '停用失败'), 'error') }
+    finally { setActivatingId(null) }
+  }
+
   // ---- 快捷键（对齐进出货页：Ctrl+S 从最上面逐行保存、Ctrl+Shift+S 批量保存、Ctrl+A 新增一行） ----
   // 用 ref 存最新处理函数：监听器只挂一次，不因 rows/drafts 变化反复解绑（对齐 StockInout 做法）
   const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {})
@@ -1078,6 +1096,7 @@ export default function StockProducts() {
                   <th>系统分配</th>
                   <th>冰箱分类</th>
                   {system !== 'overview' && <th>位次</th>}
+                  {system !== 'overview' && <th title="停用后不出现在进出货的货品下拉、总库存和手机版列表（需要「批准」权限）">启用</th>}
                   <th>{statusColTitle}</th>
                   <th>操作</th>
                 </tr>
@@ -1208,6 +1227,25 @@ export default function StockProducts() {
                             : <input className="excel-input" readOnly value={r.freezer_position || ''} placeholder="未设置" />}
                         </td>
                       )}
+                      {system !== 'overview' && (
+                        <td>
+                          {/* 启用/停用（按系统，2026-09-19）：停用后不进进出货下拉 / 总库存 / 手机版。
+                              改这个需要「批准」权限（后端也校验）；还有库存时后端会拒绝并说明还剩多少 */}
+                          {Number(r.active ?? 1) === 0 ? (
+                            canApprove ? (
+                              <button className="active-btn on" onClick={() => toggleActive(r)} disabled={activatingId === id} title="点击重新启用（恢复出现在进出货下拉/总库存）">
+                                {activatingId === id ? '处理中…' : '启用'}
+                              </button>
+                            ) : <span style={{ color: '#9ca3af', fontWeight: 600, fontSize: 12 }}>已停用</span>
+                          ) : (
+                            canApprove ? (
+                              <button className="active-btn" onClick={() => toggleActive(r)} disabled={activatingId === id} title="停用后不再出现在进出货的货品下拉、总库存和手机版列表；有库存时不能停用">
+                                {activatingId === id ? '处理中…' : '停用'}
+                              </button>
+                            ) : <span style={{ color: '#6b7280', fontSize: 12 }}>启用</span>
+                          )}
+                        </td>
+                      )}
                       <td style={{ padding: 8 }}>
                         {r.approver ? (
                           <span style={{ color: '#065f46', fontWeight: 600 }}>已批准</span>
@@ -1242,7 +1280,7 @@ export default function StockProducts() {
                   )
                 })}
                 {!loading && rows.length === 0 && newRows.length === 0 && (
-                  <tr><td colSpan={12} style={{ padding: 40, color: '#6b7280' }}>暂无数据</td></tr>
+                  <tr><td colSpan={system === 'overview' ? 12 : 14} style={{ padding: 40, color: '#6b7280' }}>暂无数据</td></tr>
                 )}
               </tbody>
             </table>
