@@ -63,7 +63,7 @@ public class StockController {
                 if (o != null && String.valueOf(o).trim().toLowerCase().equals(sys)) return;
             }
         }
-        throw new BusinessException(403, "没有查看「" + sys.toUpperCase() + "」货品备注的权限");
+        throw new BusinessException(403, "没有查看「" + sys.toUpperCase() + "」的权限（职员管理→权限设定→库存）");
     }
 
     // ---------- 库存台账 ----------
@@ -174,14 +174,18 @@ public class StockController {
 
     /** 某系统全部在库货品 + 最低库存设置 */
     @GetMapping("/stock/minimum/products")
-    public ApiResponse<List<Map<String, Object>>> listMinimumProducts(@RequestParam(defaultValue = "central") String system) {
+    public ApiResponse<List<Map<String, Object>>> listMinimumProducts(@RequestParam(defaultValue = "central") String system,
+                                                                     Authentication authentication) {
+        assertSystemAllowed(authentication, system);
         return ApiResponse.ok(stockService.listMinimumProducts(system));
     }
 
     /** 按 系统+产品名 保存单条最低库存（UPSERT；各系统设置独立） */
     @PostMapping("/stock/minimum/save")
     public ApiResponse<Void> saveMinimum(@RequestParam(defaultValue = "central") String system,
-                                         @RequestBody Map<String, Object> body) {
+                                         @RequestBody Map<String, Object> body,
+                                         Authentication authentication) {
+        assertSystemAllowed(authentication, system);
         String name = body.get("product_name") == null ? "" : String.valueOf(body.get("product_name"));
         java.math.BigDecimal qty = body.get("minimum_quantity") == null ? java.math.BigDecimal.ZERO
                 : new java.math.BigDecimal(String.valueOf(body.get("minimum_quantity")));
@@ -194,7 +198,9 @@ public class StockController {
     @PostMapping("/stock/minimum/batch")
     @SuppressWarnings("unchecked")
     public ApiResponse<Void> saveMinimumBatch(@RequestParam(defaultValue = "central") String system,
-                                              @RequestBody Map<String, Object> body) {
+                                              @RequestBody Map<String, Object> body,
+                                              Authentication authentication) {
+        assertSystemAllowed(authentication, system);
         Object raw = body.get("products");
         List<Map<String, Object>> products = raw instanceof List ? (List<Map<String, Object>>) raw : List.of();
         stockService.saveMinimumBatch(system, products);

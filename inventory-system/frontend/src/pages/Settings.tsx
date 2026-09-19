@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getMinimumProducts, saveMinimum, saveMinimumBatch } from '../api'
+import { getMinimumProducts, saveMinimum, saveMinimumBatch, getStockPerms } from '../api'
 import '../styles/settings.css'
 import { showToast } from '../utils/toast'
 
@@ -26,6 +26,13 @@ export default function Settings() {
   const navigate = useNavigate()
   const urlSystem = new URL(window.location.href).searchParams.get('system')
   const [system, setSystem] = useState(urlSystem && SYSTEMS.some((s) => s.key === urlSystem) ? urlSystem : 'central')
+  // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
+  // 与总库存/进出货/货品种类/货品备注同一套：没有权限的系统不该能点进来、也不该看到它的数据
+  const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
+  const [permsSettled, setPermsSettled] = useState(false)
+  const locked = allowedSystems !== null && allowedSystems.length === 0
+  /** 该系统是否在权限内（未配置 → 全部可见） */
+  const systemAllowed = (k: string) => allowedSystems == null || allowedSystems.includes(k)
 
   const [allProducts, setAllProducts] = useState<MinProduct[]>([])
   const [loading, setLoading] = useState(false)
@@ -63,7 +70,28 @@ export default function Settings() {
     } catch { /* 拦截器已提示 */ if (seq !== loadSeq.current) return }
     if (seq === loadSeq.current) setLoading(false)
   }
-  useEffect(() => { load(system) }, [])
+  // 读库存权限（configured=false = 没配置过 → 默认全部可用，与其它页一致）
+  useEffect(() => {
+    getStockPerms()
+      .then((p: any) => {
+        const configured = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
+        if (configured) setAllowedSystems((p.systems || []).map((s: string) => String(s).toLowerCase()))
+      })
+      .catch(() => { /* 取不到权限 → 按未配置处理，不锁死页面 */ })
+      .finally(() => setPermsSettled(true))
+  }, [])
+
+  // 权限就绪后才取数；URL/当前系统没权限 → 自动切到有权限的第一个（switchSystem 会同步地址栏）
+  useEffect(() => {
+    if (!permsSettled || locked) return
+    if (!systemAllowed(system)) {
+      const first = SYSTEMS.map(s => s.key).find(k => allowedSystems!.includes(k))
+      if (first) switchSystem(first)
+      return
+    }
+    load(system)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permsSettled, allowedSystems, system])
 
   // ---- 实时搜索（防抖 200ms，对齐线上 setupRealTimeSearch）----
   // 注意：依赖里不放 allProducts（行内编辑提交时只刷新状态不重跑搜索）；最新数据从 ref 读
@@ -178,6 +206,27 @@ export default function Settings() {
     navigate('/records?system=' + system)
   }
 
+  // 权限全关（配置过、一个系统都没勾）→ 整页锁定，不渲染任何数据
+  if (locked) {
+    return (
+      <div>
+        <div className="min-page-header">
+          <h1 id="page-title">最低库存设置</h1>
+          <div className="min-header-right">
+            <button className="btn btn-secondary" onClick={() => navigate('/records')}>
+              <i className="fas fa-arrow-left" /> 返回库存管理
+            </button>
+          </div>
+        </div>
+        <div style={{ padding: '48px 20px', textAlign: 'center', color: '#6b7280' }}>
+          <i className="fas fa-lock" style={{ fontSize: 34, color: '#d1d5db' }} />
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#374151', marginTop: 10 }}>无权限访问</div>
+          <div style={{ fontSize: 13.5, marginTop: 4 }}>权限设定已关闭全部系统（中央/J1/J2/J3）。如需使用请联系管理员开通。</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       {/* Header（对齐线上 header-left 标题 + header-right-group 返回按钮） */}
@@ -193,7 +242,7 @@ export default function Settings() {
       {/* Controls Bar：系统标签 + 搜索 + 批量保存（对齐线上 controls-bar） */}
       <div className="min-controls-bar">
         <div className="system-tabs">
-          {SYSTEMS.map((s) => (
+          {SYSTEMS.filter((s) => systemAllowed(s.key)).map((s) => (
             <button key={s.key} className={'tab-btn' + (s.key === system ? ' active' : '')} onClick={() => switchSystem(s.key)}>
               <i className={'fas ' + s.icon} /> {s.label}
             </button>
