@@ -179,6 +179,11 @@
   text-align: center; font-size: clamp(8px, 0.74vw, 14px); font-weight: 600;
   border: 1px solid #d1d5db; position: sticky; top: 0; z-index: 100; white-space: nowrap;
 }
+/* 可点排序的表头（货品编号 / 货品名字）：手型 + 悬浮变色，箭头图标指示当前排序 */
+.sp-root .excel-table th.sortable { cursor: pointer; user-select: none; transition: background 0.15s; }
+.sp-root .excel-table th.sortable:hover { background: #4b4b4b; }
+.sp-root .excel-table th.sortable i { margin-left: 5px; opacity: 0.5; }
+.sp-root .excel-table th.sortable i.fa-sort-up, .sp-root .excel-table th.sortable i.fa-sort-down { opacity: 1; }
 .sp-root .excel-table td {
   font-size: clamp(8px, 0.74vw, 14px); padding: 0; border: 1px solid #d1d5db;
   text-align: center; position: relative; vertical-align: middle;

@@ -36,6 +36,24 @@ interface ProductRow {
   updated_by?: string
 }
 
+/** 货品编号自然排序：先比前缀，再比数字（BR 0002 < BR 0003 < BR 12），最后按原文兜底 */
+function cmpProductCode(a: string, b: string): number {
+  const ma = /^(.*?)(\d+)$/.exec(a.trim())
+  const mb = /^(.*?)(\d+)$/.exec(b.trim())
+  const pa = (ma ? ma[1] : a).trim().toUpperCase()
+  const pb = (mb ? mb[1] : b).trim().toUpperCase()
+  if (pa !== pb) return pa < pb ? -1 : 1
+  const na = ma ? parseInt(ma[2], 10) : -1
+  const nb = mb ? parseInt(mb[2], 10) : -1
+  if (na !== nb) return na - nb
+  return a.trim().localeCompare(b.trim())
+}
+
+/** 货品名字排序：忽略大小写、数字按数值排（A5 < A12） */
+function cmpProductName(a: string, b: string): number {
+  return a.trim().localeCompare(b.trim(), undefined, { numeric: true, sensitivity: 'base' })
+}
+
 const SYSTEMS = [
   { key: 'overview', label: '总览', value: '' },
   { key: 'central', label: '中央', value: 'Central' },
@@ -164,6 +182,14 @@ export default function StockProducts() {
   const [editing, setEditing] = useState<Set<number>>(new Set())
   const [drafts, setDrafts] = useState<Record<number, ProductRow>>({})
   const [kw, setKw] = useState('')
+  // 列表排序：默认按「货品编号」自然升序（原来已批准那批按 updated_at 排，看起来是乱的）
+  const [sortKey, setSortKey] = useState<'code' | 'name'>('code')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  /** 点表头排序：同一列再点一次反转方向 */
+  const toggleSort = (k: 'code' | 'name') => {
+    if (k === sortKey) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setSortKey(k); setSortDir('asc') }
+  }
   const [searchExpanded, setSearchExpanded] = useState(false)
   // 搜索模式：false=全能模糊（名称/编号/规格/类型/供应商/冰箱分类） / true=精准（货品名完全等于关键字）；对齐总库存 smartSearch
   const [exactMatch, setExactMatch] = useState(false)
@@ -484,18 +510,8 @@ export default function StockProducts() {
           rawItems.push(masked ? { ...i, system_assign: visible.join(','), _assignMasked: true } : i)
         }
       }
-      // 待批准在前（按产品名）、已批准在后（按批准时间 updated_at 升序：最新批准的排最后）
-      const pending = rawItems.filter((i: any) => !i.approver)
-      const approved = rawItems.filter((i: any) => i.approver)
-      const sortByName = (a: any, b: any) => String(a.product_name || '').localeCompare(String(b.product_name || ''))
-      const sortByApprovedTime = (a: any, b: any) => {
-        const ta = String(a.updated_at || '')
-        const tb = String(b.updated_at || '')
-        return ta.localeCompare(tb) || Number(a.id) - Number(b.id)
-      }
-      pending.sort(sortByName)
-      approved.sort(sortByApprovedTime)
-      setRows([...pending, ...approved])
+      // 顺序在渲染时算（sortedRows）：待批准在前 + 组内按当前排序规则 —— 点表头能立刻重排，不用重新请求
+      setRows(rawItems)
       // 编辑态保留：重载不再清空草稿 —— 保存其中一行、批准、刷新都不会冲掉其他行正在改的内容。
       // 草稿只在三种情况下消失：保存成功、用户点取消、行确实不在列表里了（被删/切到别的系统）。
       // 例外：搜索过滤会把不匹配的行挪出列表，那种「暂时看不见」的草稿保留（清空关键字即回来），
@@ -764,7 +780,7 @@ export default function StockProducts() {
       if (e.code === 'KeyS' || e.key === 's' || e.key === 'S') {
         e.preventDefault(); e.stopPropagation()
         if (newRows.length > 0) { saveNewRow(newRows[0]); return }
-        const firstEditing = rows.find(r => editing.has(Number(r.id)))
+        const firstEditing = sortedRows.find(r => editing.has(Number(r.id)))
         if (firstEditing) { saveEdit(Number(firstEditing.id)); return }
         showMsg('没有需要保存的记录', 'info')
         return
@@ -833,6 +849,18 @@ export default function StockProducts() {
   }, [allowedSystems])
   const pageTitle = system === 'overview' ? '库存货品管理后台' : `库存货品管理后台 - ${currentSys.label}`
   const statusColTitle = system === 'overview' ? '批准状态' : '状态'
+  /** 展示顺序：待批准在前（待办浮在上面）+ 组内按表头选的排序（默认货品编号自然升序）；
+   *  放在渲染时算 —— 点表头立刻重排，不用重新请求；同等时按 id 兜底保持稳定 */
+  const sortedRows = useMemo(() => {
+    const cmp = sortKey === 'code'
+      ? (a: ProductRow, b: ProductRow) => cmpProductCode(String(a.product_code || ''), String(b.product_code || ''))
+      : (a: ProductRow, b: ProductRow) => cmpProductName(String(a.product_name || ''), String(b.product_name || ''))
+    const dir = sortDir === 'asc' ? 1 : -1
+    const bySort = (a: ProductRow, b: ProductRow) => dir * cmp(a, b) || Number(a.id) - Number(b.id)
+    const pending = rows.filter(r => !r.approver).sort(bySort)
+    const approved = rows.filter(r => r.approver).sort(bySort)
+    return [...pending, ...approved]
+  }, [rows, sortKey, sortDir])
 
   // 单行可编辑单元格（编辑模式用）
   const EditableInput = ({ id, field, value, placeholder }: { id: number; field: keyof ProductRow; value?: string; placeholder?: string }) => (
@@ -1025,8 +1053,14 @@ export default function StockProducts() {
               <thead>
                 <tr>
                   <th>序号</th>
-                  <th>货品编号</th>
-                  <th>货品名字</th>
+                  <th className="sortable" onClick={() => toggleSort('code')}
+                    title="点击按「货品编号」排序，再点一次切换升/降序">
+                    货品编号 <i className={'fas ' + (sortKey === 'code' ? (sortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort')} />
+                  </th>
+                  <th className="sortable" onClick={() => toggleSort('name')}
+                    title="点击按「货品名字」排序，再点一次切换升/降序">
+                    货品名字 <i className={'fas ' + (sortKey === 'name' ? (sortDir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort')} />
+                  </th>
                   <th>规格</th>
                   <th>单价 (RM)</th>
                   <th>货品类型</th>
@@ -1089,7 +1123,7 @@ export default function StockProducts() {
                   </tr>
                 ))}
                 {/* 已有行 */}
-                {rows.map((r, idx) => {
+                {sortedRows.map((r, idx) => {
                   const id = r.id!
                   const isEditing = editing.has(id)
                   const draft = drafts[id] || r
