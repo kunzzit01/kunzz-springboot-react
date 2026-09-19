@@ -62,3 +62,4 @@
 | 2026-09-19-products-overview-masked-edit | 已完成 | 总览打码行放开编辑（保存不发 system_assign，别家分配不受影响）；4 套文本按权限收敛 +「另有中央/J3」标记；新增行必选分配 | main |
 | 2026-09-19-approve-btn-wrap | 已完成 | 修「批准」按钮在窄窗口被竖着折成两行：按钮 nowrap + 状态列改固定 88px；只改 CSS | main |
 | 2026-09-19-products-column-sort | 已完成 | 货品种类：编号/名字表头可点排序（自然排序），默认改「编号升序」（原来按更新时间看起来是乱的） | main |
+| 2026-09-19-products-overview-text-width | 已完成 | 总览单价/冰箱分类：去掉「（另有X）」标记、加宽两列、悬浮看完整文本；前端 + 后端各一处 | main |

@@ -482,6 +482,18 @@ export default function StockProducts() {
     return system === 'overview' ? `${body}\n各系统各自的单价：到中央/J1/J2/J3 页面修改` : body
   }
 
+  /** 总览：单价那一格的悬浮提示（列窄会被截断，悬浮看全：各系统完整文本 + 最近改价） */
+  const overviewPriceTip = (r: ProductRow) => {
+    const hit = priceLogLatest[(r.product_name || '').trim()]
+    const log = hit
+      ? `最近改价（中央）: ${fmtDmy(hit.date)} RM${hit.price.toFixed(2)}${hit.by ? `（${hit.by}）` : ''}`
+      : null
+    return [`各系统单价：${r.price_by_system || '-'}`, log, '要修改：切到中央/J1/J2/J3 页面'].filter(Boolean).join('\n')
+  }
+  /** 总览：冰箱分类那一格的悬浮提示（同上） */
+  const overviewFreezerTip = (r: ProductRow) =>
+    `各系统冰箱分类：${r.freezer_by_system || '-'}\n要修改：切到中央/J1/J2/J3 页面`
+
   // kwArg/exactArg：防抖/切模式时直传最新值，避免旧渲染闭包读到上一拍的关键字（搜索慢一拍 bug）
   // keepMissingArg：列表里已没有的行，其编辑草稿保留还是丢弃 —— 默认「搜索过滤中才保留」；
   //   切系统必须显式传 false：跨系统草稿若留着，Ctrl+Shift+S 会把别系统的货品按当前系统存回去
@@ -1150,7 +1162,7 @@ export default function StockProducts() {
                       </td>
                       <td>
                         {system === 'overview'
-                          ? <input className="excel-input" readOnly value={r.price_by_system || ''} title={priceTip(r)} />
+                          ? <input className="excel-input" readOnly value={r.price_by_system || ''} title={overviewPriceTip(r)} />
                           : isEditing
                             ? <input className="excel-input text-input" type="number" min={0} step="0.00001" placeholder="0.00" title={priceTip(r)}
                                 value={draft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => setDraft(id, { price: e.target.value })} />
@@ -1187,7 +1199,7 @@ export default function StockProducts() {
                       </td>
                       <td>
                         {system === 'overview'
-                          ? <input className="excel-input" readOnly value={r.freezer_by_system || ''} title="各系统各自的冰箱分类：到中央/J1/J2/J3 页面修改" />
+                          ? <input className="excel-input" readOnly value={r.freezer_by_system || ''} title={overviewFreezerTip(r)} />
                           : isEditing
                             ? <MultiSelect value={draft.freezer_category || ''} options={freezerOptions} creatable={canApprove} onCreate={createFreezerInline} onChange={(v) => setDraft(id, { freezer_category: v })} />
                             : <input className="excel-input" readOnly value={r.freezer_category || ''} />}
