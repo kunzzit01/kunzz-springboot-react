@@ -88,6 +88,43 @@
 > 连带改了 `backend/static/images/` 下 19 张网站用图（内容确实变了）→ 已 `git checkout HEAD -- backend/static/images` 还原。
 > 收尾用逐文件 `git hash-object` 与 `HEAD:` 比对，确认「真变了」的只剩本任务该动的文件。
 
+### 复核时查出的第二个自伤：`backend/static/vendor/` 缺失自托管资源（已修）
+
+重新构建并同步 `backend/static` 之后，`backend/static/index.html` 新增引用了 6 个
+`/vendor/*` 资源（jquery / chart / html2canvas / jspdf / jspdf-autotable / fontawesome），
+但这些文件在 `backend/static/vendor/` 下**未纳入 git**（那里只跟踪了 `orgchart.min.css/js`）。
+
+对照改动前的版本可以确认是本任务引入的：
+
+| | 引用的 `/vendor/*` |
+|---|---|
+| 改动前（3907513） | 只有 `orgchart.min.css`、`orgchart.min.js` —— **两个都已跟踪** |
+| 改动后 | 额外 6 个自托管库 —— **都未跟踪** |
+
+即 `backend/static` 原本是「陈旧但自洽」（它比前端源码旧，还没跟上 vendor 自托管那次改动），
+本任务刷新后变成「最新但不自洽」：从 git 全新 clone 出来，Windows 单机版
+（`一键启动.bat` → jar 从磁盘伺服 `backend/static`）会 404 掉 jQuery/Chart.js/jsPDF/FontAwesome/html2canvas。
+
+修法：把这 15 个未跟踪文件补进 `backend/static/vendor/`（合计 1.9 MB）。
+补之前已逐个 `md5sum` 与 `inventory-system/frontend/public/vendor/` 下**已在 git 的同一批文件**比对，
+**15 个全部逐字节一致**，因此是纯拷贝、不引入新内容。
+
+## 复核（第二轮）补充验证
+
+被质疑「确定没问题吗」之后重查了一遍，补了 4 项之前没覆盖的：
+
+| 项 | 结果 |
+|---|---|
+| 非中央系统（j1）的库存校验是否也按编码 | 3 个编码（j1 库存 2 / 2 / 0.283）全部被正确拦下，且报的是**该编号自己**的库存 ✓ |
+| 编码大小写/首尾空格不一致会让 Java 侧 `Set.contains`（大小写敏感）漏匹配 | 快照里 **0 条**这类数据（含空格的 0 条、仅大小写不同的 0 条）→ 只是理论风险 ✓ |
+| 旧实现（名字+编码）会漏掉多少行 | 中央 **1962** / J1 **1093** / J2 **664** / J3 **1108**，共 **4827 行**（96/68/46/64 个编码），且 **0 行**是空格/大小写假差异 ✓ |
+| 新实现（按编码）会连带隐藏的规模 | **仅 2 个编码**：`PI 0031`、`SK 0009` ⚠️（见下） |
+
+**唯一的真实退步（已向用户说明）**：`stock_data` 里有 2 个编码各被两个**不相关**的货品复用 ——
+`PI 0031` = HIKARI SHIRO MISO P / UNAGI MAKI BOX，`SK 0009` = YAMAZAKI DISTILLER'S RESERVE 700ML /
+KUBOTA MANJYU SAKE 720ML。按编码停用会连带隐藏同编码的另一个货品（编码复用本身是录入错误）。
+权衡：换来 4827 行漏过滤的修复，代价是 2 个编码过度隐藏 —— 净收益为正，且这 2 处应该改数据而不是改逻辑。
+
 ### 验证脚本
 
 - `.zcode/backup-inactive-by-code/verify.py` — 端到端断言脚本（A–E 五组）
