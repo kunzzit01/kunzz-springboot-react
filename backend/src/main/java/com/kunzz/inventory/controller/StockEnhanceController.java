@@ -170,11 +170,13 @@ public class StockEnhanceController {
         }
     }
 
-    /** 批准记录 */
+    /** 批准记录（2026-09-22 修正）：① 需要「批准」权限（原来这个端点没有任何校验，任何登录用户都能批准任意记录）；
+     *  ② 批准人由登录态决定 —— 请求体里的 approver 一律忽略，前端伪造不了"谁批的"。
+     *  （前端仍会发 body，这里不再声明 @RequestBody，Spring 直接忽略，不影响调用） */
     @PutMapping("/products/{id}/approve")
-    public ApiResponse<Map<String, Object>> approveProduct(@PathVariable Integer id, @RequestBody(required = false) Map<String, Object> body) {
-        String approver = body == null ? null : (String) body.get("approver");
-        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.approve(id, approver));
+    public ApiResponse<Map<String, Object>> approveProduct(@PathVariable Integer id, Authentication authentication) {
+        assertCanApprove(authentication, "批准货品");
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.approve(id, operatorOf(authentication)));
         realtimeService.notifyStockChanged("all"); // 实时：批准后广播（其他视图/用户自动刷新）
         return resp;
     }

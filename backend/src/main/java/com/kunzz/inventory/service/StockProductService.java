@@ -367,7 +367,8 @@ public class StockProductService {
         return Map.of("success", true);
     }
 
-    /** 批准记录（对齐 ?action=approve） */
+    /** 批准记录（对齐 ?action=approve）
+     *  approver 必须由 controller 从**登录态**取（operatorOf）；不接受前端传值，否则"谁批的"可以伪造（2026-09-22 修正） */
     @Transactional
     public Map<String, Object> approve(Integer id, String approver) {
         if (approver == null || approver.isBlank()) throw new BusinessException("审批人不能为空");

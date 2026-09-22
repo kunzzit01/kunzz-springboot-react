@@ -631,8 +631,11 @@ export default function StockProducts() {
     const d = drafts[id]
     if (!d) return '该行没有待保存的修改'
     try {
-      // 对齐 saveSingleRowData：总览页保持原批准状态；系统页编辑后清除批准状态需重新批准
-      const approver = system === 'overview' ? (d.approver || '') : ''
+      // 对齐 saveSingleRowData：总览页保持原批准状态；系统页编辑后清除批准状态需重新批准。
+      // 例外（2026-09-22）：**有批准权限的人不清空** —— 他本来就有批准权，他的编辑不需要重新批准。
+      // 清空的话会掉回待批准，再被后端 autoApproveIfBlank 补成本次操作人，
+      // 于是"只改个错别字就把原来的批准人顶掉、当初是谁批的查不到"（复核时查出的问题）。
+      const approver = (system === 'overview' || canApprove) ? (d.approver || '') : ''
       // 系统分配：一律传这一行自己的值。原来在单系统页强制写成 currentSys.value，
       // 会把 Central,J1,J2,J3 这样的多系统分配覆盖成当前页那一个系统（分店从此看不到该货品）。
       // 申请人：保持这一行原本的申请人（创建人），不再用"当前用户"顶替 —— 谁改的另记 updated_by（编辑人）
