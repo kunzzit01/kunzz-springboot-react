@@ -101,9 +101,10 @@ public class StockProductService {
         }
     }
 
-    /** 新增记录（对齐 POST stockapi.php；date/time 为空时用当前日期时间） */
+    /** 新增记录（对齐 POST stockapi.php；date/time 为空时用当前日期时间）
+     *  autoApprove = 调用者有「批准」权限 → 批准人留空时自动写成本次操作人（保存即批准，2026-09-22 用户要求） */
     @Transactional
-    public Map<String, Object> create(Map<String, Object> body) {
+    public Map<String, Object> create(Map<String, Object> body, String operator, boolean autoApprove) {
         String date = str(body.get("date"));
         String time = str(body.get("time"));
         if (date.isBlank()) date = java.time.LocalDate.now().toString();
@@ -120,6 +121,8 @@ public class StockProductService {
         r.put("applicant", body.getOrDefault("applicant", ""));
         r.put("approver", body.getOrDefault("approver", ""));
         r.put("systemAssign", body.getOrDefault("system_assign", ""));
+        // 有批准权限的人新增 → 直接批准（批准人写成本次操作人），不用再去点「批准」按钮
+        autoApproveIfBlank(r, operator, autoApprove, str(body.get("approver")));
         stockProductMapper.insertRow(r);
         // 单价/冰箱分类/位次 按系统写进 stock_data_system（stock_data 上那三列保留但不再读写）
         writePerSystemFields(stockProductMapper.lastInsertId(), body);
@@ -127,9 +130,10 @@ public class StockProductService {
     }
 
     /** 更新记录（对齐 PUT stockapi.php；approver 由前端传，系统页编辑时清空重新批准）
-     *  operator = 当前登录用户显示名，只用于改价记录的「谁改的」（改价人不等于货品申请人） */
+     *  operator = 当前登录用户显示名，只用于改价记录的「谁改的」（改价人不等于货品申请人）
+     *  autoApprove = 调用者有「批准」权限 → 本该变回待批准的（approver 为空），自动写成本次操作人（保存即批准） */
     @Transactional
-    public Map<String, Object> update(Integer id, Map<String, Object> body, String operator) {
+    public Map<String, Object> update(Integer id, Map<String, Object> body, String operator, boolean autoApprove) {
         // 部分字段安全：只更新请求里实际携带的字段（未携带的不动），
         // 防止部分字段的 PUT 把其余列清空（数据丢失风险；前端全量发送时行为不变）
         Map<String, Object> r = new LinkedHashMap<>();
@@ -163,6 +167,10 @@ public class StockProductService {
         if (body.containsKey("active") && Integer.valueOf(0).equals(parseActive(body.get("active")))) {
             assertNoStockBeforeDeactivate(before, logSys);
         }
+        // 有批准权限的人保存即批准：这行保存后会掉回待批准（approver 空）时，直接写成本次操作人。
+        // 请求体带了 approver 就以它为准，没带就看库里的现值 —— 非空一律不动（不会把别人批的改成自己）
+        autoApproveIfBlank(r, operator, autoApprove,
+                body.containsKey("approver") ? str(body.get("approver")) : str(before.get("approver")));
         if (!r.isEmpty()) stockProductMapper.updateRow(id, r);
         writePerSystemFields(id, body);
         // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
@@ -212,6 +220,18 @@ public class StockProductService {
         if (v == null) return null;
         String s = String.valueOf(v).trim().toLowerCase();
         return ("true".equals(s) || "1".equals(s) || "yes".equals(s)) ? 1 : 0;
+    }
+
+    /**
+     * 「有批准权限的人保存即批准」（2026-09-22 用户要求）：这行保存后批准人会变空时，自动写成本次操作人。
+     * 非空一律不动 —— 总览页"保持原批准状态"的既有行为不被破坏，也不会把别人批的改成自己。
+     * 没有批准权限（autoApprove=false）或拿不到登录用户（operator 空）→ 完全不动，行为与改动前一致。
+     * currentApprover = 这行保存后会是什么批准人（请求体带了就是请求体的值，没带就是库里的现值）。
+     */
+    private void autoApproveIfBlank(Map<String, Object> r, String operator, boolean autoApprove, String currentApprover) {
+        if (!autoApprove || operator == null || operator.isBlank()) return;
+        if (currentApprover != null && !currentApprover.isBlank()) return;
+        r.put("approver", operator);
     }
 
     /**

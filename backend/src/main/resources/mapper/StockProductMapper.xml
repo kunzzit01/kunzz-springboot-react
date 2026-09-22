@@ -51,9 +51,10 @@
         ORDER BY d.id
     </select>
 
-    <!-- 按 id 查单行（改价日志：取旧价/旧名） -->
+    <!-- 按 id 查单行（改价日志取旧价/旧名；停用前校验取编号；
+         approver：保存时判断"这行会不会变成待批准"用——有批准权限的人保存即批准） -->
     <select id="findById" resultType="java.util.LinkedHashMap">
-        SELECT id, product_name, product_code, price
+        SELECT id, product_name, product_code, price, approver
         FROM stock_data
         WHERE id = #{id}
     </select>

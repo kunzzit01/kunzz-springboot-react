@@ -99,10 +99,11 @@ public class StockEnhanceController {
         return ApiResponse.ok(stockProductService.getDefaultPrice(productName, codeNumber, system));
     }
 
-    /** 新增记录 */
+    /** 新增记录（有「批准」权限的人保存即批准，不用再点「批准」按钮） */
     @PostMapping("/products")
-    public ApiResponse<Map<String, Object>> createProduct(@RequestBody Map<String, Object> body) {
-        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.create(body));
+    public ApiResponse<Map<String, Object>> createProduct(@RequestBody Map<String, Object> body, Authentication authentication) {
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(
+                stockProductService.create(body, operatorOf(authentication), canApprove(authentication)));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
     }
@@ -129,7 +130,9 @@ public class StockEnhanceController {
         // 启用/停用（active）需要「批准」权限：申请权限的人只能加货品、不能自己停用（2026-09-19 用户要求）
         if (body.containsKey("active")) assertCanApprove(authentication, "停用/启用货品");
         // 改价记录里的「谁改的」用登录态：请求体里的 applicant 是货品申请人（当初建这条记录的人），不是改价人
-        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(stockProductService.update(id, body, operatorOf(authentication)));
+        // canApprove：有「批准」权限的人保存即批准（本该掉回待批准的行直接写成本次操作人），不用再点「批准」按钮
+        ApiResponse<Map<String, Object>> resp = ApiResponse.ok(
+                stockProductService.update(id, body, operatorOf(authentication), canApprove(authentication)));
         realtimeService.notifyStockChanged("all"); // 实时：货品种类变更广播
         return resp;
     }
@@ -150,12 +153,19 @@ public class StockEnhanceController {
         return resp;
     }
 
+    /** 是否具备「批准」权限；**没配置过权限的老账号/demo 默认放行**（与其它页一致）。
+     *  未登录 → false（由 SecurityConfig 拦截，这里只是不给自动批准的能力） */
+    private boolean canApprove(Authentication authentication) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof User u)) return false;
+        Map<String, Object> perms = staffService.stockPerms(u.getId());
+        if (!Boolean.TRUE.equals(perms.get("configured"))) return true;
+        return Boolean.TRUE.equals(perms.get("canApprove"));
+    }
+
     /** 需要「批准」权限（职员管理→权限设定→库存→批准）；没配置过权限的老账号/demo 默认放行，与其它页一致 */
     private void assertCanApprove(Authentication authentication, String action) {
         if (authentication == null || !(authentication.getPrincipal() instanceof User u)) return; // 未登录由 SecurityConfig 拦截
-        Map<String, Object> perms = staffService.stockPerms(u.getId());
-        if (!Boolean.TRUE.equals(perms.get("configured"))) return;
-        if (!Boolean.TRUE.equals(perms.get("canApprove"))) {
+        if (!canApprove(authentication)) {
             throw new BusinessException(403, "没有" + action + "的权限（需要「批准」权限，见 职员管理→权限设定→库存）");
         }
     }
