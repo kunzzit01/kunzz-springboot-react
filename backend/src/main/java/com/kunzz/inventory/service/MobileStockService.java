@@ -72,13 +72,13 @@ public class MobileStockService {
         String sys = sys(system);
         Map<String, Object> out = new LinkedHashMap<>();
         List<Map<String, Object>> items = mobileStockMapper.phoneStockList(editTable(sys), sys);
-        // 停用货品不进手机版出货列表（按系统；key = 货品名 + 编号，该组合下所有货品行都停用才算停用）
+        // 停用货品不进手机版出货列表（按系统；2026-09-22 起**只认货品编号**，不再带名字）
         java.util.Set<String> inactive = new java.util.HashSet<>();
-        for (Map<String, Object> k : stockDataSystemMapper.inactiveKeys(sys)) {
-            inactive.add(keyPart(k.get("name")) + "\u0000" + keyPart(k.get("code")));
+        for (String code : stockDataSystemMapper.inactiveKeys(sys)) {
+            if (code != null && !code.isBlank()) inactive.add(code.trim());
         }
         if (!inactive.isEmpty()) {
-            items.removeIf(it -> inactive.contains(keyPart(it.get("product_name")) + "\u0000" + keyPart(it.get("code_number"))));
+            items.removeIf(it -> inactive.contains(keyPart(it.get("code_number"))));
         }
         out.put("items", items);
         out.put("summaryCount", mobileStockMapper.summaryCount(editTable(sys)));

@@ -24,8 +24,9 @@ public interface StockDataSystemMapper {
                @Param("price") Double price,
                @Param("active") Integer active);
 
-    /** 某系统的停用名单（货品名 + 编号）：该名字+编号的所有行都停用才算停用；没有行的货品 = 启用 */
-    List<Map<String, Object>> inactiveKeys(@Param("system") String system);
+    /** 某系统的停用货品编码集合（**只认编码**，2026-09-22 起）：该编码被停用则整条编码从各列表消失。
+     *  没有 stock_data_system 行的货品 = 启用（历史数据默认全部启用） */
+    List<String> inactiveKeys(@Param("system") String system);
 
     /** 某系统下所有货品的 [货品名, 冰箱分类, 位次]（总库存「冰箱分类+排序」用；按 stock_data.id 升序，同名取第一条） */
     List<Map<String, Object>> freezerRows(@Param("system") String system);

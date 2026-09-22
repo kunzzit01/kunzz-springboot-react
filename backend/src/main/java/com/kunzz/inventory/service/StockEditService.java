@@ -26,8 +26,10 @@ public class StockEditService {
     private final StockDataSystemMapper stockDataSystemMapper;
 
     /**
-     * 某系统的停用货品集合（key = 货品名 + \u0000 + 编号）。
-     * 规则：该「名字+编号」下**所有**货品行都停用才算停用（同名多供应商只要还有一行启用就仍可用）。
+     * 某系统的停用货品编码集合（值 = 货品编号 product_code）。
+     * 规则：**只认编号**（2026-09-22 起）——该编号被停用，整条编号就不进下拉。
+     * 原来是「名字 + \u0000 + 编号」二元组，但一个名字常挂多个编号（实测 485 个名字里 92 个），
+     * 名字参与匹配会让停用看起来牵动同名货品；编号才是货品身份。
      * system 为空/不认识 → 返回空集（不过滤，保持旧行为）。
      */
     private Set<String> inactiveKeys(String system) {
@@ -35,8 +37,8 @@ public class StockEditService {
         if (system == null || system.isBlank()) return out;
         String sys = system.trim().toLowerCase();
         if (!List.of("central", "j1", "j2", "j3").contains(sys)) return out;
-        for (Map<String, Object> k : stockDataSystemMapper.inactiveKeys(sys)) {
-            out.add(HtmlText.decode(str(k.get("name"))) + "\u0000" + str(k.get("code")));
+        for (String code : stockDataSystemMapper.inactiveKeys(sys)) {
+            if (code != null && !code.isBlank()) out.add(code.trim());
         }
         return out;
     }
@@ -47,7 +49,7 @@ public class StockEditService {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : stockEditMapper.codeNumbers()) {
             String name = HtmlText.decode(str(r.get("product_name")));
-            if (inactive.contains(name + "\u0000" + str(r.get("code_number")))) continue; // 停用货品不进下拉
+            if (inactive.contains(str(r.get("code_number")).trim())) continue; // 停用货品（按编号）不进下拉
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("code_number", str(r.get("code_number")));
             // 货品名解码：与货品种类页/总库存页口径一致（老库有 &amp; 实体，编码/解码两套名字会导致下拉匹配不上）
@@ -63,7 +65,7 @@ public class StockEditService {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> r : stockEditMapper.products()) {
             String name = HtmlText.decode(str(r.get("product_name")));
-            if (inactive.contains(name + "\u0000" + str(r.get("product_code")))) continue; // 停用货品不进下拉
+            if (inactive.contains(str(r.get("product_code")).trim())) continue; // 停用货品（按编号）不进下拉
             Map<String, Object> m = new LinkedHashMap<>();
             // 货品名/供应商解码：货品种类页（StockProductService）本来就是解码后的值，
             // 进出货这里不解码会出现「同一条货品两套名字」（如 L&amp;L FROZEN vs L&L FROZEN）→ 下拉里认不出、搜不到

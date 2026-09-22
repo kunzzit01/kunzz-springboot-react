@@ -14,15 +14,18 @@
         <if test="active != null">, active = #{active}</if>
     </insert>
 
-    <!-- 停用名单（货品名 + 编号）：某系统下**该名字+编号的所有货品行都停用**才算停用。
-         没有 stock_data_system 行的货品 = 启用（COALESCE 兜底），所以历史数据默认全部启用 -->
-    <select id="inactiveKeys" resultType="java.util.LinkedHashMap">
-        SELECT d.product_name AS name, d.product_code AS code
+    <!-- 停用名单（**只认货品编码**，2026-09-22 起）。
+         某系统下该编码被标记 active = 0 → 该编码停用；没有 stock_data_system 行的货品 = 启用，
+         所以历史数据默认全部启用（不用迁移）。
+         按名字匹配是错的：一个名字在真实数据里平均挂多个编码（实测 485 个名字里 92 个如此），
+         会让"停用 A 编码"看起来牵动同名的 B 编码；编码才是货品的身份。 -->
+    <select id="inactiveKeys" resultType="java.lang.String">
+        SELECT DISTINCT d.product_code
         FROM stock_data d
-        LEFT JOIN stock_data_system s
-               ON s.stock_data_id = d.id AND s.stock_system = #{system}
-        GROUP BY d.product_name, d.product_code
-        HAVING MIN(COALESCE(s.active, 1)) = 0
+        JOIN stock_data_system s
+             ON s.stock_data_id = d.id AND s.stock_system = #{system}
+        WHERE s.active = 0
+          AND d.product_code IS NOT NULL AND d.product_code &lt;&gt; ''
     </select>
 
     <!-- 某系统下每个货品的冰箱分类/位次（总库存排序用）。

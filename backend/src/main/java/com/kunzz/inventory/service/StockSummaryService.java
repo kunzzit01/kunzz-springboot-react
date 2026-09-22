@@ -66,7 +66,7 @@ public class StockSummaryService {
         // 必须在统计之前过滤：下面的总额/分类小计都在这份 rows 上算，晚了就对不上列表。
         java.util.Set<String> inactive = inactiveKeys(ts);
         if (!inactive.isEmpty()) {
-            rows.removeIf(r -> inactive.contains(str(r.get("product_name")) + "\u0000" + str(r.get("code_number"))));
+            rows.removeIf(r -> inactive.contains(str(r.get("code_number")).trim()));
         }
         // 中央无 type 列：从台账补全（8/24，对齐分店显示类型）
         Map<String, String> productType = isCentral ? productTypeMap() : Map.of();
@@ -218,12 +218,12 @@ public class StockSummaryService {
         return o == null ? "" : String.valueOf(o);
     }
 
-    /** 某系统的停用货品集合（key = 货品名 + \u0000 + 编号；该组合下所有货品行都停用才算停用） */
+    /** 某系统的停用货品编码集合（值 = 货品编号；2026-09-22 起只认编号，不再带名字） */
     private java.util.Set<String> inactiveKeys(String system) {
         java.util.Set<String> out = new java.util.HashSet<>();
         if (system == null) return out;
-        for (Map<String, Object> k : stockDataSystemMapper.inactiveKeys(system)) {
-            out.add(str(k.get("name")) + "\u0000" + str(k.get("code")));
+        for (String code : stockDataSystemMapper.inactiveKeys(system)) {
+            if (code != null && !code.isBlank()) out.add(code.trim());
         }
         return out;
     }

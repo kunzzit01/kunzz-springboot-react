@@ -215,17 +215,21 @@ public class StockProductService {
     }
 
     /**
-     * 停用前的库存校验：当前系统净库存 ≠ 0 → 拒绝（口径与「总库存」一致：台账表 deleted_at IS NULL）。
+     * 停用前的库存校验：当前系统里**该货品编号**的净库存 ≠ 0 → 拒绝（口径与「总库存」一致：台账表 deleted_at IS NULL）。
      * 用户要求"该货品还有货品就无法 inactive"。
+     * 2026-09-22 起**按货品编号**算，不再按名字：一个名字在真实数据里常挂多个编号
+     * （实测 485 个名字里 92 个，如「CHICKEN BONELESS LEG」= FI 0017/0018/0149/0165），
+     * 按名字求和会让没库存的那个编号被同名的别的编号的库存拦下。
      */
     private void assertNoStockBeforeDeactivate(Map<String, Object> before, String system) {
         if (system == null) throw new BusinessException("请在具体系统页面（中央/J1/J2/J3）操作停用");
-        String name = str(before.get("product_name"));
-        if (name == null || name.isBlank()) return;
+        String code = str(before.get("product_code")).trim();
+        if (code.isEmpty()) return; // 没编号无法核对库存，放行（老数据兜底，与原来名字为空时一致）
         String table = "central".equals(system) ? "stockinout_data" : system + "stockedit_data";
-        java.math.BigDecimal net = stockProductMapper.netStockByName(table, name);
+        java.math.BigDecimal net = stockProductMapper.netStockByCode(table, code);
         if (net != null && net.signum() != 0) {
-            throw new BusinessException("该货品在 " + system.toUpperCase() + " 还有库存 "
+            throw new BusinessException("该货品「" + decodeHtml(str(before.get("product_name")))
+                    + "」（编号 " + code + "）在 " + system.toUpperCase() + " 还有库存 "
                     + net.stripTrailingZeros().toPlainString() + "，清完库存后才能停用");
         }
     }

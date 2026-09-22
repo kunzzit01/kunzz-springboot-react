@@ -773,16 +773,19 @@ export default function StockProducts() {
     finally { setApprovingId(null) }
   }
 
-  /** 启用/停用（按系统，需要「批准」权限）：停用后不进进出货下拉/总库存/手机版；有库存时后端会拒绝 */
+  /** 启用/停用（按系统，需要「批准」权限）：停用后不进进出货下拉/总库存/手机版；有库存时后端会拒绝。
+      停用/启用都**按货品编号**（后端按 product_code 匹配），所以文案里带上编号：
+      一个名字常挂多个编号（如「CHICKEN BONELESS LEG」有 4 个），只显示名字会让操作人分不清停的是哪一个 */
   const toggleActive = async (r: ProductRow) => {
     if (!r.id || !canApprove) return
     const next = Number(r.active ?? 1) === 0 // 当前是"已停用" → 这次是启用
-    if (!next && !window.confirm(`确定停用「${r.product_name}」吗？\n停用后它不再出现在进出货的货品下拉、总库存和手机版列表里。\n（还有库存时不能停用）`)) return
+    const label = `「${r.product_name}」（编号 ${r.product_code || '-'}）`
+    if (!next && !window.confirm(`确定停用${label}吗？\n停用后它不再出现在进出货的货品下拉、总库存和手机版列表里。\n（还有库存时不能停用）`)) return
     setActivatingId(r.id)
     try {
       await updateStockProduct(r.id, { active: next ? 1 : 0, system: currentSys.key })
       await load()
-      showMsg(next ? `已启用「${r.product_name}」` : `已停用「${r.product_name}」`, 'success')
+      showMsg(next ? `已启用${label}` : `已停用${label}`, 'success')
     } catch (e: any) { showMsg(e?.response?.data?.message || (next ? '启用失败' : '停用失败'), 'error') }
     finally { setActivatingId(null) }
   }

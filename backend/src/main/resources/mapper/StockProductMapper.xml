@@ -96,13 +96,15 @@
     </update>
 
     <!-- 某货品在某系统的净库存（停用前校验用）。口径与「总库存」一致：台账表 deleted_at IS NULL；
-         货品名匹配兼容 HTML 实体（&amp;），与 availableStockCentral 同款 -->
-    <select id="netStockByName" resultType="java.math.BigDecimal">
+         **按货品编号匹配**（2026-09-22 起）：原来只按 product_name 匹配，而一个名字常挂多个编号
+         （实测 485 个名字里 92 个），会把同名的别的编号的库存算进来 → 本来没库存的编号也停不了。
+         各系统台账表这一列的名字都是 code_number（stockinout_data / jXstockedit_data） -->
+    <select id="netStockByCode" resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(CASE WHEN in_quantity &gt; 0 THEN in_quantity ELSE 0 END), 0)
              - COALESCE(SUM(CASE WHEN out_quantity &gt; 0 THEN out_quantity ELSE 0 END), 0)
         FROM ${table}
         WHERE deleted_at IS NULL
-          AND REPLACE(product_name, '&amp;amp;', '&amp;') = REPLACE(#{productName}, '&amp;amp;', '&amp;')
+          AND code_number = #{productCode}
     </select>
 
     <delete id="deleteRow">
