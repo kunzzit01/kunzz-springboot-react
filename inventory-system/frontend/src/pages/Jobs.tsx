@@ -896,23 +896,23 @@ export default function Jobs() {
                   : '⚪ 尚未认领'}
               </span>
               <span className="claim-banner-actions">
+                {/* 转交对任何工作人员都开放，不要求「你必须是当前处理人」——
+                    处理人休假/转岗时才不会被卡住（2026-09-23 用户要求） */}
+                <Select
+                  size="small"
+                  placeholder="转交给…"
+                  style={{ width: 190 }}
+                  value={transferPick}
+                  options={handlerOptions.map((h) => ({
+                    value: h.id,
+                    label: `${h.name || '未命名'}${h.position ? ' · ' + h.position : ''}`,
+                  }))}
+                  onChange={(v) => { setTransferPick(undefined); transferMine(v) }}
+                />
                 {modalMine && (
-                  <>
-                    <Select
-                      size="small"
-                      placeholder="转交给…"
-                      style={{ width: 190 }}
-                      value={transferPick}
-                      options={handlerOptions.map((h) => ({
-                        value: h.id,
-                        label: `${h.name || '未命名'}${h.position ? ' · ' + h.position : ''}`,
-                      }))}
-                      onChange={(v) => { setTransferPick(undefined); transferMine(v) }}
-                    />
-                    <Popconfirm title="释放这条申请？" description="释放后其他人可以接手" onConfirm={releaseMine} okText="释放" cancelText="取消">
-                      <Button size="small">释放</Button>
-                    </Popconfirm>
-                  </>
+                  <Popconfirm title="释放这条申请？" description="释放后其他人可以接手" onConfirm={releaseMine} okText="释放" cancelText="取消">
+                    <Button size="small">释放</Button>
+                  </Popconfirm>
                 )}
                 {isBoss && !modalMine && (
                   <Popconfirm title="强制接管这条申请？" description={modalApp.handlerName ? `原处理人 ${modalApp.handlerName} 会失去编辑权` : ''} onConfirm={takeOver} okText="接管" cancelText="取消">
@@ -948,7 +948,7 @@ export default function Jobs() {
                       </a>
                     ) : (
                       <span className={'font-bold' + (modalEditable ? '' : ' contact-locked')}>
-                        {modalApp.email || ''}{!modalEditable && gmailComposeUrl(modalApp.email) ? '（由他人跟进，不可联系）' : ''}
+                        {modalApp.email || ''}
                       </span>
                     )}
                   </span>
@@ -965,7 +965,7 @@ export default function Jobs() {
                       </a>
                     ) : (
                       <span className={'font-bold' + (modalEditable ? '' : ' contact-locked')}>
-                        {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}{!modalEditable && whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber) ? '（由他人跟进，不可联系）' : ''}
+                        {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}
                       </span>
                     )}
                   </span>

@@ -174,10 +174,8 @@ public class JobService {
     public JobApplication transfer(Integer id, User me, Integer targetUserId) {
         JobApplication a = applicationRepo.findByIdForUpdate(id)
                 .orElseThrow(() -> new BusinessException(404, "申请不存在"));
-        boolean boss = isSpecial(me);
-        if (!boss && !me.getId().equals(a.getHandlerId())) {
-            throw new BusinessException(409, "该申请当前由 " + handlerLabel(a) + " 处理，你无法转交");
-        }
+        // 转交不要求「你必须是当前处理人」：任何工作人员都可以把一条申请转给别人
+        // （2026-09-23 用户要求：处理人休假/转岗时不该被卡住）
         if (targetUserId == null) throw new BusinessException(400, "请选择要转交的人");
         if (targetUserId.equals(me.getId())) throw new BusinessException(400, "不能转交给自己");
         User target = userRepo.findById(targetUserId)
@@ -185,13 +183,17 @@ public class JobService {
         if (!HANDLER_ACCOUNT_TYPES.contains(String.valueOf(target.getAccountType()))) {
             throw new BusinessException(400, "只能转交给 HR 部门成员");
         }
+        // 选中的就是当前处理人 → 什么都不用做，别写一条「转交给 X（原处理人 X）」的荒唐记录
+        if (target.getId().equals(a.getHandlerId())) {
+            throw new BusinessException(400, "该申请已经由 " + target.getDisplayName() + " 处理");
+        }
         String previous = a.getHandlerName();
         a.setHandlerId(target.getId());
         a.setHandlerName(target.getDisplayName());
         a.setClaimedAt(LocalDateTime.now());
         JobApplication saved = applicationRepo.save(a);
         writeLog(me, "转交", id, "转交给 " + target.getDisplayName()
-                + (previous == null ? "" : "（原处理人 " + previous + "）"));
+                + (previous == null ? "（原为未认领）" : "（原处理人 " + previous + "）"));
         return saved;
     }
 
