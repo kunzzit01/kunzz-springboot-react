@@ -422,6 +422,14 @@
 .hr-root .data-table th:nth-child(8), .hr-root .data-table td:nth-child(8) { width: 5%; text-align: center; }
 /* 超长内容省略 */
 .hr-root .cell-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 联系方式：邮箱→Gmail、电话→WhatsApp 的可点击链接（block 才能让 cell-ellipsis 生效） */
+.hr-root .contact-link {
+  display: block;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.hr-root .contact-link:hover { color: var(--primary-color); text-decoration: underline; }
+.hr-root .contact-link.phone-link:hover { color: #25d366; }
 .hr-root .data-table tbody td:nth-child(1) > div { overflow: hidden; }
 .hr-root .data-table tbody td:nth-child(1) .font-bold { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 表头：深灰底白字，略大的字号与舒适高度 */

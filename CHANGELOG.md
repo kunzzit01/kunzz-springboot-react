@@ -32,6 +32,31 @@
   于是把新 `KpiMapper.xml` 直接替换进现有 `inventory-backend-1.0.0.jar`（`BOOT-INF/classes/mapper/KpiMapper.xml`），
   对运行时等价于重新打包，已用该 jar 起服务实测通过。**今后有人装回 Maven 时，建议重新 `mvn -DskipTests package` 复核一次。**
 
+### [2026-09-23-hire-contact-links] 招聘列表：点邮箱去 Gmail、点电话去 WhatsApp
+
+- **需求（用户反馈）**：`/hire` 招聘申请列表的「联系方式」列原本是纯文本，HR 要联系应聘者得手动复制邮箱到 Gmail、
+  复制号码到 WhatsApp。改成：点邮箱 → 打开 Gmail 写信页，点电话 → 打开 WhatsApp 会话。
+- **改动（只动 `Jobs.tsx` 与 `hire.css`）**：新增两个纯函数 `gmailComposeUrl()` / `whatsappUrl()`：
+  - 邮箱 → `https://mail.google.com/mail/?view=cm&fs=1&to=<邮箱>`。**刻意不用 `mailto:`** ——
+    `mailto:` 拉起的是系统默认邮件客户端（HR 电脑上多半没配），Gmail 才是实际在用的邮箱。
+  - 电话 → `https://wa.me/<区号><本地号>`，两端都只取数字：本地号去掉国内拨号前缀 `0`，
+    区号兼容 `+60` / `60` / `0060` 三种写法（去掉 `00` 国际前缀）。于是截图里那条
+    `+60 0104381189` → `wa.me/60104381189`，与本仓库官网侧边栏既有的 `wa.me/60135535355` 写法一致。
+    号码为空时不渲染成链接、退化为纯文本，不会生成打不开的死链。
+  - 列表单元格的链接加 `display:block`（`<a>` 默认 inline，不加这行 `cell-ellipsis` 的省略号会失效）；
+    悬停时邮箱变主题橙、电话变 WhatsApp 绿。
+  - 顺手统一了**详情弹窗**：弹窗里邮箱原来也是 `mailto:`、电话是纯文本，一并改成同样的 Gmail / WhatsApp 链接 ——
+    同一个页面两处口径不一致会让人以为弹窗坏了。
+- **验证（真实浏览器跑已提交的 `backend/static` 产物，不是只看代码）**：起静态服务 + mock 掉 `/api` 接口，
+  本地注入 token 进 `/hire`，页面渲染出截图里那条真实记录（高雪宁 / kxn1102@gmail.com / +60 0104381189），
+  **实际点击**两个链接：邮箱新标签落到 Gmail 写信页（未登录 Google 时跳登录页，`continue=` 里仍是写信 URL），
+  电话新标签经 `wa.me` 302 到 `api.whatsapp.com/send/?phone=60104381189`（号码正好正确）。
+  共 11 项断言全通过，无运行时错误、无 404。
+- **产物**：前端源码改动后重新 `npm run build`，新 hash 资源已同步进 `backend/static`
+  （`index-K70lqb3v.js` / `index-BTOT-EGs.css` / `index.es-Bk6oXfqF.js`，旧 hash 文件已删）。
+  `backend/target/*.jar` **不需要**重新打包 —— 该 jar 内不含 `static/`（实测 `unzip -l` 命中 0 条），
+  后端是 `WebConfig` 从磁盘 `backend/static/` 伺服的。
+
 ---
 ## 🗓️ 2026-09-18
 

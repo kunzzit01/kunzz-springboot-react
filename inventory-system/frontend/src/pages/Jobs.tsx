@@ -33,6 +33,28 @@ function fmtCreated(createdAt?: string) {
   return s.replace('T', ' ').substring(0, 19)
 }
 
+/** 邮箱 → Gmail 写信页（用 Gmail 而不是 mailto:，避免拉起系统默认邮件客户端） */
+function gmailComposeUrl(email?: string) {
+  const e = String(email || '').trim()
+  if (!e) return ''
+  return 'https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(e)
+}
+
+/** 电话号码 → WhatsApp 会话。区号与本地号只取数字，并去掉本地号的国内拨号前缀 0（+60 010-438 1189 → 60104381189） */
+function whatsappUrl(phoneCode?: string, phoneNumber?: string) {
+  const local = String(phoneNumber || '').replace(/\D/g, '')
+  if (!local) return ''
+  // 区号可能是 +60 / 60 / 0060 三种写法，去掉 00 国际前缀后统一成 60
+  const code = String(phoneCode || '').replace(/\D/g, '').replace(/^0+/, '')
+  if (!code) return 'https://wa.me/' + local
+  return 'https://wa.me/' + code + (local.replace(/^0+/, '') || local)
+}
+
+/** 区号 + 本地号的展示文本（如 +60 0104381189） */
+function fmtPhone(phoneCode?: string, phoneNumber?: string) {
+  return phoneCode ? `${phoneCode} ${phoneNumber || ''}` : (phoneNumber || '')
+}
+
 /** flatpickr 中文日期区间选择（对齐线上 date-input：单输入框 + 日历图标 + fixed 弹层） */
 function DateRangeFlatpickr({ value, onChange }: { value: [Dayjs, Dayjs] | null; onChange: (v: [Dayjs, Dayjs] | null) => void }) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -561,7 +583,9 @@ export default function Jobs() {
                   const st = statusMeta(app.status)
                   const created = fmtCreated(app.createdAt)
                   const [datePart, timePart] = created.split(' ')
-                  const phone = app.phoneCode ? `${app.phoneCode} ${app.phoneNumber}` : (app.phoneNumber || '')
+                  const phone = fmtPhone(app.phoneCode, app.phoneNumber)
+                  const emailHref = gmailComposeUrl(app.email)
+                  const waHref = whatsappUrl(app.phoneCode, app.phoneNumber)
                   return (
                     <tr key={app.id} className="table-row">
                       <td>
@@ -573,8 +597,32 @@ export default function Jobs() {
                       <td><span className="company-badge">{app.companyName || ''}</span></td>
                       <td className="font-medium text-primary">{app.jobTitle || ''}</td>
                       <td>
-                        <div className="text-14 text-main mb-4 cell-ellipsis">✉️ {app.email || ''}</div>
-                        <div className="text-12 text-muted cell-ellipsis">📞 {phone}</div>
+                        {emailHref ? (
+                          <a
+                            className="contact-link text-14 text-main mb-4 cell-ellipsis"
+                            href={emailHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={'用 Gmail 给 ' + app.email + ' 写邮件'}
+                          >
+                            ✉️ {app.email}
+                          </a>
+                        ) : (
+                          <div className="text-14 text-main mb-4 cell-ellipsis">✉️ {app.email || ''}</div>
+                        )}
+                        {waHref ? (
+                          <a
+                            className="contact-link phone-link text-12 text-muted cell-ellipsis"
+                            href={waHref}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={'用 WhatsApp 联系 ' + phone}
+                          >
+                            📞 {phone}
+                          </a>
+                        ) : (
+                          <div className="text-12 text-muted cell-ellipsis">📞 {phone}</div>
+                        )}
                       </td>
                       <td>
                         {app.resumeFileUrl ? (
@@ -670,8 +718,38 @@ export default function Jobs() {
                 <span className="hr-modal-label">中文姓名：</span><span className="font-bold">{modalApp.chineseName || ''}</span>
                 <span className="hr-modal-label">英文姓名：</span><span className="font-bold">{modalApp.englishName || ''}</span>
                 <span className="hr-modal-label">性别：</span><span className="font-normal">{modalApp.gender || ''}</span>
-                <span className="hr-modal-label">电子邮箱：</span><span><a href={'mailto:' + modalApp.email} className="font-bold hr-modal-link">{modalApp.email || ''}</a></span>
-                <span className="hr-modal-label">电话号码：</span><span className="font-bold">{modalApp.phoneCode ? modalApp.phoneCode + ' ' : ''}{modalApp.phoneNumber || ''}</span>
+                <span className="hr-modal-label">电子邮箱：</span>
+                <span>
+                  {gmailComposeUrl(modalApp.email) ? (
+                    <a
+                      href={gmailComposeUrl(modalApp.email)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold hr-modal-link"
+                      title={'用 Gmail 给 ' + modalApp.email + ' 写邮件'}
+                    >
+                      {modalApp.email}（Gmail 写信）
+                    </a>
+                  ) : (
+                    <span className="font-bold">{modalApp.email || ''}</span>
+                  )}
+                </span>
+                <span className="hr-modal-label">电话号码：</span>
+                <span>
+                  {whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber) ? (
+                    <a
+                      href={whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-bold hr-modal-link"
+                      title={'用 WhatsApp 联系 ' + fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}
+                    >
+                      {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}（WhatsApp）
+                    </a>
+                  ) : (
+                    <span className="font-bold">{fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}</span>
+                  )}
+                </span>
                 <span className="hr-modal-label items-center flex-row">简历附件：</span>
                 <span>
                   {modalApp.resumeFileUrl ? (
