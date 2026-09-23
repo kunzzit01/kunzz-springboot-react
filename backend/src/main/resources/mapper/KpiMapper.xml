@@ -45,11 +45,16 @@
         VALUES (#{c.date}, #{c.day_name}, #{c.c_beverage}, #{c.c_kitchen}, #{c.c_grab}, #{c.c_foodpanda}, #{c.c_shopee})
     </insert>
 
+    <!-- 中央供应给 J2/J3 的金额：中央 stockinout_data 中 target_system=j2/j3 的出库记录，
+         按记录 ROUND(out×price, 2) 后累加（与旧站 costapi.php get_supply 口径一致） -->
     <select id="listSupplyBetween" resultType="map">
-        SELECT COALESCE(SUM(supply_to_j2), 0) AS supply_to_j2,
-               COALESCE(SUM(supply_to_j3), 0) AS supply_to_j3
-        FROM j1_supply
-        WHERE date BETWEEN #{startDate} AND #{endDate}
+        SELECT COALESCE(SUM(CASE WHEN target_system = 'j2' THEN ROUND(out_quantity * price, 2) ELSE 0 END), 0) AS supply_to_j2,
+               COALESCE(SUM(CASE WHEN target_system = 'j3' THEN ROUND(out_quantity * price, 2) ELSE 0 END), 0) AS supply_to_j3
+        FROM stockinout_data
+        WHERE deleted_at IS NULL
+          AND out_quantity &gt; 0
+          AND target_system IN ('j2', 'j3')
+          AND date BETWEEN #{startDate} AND #{endDate}
     </select>
 
     <select id="getMonthStock" resultType="map">

@@ -131,7 +131,7 @@ public class KpiService {
         kpiMapper.deleteDailyByDate(dailyTable(branch), date);
     }
 
-    /** 某日期区间 J1 供应给 J2/J3 的合计（成本仪表盘 J1 模式） */
+    /** 某日期区间中央供应给 J2/J3 的合计（成本仪表盘 J1 模式） */
     @Transactional(readOnly = true)
     public Map<String, Object> getSupply(LocalDate startDate, LocalDate endDate) {
         Map<String, Object> row = kpiMapper.listSupplyBetween(startDate, endDate);

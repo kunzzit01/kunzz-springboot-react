@@ -5,6 +5,34 @@
 
 ---
 ---
+## 🗓️ 2026-09-23
+
+### [2026-09-23-cost-supply-j2j3] 成本仪表盘：J1 的「供应→J2 / 供应→J3」恒为 0.00
+
+- **现象（用户反馈）**：`/cost` 选 J1、范围 2026-09-01～09-23，「供应→J2 (RM)」「供应→J3 (RM)」都显示 RM 0.00；
+  这两张卡还参与总成本：`实际总成本 = 上期库存 − 本期库存 + 记录成本 − (供应→J2 + 供应→J3)`，
+  所以它们恒为 0 时 J1 的总成本也偏高。
+- **根因**：接口 `/kpi/supply` 读的是 `j1_supply` 表（`KpiMapper.listSupplyBetween`），
+  而这张表在库里始终是空的（线上 dump 与本地 dump 的 `j1_supply` 段都只有建表语句、**零条 INSERT**），
+  且**本仓库没有任何写入方** —— 全仓搜索 `j1_supply` 只有那一处 SELECT + 两份 dump 的建表语句。
+  旧系统里这张表同样是空表，真正算供应值的是旧站 `backend/costapi.php` 的 `get_supply`。
+- **正确口径（照旧站 `get_supply` 抄）**：从**中央** `stockinout_data` 取 `target_system='j2'/'j3'` 的**出库**记录，
+  逐条 `ROUND(out_quantity × price, 2)` 后累加（旧站注释说「与发票导出口径完全一致，用分累加避免浮点误差」）。
+  该值与各分店自己 `jXstockinout_data` 的入库额互为镜像（实测 2026-08 中央→J2 出库 23432.77 = J2 入库 23432.77）。
+- **改动**：`KpiMapper.xml` 的 `listSupplyBetween` 改为查中央 `stockinout_data`。
+  `deleted_at IS NULL` / `out_quantity > 0` 是新系统的统一口径 —— 旧站这个接口漏了 `deleted_at IS NULL`
+  （同一份旧代码里 `stocklistapi.php getSupplyTotal` 是有的），新系统照统一口径过滤，
+  故与旧站可能存在小数级差异（软删记录，全年 j2 1333.50 / j3 1431.00）。
+  `KpiMapper.java` / `KpiService.java` 只改注释（原文写「J1 供应给 J2/J3」，实际是中央供应）。
+  前端 `Cost.tsx` 无需改动（本来就调 `/kpi/supply`、按 j1 显示这两张卡）。`j1_supply` 表保留不动，只是不再读它。
+- **验证（本地跑打好的 jar + 真实登录调接口）**：`/api/kpi/supply?startDate=2026-09-01&endDate=2026-09-23`
+  → `{"supply_to_j2":15497.66,"supply_to_j3":13297.78}`（改前两值恒 0）；2026-08 全月 → `23432.75 / 24429.03`。
+- **产物**：本机**既无 Maven 也无 JDK 21**（只有 java/javac 24），跑不了 `mvn package`。
+  本次只有 mapper XML 这一个资源变了（Java 改动是纯注释，字节码不变），
+  于是把新 `KpiMapper.xml` 直接替换进现有 `inventory-backend-1.0.0.jar`（`BOOT-INF/classes/mapper/KpiMapper.xml`），
+  对运行时等价于重新打包，已用该 jar 起服务实测通过。**今后有人装回 Maven 时，建议重新 `mvn -DskipTests package` 复核一次。**
+
+---
 ## 🗓️ 2026-09-18
 
 ### [2026-09-18-stockrecords-silent-refresh] 总库存：别人保存后改为静默更新，不再跳回顶部 / 清空筛选

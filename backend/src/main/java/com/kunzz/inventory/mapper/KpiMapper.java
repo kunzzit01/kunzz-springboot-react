@@ -33,7 +33,7 @@ public interface KpiMapper {
     /** 插入成本 */
     int insertCost(@Param("table") String table, @Param("c") Map<String, Object> c);
 
-    /** 某日期区间 J1 供应给 J2/J3 的合计 */
+    /** 某日期区间中央供应给 J2/J3 的合计（J1 成本仪表盘用；取自中央 stockinout_data 出库记录） */
     Map<String, Object> listSupplyBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     /** 查询某店某月当前库存 */
