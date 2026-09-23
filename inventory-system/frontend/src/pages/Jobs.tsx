@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { message, Modal, notification, Select, Button } from 'antd'
+import { message, Modal, notification, Select, Button, Popconfirm } from 'antd'
 import dayjs, { Dayjs } from 'dayjs'
 import flatpickr from 'flatpickr'
 import 'flatpickr/dist/flatpickr.min.css'
 import zh from 'flatpickr/dist/l10n/zh'
-import { getApplicationsPaged, getJobs, updateApplication } from '../api'
-import type { JobApplication, JobPosition } from '../types'
+import {
+  claimApplication, getApplicationLogs, getApplicationsPaged, getHandlerOptions, getJobs, getMe,
+  releaseApplication, takeoverApplication, transferApplication, updateApplication,
+} from '../api'
+import type { ApplicationLog, HandlerOption, JobApplication, JobPosition, UserInfo } from '../types'
+import { useRealtime } from '../utils/useRealtime'
 import '../styles/hire.css'
 
 const STATUS_CONFIG = [
@@ -159,7 +163,40 @@ export default function Jobs() {
   const [modalStatus, setModalStatus] = useState(0)
   const [modalRemarks, setModalRemarks] = useState('')
 
+  // 处理人归属（认领 / 转交）
+  const [currentUser, setCurrentUser] = useState<UserInfo | null>(null)
+  const [claiming, setClaiming] = useState(false)
+  const [handlerOptions, setHandlerOptions] = useState<HandlerOption[]>([])
+  const [modalLogs, setModalLogs] = useState<ApplicationLog[]>([])
+  /** 「转交给…」下拉的选中值：每次选完立刻清空，让下拉恢复成操作菜单的样子 */
+  const [transferPick, setTransferPick] = useState<number | undefined>(undefined)
+
   const searchRef = useRef<HTMLInputElement>(null)
+
+  // 实时回调里读最新值用的 ref（避免把整块 state 塞进 useRealtime 的依赖里）
+  const pageRef = useRef(1)
+  pageRef.current = page
+  const modalAppRef = useRef<JobApplication | null>(null)
+  modalAppRef.current = modalApp
+  const popoverRef = useRef<{ app: JobApplication; x: number; y: number } | null>(null)
+  popoverRef.current = popover
+  const savingRef = useRef(false)
+  savingRef.current = saving
+  const drawerOpenRef = useRef(false)
+  drawerOpenRef.current = drawerOpen
+
+  // 老板（account_type=special）：不参与认领，可强制接管
+  const isBoss = String(currentUser?.accountType || '') === 'special'
+  const myId = currentUser?.id
+  /** 这条归我处理？（未认领也算「可处理」——打开详情会自动认领） */
+  const isMine = (a: JobApplication) => !a.handlerId || (myId != null && a.handlerId === myId)
+  /** 能否点联系方式：只有未认领 / 归我 / 老板可以 —— 防止别人没认领就先去联系应聘者 */
+  const canContact = (a: JobApplication) => isMine(a) || isBoss
+
+  /** 弹窗里这条是不是「我正在处理」（未认领不算，横幅要显示「尚未认领」） */
+  const modalMine = !!modalApp && modalApp.handlerId != null && modalApp.handlerId === myId
+  /** 弹窗是否可编辑：未认领（打开即认领）/ 归我 / 老板；被抢占后 patchRow 会把 handlerId 刷成别人，自动变只读 */
+  const modalEditable = !!modalApp && (isBoss || modalApp.handlerId == null || modalApp.handlerId === myId)
 
   // 移动端抽屉：打开时锁定页面滚动（对齐线上 toggleDrawer）
   useEffect(() => {
@@ -237,9 +274,13 @@ export default function Jobs() {
     setPopover({ app, x: rect.left + rect.width / 2 - 60, y: rect.bottom + 4 })
   }
 
+  /**
+   * silent=true 用于实时刷新：不显示 loading（否则 tbody 变单行、表格高度塌陷、滚动位置被浏览器夹掉），
+   * 并且保留当前页 —— 别人认领一条不该把正在看第 3 页的人踢回第 1 页。
+   */
   const fetchData = useCallback(
-    async (p: number) => {
-      setLoading(true)
+    async (p: number, opts?: { silent?: boolean }) => {
+      if (!opts?.silent) setLoading(true)
       try {
         const res = await getApplicationsPaged({
           keyword: keyword || undefined,
@@ -256,10 +297,29 @@ export default function Jobs() {
         setTotalPages(res.totalPages)
         setPage(p)
       } catch { /* 拦截器已提示 */ } finally {
-        setLoading(false)
+        if (!opts?.silent) setLoading(false)
       }
     },
     [keyword, company, jobTitle, status, dateRange],
+  )
+
+  const fetchDataRef = useRef(fetchData)
+  fetchDataRef.current = fetchData
+
+  // 当前登录用户（判断「这条是不是我的」）+ 可转交名单
+  useEffect(() => {
+    getMe().then(setCurrentUser).catch(() => {})
+    getHandlerOptions().then(setHandlerOptions).catch(() => {})
+  }, [])
+
+  // 实时：别人认领/转交后自动刷新（保留当前页 + 静默，不打断正在编辑的弹窗）
+  useRealtime(
+    '*',
+    () => fetchDataRef.current(pageRef.current, { silent: true }),
+    1000,
+    3000,
+    () => !!(modalAppRef.current || popoverRef.current || savingRef.current || drawerOpenRef.current),
+    ['application_changed'],
   )
 
   // 筛选变化 → 回第 1 页
@@ -359,8 +419,94 @@ export default function Jobs() {
     try {
       await updateApplication(app.id, { status: newStatus })
       setRawData((prev) => prev.map((r) => (r.id === app.id ? { ...r, status: newStatus } : r)))
-      fetchData(1)
+      fetchDataRef.current(page)
     } catch { /* 拦截器已提示 */ }
+  }
+
+  /** 把某条申请替换成最新的（列表页 + 全量计数 + 打开着的弹窗一起同步） */
+  const patchRow = useCallback((updated: JobApplication) => {
+    setAllData((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)))
+    setRawData((prev) => prev.map((r) => (r.id === updated.id ? { ...r, ...updated } : r)))
+    setModalApp((prev) => (prev && prev.id === updated.id ? { ...prev, ...updated } : prev))
+  }, [])
+
+  const loadLogs = useCallback((id: number) => {
+    getApplicationLogs(id).then(setModalLogs).catch(() => setModalLogs([]))
+  }, [])
+
+  /**
+   * 打开详情 = 认领（用户选定的交互：谁点开谁接手）。
+   * - 已被别人认领 → 只读打开，不抢
+   * - 老板（special）不参与认领，只提供「强制接管」
+   * - 未认领 → 认领；万一被别人抢先（并发），后端返回 claimed=false，切成只读
+   */
+  const openDetail = async (app: JobApplication) => {
+    setClaiming(true)
+    // 先按「当前已知状态」把弹窗打开，避免点一下等半秒才出现
+    setModalApp(app)
+    setModalStatus(Number(app.status ?? 0))
+    setModalRemarks(app.hrRemarks || '')
+    setModalLogs([])
+    loadLogs(app.id)
+    try {
+      if (app.handlerId || isBoss || myId == null) return
+      const res = await claimApplication(app.id)
+      if (res.claimed) {
+        patchRow(res.application)
+      } else {
+        patchRow(res.application)
+        message.warning(`该申请已被 ${res.handlerName || '其他 HR'} 认领，已切换为只读`)
+      }
+    } catch { /* 拦截器已提示 */ } finally {
+      setClaiming(false)
+    }
+  }
+
+  const releaseMine = async () => {
+    if (!modalApp) return
+    try {
+      const updated = await releaseApplication(modalApp.id)
+      patchRow(updated)
+      message.success('已释放，其他人可以接手了')
+      loadLogs(modalApp.id)
+    } catch { /* 拦截器已提示 */ }
+  }
+
+  const transferMine = async (handlerId: number) => {
+    if (!modalApp) return
+    try {
+      const updated = await transferApplication(modalApp.id, handlerId)
+      patchRow(updated)
+      const who = handlerOptions.find((h) => h.id === handlerId)
+      message.success(`已转交给 ${who?.name || '对方'}`)
+      loadLogs(modalApp.id)
+    } catch { /* 拦截器已提示 */ }
+  }
+
+  const takeOver = async () => {
+    if (!modalApp) return
+    try {
+      const updated = await takeoverApplication(modalApp.id)
+      patchRow(updated)
+      message.success('已接管这条申请')
+      loadLogs(modalApp.id)
+    } catch { /* 拦截器已提示 */ }
+  }
+
+  /** 点列表联系方式：未认领时先认领再跳转，认领不到（被抢）就不跳 —— 防止两个人重复联系同一位应聘者 */
+  const openContact = async (app: JobApplication, url: string) => {
+    if (!canContact(app)) return
+    if (!app.handlerId && !isBoss && myId != null) {
+      try {
+        const res = await claimApplication(app.id)
+        patchRow(res.application)
+        if (!res.claimed) {
+          message.warning(`该申请已被 ${res.handlerName || '其他 HR'} 认领，请联系对方`)
+          return
+        }
+      } catch { return /* 拦截器已提示 */ }
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
   }
 
   // 详情弹窗保存
@@ -373,7 +519,7 @@ export default function Jobs() {
       message.success('保存成功')
       setRawData((prev) => prev.map((r) => (r.id === modalApp.id ? { ...r, status: modalStatus, hrRemarks: modalRemarks } : r)))
       setModalApp(null)
-      fetchData(1)
+      fetchDataRef.current(page)
     } catch { /* 拦截器已提示 */ }
     finally { setSaving(false) }
   }
@@ -568,16 +714,17 @@ export default function Jobs() {
                   <th>联系方式</th>
                   <th>简历附件</th>
                   <th>申请时间</th>
+                  <th>处理人</th>
                   <th>状态</th>
                   <th className="text-center">操作</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && allData.length === 0 && (
-                  <tr><td colSpan={8} className="empty-state">数据加载中…</td></tr>
+                  <tr><td colSpan={9} className="empty-state">数据加载中…</td></tr>
                 )}
                 {!loading && allData.length === 0 && (
-                  <tr><td colSpan={8} className="empty-state">没有找到匹配的记录</td></tr>
+                  <tr><td colSpan={9} className="empty-state">没有找到匹配的记录</td></tr>
                 )}
                 {allData.map((app) => {
                   const st = statusMeta(app.status)
@@ -586,6 +733,9 @@ export default function Jobs() {
                   const phone = fmtPhone(app.phoneCode, app.phoneNumber)
                   const emailHref = gmailComposeUrl(app.email)
                   const waHref = whatsappUrl(app.phoneCode, app.phoneNumber)
+                  const contactable = canContact(app)
+                  const mine = isMine(app)
+                  const contactHint = contactable ? '' : `该申请由 ${app.handlerName || '其他 HR'} 跟进中`
                   return (
                     <tr key={app.id} className="table-row">
                       <td>
@@ -597,31 +747,39 @@ export default function Jobs() {
                       <td><span className="company-badge">{app.companyName || ''}</span></td>
                       <td className="font-medium text-primary">{app.jobTitle || ''}</td>
                       <td>
-                        {emailHref ? (
+                        {emailHref && contactable ? (
                           <a
                             className="contact-link text-14 text-main mb-4 cell-ellipsis"
                             href={emailHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             title={'用 Gmail 给 ' + app.email + ' 写邮件'}
+                            onClick={(e) => { e.preventDefault(); openContact(app, emailHref) }}
                           >
                             ✉️ {app.email}
                           </a>
                         ) : (
-                          <div className="text-14 text-main mb-4 cell-ellipsis">✉️ {app.email || ''}</div>
+                          <div
+                            className={'text-14 text-main mb-4 cell-ellipsis' + (contactable ? '' : ' contact-locked')}
+                            title={contactHint || undefined}
+                          >
+                            ✉️ {app.email || ''}
+                          </div>
                         )}
-                        {waHref ? (
+                        {waHref && contactable ? (
                           <a
                             className="contact-link phone-link text-12 text-muted cell-ellipsis"
                             href={waHref}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             title={'用 WhatsApp 联系 ' + phone}
+                            onClick={(e) => { e.preventDefault(); openContact(app, waHref) }}
                           >
                             📞 {phone}
                           </a>
                         ) : (
-                          <div className="text-12 text-muted cell-ellipsis">📞 {phone}</div>
+                          <div
+                            className={'text-12 text-muted cell-ellipsis' + (contactable ? '' : ' contact-locked')}
+                            title={contactHint || undefined}
+                          >
+                            📞 {phone}
+                          </div>
                         )}
                       </td>
                       <td>
@@ -640,12 +798,25 @@ export default function Jobs() {
                         <div className="text-14 text-main mb-4 cell-ellipsis">{datePart}</div>
                         <div className="text-12 text-muted">{timePart}</div>
                       </td>
+                      <td>
+                        {app.handlerName ? (
+                          <span className={'handler-tag' + (app.handlerId === myId ? ' is-me' : '')}>
+                            {app.handlerId === myId ? '我' : app.handlerName}
+                          </span>
+                        ) : (
+                          <span className="handler-tag empty">未认领</span>
+                        )}
+                      </td>
                       <td className="status-cell">
                         <div className="status-wrapper">
                           <span
                             className={'badge ' + st.cls}
-                            title="点击修改状态"
-                            onClick={(e) => togglePopover(app, e)}
+                            title={mine ? '点击修改状态' : `该申请由 ${app.handlerName || '其他 HR'} 跟进中`}
+                            style={mine ? undefined : { cursor: 'not-allowed', opacity: 0.55 }}
+                            onClick={(e) => {
+                              if (mine) togglePopover(app, e)
+                              else { e.stopPropagation(); message.warning(contactHint) }
+                            }}
                           >
                             {st.label}
                           </span>
@@ -654,7 +825,7 @@ export default function Jobs() {
                       <td className="text-center">
                         <button
                           className="btn-link-action btn-action-detail"
-                          onClick={() => { setModalApp(app); setModalStatus(Number(app.status ?? 0)); setModalRemarks(app.hrRemarks || '') }}
+                          onClick={() => openDetail(app)}
                         >
                           详情
                         </button>
@@ -699,92 +870,158 @@ export default function Jobs() {
         title="应聘者详情档案"
         onCancel={() => setModalApp(null)}
         width={900}
+        className="hire-modal"
         footer={[
           <Button key="c" onClick={() => setModalApp(null)}>取消关闭</Button>,
-          <Button key="s" type="primary" style={{ background: '#ff7b00', fontWeight: 'bold' }} onClick={saveModal} loading={saving} disabled={saving}>保存更新</Button>,
+          <Button
+            key="s"
+            type="primary"
+            style={{ background: '#ff7b00', fontWeight: 'bold' }}
+            onClick={saveModal}
+            loading={saving}
+            disabled={saving || !modalEditable}
+          >
+            {modalEditable ? '保存更新' : '只读（非处理人）'}
+          </Button>,
         ]}
       >
         {modalApp && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
-            <div>
-              <div className="hr-section-title">基础申请信息</div>
-              <div className="hr-modal-grid">
-                <span className="hr-modal-label">申请公司：</span><span className="font-bold">{modalApp.companyName || ''}</span>
-                <span className="hr-modal-label">申请职位：</span><span className="font-bold text-primary">{modalApp.jobTitle || ''}</span>
-                <span className="hr-modal-label">提交时间：</span><span>{fmtCreated(modalApp.createdAt)}</span>
+          <>
+            {/* 顶部归属横幅：三态（我的 / 别人的 / 未认领） */}
+            <div className={'claim-banner' + (modalMine ? ' mine' : modalApp.handlerId ? ' taken' : '')}>
+              <span className="claim-banner-text">
+                {claiming ? '⏳ 正在认领…'
+                  : modalMine ? `✅ 由你处理${modalApp.claimedAt ? '（' + fmtCreated(modalApp.claimedAt).substring(0, 16) + ' 认领）' : ''}`
+                  : modalApp.handlerId ? `🔒 该申请由 ${modalApp.handlerName || '其他 HR'} 跟进中${isBoss ? '（你可以强制接管）' : '，你只能查看'}`
+                  : '⚪ 尚未认领'}
+              </span>
+              <span className="claim-banner-actions">
+                {modalMine && (
+                  <>
+                    <Select
+                      size="small"
+                      placeholder="转交给…"
+                      style={{ width: 190 }}
+                      value={transferPick}
+                      options={handlerOptions.map((h) => ({
+                        value: h.id,
+                        label: `${h.name || '未命名'}${h.position ? ' · ' + h.position : ''}`,
+                      }))}
+                      onChange={(v) => { setTransferPick(undefined); transferMine(v) }}
+                    />
+                    <Popconfirm title="释放这条申请？" description="释放后其他人可以接手" onConfirm={releaseMine} okText="释放" cancelText="取消">
+                      <Button size="small">释放</Button>
+                    </Popconfirm>
+                  </>
+                )}
+                {isBoss && !modalMine && (
+                  <Popconfirm title="强制接管这条申请？" description={modalApp.handlerName ? `原处理人 ${modalApp.handlerName} 会失去编辑权` : ''} onConfirm={takeOver} okText="接管" cancelText="取消">
+                    <Button size="small" danger>强制接管</Button>
+                  </Popconfirm>
+                )}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+              <div>
+                <div className="hr-section-title">基础申请信息</div>
+                <div className="hr-modal-grid">
+                  <span className="hr-modal-label">申请公司：</span><span className="font-bold">{modalApp.companyName || ''}</span>
+                  <span className="hr-modal-label">申请职位：</span><span className="font-bold text-primary">{modalApp.jobTitle || ''}</span>
+                  <span className="hr-modal-label">提交时间：</span><span>{fmtCreated(modalApp.createdAt)}</span>
+                </div>
+                <div className="hr-section-title mt-24">个人联系资料</div>
+                <div className="hr-modal-grid">
+                  <span className="hr-modal-label">中文姓名：</span><span className="font-bold">{modalApp.chineseName || ''}</span>
+                  <span className="hr-modal-label">英文姓名：</span><span className="font-bold">{modalApp.englishName || ''}</span>
+                  <span className="hr-modal-label">性别：</span><span className="font-normal">{modalApp.gender || ''}</span>
+                  <span className="hr-modal-label">电子邮箱：</span>
+                  <span>
+                    {gmailComposeUrl(modalApp.email) && modalEditable ? (
+                      <a
+                        href={gmailComposeUrl(modalApp.email)}
+                        className="font-bold hr-modal-link"
+                        title={'用 Gmail 给 ' + modalApp.email + ' 写邮件'}
+                        onClick={(e) => { e.preventDefault(); openContact(modalApp, gmailComposeUrl(modalApp.email)) }}
+                      >
+                        {modalApp.email}（Gmail 写信）
+                      </a>
+                    ) : (
+                      <span className={'font-bold' + (modalEditable ? '' : ' contact-locked')}>
+                        {modalApp.email || ''}{!modalEditable && gmailComposeUrl(modalApp.email) ? '（由他人跟进，不可联系）' : ''}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hr-modal-label">电话号码：</span>
+                  <span>
+                    {whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber) && modalEditable ? (
+                      <a
+                        href={whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber)}
+                        className="font-bold hr-modal-link"
+                        title={'用 WhatsApp 联系 ' + fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}
+                        onClick={(e) => { e.preventDefault(); openContact(modalApp, whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber)) }}
+                      >
+                        {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}（WhatsApp）
+                      </a>
+                    ) : (
+                      <span className={'font-bold' + (modalEditable ? '' : ' contact-locked')}>
+                        {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}{!modalEditable && whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber) ? '（由他人跟进，不可联系）' : ''}
+                      </span>
+                    )}
+                  </span>
+                  <span className="hr-modal-label items-center flex-row">简历附件：</span>
+                  <span>
+                    {modalApp.resumeFileUrl ? (
+                      <button className="hr-resume-btn" onClick={() => window.open(resolveFileUrl(modalApp.resumeFileUrl), '_blank')}>📄 下载/预览简历</button>
+                    ) : (
+                      <span className="hr-resume-btn disabled">无简历附件</span>
+                    )}
+                  </span>
+                </div>
               </div>
-              <div className="hr-section-title mt-24">个人联系资料</div>
-              <div className="hr-modal-grid">
-                <span className="hr-modal-label">中文姓名：</span><span className="font-bold">{modalApp.chineseName || ''}</span>
-                <span className="hr-modal-label">英文姓名：</span><span className="font-bold">{modalApp.englishName || ''}</span>
-                <span className="hr-modal-label">性别：</span><span className="font-normal">{modalApp.gender || ''}</span>
-                <span className="hr-modal-label">电子邮箱：</span>
-                <span>
-                  {gmailComposeUrl(modalApp.email) ? (
-                    <a
-                      href={gmailComposeUrl(modalApp.email)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold hr-modal-link"
-                      title={'用 Gmail 给 ' + modalApp.email + ' 写邮件'}
-                    >
-                      {modalApp.email}（Gmail 写信）
-                    </a>
+              <div className="hr-action-section">
+                <div className="hr-section-title">HR 处理进度跟进</div>
+                <div className="mb-8">
+                  <label className="hr-modal-label mb-8">修改当前状态：</label>
+                  <Select
+                    className="hr-modal-select"
+                    style={{ width: '100%' }}
+                    value={modalStatus}
+                    onChange={setModalStatus}
+                    disabled={!modalEditable}
+                    options={STATUS_CONFIG.map((s) => ({ value: s.val, label: `${s.icon} ${s.label}` }))}
+                  />
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label className="hr-modal-label mt-24">内部备注 (仅 HR 可见)：</label>
+                  <textarea
+                    className="form-control"
+                    rows={5}
+                    style={{ width: '100%', minWidth: '100%', resize: 'vertical', height: 'auto' }}
+                    placeholder={modalEditable ? '在此记录面试情况、期望薪资、背景调查结果等...' : '由其他 HR 填写中'}
+                    value={modalRemarks}
+                    readOnly={!modalEditable}
+                    onChange={(e) => setModalRemarks(e.target.value)}
+                  />
+                </div>
+                <div className="hr-section-title mt-24">跟进记录</div>
+                <div className="claim-timeline">
+                  {modalLogs.length === 0 ? (
+                    <div className="text-12 text-muted">暂无记录</div>
                   ) : (
-                    <span className="font-bold">{modalApp.email || ''}</span>
+                    modalLogs.map((l) => (
+                      <div key={l.id} className="claim-log">
+                        <span className="claim-log-time">{fmtCreated(l.createdAt).substring(0, 16)}</span>
+                        <span className="claim-log-who">{l.operator || '—'}</span>
+                        <span className="claim-log-act">{l.action || ''}</span>
+                        <span className="claim-log-detail">{l.detail || ''}</span>
+                      </div>
+                    ))
                   )}
-                </span>
-                <span className="hr-modal-label">电话号码：</span>
-                <span>
-                  {whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber) ? (
-                    <a
-                      href={whatsappUrl(modalApp.phoneCode, modalApp.phoneNumber)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-bold hr-modal-link"
-                      title={'用 WhatsApp 联系 ' + fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}
-                    >
-                      {fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}（WhatsApp）
-                    </a>
-                  ) : (
-                    <span className="font-bold">{fmtPhone(modalApp.phoneCode, modalApp.phoneNumber)}</span>
-                  )}
-                </span>
-                <span className="hr-modal-label items-center flex-row">简历附件：</span>
-                <span>
-                  {modalApp.resumeFileUrl ? (
-                    <button className="hr-resume-btn" onClick={() => window.open(resolveFileUrl(modalApp.resumeFileUrl), '_blank')}>📄 下载/预览简历</button>
-                  ) : (
-                    <span className="hr-resume-btn disabled">无简历附件</span>
-                  )}
-                </span>
+                </div>
               </div>
             </div>
-            <div className="hr-action-section">
-              <div className="hr-section-title">HR 处理进度跟进</div>
-              <div className="mb-8">
-                <label className="hr-modal-label mb-8">修改当前状态：</label>
-                <Select
-                  className="hr-modal-select"
-                  style={{ width: '100%' }}
-                  value={modalStatus}
-                  onChange={setModalStatus}
-                  options={STATUS_CONFIG.map((s) => ({ value: s.val, label: `${s.icon} ${s.label}` }))}
-                />
-              </div>
-              <div style={{ marginTop: 12 }}>
-                <label className="hr-modal-label mt-24">内部备注 (仅 HR 可见)：</label>
-                <textarea
-                  className="form-control"
-                  rows={7}
-                  style={{ width: '100%', minWidth: '100%', resize: 'vertical', height: 'auto' }}
-                  placeholder="在此记录面试情况、期望薪资、背景调查结果等..."
-                  value={modalRemarks}
-                  onChange={(e) => setModalRemarks(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+          </>
         )}
       </Modal>
     </div>

@@ -4,8 +4,12 @@ import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.dto.PageResult;
 import com.kunzz.inventory.entity.JobApplication;
 import com.kunzz.inventory.entity.JobPosition;
+import com.kunzz.inventory.entity.OperationLog;
+import com.kunzz.inventory.entity.User;
 import com.kunzz.inventory.repository.JobApplicationRepository;
 import com.kunzz.inventory.repository.JobPositionRepository;
+import com.kunzz.inventory.repository.OperationLogRepository;
+import com.kunzz.inventory.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,7 +22,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,6 +38,17 @@ public class JobService {
 
     private final JobPositionRepository positionRepo;
     private final JobApplicationRepository applicationRepo;
+    private final OperationLogRepository operationLogRepo;
+    private final UserRepository userRepo;
+
+    /** 可以把应聘者转交给谁：HR 部门 + 老板（users.account_type 枚举里本来就有 'hr'） */
+    private static final List<String> HANDLER_ACCOUNT_TYPES = List.of("hr", "special");
+
+    /** 跟进记录挂在 operation_logs.target 上的前缀（一张表可承载多种业务对象） */
+    private static final String LOG_TARGET_PREFIX = "job_application:";
+
+    /** 认领结果：claimed=false 表示这条已被别人认领（并发竞争的正常结果，不是错误） */
+    public record ClaimResult(boolean claimed, JobApplication application, String handlerName) {}
 
     // ---------- 职位 ----------
 
@@ -108,9 +125,10 @@ public class JobService {
     }
 
     @Transactional
-    public JobApplication updateApplication(Integer id, Map<String, Object> patch) {
+    public JobApplication updateApplication(Integer id, Map<String, Object> patch, User me) {
         JobApplication a = applicationRepo.findById(id)
                 .orElseThrow(() -> new BusinessException(404, "申请不存在"));
+        requireHandler(a, me, "修改");
         if (patch.containsKey("status")) {
             a.setStatus(((Number) patch.get("status")).intValue());
         }
@@ -125,6 +143,139 @@ public class JobService {
     @Transactional
     public void deleteApplication(Integer id) {
         applicationRepo.deleteById(id);
+    }
+
+    // ---------- 处理人归属：认领 / 转交 / 释放 ----------
+
+    /**
+     * 认领：谁点开详情谁接手。
+     * 已被别人认领时返回 claimed=false（并发竞争的正常结果，交给前端切只读，不当错误抛）。
+     */
+    @Transactional
+    public ClaimResult claim(Integer id, User me) {
+        JobApplication a = applicationRepo.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(404, "申请不存在"));
+        if (a.getHandlerId() != null) {
+            if (a.getHandlerId().equals(me.getId())) {
+                return new ClaimResult(true, a, a.getHandlerName()); // 本来就是我的，幂等
+            }
+            return new ClaimResult(false, a, a.getHandlerName());
+        }
+        a.setHandlerId(me.getId());
+        a.setHandlerName(me.getDisplayName());
+        a.setClaimedAt(LocalDateTime.now());
+        JobApplication saved = applicationRepo.save(a);
+        writeLog(me, "认领", id, null);
+        return new ClaimResult(true, saved, saved.getHandlerName());
+    }
+
+    /** 转交给另一位 HR（本人或老板） */
+    @Transactional
+    public JobApplication transfer(Integer id, User me, Integer targetUserId) {
+        JobApplication a = applicationRepo.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(404, "申请不存在"));
+        boolean boss = isSpecial(me);
+        if (!boss && !me.getId().equals(a.getHandlerId())) {
+            throw new BusinessException(409, "该申请当前由 " + handlerLabel(a) + " 处理，你无法转交");
+        }
+        if (targetUserId == null) throw new BusinessException(400, "请选择要转交的人");
+        if (targetUserId.equals(me.getId())) throw new BusinessException(400, "不能转交给自己");
+        User target = userRepo.findById(targetUserId)
+                .orElseThrow(() -> new BusinessException(404, "转交对象不存在"));
+        if (!HANDLER_ACCOUNT_TYPES.contains(String.valueOf(target.getAccountType()))) {
+            throw new BusinessException(400, "只能转交给 HR 部门成员");
+        }
+        String previous = a.getHandlerName();
+        a.setHandlerId(target.getId());
+        a.setHandlerName(target.getDisplayName());
+        a.setClaimedAt(LocalDateTime.now());
+        JobApplication saved = applicationRepo.save(a);
+        writeLog(me, "转交", id, "转交给 " + target.getDisplayName()
+                + (previous == null ? "" : "（原处理人 " + previous + "）"));
+        return saved;
+    }
+
+    /** 释放回「未认领」（认领错了 / 人要离职） */
+    @Transactional
+    public JobApplication release(Integer id, User me) {
+        JobApplication a = applicationRepo.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(404, "申请不存在"));
+        if (!isSpecial(me) && !me.getId().equals(a.getHandlerId())) {
+            throw new BusinessException(409, "该申请当前由 " + handlerLabel(a) + " 处理，你无法释放");
+        }
+        String previous = a.getHandlerName();
+        a.setHandlerId(null);
+        a.setHandlerName(null);
+        a.setClaimedAt(null);
+        JobApplication saved = applicationRepo.save(a);
+        writeLog(me, "释放", id, previous == null ? null : "原处理人 " + previous);
+        return saved;
+    }
+
+    /** 强制接管：仅老板（account_type=special）—— 处理人离职/忘记释放时兜底 */
+    @Transactional
+    public JobApplication takeover(Integer id, User me) {
+        if (!isSpecial(me)) throw new BusinessException(403, "只有管理员可以强制接管");
+        JobApplication a = applicationRepo.findByIdForUpdate(id)
+                .orElseThrow(() -> new BusinessException(404, "申请不存在"));
+        String previous = a.getHandlerName();
+        a.setHandlerId(me.getId());
+        a.setHandlerName(me.getDisplayName());
+        a.setClaimedAt(LocalDateTime.now());
+        JobApplication saved = applicationRepo.save(a);
+        writeLog(me, "强制接管", id, previous == null ? "原为未认领" : "原处理人 " + previous);
+        return saved;
+    }
+
+    /** 可转交的人员名单（HR + 老板），排除自己 */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> handlerOptions(Integer excludeUserId) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (User u : userRepo.findAll()) {
+            if (!HANDLER_ACCOUNT_TYPES.contains(String.valueOf(u.getAccountType()))) continue;
+            if (u.getId().equals(excludeUserId)) continue;
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", u.getId());
+            m.put("name", u.getDisplayName());
+            m.put("position", u.getPosition());
+            out.add(m);
+        }
+        return out;
+    }
+
+    /** 某条申请的跟进记录（认领 / 转交 / 释放 / 强制接管） */
+    @Transactional(readOnly = true)
+    public List<OperationLog> applicationLogs(Integer id) {
+        return operationLogRepo.findTop50ByTargetOrderByCreatedAtDesc(LOG_TARGET_PREFIX + id);
+    }
+
+    /**
+     * 归属校验：这条已被别人认领时，非处理人（且非老板）不许改。
+     * 前端 UI 已经拦住了，这里是纵深防御 —— 直接调 API 也改不动别人的应聘者。
+     */
+    private void requireHandler(JobApplication a, User me, String verb) {
+        if (a.getHandlerId() == null) return; // 未认领：放行（正常 UI 流程下打开详情即已认领）
+        if (me != null && a.getHandlerId().equals(me.getId())) return;
+        if (isSpecial(me)) return;
+        throw new BusinessException(409, "该申请由 " + handlerLabel(a) + " 跟进中，你无法" + verb);
+    }
+
+    private static String handlerLabel(JobApplication a) {
+        return a.getHandlerName() == null ? "其他 HR" : a.getHandlerName();
+    }
+
+    private static boolean isSpecial(User u) {
+        return u != null && "special".equalsIgnoreCase(String.valueOf(u.getAccountType()));
+    }
+
+    /** 写一条跟进记录到已有的 operation_logs 表（本仓库首次启用这张表） */
+    private void writeLog(User me, String action, Integer applicationId, String detail) {
+        OperationLog log = new OperationLog();
+        log.setOperator(me == null ? null : me.getDisplayName());
+        log.setAction(action);
+        log.setTarget(LOG_TARGET_PREFIX + applicationId);
+        log.setDetail(detail);
+        operationLogRepo.save(log);
     }
 
     // ---------- 官网应聘提交（加入我们 → job_applications） ----------

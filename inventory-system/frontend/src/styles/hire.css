@@ -411,15 +411,16 @@
   table-layout: fixed;
   margin: 0;
 }
-/* 列宽分配（应聘者/公司/职位/联系方式/简历/时间/状态/操作） */
-.hr-root .data-table th:nth-child(1), .hr-root .data-table td:nth-child(1) { width: 18%; }
-.hr-root .data-table th:nth-child(2), .hr-root .data-table td:nth-child(2) { width: 11%; }
-.hr-root .data-table th:nth-child(3), .hr-root .data-table td:nth-child(3) { width: 13%; }
-.hr-root .data-table th:nth-child(4), .hr-root .data-table td:nth-child(4) { width: 21%; }
-.hr-root .data-table th:nth-child(5), .hr-root .data-table td:nth-child(5) { width: 10%; }
-.hr-root .data-table th:nth-child(6), .hr-root .data-table td:nth-child(6) { width: 13%; }
+/* 列宽分配（应聘者/公司/职位/联系方式/简历/时间/处理人/状态/操作） */
+.hr-root .data-table th:nth-child(1), .hr-root .data-table td:nth-child(1) { width: 17%; }
+.hr-root .data-table th:nth-child(2), .hr-root .data-table td:nth-child(2) { width: 10%; }
+.hr-root .data-table th:nth-child(3), .hr-root .data-table td:nth-child(3) { width: 12%; }
+.hr-root .data-table th:nth-child(4), .hr-root .data-table td:nth-child(4) { width: 19%; }
+.hr-root .data-table th:nth-child(5), .hr-root .data-table td:nth-child(5) { width: 9%; }
+.hr-root .data-table th:nth-child(6), .hr-root .data-table td:nth-child(6) { width: 12%; }
 .hr-root .data-table th:nth-child(7), .hr-root .data-table td:nth-child(7) { width: 9%; }
-.hr-root .data-table th:nth-child(8), .hr-root .data-table td:nth-child(8) { width: 5%; text-align: center; }
+.hr-root .data-table th:nth-child(8), .hr-root .data-table td:nth-child(8) { width: 7%; }
+.hr-root .data-table th:nth-child(9), .hr-root .data-table td:nth-child(9) { width: 5%; text-align: center; }
 /* 超长内容省略 */
 .hr-root .cell-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 联系方式：邮箱→Gmail、电话→WhatsApp 的可点击链接（block 才能让 cell-ellipsis 生效） */
@@ -430,6 +431,71 @@
 }
 .hr-root .contact-link:hover { color: var(--primary-color); text-decoration: underline; }
 .hr-root .contact-link.phone-link:hover { color: #25d366; }
+/* 被别人认领后：联系方式不可点，视觉上也弱化，配合 title 提示处理人
+   （不套 .hr-root 前缀：列表和详情弹窗里都用它，而 antd Modal 是 portal 到 body 的，不在 .hr-root 内，
+     与本文件既有的 .hr-modal-link / .hr-section-title 同一处理方式） */
+.contact-locked { cursor: not-allowed; opacity: 0.5; }
+
+/* ================= 处理人归属（认领 / 转交） ================= */
+.hr-root .handler-tag {
+  display: inline-block;
+  max-width: 100%;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #eef2ff;
+  color: #4f46e5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hr-root .handler-tag.is-me { background: #dcfce7; color: #15803d; }
+.hr-root .handler-tag.empty { background: #f3f4f6; color: #9ca3af; font-weight: 500; }
+
+/* 下面这些只在详情弹窗里用 —— 弹窗被 portal 到 body，所以不能加 .hr-root 前缀 */
+/* 同一个原因：.hr-root 上定义的那套 CSS 变量传不到 portal 出来的弹窗里，
+   于是弹窗内的 var(--border-color)/var(--primary-color)/var(--text-muted) 全部解析为空
+   （表现：标题下的分隔线、邮箱/电话链接的主题色、标签的灰色都失效）。这里补一份到弹窗根节点。 */
+.hire-modal {
+  --primary-color: #ff7b00;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --border-color: #e5e7eb;
+}
+.claim-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 20px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #4b5563;
+}
+.claim-banner.mine { background: #ecfdf5; color: #15803d; }
+.claim-banner.taken { background: #fff7ed; color: #b45309; }
+.claim-banner-actions { display: flex; align-items: center; gap: 8px; }
+
+.claim-timeline { max-height: 190px; overflow-y: auto; }
+.claim-log {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--border-color);
+  font-size: 12px;
+}
+.claim-log:last-child { border-bottom: none; }
+.claim-log-time { color: #9ca3af; font-variant-numeric: tabular-nums; }
+.claim-log-who { color: var(--text-main); font-weight: 600; }
+.claim-log-act { color: var(--primary-color); font-weight: 600; }
+.claim-log-detail { color: var(--text-muted); }
 .hr-root .data-table tbody td:nth-child(1) > div { overflow: hidden; }
 .hr-root .data-table tbody td:nth-child(1) .font-bold { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* 表头：深灰底白字，略大的字号与舒适高度 */

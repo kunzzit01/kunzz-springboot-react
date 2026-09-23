@@ -33,6 +33,14 @@ public class RealtimeWebSocketHandler extends TextWebSocketHandler {
         broadcast("{\"type\":\"stock_changed\",\"system\":\"" + (system == null ? "all" : system) + "\"}");
     }
 
+    /**
+     * 广播招聘申请变更信号（认领 / 转交 / 释放 / 改状态）。
+     * 刻意不复用 stock_changed：那会让库存页在 HR 认领应聘者时无谓刷新（7 个页面都在订阅 stock_changed）。
+     */
+    public void broadcastApplicationChanged() {
+        broadcast("{\"type\":\"application_changed\"}");
+    }
+
     /** 广播任意 JSON 消息 */
     public void broadcast(String json) {
         TextMessage msg = new TextMessage(json);

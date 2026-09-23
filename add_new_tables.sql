@@ -391,3 +391,32 @@ DEALLOCATE PREPARE stmt;
 SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, COLUMN_DEFAULT
 FROM information_schema.COLUMNS
 WHERE table_schema='u690174784_kunzz' AND TABLE_NAME='stock_data_system' AND COLUMN_NAME='active';
+
+-- 13) 招聘申请「处理人」归属（认领 / 转交）（2026-09-23）
+--     需求：HR 部门三个人共用一个应聘者池。谁点开某位应聘者的详情，这条就归谁处理，
+--     其他人只读且联系方式不可点，避免两个 HR 重复联系同一位应聘者；接手的人可以转交给另一位 HR。
+--     口径：handler_id   = 当前处理人 user id（判定「是不是我」的唯一真相，NULL = 未认领）；
+--           handler_name = 处理人显示名快照（HR 改昵称/离职后列表仍显示得出人，
+--                          与本库 updated_by/created_by/operator 存显示名的既有风格一致）；
+--           claimed_at   = 认领时间。
+--     列名用 handler_name 而不是 handler：handler 是 MySQL/MariaDB 的关键字，裸用有踩雷风险。
+--     历史数据三列全为 NULL = 全部「未认领」，符合上线预期，无需迁移数据。
+--     转交/认领/释放的历史记在已有的 operation_logs 表（target = job_application:<id>），不新建表。
+SET @h_col := (SELECT COUNT(*) FROM information_schema.COLUMNS
+               WHERE table_schema='u690174784_kunzz' AND table_name='job_applications' AND column_name='handler_id');
+SET @ddl := IF(@h_col = 0,
+  'ALTER TABLE job_applications
+     ADD COLUMN handler_id   INT(11)      NULL COMMENT ''当前处理人 user id；NULL=未认领'' AFTER hr_remarks,
+     ADD COLUMN handler_name VARCHAR(100) NULL COMMENT ''当前处理人显示名（快照）'' AFTER handler_id,
+     ADD COLUMN claimed_at   TIMESTAMP    NULL COMMENT ''认领时间'' AFTER handler_name',
+  'SELECT ''job_applications 处理人字段已存在，跳过''');
+PREPARE stmt FROM @ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 验证（应出现 3 行：handler_id int(11) / handler_name varchar(100) / claimed_at timestamp）
+SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE
+FROM information_schema.COLUMNS
+WHERE table_schema='u690174784_kunzz' AND TABLE_NAME='job_applications'
+  AND COLUMN_NAME IN ('handler_id','handler_name','claimed_at')
+ORDER BY ORDINAL_POSITION;

@@ -277,7 +277,29 @@ export interface JobApplication {
   resumeFileUrl?: string
   status?: number
   hrRemarks?: string
+  /** 当前处理人 user id；空 = 未认领（谁点开详情谁认领） */
+  handlerId?: number
+  /** 当前处理人显示名快照（HR 改昵称/离职后仍显示得出人） */
+  handlerName?: string
+  /** 认领时间 */
+  claimedAt?: string
   createdAt?: string
+}
+
+/** 某条招聘申请的跟进记录（认领 / 转交 / 释放），来自 operation_logs */
+export interface ApplicationLog {
+  id: number
+  operator?: string
+  action?: string
+  detail?: string
+  createdAt?: string
+}
+
+/** 可转交的人员（HR + 老板） */
+export interface HandlerOption {
+  id: number
+  name?: string
+  position?: string
 }
 
 export interface ScheduleEmployee {

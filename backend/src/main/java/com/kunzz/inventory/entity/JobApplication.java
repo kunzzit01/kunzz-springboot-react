@@ -56,6 +56,18 @@ public class JobApplication {
     @Column(name = "hr_remarks", length = 500)
     private String hrRemarks;
 
+    /** 当前处理人 user id；NULL = 未认领（认领/转交/释放见 JobService） */
+    @Column(name = "handler_id")
+    private Integer handlerId;
+
+    /** 当前处理人显示名快照（HR 改昵称/离职后列表仍显示得出人） */
+    @Column(name = "handler_name", length = 100)
+    private String handlerName;
+
+    /** 认领时间 */
+    @Column(name = "claimed_at")
+    private LocalDateTime claimedAt;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 

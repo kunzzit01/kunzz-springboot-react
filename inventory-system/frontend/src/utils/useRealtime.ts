@@ -12,6 +12,9 @@ import { useEffect, useRef, useCallback } from 'react'
  *   结束后由尾部定时器自动补刷
  *
  * system 传 '*' 表示订阅任意系统（收到任何 stock_changed 都触发）
+ *
+ * events 默认为 ['stock_changed']（库存页行为不变）；招聘列表传 ['application_changed']
+ * 订阅招聘申请变更（认领/转交），避免库存页被无关的招聘事件刷到。
  */
 export function useRealtime(
   system: string | null,
@@ -19,6 +22,7 @@ export function useRealtime(
   debounceMs = 1000,
   throttleMs = 3000,
   isBusy?: () => boolean,
+  events: string[] = ['stock_changed'],
 ) {
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
@@ -26,6 +30,8 @@ export function useRealtime(
   systemRef.current = system
   const busyRef = useRef(isBusy)
   busyRef.current = isBusy
+  const eventsRef = useRef(events)
+  eventsRef.current = events
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastRunRef = useRef(0)
   const wsRef = useRef<WebSocket | null>(null)
@@ -83,9 +89,10 @@ export function useRealtime(
       ws.onmessage = (e) => {
         try {
           const msg = JSON.parse(e.data)
-          if (msg && msg.type === 'stock_changed') {
+          if (msg && eventsRef.current.includes(msg.type)) {
             const sys = systemRef.current
-            if (msg.system === 'all' || sys === '*' || msg.system === sys) {
+            // 招聘事件不带 system；库存事件才按 system 过滤
+            if (msg.system === undefined || msg.system === 'all' || sys === '*' || msg.system === sys) {
               notify()
             }
           }

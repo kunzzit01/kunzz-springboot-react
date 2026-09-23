@@ -1,11 +1,16 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.entity.JobApplication;
 import com.kunzz.inventory.entity.JobPosition;
+import com.kunzz.inventory.entity.OperationLog;
+import com.kunzz.inventory.entity.User;
+import com.kunzz.inventory.realtime.RealtimeService;
 import com.kunzz.inventory.repository.JobPositionRepository;
 import com.kunzz.inventory.service.JobService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -19,6 +24,14 @@ public class JobController {
 
     private final JobService jobService;
     private final JobPositionRepository jobPositionRepository;
+    private final RealtimeService realtimeService;
+
+    /** 当前登录用户（JWT 过滤器把 User 实体放进 principal）；取不到 → null */
+    private User currentUser(Authentication authentication) {
+        if (authentication == null) return null;
+        Object principal = authentication.getPrincipal();
+        return principal instanceof User u ? u : null;
+    }
 
     /**
      * 官网职位 API：兼容老系统 get_jobs_api.php 的返回格式
@@ -119,14 +132,69 @@ public class JobController {
     }
 
     @PutMapping("/applications/{id}")
-    public ApiResponse<JobApplication> updateApplication(@PathVariable Integer id, @RequestBody Map<String, Object> patch) {
-        return ApiResponse.ok(jobService.updateApplication(id, patch));
+    public ApiResponse<JobApplication> updateApplication(@PathVariable Integer id, @RequestBody Map<String, Object> patch,
+                                                         Authentication authentication) {
+        ApiResponse<JobApplication> resp = ApiResponse.ok(
+                jobService.updateApplication(id, patch, currentUser(authentication)));
+        realtimeService.notifyApplicationChanged();
+        return resp;
     }
 
     @DeleteMapping("/applications/{id}")
     public ApiResponse<Void> deleteApplication(@PathVariable Integer id) {
         jobService.deleteApplication(id);
         return ApiResponse.ok();
+    }
+
+    // ---------- 处理人归属：认领 / 转交 / 释放（HR 共用应聘者池，避免两个人重复联系同一位） ----------
+
+    /** 可转交的人员名单（HR + 老板），排除自己 */
+    @GetMapping("/applications/handler-options")
+    public ApiResponse<List<Map<String, Object>>> handlerOptions(Authentication authentication) {
+        User me = currentUser(authentication);
+        return ApiResponse.ok(jobService.handlerOptions(me == null ? null : me.getId()));
+    }
+
+    /** 某条申请的跟进记录 */
+    @GetMapping("/applications/{id}/logs")
+    public ApiResponse<List<OperationLog>> applicationLogs(@PathVariable Integer id) {
+        return ApiResponse.ok(jobService.applicationLogs(id));
+    }
+
+    /** 认领：谁点开详情谁接手；已被别人认领时 claimed=false（正常返回，不当错误） */
+    @PostMapping("/applications/{id}/claim")
+    public ApiResponse<JobService.ClaimResult> claim(@PathVariable Integer id, Authentication authentication) {
+        JobService.ClaimResult result = jobService.claim(id, currentUser(authentication));
+        if (result.claimed()) realtimeService.notifyApplicationChanged();
+        return ApiResponse.ok(result);
+    }
+
+    /** 转交给另一位 HR（本人或老板） */
+    @PostMapping("/applications/{id}/transfer")
+    public ApiResponse<JobApplication> transfer(@PathVariable Integer id, @RequestBody Map<String, Object> body,
+                                                Authentication authentication) {
+        Object target = body.get("handlerId");
+        if (target == null) throw new BusinessException(400, "请选择要转交的人");
+        ApiResponse<JobApplication> resp = ApiResponse.ok(
+                jobService.transfer(id, currentUser(authentication), ((Number) target).intValue()));
+        realtimeService.notifyApplicationChanged();
+        return resp;
+    }
+
+    /** 释放回「未认领」 */
+    @PostMapping("/applications/{id}/release")
+    public ApiResponse<JobApplication> release(@PathVariable Integer id, Authentication authentication) {
+        ApiResponse<JobApplication> resp = ApiResponse.ok(jobService.release(id, currentUser(authentication)));
+        realtimeService.notifyApplicationChanged();
+        return resp;
+    }
+
+    /** 强制接管：仅老板（account_type=special），处理人离职/忘记释放时兜底 */
+    @PostMapping("/applications/{id}/takeover")
+    public ApiResponse<JobApplication> takeover(@PathVariable Integer id, Authentication authentication) {
+        ApiResponse<JobApplication> resp = ApiResponse.ok(jobService.takeover(id, currentUser(authentication)));
+        realtimeService.notifyApplicationChanged();
+        return resp;
     }
 
     // ---------- 官网应聘提交（加入我们，multipart） ----------

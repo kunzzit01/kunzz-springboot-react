@@ -57,6 +57,53 @@
   `backend/target/*.jar` **不需要**重新打包 —— 该 jar 内不含 `static/`（实测 `unzip -l` 命中 0 条），
   后端是 `WebConfig` 从磁盘 `backend/static/` 伺服的。
 
+### [2026-09-23-hire-claim-transfer] 招聘列表：HR 认领应聘者 + 转交（防止两个人重复联系同一位）
+
+- **需求（用户）**：HR 部门 3 个人共用一个应聘者池。谁点开某位应聘者的详情，这条就归谁处理，
+  其他人不能介入（只读、联系方式点不了）；接手的人可以把这条转交给另一位 HR，并能查「谁在什么时候转交给了谁」。
+- **交互口径（用户拍板）**：打开详情即认领（不是点按钮）；被别人认领后能看全部信息但联系方式不可点；
+  本人可释放/转交，老板（`account_type=special`）可强制接管；转交历史写进 `operation_logs` 并在弹窗显示。
+  另外**认领不自动改状态** —— 认领发生在「打开详情」这个轻动作上，自动把 0→1 会让「沟通中」失真。
+- **为什么不用手工维护 HR 名单**：`users.account_type` 枚举里本来就有 `'hr'`，库中正好 3 个
+  （NG E CHING 吴沂芩 / WONG HUI HUI / SOH ZHI ZEEN，职位都是 JUNIOR HR EXECUTIVE）—— 与「HR 三个人」对上。
+  转交名单 = `account_type IN ('hr','special')`。
+- **数据模型**：`job_applications` 加 `handler_id`（判定「是不是我」的唯一真相，NULL=未认领）、
+  `handler_name`（显示名快照，HR 改昵称/离职后仍显示得出人）、`claimed_at`。
+  列名用 `handler_name` 而非 `handler`：**`handler` 是 MySQL/MariaDB 关键字，裸用有踩雷风险**。
+  老数据三列全 NULL = 全部「未认领」。DDL 追加在 `add_new_tables.sql` 第 13 节（`information_schema` 探针 + `PREPARE`，幂等）。
+- **并发安全**：认领/转交/释放走 `SELECT ... FOR UPDATE` 悲观行锁（`JobApplicationRepository.findByIdForUpdate`，
+  与 `MobileStockMapper` 的 HIFO 行锁同一套路），在一个事务里读-判断-写。两人同时点开同一条时后到的事务等锁，
+  拿到锁后读到「已有处理人」→ 返回 409/`claimed=false`，**不会互相覆盖**。
+- **接口**：`POST /applications/{id}/claim|transfer|release|takeover`、`GET /applications/handler-options|{id}/logs`。
+  `force`（强制接管/释放）**完全由后端按登录用户 `account_type` 判定，前端传不了**；转交目标必须是 hr/special。
+  `updateApplication` 加归属校验：已被别人认领时非处理人改不动（纵深防御，直接调 API 也一样）。
+- **顺手堵住一个既有的越权口子**：`PagePermissionInterceptor` 的前缀映射表原本**漏了 `/api/applications/`**，
+  也就是任何登录用户都能 `PUT` 招聘申请。已补 `→ "hr"`（GET 不拦；官网投递 `POST /api/applications` 无 principal，仍放行）。
+- **顺手修好弹窗里一批「本来就失效」的样式**：antd `Modal` 是 portal 到 `body` 的，不在 `.hr-root` 内，
+  而 `--border-color` / `--primary-color` / `--text-muted` 只定义在 `.hr-root` 上 —— 所以弹窗里
+  `.hr-section-title` 的分隔线、`.hr-modal-link` 的主题橙、`.hr-modal-label` 的灰色**一直是解析为空、没生效的**。
+  给弹窗根节点补了一份同名变量（`.hire-modal`）。
+- **前端**：表格加「处理人」列（未认领 / 我 / 别人）；弹窗顶部三态横幅 + 「转交给…」下拉 + 「释放」/「强制接管」；
+  联系方式（列表与弹窗）对非处理人**不可点**；非处理人的状态下拉/备注/保存全部禁用；
+  弹窗底部「跟进记录」时间线。实时用 `useRealtime` 新增的可选 `events` 参数订阅 `application_changed`
+  （**没有复用 `stock_changed`** —— 那会让 7 个库存页在 HR 认领应聘者时无谓刷新）。
+  实时刷新**保留当前页且静默**（原 `fetchData(1)` 会把正在看第 3 页的人踢回第 1 页）。
+- **验证（本机真跑，不是只看代码）**：
+  ① 让仓库自己的 `deploy-ec2.sh` 期望的路径派上用场，装了 Maven 3.9.9 到 `~/tools`，
+     `mvn -DskipTests package` BUILD SUCCESS（203 个源文件），用**新 jar** 起本地服务 + 便携 MariaDB 实测。
+  ② **接口层 16 项**：认领幂等、第二个 HR 认领返回 `claimed=false` 且不覆盖、越权改/转/释放全部 409、
+     转交后原处理人被拦、转给非 HR 400、转给自己 400、非老板强制接管 403、老板接管/释放成功、
+     跟进记录落库正确、转交名单排除自己。
+  ③ **并发 8 轮**：两个 HR 同一瞬间认领同一条 → **8/8 轮都只有一个成功且处理人未被覆盖**。
+  ④ **真实浏览器两个会话 27 项**：A 打开详情自动认领→横幅「由你处理」；B 看到处理人「阿娃」、
+     那条邮箱不可点、弹窗「由 阿娃 跟进中，你只能查看」+ 保存禁用 + 无任何可点联系方式 + 备注只读、
+     点别人的状态徽章不弹修改框；A 转交 ELAINE 后 B 刷新即变可编辑。
+  ⑤ **实时 10 项**：A 认领后 **B 不刷新**，列表处理人自动变成「阿娃」；弹窗 CSS 变量修复后各项 computed style 正确。
+- **产物**：这次真的改了 Java，所以 `backend/target/inventory-backend-1.0.0.jar` **已重新打包**（72M）；
+  前端 `npm run build` 后同步进 `backend/static`（`index-BsUHgju6.js` / `index-Cv3r_wL.css` / `index.es-Cg2LfVUQ.js`）。
+- **上线注意**：`add_new_tables.sql` **必须在重启后端之前**跑完，否则新代码查不存在的列会直接报错；
+  回滚 = 换回 `app.jar.bak` + 重启（新列留着不影响旧代码）。
+
 ---
 ## 🗓️ 2026-09-18
 

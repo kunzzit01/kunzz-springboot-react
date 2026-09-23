@@ -43,6 +43,7 @@ public class PagePermissionInterceptor implements HandlerInterceptor {
             "/api/stock/", "resource",
             "/api/kpi/", "analytics",
             "/api/staff/", "hr",
+            "/api/applications/", "hr",
             "/api/media/", "visual",
             "/api/schedule/", "brand",
             "/api/phone/", "brand"

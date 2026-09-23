@@ -16,4 +16,9 @@ public class RealtimeService {
     public void notifyStockChanged(String system) {
         realtimeWebSocketHandler.broadcastStockChanged(system);
     }
+
+    /** 招聘申请变更（认领 / 转交 / 释放 / 改状态）→ 广播信号，招聘列表自动刷新 */
+    public void notifyApplicationChanged() {
+        realtimeWebSocketHandler.broadcastApplicationChanged();
+    }
 }

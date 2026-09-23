@@ -1,7 +1,7 @@
 import http from './http'
 import type {
-  BranchRow, BranchStockTotal, Category, DashboardSummary, DishwareBreak,
-  DishwareInfo, DishwareSet, DishwareSetItem, DishwareStockVO, DishwareTransfer,
+  ApplicationLog, BranchRow, BranchStockTotal, Category, DashboardSummary, DishwareBreak,
+  DishwareInfo, DishwareSet, DishwareSetItem, DishwareStockVO, DishwareTransfer, HandlerOption,
   LoginResponse, PageResult, StockData, StockInout, StockMinimum, StockSot,
   Supply, SupplyMaterial, UserInfo,
 } from '../types'
@@ -417,6 +417,9 @@ export interface JobApplication {
   resumeFileUrl?: string
   status?: number
   hrRemarks?: string
+  handlerId?: number
+  handlerName?: string
+  claimedAt?: string
   createdAt?: string
 }
 export const getJobs = () => http.get<unknown, JobPosition[]>('/jobs')
@@ -440,6 +443,21 @@ export const getPendingCount = () => http.get<unknown, number>('/applications/pe
 export const updateApplication = (id: number, d: { status?: number; hrRemarks?: string }) =>
   http.put<unknown, JobApplication>('/applications/' + id, d)
 export const deleteApplication = (id: number) => http.delete<unknown, void>('/applications/' + id)
+
+// ---------- 招聘申请「处理人」归属（认领 / 转交 / 释放） ----------
+/** HR 共用应聘者池：谁点开详情谁认领。claimed=false 表示已被别人认领（正常返回，不是错误） */
+export interface ClaimResult {
+  claimed: boolean
+  application: JobApplication
+  handlerName?: string
+}
+export const claimApplication = (id: number) => http.post<unknown, ClaimResult>('/applications/' + id + '/claim')
+export const transferApplication = (id: number, handlerId: number) =>
+  http.post<unknown, JobApplication>('/applications/' + id + '/transfer', { handlerId })
+export const releaseApplication = (id: number) => http.post<unknown, JobApplication>('/applications/' + id + '/release')
+export const takeoverApplication = (id: number) => http.post<unknown, JobApplication>('/applications/' + id + '/takeover')
+export const getHandlerOptions = () => http.get<unknown, HandlerOption[]>('/applications/handler-options')
+export const getApplicationLogs = (id: number) => http.get<unknown, ApplicationLog[]>('/applications/' + id + '/logs')
 
 // ---------- 问卷 ----------
 export const getQna = () => http.get<unknown, Record<string, unknown>[]>('/qna')
