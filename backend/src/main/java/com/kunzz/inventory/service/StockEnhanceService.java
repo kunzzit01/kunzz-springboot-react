@@ -1,8 +1,10 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.common.ProductName;
 import com.kunzz.inventory.entity.StockInout;
 import com.kunzz.inventory.mapper.StockInoutMapper;
+import com.kunzz.inventory.mapper.StockProductMapper;
 import com.kunzz.inventory.repository.StockInoutRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +26,8 @@ public class StockEnhanceService {
 
     private final StockInoutRepository stockInoutRepository;
     private final StockInoutMapper stockInoutMapper;
+    private final StockProductMapper stockProductMapper;
+    private final ProductRenameService productRenameService;
 
     // ---------- 回收站 ----------
 
@@ -64,18 +68,20 @@ public class StockEnhanceService {
         return names.stream().sorted().toList();
     }
 
-    /** 重命名产品（更新流水与台账中的名称） */
+    /** 重命名产品（更新流水与台账中的名称）
+     *  2026-09-24 改造：原来只改中央流水（JPA findAll 全表扫描逐行 save），
+     *  分店流水/分店台账/手机台账/最低库存/改价日志全都没跟上 —— 改完名字反而多裂出几份库存。
+     *  现在统一走 ProductRenameService 的级联，并且台账也要跟着改（否则下次进货从下拉带出的还是旧名）。 */
     @Transactional
     public void renameProduct(String oldName, String newName) {
-        if (oldName == null || newName == null || oldName.isBlank() || newName.isBlank()) {
+        String target = ProductName.normalize(newName);
+        if (oldName == null || oldName.isBlank() || target == null || target.isBlank()) {
             throw new BusinessException("名称不能为空");
         }
-        stockInoutRepository.findAll().stream()
-                .filter(s -> s.getDeletedAt() == null && oldName.equals(s.getProductName()))
-                .forEach(s -> {
-                    s.setProductName(newName);
-                    stockInoutRepository.save(s);
-                });
+        String source = oldName.trim();
+        if (source.equals(target)) return;
+        productRenameService.cascade(source, target);
+        stockProductMapper.renameProductName(source, target);
     }
 
     // ---------- 备注维护（从流水提取唯一值） ----------

@@ -76,6 +76,31 @@ public interface StockInoutMapper {
     int restoreBranchEditByMainId(@Param("table") String table, @Param("mainId") Integer mainId,
                                   @Param("targetSystem") String targetSystem);
 
+    // ---------- 改名级联（台账改名时同步历史；表名动态） ----------
+
+    /** 旧名整批改新名；带 updated_at 的表用这个（updated_at 自赋值 = 保持原值，不把这批历史刷成"今天改的"） */
+    int renameProductNameKeepStamp(@Param("table") String table,
+                                   @Param("oldName") String oldName, @Param("newName") String newName);
+
+    /** 旧名整批改新名；没有 updated_at 列的表用这个 */
+    int renameProductName(@Param("table") String table,
+                          @Param("oldName") String oldName, @Param("newName") String newName);
+
+    /** jXstocklist_total 改名：唯一键 (product_name, code_number, specification)，
+     *  新旧名同时存在时先把数量并到新名行（否则改名撞唯一键直接报错） */
+    int mergeListTotalOnRename(@Param("table") String table,
+                               @Param("oldName") String oldName, @Param("newName") String newName);
+
+    /** jXstocklist_total 改名：删掉已并入新名行的旧名行 */
+    int deleteMergedListTotalOnRename(@Param("table") String table,
+                                      @Param("oldName") String oldName, @Param("newName") String newName);
+
+    /** stock_minimum_settings 改名：唯一键 (stock_system, product_name)，撞车时取两者较大的最低库存 */
+    int mergeMinimumOnRename(@Param("oldName") String oldName, @Param("newName") String newName);
+
+    /** stock_minimum_settings 改名：删掉已并入新名行的旧名行 */
+    int deleteMergedMinimumOnRename(@Param("oldName") String oldName, @Param("newName") String newName);
+
     // ---------- 出库库存校验（事务内，对齐旧系统） ----------
 
     /** 中央库存可用量（stockinout_data，排除 SOT） */

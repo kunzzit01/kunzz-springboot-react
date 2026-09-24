@@ -1,5 +1,6 @@
 package com.kunzz.inventory.dto;
 
+import com.kunzz.inventory.common.ProductName;
 import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
@@ -18,4 +19,8 @@ public record StockDataRequest(
         String systemAssign,
         String freezerCategory
 ) {
+    /** 货品名先规范化（2026-09-24）：避免名字里夹不可见字符，让同一条货品裂成两行 */
+    public StockDataRequest {
+        productName = ProductName.normalize(productName);
+    }
 }

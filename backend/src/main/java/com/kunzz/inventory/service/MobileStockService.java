@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.common.ProductName;
 import com.kunzz.inventory.dto.MobileBatchSaveRequest;
 import com.kunzz.inventory.dto.MobileStockRequest;
 import com.kunzz.inventory.mapper.MobileStockMapper;
@@ -403,11 +404,12 @@ public class MobileStockService {
     private String editTable(String sys) { return sys + "stockedit_data"; }
     private String totalTable(String sys) { return sys + "stocklist_total"; }
 
-    /** 产品名统一：HTML 实体解码 + 去首尾空格（对齐旧 API Normalize &amp; to &amp;） */
+    /** 产品名统一：HTML 实体解码 + 空白规范化（对齐旧 API Normalize &amp; to &amp;）
+     *  2026-09-24：并入 ProductName.normalize —— 顺带把制表符/连续空格折叠成单个空格，
+     *  否则手机端录入的名字会和桌面端/历史流水对不上，同一条货品裂成两行 */
     private String normalizeName(String name) {
-        if (name == null) return null;
-        String s = name.replace("&amp;", "&").trim();
-        return s.isBlank() ? null : s;
+        String s = ProductName.normalize(name);
+        return (s == null || s.isBlank()) ? null : s;
     }
 
     private String blankToNull(String s) { return (s == null || s.isBlank()) ? null : s.trim(); }

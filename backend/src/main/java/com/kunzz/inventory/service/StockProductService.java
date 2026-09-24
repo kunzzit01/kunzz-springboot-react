@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.common.ProductName;
 import com.kunzz.inventory.mapper.PriceChangeLogMapper;
 import com.kunzz.inventory.mapper.StockDataSystemMapper;
 import com.kunzz.inventory.mapper.StockProductMapper;
@@ -25,6 +26,7 @@ public class StockProductService {
     private final StockProductMapper stockProductMapper;
     private final StockDataSystemMapper stockDataSystemMapper;
     private final PriceChangeLogMapper priceChangeLogMapper;
+    private final ProductRenameService productRenameService;
 
     /** 列表 + 统计（exact=true 货品名精确匹配，false 全能多字段模糊）
      *  allowedSystems = 当前用户有权限的系统（小写；null = 没配置权限，不限制）。
@@ -113,7 +115,7 @@ public class StockProductService {
         r.put("date", date);
         r.put("time", time);
         r.put("productCode", body.getOrDefault("product_code", ""));
-        r.put("productName", body.getOrDefault("product_name", ""));
+        r.put("productName", ProductName.normalize(str(body.get("product_name"))));
         r.put("specification", body.getOrDefault("specification", ""));
         r.put("price", cleanPrice(body.get("price")));
         r.put("category", body.getOrDefault("category", ""));
@@ -138,7 +140,7 @@ public class StockProductService {
         // 防止部分字段的 PUT 把其余列清空（数据丢失风险；前端全量发送时行为不变）
         Map<String, Object> r = new LinkedHashMap<>();
         if (body.containsKey("product_code"))  r.put("productCode", str(body.get("product_code")));
-        if (body.containsKey("product_name"))  r.put("productName", str(body.get("product_name")));
+        if (body.containsKey("product_name"))  r.put("productName", ProductName.normalize(str(body.get("product_name"))));
         if (body.containsKey("specification")) r.put("specification", str(body.get("specification")));
         if (body.containsKey("category"))      r.put("category", str(body.get("category")));
         if (body.containsKey("supplier"))      r.put("supplier", str(body.get("supplier")));
@@ -172,6 +174,14 @@ public class StockProductService {
         autoApproveIfBlank(r, operator, autoApprove,
                 body.containsKey("approver") ? str(body.get("approver")) : str(before.get("approver")));
         if (!r.isEmpty()) stockProductMapper.updateRow(id, r);
+        // 改名级联（2026-09-24）：台账是本系统的货品主数据，名字变了必须同步历史，
+        // 否则新录入的名字与历史流水对不上，同一条货品会当场裂成两份库存并各显示一行
+        // （2026-09-19 SURUME IKA P 的 制表符→空格 分裂就是这么发生的）
+        if (r.get("productName") != null) {
+            String oldName = str(before.get("product_name"));
+            String newName = str(r.get("productName"));
+            if (!oldName.equals(newName)) productRenameService.cascade(oldName, newName);
+        }
         writePerSystemFields(id, body);
         // 改价日志：body 携带 price 且与旧值（该系统那一份）不同 → 记录当天一条
         if (body.containsKey("price")) logPriceChange(before, body, logSys, oldPriceBefore, operator);
@@ -330,9 +340,9 @@ public class StockProductService {
         Double newPrice = cleanPrice(body.get("price"));
         if (newPrice == null) return;
         if (oldPrice != null && oldPrice.compareTo(newPrice) == 0) return; // 价格未变不记录
-        // 名字与流水/总库存保持一致（decoded 纯文本）：改价同时改名 → 取新名
+        // 名字与流水/总库存保持一致（纯文本 + 空白规范化）：改价同时改名 → 取新名
         String productName = body.containsKey("product_name") && !str(body.get("product_name")).isBlank()
-                ? decodeHtml(str(body.get("product_name"))) : decodeHtml(str(before.get("product_name")));
+                ? ProductName.normalize(str(body.get("product_name"))) : ProductName.normalize(str(before.get("product_name")));
         // 「谁改的」= 当前登录用户（服务端取，前端伪造不了）。请求体里的 applicant 是货品申请人
         // （当初建这条货品记录的人，可能是很久以前、别人），拿它当改价人是错的 —— 只在没有登录态时兜底
         String changedBy = operator != null && !operator.isBlank()

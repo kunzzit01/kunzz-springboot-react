@@ -35,6 +35,10 @@ public interface StockProductMapper {
     /** 批准记录（设置 approver） */
     int approveRow(@Param("id") Integer id, @Param("approver") String approver);
 
+    /** 按名字整批改名（维护页「重命名产品」用：流水改了名，台账必须跟着改，否则下次进货从下拉带出的还是旧名）
+     *  updated_at 自赋值 = 保持原值不刷新时间戳 */
+    int renameProductName(@Param("oldName") String oldName, @Param("newName") String newName);
+
     /** 某货品在某系统台账表里的净库存（停用前校验用；按货品编号匹配，table 只允许 stockinout_data / jXstockedit_data） */
     java.math.BigDecimal netStockByCode(@Param("table") String table, @Param("productCode") String productCode);
 

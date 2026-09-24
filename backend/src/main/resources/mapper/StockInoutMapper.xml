@@ -233,4 +233,56 @@
         ) t
     </select>
 
+    <!-- ================= 改名级联（2026-09-24） =================
+         货品名同时是"货品身份"：总库存按 product_name 分组，最低库存/改价日志/备注分析也按名字关联。
+         只改台账不动历史，同一条货品就会当场裂成两份库存并各显示一行
+         （实例：SURUME IKA<P>P 的 制表符/空格 分裂，2026-09-19）。
+         用 BINARY 做精确匹配，不依赖库/连接的字符集；updated_at 自赋值 = 保持原值不刷新时间戳。 -->
+
+    <update id="renameProductNameKeepStamp">
+        UPDATE ${table} SET product_name = #{newName}, updated_at = updated_at
+        WHERE product_name = BINARY #{oldName}
+    </update>
+
+    <update id="renameProductName">
+        UPDATE ${table} SET product_name = #{newName}
+        WHERE product_name = BINARY #{oldName}
+    </update>
+
+    <!-- jXstocklist_total（手机版总库存缓存）唯一键 = (product_name, code_number, specification)：
+         新旧名同时存在时先把数量并到新名行，再删旧名行，最后剩下的旧名行改名 -->
+    <update id="mergeListTotalOnRename">
+        UPDATE ${table} t1 JOIN ${table} t2
+           ON t1.product_name = #{newName}
+          AND t2.product_name = BINARY #{oldName}
+          AND t1.code_number &lt;=&gt; t2.code_number
+          AND t1.specification &lt;=&gt; t2.specification
+        SET t1.total_qty = t1.total_qty + t2.total_qty
+    </update>
+
+    <delete id="deleteMergedListTotalOnRename">
+        DELETE t2 FROM ${table} t2 JOIN ${table} t1
+           ON t1.product_name = #{newName}
+          AND t2.product_name = BINARY #{oldName}
+          AND t1.code_number &lt;=&gt; t2.code_number
+          AND t1.specification &lt;=&gt; t2.specification
+    </delete>
+
+    <!-- stock_minimum_settings 唯一键 = (stock_system, product_name)：撞车时取两者较大的最低库存 -->
+    <update id="mergeMinimumOnRename">
+        UPDATE stock_minimum_settings t1 JOIN stock_minimum_settings t2
+           ON t1.product_name = #{newName}
+          AND t2.product_name = BINARY #{oldName}
+          AND t1.stock_system = t2.stock_system
+        SET t1.minimum_quantity = GREATEST(t1.minimum_quantity, t2.minimum_quantity),
+            t1.updated_at = t1.updated_at
+    </update>
+
+    <delete id="deleteMergedMinimumOnRename">
+        DELETE t2 FROM stock_minimum_settings t2 JOIN stock_minimum_settings t1
+           ON t1.product_name = #{newName}
+          AND t2.product_name = BINARY #{oldName}
+          AND t1.stock_system = t2.stock_system
+    </delete>
+
 </mapper>
