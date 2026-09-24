@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   deleteScheduleEmployee, deleteScheduleRecord, deleteShift, getLeaveTypes, getScheduleEmployees, getScheduleRecords,
   getShifts, saveScheduleEmployee, saveScheduleRecords, saveShift, upsertScheduleRecord
@@ -89,10 +90,18 @@ function encodeHolidayOverlayData(r?: Rec) {
 
 
 export default function Schedule() {
-  const [restaurant, setRestaurant] = useState(() => {
-    const r = new URL(window.location.href).searchParams.get('restaurant')
-    return r === 'J1' || r === 'J2' || r === 'J3' ? r : 'J1'
-  })
+  // 分店以 URL 的 ?restaurant= 为准，且必须用 useSearchParams 响应式读取：
+  // 侧边栏 J1/J2/J3 走的是前端路由跳转（navigate，不刷新页面），只在挂载时读一次
+  // window.location 的话，在排班页里点另一家分店会「地址栏变成 J2、表格还是 J1」
+  // （组件没重新挂载，state 停在旧分店）。改分店用 replace，不额外压历史记录。
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlRestaurant = searchParams.get('restaurant')
+  const restaurant = urlRestaurant && restaurants.includes(urlRestaurant) ? urlRestaurant : 'J1'
+  const setRestaurant = useCallback((r: string) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('restaurant', r)
+    setSearchParams(next, { replace: true })
+  }, [searchParams, setSearchParams])
   const [employees, setEmployees] = useState<Emp[]>([])
   const [shifts, setShifts] = useState<Shift[]>([])
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([])
@@ -144,9 +153,12 @@ export default function Schedule() {
   const showMsg = useCallback((msg: string, type = 'success') => showToast(msg, type), [])
 
   useEffect(() => {
-    const url = new URL(window.location.href)
-    url.searchParams.set('restaurant', restaurant)
-    window.history.replaceState({}, '', url)
+    // 地址栏缺 restaurant / 写了非法值时补成当前分店（保持「地址栏始终反映当前分店」的旧行为）
+    if (searchParams.get('restaurant') !== restaurant) {
+      const next = new URLSearchParams(searchParams)
+      next.set('restaurant', restaurant)
+      setSearchParams(next, { replace: true })
+    }
     loadAll()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restaurant])

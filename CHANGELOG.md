@@ -7,6 +7,27 @@
 ---
 ## 🗓️ 2026-09-24
 
+### [2026-09-24-schedule-restaurant-sync] 侧边栏点 J2，页面仍是 J1 的员工（地址栏是 J2）
+
+- **现象（用户反馈）**：在排班页点侧边栏 `J2 (PARADIGM MALL) → 员工排班表`，地址栏变成
+  `?restaurant=J2`，但标题还是 `员工排班管理系统 - J1`、右上角选择器是 J1、表格是 J1 的员工。
+  员工手机记录页（`/phone`）同样。
+- **根因**：两个页面的分店只在**挂载那一刻**读一次 `window.location.href` 的 `?restaurant=`。
+  侧边栏走的是 `navigate()` 前端路由跳转（不刷新页面），路径 `pathname` 没变、只有查询串变了，
+  React 复用同一个组件实例，`restaurant` state 停在 J1 → 取数也一直按 J1 取。
+  （同一类坑仓库里已有记录：`RemarkAnalysis.tsx` 注释「必须用响应式来源」。）
+- **修复**：
+  - `Schedule.tsx`：`restaurant` 改为从 `useSearchParams()` 派生（URL 是唯一来源），
+    改分店走 `setSearchParams(..., { replace: true })`；缺参数/非法值仍补成当前分店。
+  - `Phone.tsx`：同上。两处都不再用 `window.history.replaceState`——
+    直接改地址栏不会通知路由，下一次侧边栏点击会读到过期 location。
+- **验证（本机，浏览器实测）**：mock API(8081) + `npm run dev`(5174) 复现原 bug（URL=J2、内容是 J1）；
+  改完同一次点击 → 标题/选择器/员工都变 J2（J2-CAROL NG、J2-DAVID WONG）。
+  再用 `cp -rf dist/* backend/static/` 后的**生产包**（`index-BlCafDrt.js`，
+  经静态服务 + /api 代理）点一遍，同样正确切到 J2；手机记录页按路由切 J1↔J2 也跟随正常。
+- **产物**：`backend/static/assets/index-BlCafDrt.js`（替换 `index-RD6T2QDl.js`）、
+  `index.es-DcXpsDe3.js`（替换 `index.es-Dthys-hB.js`），CSS 哈希未变。
+
 ### [2026-09-24-product-name-consistency] 总库存-中央 出现两行同一个货品（PI 0034 / SURUME IKA P）
 
 - **现象（用户反馈）**：`/records` 总库存-中央 第 190、191 行都是 `PI 0034 / SURUME IKA P / Packet / RM 18.00`，
