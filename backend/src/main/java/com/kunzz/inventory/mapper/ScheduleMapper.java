@@ -29,6 +29,9 @@ public interface ScheduleMapper {
 
     int insertShift(ScheduleShift s);
 
+    /** 编辑班次：只改起止时间（对齐旧 schedule_api.php 的 update_shift，班次代码不可改） */
+    int updateShiftTime(@Param("id") Integer id, @Param("startTime") java.time.LocalTime startTime, @Param("endTime") java.time.LocalTime endTime);
+
     int deleteShift(@Param("id") Integer id);
 
     // ---------- 假期类型 ----------

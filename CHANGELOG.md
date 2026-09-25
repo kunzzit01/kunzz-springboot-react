@@ -4,6 +4,47 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-09-25
+
+### [2026-09-25-schedule-align-old] 排班页对齐旧 PHP 系统（员工管理分组 / 多选 / 假期底色 / 批量输入 / 班次管理）
+
+- **背景（用户反馈）**：用户把新版排班页与旧 PHP 系统（`kunzzgroup/backend/schedule_manager.php`）逐屏对比，
+  指出 5 处没对齐。**排查中发现**：用户当时看的是 `localhost/kunzzgroup/...`（子目录部署），
+  旧页面资源全是根路径（`/backend/css/schedule_manager.css`）→ 该 URL 下 CSS 404，
+  看到的是"无样式版"旧页面，容易被误判为"旧版就长这样"。按站点根起一份
+  （`php -S 127.0.0.1:8082 -t kunzzgroup`）才是旧系统的真实渲染。
+- **① 员工管理弹窗**：旧版按部门分组，新版是平铺列表、无 No.、无人数计数、只有删除钮。
+  对齐旧版 `displayEmployeesInModal()`：`SERVICE LINE / SUSHI BAR / KITCHEN` 分组标题行 +
+  `当前人数/上限` 徽章（9 / 4 / 13，到上限变红）、组内独立编号、每行「编辑 + 删除」、
+  工作区域显示为彩色 pill；表格改固定列宽（`tableLayout: fixed` + `colgroup`）让 6 列全部可见。
+- **② 选格子跳位 / 取消不掉**：根因是行列换算用了 `cellRefs` 这个**只增不减**的 Map —— 换分店/换月后旧 key
+  仍在，索引错位 → Shift 多选选到别的格子；且新版没有"非 Shift 点击清空选择"（旧版 `handleCellClick` 有），
+  选上之后只能刷新页面。改为对齐旧版 `getEditableDateCells()`：每次现查现取
+  `#scheduleContainer .grid-cell.grid-date`；ref 回调补删除（卸载清 key）；
+  新增「非 Shift 点击清空」「Esc 取消」「点击网格外/弹窗外取消」。
+- **③ 班次压在公共假期上，假期底色被顶掉**：旧版后端 `save_schedule` 写班次前会查该格是否公共假期，
+  是则**保留 holiday 记录、把班次代码写进 notes**（前端据此渲染"假期底色 + 班次代码"）；
+  新版后端只是裸 upsert，前端自动保存后又 `applyCellStyle(cell, code)` 清掉底色。
+  修：`ScheduleService.upsertRecord` 补同样的假期分支；前端 `autoSaveCell` 改用**后端返回的记录**回填状态与样式。
+- **④ 批量输入不落库**：旧版 `applyBatchInput` 对每个选中格都调 `scheduleAutoSave(cell)`；
+  新版只 `markModified`，值停在页面上不进库。改为逐格自动保存，并在应用后清空选择。
+- **⑤ 班次管理弹窗**：旧版表格为 `序号 / 班次代码 / 餐厅 / 开始时间 / 结束时间 / 操作`，每行「编辑 + 删除」，
+  表尾还有**内联新增行**（代码 + 起止时间 + 绿色 ✓）；编辑时**班次代码不可改**，只改起止时间
+  （后端 `update_shift` 也只 UPDATE 起止时间）。新版缺餐厅列、缺编辑、新增要走单独弹窗。
+  修：前端补餐厅列（橙色）/编辑按钮/内联新增行/编辑时禁用代码输入；
+  后端 `saveShift` 支持 update（新增 `updateShiftTime`，只改起止时间）。
+- **验证（本机 8081 生产包，浏览器实测）**：
+  ① 员工管理：`SERVICE LINE 6/9、SUSHI BAR 3/4、KITCHEN 8/13`，表宽 835 = 容器宽（无横向溢出），17 行各有编辑/删除；
+  ② 多选：Shift 拖动 (89/9-22)→(90/9-23) 精确选中 4 格（不再跳位）；普通点击另一格 → 清空；Esc → 清空；
+  ③ 在假期格（89 / 2026-09-05，MCPH）打班次 `B` → 自动保存后底色仍是假期色、文字 `B`，
+     库里仍是 `holiday/MCPH` 且 `notes='B'`（测完改回 `D`）；
+  ④ 批量选 2 格输入 `B` → 两格落库为 `shift/B`（测完改回 `D`）；
+  ⑤ 班次管理：内联新增 `ZZ 07:30-15:45` 落库 → 编辑改成 16:20 生效、代码保持 `ZZ`（编辑框禁用）→ 测完已删除。
+  **测试写入的数据已全部按原值恢复/清理。**
+- **产物**：`backend/static/assets/index-CiTZNG_G.js`（替换 `index-BlCafDrt.js`）、
+  `index.es-DuT1tenh.js`（替换 `index.es-DcXpsDe3.js`），CSS 哈希未变；`backend/target/inventory-backend-1.0.0.jar` 已重打包。
+
+---
 ---
 ## 🗓️ 2026-09-24
 

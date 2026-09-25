@@ -53,6 +53,10 @@
         VALUES (#{shiftCode}, #{restaurant}, #{startTime}, #{endTime})
     </insert>
 
+    <update id="updateShiftTime">
+        UPDATE schedule_shifts SET start_time = #{startTime}, end_time = #{endTime} WHERE id = #{id}
+    </update>
+
     <delete id="deleteShift">
         DELETE FROM schedule_shifts WHERE id=#{id}
     </delete>

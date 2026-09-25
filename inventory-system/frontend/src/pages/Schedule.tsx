@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   deleteScheduleEmployee, deleteScheduleRecord, deleteShift, getLeaveTypes, getScheduleEmployees, getScheduleRecords,
@@ -32,6 +32,19 @@ const departments = [
   { key: 'sushi_bar', name: 'SUSHI BAR' },
   { key: 'kitchen', name: 'KITCHEN' }
 ]
+
+/** 各部门人数上限（对齐线上 displayEmployeesInModal 的 departmentLimits） */
+const departmentLimits: Record<string, number> = {
+  service_line: 9,
+  sushi_bar: 4,
+  kitchen: 13
+}
+
+const workAreaNames: Record<string, string> = {
+  service_line: 'Service Line',
+  sushi_bar: 'Sushi Bar',
+  kitchen: 'Kitchen'
+}
 
 const defaultHolidayTypes: LeaveType[] = [
   { code: 'IPH', name: 'International Public Holiday', description: '国际公共假期', color: '#0ea5e9', type: 'holiday' },
@@ -133,6 +146,10 @@ export default function Schedule() {
   const [shiftCode, setShiftCode] = useState('')
   const [shiftStart, setShiftStart] = useState('')
   const [shiftEnd, setShiftEnd] = useState('')
+  // 班次列表表尾的内联新增行（对齐线上 newShiftRow）
+  const [newShiftCode, setNewShiftCode] = useState('')
+  const [newShiftStart, setNewShiftStart] = useState('08:00')
+  const [newShiftEnd, setNewShiftEnd] = useState('17:00')
   // 整列假期
   const [colHoliday, setColHoliday] = useState<{ dateStr: string; day: number } | null>(null)
   // 修改集合（保存所有更改）
@@ -429,6 +446,12 @@ export default function Schedule() {
     else cell.style.background = ''
   }
 
+  /** 单元格当前是否带底色（假期/请假色块）——对齐线上 hasHolidayBg 的判断 */
+  const hasNonDefaultBg = (cell: HTMLDivElement) => {
+    const bg = cell.style.background
+    return !!bg && bg !== '' && bg !== 'transparent' && bg !== 'white' && bg !== 'rgb(255, 255, 255)'
+  }
+
   const markModified = (empId: number, dateStr: string, value: string) => {
     modifiedRef.current.set(cellKey(empId, dateStr), { employeeId: empId, dateStr, value })
     const cell = cellRefs.current.get(cellKey(empId, dateStr))
@@ -453,6 +476,14 @@ export default function Schedule() {
       if (!modifiedRef.current.has(key)) return
       autoSaveCell(empId, dateStr, cell)
     }, 800))
+  }
+
+  /** 按记录的显示数据刷新单元格：假期+班次叠加时保持假期底色、文字显示班次代码 */
+  const applyCellDisplay = (cell: HTMLDivElement, rec?: Rec) => {
+    const cd = getCellDisplay(rec)
+    cell.style.background = cd.color !== 'transparent' ? cd.color : ''
+    cell.style.color = cd.textColor || '#000'
+    if (cd.shiftCode) cell.textContent = cd.shiftCode
   }
 
   const autoSaveCell = async (empId: number, dateStr: string, cell: HTMLDivElement) => {
@@ -486,13 +517,17 @@ export default function Schedule() {
       } else if (existing && existing.valueType === valueInfo.type) {
         notes = existing.notes || null
       }
-      await upsertScheduleRecord({ employeeId: empId, scheduleDate: dateStr, valueType: valueInfo.type, valueCode: valueInfo.code, notes: notes || undefined })
-      const rec = { employeeId: empId, scheduleDate: dateStr, valueType: valueInfo.type, valueCode: valueInfo.code, notes: notes || undefined }
+      // 后端对齐旧 save_schedule：班次压在公共假期上时保留假期记录、把班次代码写进 notes，
+      // 所以这里必须用后端返回的记录回填（否则本地状态以为假期被顶掉了，底色也会被清掉）
+      const res = await upsertScheduleRecord({ employeeId: empId, scheduleDate: dateStr, valueType: valueInfo.type, valueCode: valueInfo.code, notes: notes || undefined })
+      const rec: Rec = res && res.valueType
+        ? res
+        : { employeeId: empId, scheduleDate: dateStr, valueType: valueInfo.type, valueCode: valueInfo.code, notes: notes || undefined }
       setRecords(prev => {
         const others = prev.filter(r => !(r.employeeId === empId && r.scheduleDate === dateStr))
         return [...others, rec]
       })
-      applyCellStyle(cell, valueInfo.code)
+      applyCellDisplay(cell, rec)
       unmarkModified(cellKey(empId, dateStr))
       dirtyCellsRef.current.delete(cellKey(empId, dateStr))
     } catch (e) {
@@ -617,6 +652,14 @@ export default function Schedule() {
 
   const getEditableCells = () => [...cellRefs.current.values()]
 
+  /**
+   * 现查现取（对齐线上 getEditableDateCells）。
+   * 行列换算不能用 cellRefs 这个 Map：换分店/换月份后旧 key 还留在里面，
+   * 索引一错位，Shift 多选就会选到别的格子（用户报的「选格子直接跳上去」）。
+   */
+  const getDateCells = () => Array.from(document.querySelectorAll<HTMLDivElement>('#scheduleContainer .grid-cell.grid-date'))
+  const keyOfCell = (cell: HTMLDivElement) => Number(cell.dataset.empId) + '|' + (cell.dataset.date || '')
+
   const focusDateCell = (cell: HTMLDivElement) => {
     clearSelection()
     cell.focus()
@@ -627,29 +670,31 @@ export default function Schedule() {
       const c = cellRefs.current.get(k)
       if (c) c.classList.remove('selected')
     })
+    // 兜底：状态与 DOM 不同步时也把高亮清干净（否则「选了取消不掉」）
+    getDateCells().forEach(c => c.classList.remove('selected'))
     setSelectedCells([])
   }
 
   const updateSelection = (startKey: string, endKey: string) => {
-    const keys = [...cellRefs.current.keys()]
-    const si = keys.indexOf(startKey)
-    const ei = keys.indexOf(endKey)
+    const cells = getDateCells()
+    const si = cells.findIndex(c => keyOfCell(c) === startKey)
+    const ei = cells.findIndex(c => keyOfCell(c) === endKey)
     if (si === -1 || ei === -1) return
     const minI = Math.min(si, ei)
     const maxI = Math.max(si, ei)
+    cells.forEach(c => c.classList.remove('selected'))
     const days = daysInMonth
-    const sr = Math.floor(si / days), sc = si % days
-    const er = Math.floor(ei / days), ec = ei % days
+    const sr = Math.floor(minI / days), sc = minI % days
+    const er = Math.floor(maxI / days), ec = maxI % days
     const minR = Math.min(sr, er), maxR = Math.max(sr, er)
     const minC = Math.min(sc, ec), maxC = Math.max(sc, ec)
     const chosen: string[] = []
     for (let row = minR; row <= maxR; row++) {
       for (let col = minC; col <= maxC; col++) {
         const idx = row * days + col
-        if (idx < keys.length) {
-          chosen.push(keys[idx])
-          const c = cellRefs.current.get(keys[idx])
-          if (c) c.classList.add('selected')
+        if (idx < cells.length) {
+          chosen.push(keyOfCell(cells[idx]))
+          cells[idx].classList.add('selected')
         }
       }
     }
@@ -686,6 +731,11 @@ export default function Schedule() {
   }
   const handleCellMouseUp = () => { isSelectingRef.current = false }
 
+  /** 非 Shift 点击清除多选（对齐线上 handleCellClick：否则选择一直挂着，只能刷新页面） */
+  const handleCellClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!e.shiftKey && selectedCells.length > 0) clearSelection()
+  }
+
   const handleCellPaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault()
     const pasteData = e.clipboardData.getData('text')
@@ -693,26 +743,26 @@ export default function Schedule() {
     const rows = pasteData.split('\n').filter(r => r.trim() !== '').map(r => r.split('\t'))
     if (rows.length === 0) return
     const startKey = selectedCells.length > 0 ? selectedCells[0] : cellKey(Number(e.currentTarget.dataset.empId), e.currentTarget.dataset.date || '')
-    const keys = [...cellRefs.current.keys()]
-    const startIdx = keys.indexOf(startKey)
+    const cells = getDateCells()
+    const startIdx = cells.findIndex(c => keyOfCell(c) === startKey)
     if (startIdx === -1) return
     const days = daysInMonth
     let idx = startIdx
     for (let ri = 0; ri < rows.length; ri++) {
       for (let ci = 0; ci < rows[ri].length; ci++) {
         const targetIdx = idx + ci
-        if (targetIdx >= keys.length) break
-        const k = keys[targetIdx]
-        const cell = cellRefs.current.get(k)
-        if (!cell) continue
+        if (targetIdx >= cells.length) break
+        const cell = cells[targetIdx]
+        const k = keyOfCell(cell)
         const v = (rows[ri][ci] || '').trim().toUpperCase()
         const [empIdStr, dateStr] = k.split('|')
         cell.textContent = v || '\u00A0'
-        const hasHolidayBg = !!(cell.dataset.origBg && cell.dataset.origBg !== 'transparent')
+        const hasHolidayBg = hasNonDefaultBg(cell)
         applyCellStyle(cell, v, hasHolidayBg)
         if (v) {
           cell.classList.add('modified')
           markModified(Number(empIdStr), dateStr, v)
+          scheduleAutoSave(Number(empIdStr), dateStr, cell)
         }
       }
       idx += days
@@ -723,9 +773,10 @@ export default function Schedule() {
   /** 复制选中单元格（制表符分隔，对齐线上） */
   const copyCellsToClipboard = async () => {
     if (selectedCells.length === 0) return
-    const keys = [...cellRefs.current.keys()]
+    const cells = getDateCells()
     const days = daysInMonth
-    const indices = selectedCells.map(k => keys.indexOf(k))
+    const indices = selectedCells.map(k => cells.findIndex(c => keyOfCell(c) === k)).filter(i => i >= 0)
+    if (indices.length === 0) return
     const rows = indices.map(i => Math.floor(i / days))
     const cols = indices.map(i => i % days)
     const minR = Math.min(...rows), maxR = Math.max(...rows)
@@ -735,9 +786,8 @@ export default function Schedule() {
       const rowData: string[] = []
       for (let col = minC; col <= maxC; col++) {
         const index = row * days + col
-        if (index < keys.length) {
-          const cell = cellRefs.current.get(keys[index])
-          const value = cell ? (cell.textContent || '').trim() : ''
+        if (index < cells.length) {
+          const value = (cells[index].textContent || '').trim()
           rowData.push((value === '' || value === '\u00A0') ? '' : value)
         } else rowData.push('')
       }
@@ -749,7 +799,7 @@ export default function Schedule() {
     } catch (e) { console.error('复制失败:', e) }
   }
 
-  /** 批量输入：应用到所有选中单元格 */
+  /** 批量输入：应用到所有选中单元格（对齐线上 applyBatchInput：逐个自动保存，值才真正落库） */
   const applyBatchInput = () => {
     const value = batchValue.trim().toUpperCase()
     if (!value) { showMsg('请输入代码', 'error'); return }
@@ -759,20 +809,24 @@ export default function Schedule() {
     if (!isShift && !isLeave && !isHoliday) {
       if (!window.confirm('代码 "' + value + '" 未识别，确定要继续吗？\n它将被当作班次代码处理。')) return
     }
+    const cellsById = new Map(getDateCells().map(c => [keyOfCell(c), c]))
     let count = 0
     selectedCells.forEach(k => {
-      const cell = cellRefs.current.get(k)
+      const cell = cellRefs.current.get(k) || cellsById.get(k)
       if (!cell) return
       const [empIdStr, dateStr] = k.split('|')
-      const hasHolidayBg = !!(cell.dataset.origBg && cell.dataset.origBg !== 'transparent')
+      const hasHolidayBg = hasNonDefaultBg(cell)
       cell.textContent = value
       applyCellStyle(cell, value, hasHolidayBg)
       cell.classList.add('modified')
       markModified(Number(empIdStr), dateStr, value)
+      // 旧版这里是每个格子都走一次自动保存；只标记 modified 的话，批量值会停在页面上不进库
+      scheduleAutoSave(Number(empIdStr), dateStr, cell)
       count++
     })
     setBatchModal(false)
     setBatchValue('')
+    clearSelection()
     showMsg('已应用到 ' + count + ' 个单元格')
   }
 
@@ -802,9 +856,30 @@ export default function Schedule() {
         e.preventDefault()
         setBatchModal(true)
       }
+      // Esc 取消多选（在弹窗输入框里按 Esc 只关弹窗，不动选择）
+      if (e.key === 'Escape' && selectedCells.length > 0) {
+        const t = e.target as HTMLElement | null
+        const inModal = !!t && typeof t.closest === 'function' && !!t.closest('.modal')
+        const inInput = t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement
+        if (!inModal && !inInput) clearSelection()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+  }, [selectedCells])
+
+  /** 点击网格外/其它地方时取消多选（解决「选了取消不掉，只能刷新页面」） */
+  useEffect(() => {
+    if (selectedCells.length === 0) return
+    const onDocMouseDown = (e: MouseEvent) => {
+      const t = e.target as HTMLElement | null
+      if (!t || typeof t.closest !== 'function') return
+      if (t.closest('.grid-cell.grid-date') || t.closest('.modal')) return
+      clearSelection()
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCells])
 
   // 编辑模式提示（对齐线上 editModeInfoShown）
@@ -846,6 +921,15 @@ export default function Schedule() {
       setEmployees(es.filter(e => e.isActive !== false))
     } catch { showMsg('删除失败', 'error') }
   }
+  /** 打开编辑员工弹窗（对齐线上 editEmployee） */
+  const openEditEmployee = (e: Emp) => {
+    setEmpId(e.id)
+    setEmpName(e.name || '')
+    setEmpPhone(e.phone || '')
+    setEmpArea(e.workArea || 'service_line')
+    setEmpPosition(e.position || '')
+    setEmpModal(true)
+  }
 
   // ---------- 班次管理 ----------
   const saveShiftItem = async () => {
@@ -869,6 +953,29 @@ export default function Schedule() {
       const ss = await getShifts()
       setShifts(ss.filter(s => !s.restaurant || s.restaurant === restaurant))
     } catch { showMsg('删除失败', 'error') }
+  }
+  /** 打开编辑班次（对齐线上 editShift：编辑时班次代码不可改，只改起止时间） */
+  const openEditShift = (s: Shift) => {
+    setShiftId(s.id)
+    setShiftCode(s.shiftCode)
+    setShiftStart((s.startTime || '').slice(0, 5))
+    setShiftEnd((s.endTime || '').slice(0, 5))
+    setShiftModal(true)
+  }
+  /** 表尾内联新增班次（对齐线上 saveShiftInline） */
+  const saveShiftInline = async () => {
+    if (saving) return
+    const code = newShiftCode.trim().toUpperCase()
+    if (!code || !newShiftStart || !newShiftEnd) { showMsg('请填写所有字段', 'error'); return }
+    setSaving(true)
+    try {
+      await saveShift({ shiftCode: code, restaurant, startTime: newShiftStart + ':00', endTime: newShiftEnd + ':00' })
+      showMsg('班次添加成功')
+      setNewShiftCode('')
+      const ss = await getShifts()
+      setShifts(ss.filter(s => !s.restaurant || s.restaurant === restaurant))
+    } catch { showMsg('添加失败，请重试', 'error') }
+    finally { setSaving(false) }
   }
 
 // ---------- 下载 PDF ----------
@@ -1012,11 +1119,12 @@ export default function Schedule() {
                         <div key={day} className={cls} style={style}
                           contentEditable suppressContentEditableWarning
                           data-emp-id={emp.id} data-date={dateStr}
-                          ref={(el) => { if (el) cellRefs.current.set(key, el) }}
+                          ref={(el) => { if (el) cellRefs.current.set(key, el); else cellRefs.current.delete(key) }}
                           onFocus={handleCellFocus}
                           onInput={handleCellInput}
                           onBlur={handleCellBlur}
                           onKeyDown={handleCellKeydown}
+                          onClick={handleCellClick}
                           onMouseDown={handleCellMouseDown}
                           onMouseEnter={handleCellMouseEnter}
                           onMouseUp={handleCellMouseUp}
@@ -1269,20 +1377,23 @@ export default function Schedule() {
             <div style={{ marginTop: 20 }}>
               {panel === 'shifts' && (
                 <div id="shiftListModal" className="shift-list">
-                  <div style={{ marginBottom: 12 }}>
-                    <button className="btn-generate" onClick={() => { setShiftId(null); setShiftCode(''); setShiftStart(''); setShiftEnd(''); setShiftModal(true) }}>
-                      <i className="fas fa-plus"></i> 添加班次
-                    </button>
-                  </div>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  {/* 对齐线上 displayShiftsInModal：序号 / 班次代码 / 餐厅 / 开始 / 结束 / 操作(编辑+删除)，
+                      表尾是内联新增行（代码 + 起止时间 + 绿色 ✓），不再走单独的「添加班次」弹窗 */}
+                  <div style={{ overflowX: 'auto', marginTop: 16 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: 70 }} />
+                        <col style={{ width: 130 }} />
+                        <col style={{ width: 100 }} />
+                        <col style={{ width: 150 }} />
+                        <col style={{ width: 150 }} />
+                        <col />
+                      </colgroup>
                       <thead>
                         <tr>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>序号</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>班次代码</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>开始时间</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>结束时间</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>操作</th>
+                          {['序号', '班次代码', '餐厅', '开始时间', '结束时间', '操作'].map(h => (
+                            <th key={h} style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>{h}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
@@ -1290,14 +1401,42 @@ export default function Schedule() {
                           <tr key={s.id}>
                             <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', fontWeight: 600 }}>{i + 1}</td>
                             <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', fontWeight: 700, fontSize: 18 }}>{s.shiftCode}</td>
+                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', fontWeight: 600, color: '#f99e00' }}>{s.restaurant || 'J1'}</td>
                             <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{formatTime(s.startTime)}</td>
                             <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{formatTime(s.endTime)}</td>
                             <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
-                              <button className="btn-action btn-delete" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => deleteShiftItem(s.id)}>删除</button>
+                              <button className="btn-action" title="编辑班次" onClick={() => openEditShift(s)}
+                                style={{ background: '#f99e00', color: 'white', marginRight: 5, padding: '6px 12px', fontSize: 12 }}>
+                                <i className="fas fa-edit"></i>
+                              </button>
+                              <button className="btn-action btn-delete" style={{ padding: '6px 12px', fontSize: 12 }} title="删除班次" onClick={() => deleteShiftItem(s.id)}>
+                                <i className="fas fa-trash"></i>
+                              </button>
                             </td>
                           </tr>
                         ))}
-                        {shifts.length === 0 && <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>暂无班次</td></tr>}
+                        <tr id="newShiftRow" style={{ background: '#f0f9ff' }}>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', fontWeight: 600 }}>{shifts.length + 1}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                            <input type="text" id="newShiftCode" placeholder="如 A" maxLength={10} value={newShiftCode}
+                              onChange={(e) => setNewShiftCode(e.target.value.toUpperCase())}
+                              style={{ width: 80, padding: 6, border: '1px solid #ddd', borderRadius: 4, textAlign: 'center', fontWeight: 700, textTransform: 'uppercase' }} />
+                          </td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', fontWeight: 600, color: '#f99e00' }}>{restaurant}</td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                            <input type="time" id="newShiftStart" value={newShiftStart} onChange={(e) => setNewShiftStart(e.target.value)}
+                              style={{ width: 100, padding: 6, border: '1px solid #ddd', borderRadius: 4 }} />
+                          </td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                            <input type="time" id="newShiftEnd" value={newShiftEnd} onChange={(e) => setNewShiftEnd(e.target.value)}
+                              style={{ width: 100, padding: 6, border: '1px solid #ddd', borderRadius: 4 }} />
+                          </td>
+                          <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                            <button className="btn-action btn-save" title="保存班次" disabled={saving} onClick={saveShiftInline}>
+                              <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : 'fa-check')}></i>
+                            </button>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -1309,29 +1448,73 @@ export default function Schedule() {
                     <i className="fas fa-user-plus"></i> 添加新员工
                   </button>
                   <div style={{ overflowX: 'auto', marginTop: 16 }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    {/* 对齐线上 displayEmployeesInModal：按部门分组、组内独立编号、带 人数/上限 徽章；
+                        固定列宽，保证「操作」列不被挤出可视区（旧版 6 列全部可见、无需横向滚动） */}
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+                      <colgroup>
+                        <col style={{ width: 56 }} />
+                        <col style={{ width: '21%' }} />
+                        <col style={{ width: '16%' }} />
+                        <col style={{ width: '20%' }} />
+                        <col style={{ width: '15%' }} />
+                        <col />
+                      </colgroup>
                       <thead>
                         <tr>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>姓名</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>手机</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>职位</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>工作区域</th>
-                          <th style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>操作</th>
+                          {['No.', '姓名', '手机号码', '职位', '工作区域', '操作'].map(h => (
+                            <th key={h} style={{ background: '#636363', color: 'white', padding: '12px 8px', border: '1px solid #d1d5db', fontSize: 12 }}>{h}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {employees.map(e => (
-                          <tr key={e.id}>
-                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', fontWeight: 600 }}>{e.name}</td>
-                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{e.phone}</td>
-                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{e.position}</td>
-                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{departments.find(d => d.key === e.workArea)?.name || e.workArea}</td>
-                            <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
-                              <button className="btn-action btn-delete" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => deleteEmployee(e.id)}>删除</button>
-                            </td>
-                          </tr>
-                        ))}
-                        {employees.length === 0 && <tr><td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#6b7280' }}>暂无员工</td></tr>}
+                        {departments.map(dept => {
+                          const deptEmps = employees.filter(e => e.workArea === dept.key).sort((a, b) => {
+                            const ra = positionHierarchy[dept.key]?.indexOf(a.position || '') ?? 999
+                            const rb = positionHierarchy[dept.key]?.indexOf(b.position || '') ?? 999
+                            return ra - rb
+                          })
+                          const limit = departmentLimits[dept.key]
+                          const atLimit = deptEmps.length >= limit
+                          const cellStyle = { padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' as const }
+                          return (
+                            <Fragment key={dept.key}>
+                              <tr>
+                                <td colSpan={6} style={{ background: '#636363', color: 'white', fontWeight: 'bold', padding: '10px 12px', border: '1px solid #d1d5db', textAlign: 'left' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span>{dept.name}</span>
+                                    <span style={{ background: atLimit ? '#ef4444' : '#10b981', padding: '4px 12px', borderRadius: 12, fontSize: 11 }}>
+                                      {deptEmps.length} / {limit}
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                              {deptEmps.length > 0 ? deptEmps.map((e, index) => (
+                                <tr key={e.id}>
+                                  <td style={{ ...cellStyle, fontWeight: 600 }}>{index + 1}</td>
+                                  <td style={{ ...cellStyle, fontWeight: 600 }}>{(e.name || '').toUpperCase()}</td>
+                                  <td style={cellStyle}>{e.phone}</td>
+                                  <td style={cellStyle}>{e.position}</td>
+                                  <td style={cellStyle}>
+                                    <span className={'work-area-badge work-area-' + e.workArea}>{workAreaNames[e.workArea || ''] || e.workArea}</span>
+                                  </td>
+                                  <td style={cellStyle}>
+                                    <button className="btn-action" title="编辑员工" onClick={() => openEditEmployee(e)}
+                                      style={{ background: '#f99e00', color: 'white', marginRight: 5, padding: '6px 12px', fontSize: 12 }}>
+                                      <i className="fas fa-edit"></i>
+                                    </button>
+                                    <button className="btn-action btn-delete" title="删除员工" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => deleteEmployee(e.id)}>
+                                      <i className="fas fa-trash"></i>
+                                    </button>
+                                  </td>
+                                </tr>
+                              )) : (
+                                <tr>
+                                  <td colSpan={6} style={{ padding: 20, textAlign: 'center', color: '#999', fontStyle: 'italic', border: '1px solid #d1d5db' }}>暂无员工</td>
+                                </tr>
+                              )}
+                            </Fragment>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1423,7 +1606,9 @@ export default function Schedule() {
             </div>
             <div className="form-group">
               <label>班次代码 (如 A, B, C):</label>
-              <input type="text" id="shiftCode" maxLength={10} value={shiftCode} onChange={(e) => setShiftCode(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} />
+              <input type="text" id="shiftCode" maxLength={10} value={shiftCode} disabled={!!shiftId}
+                onChange={(e) => setShiftCode(e.target.value.toUpperCase())} style={{ textTransform: 'uppercase' }} />
+              {!!shiftId && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>编辑时班次代码不可修改（对齐线上）</div>}
             </div>
             <div className="form-group">
               <label>开始时间:</label>

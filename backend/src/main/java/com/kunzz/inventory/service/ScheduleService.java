@@ -51,9 +51,14 @@ public class ScheduleService {
         return scheduleMapper.listShifts(restaurant);
     }
 
+    /** 新增/编辑班次（对齐线上 schedule_api.php：编辑只改起止时间，班次代码不可改） */
     @Transactional
     public ScheduleShift saveShift(ScheduleShift s) {
-        scheduleMapper.insertShift(s);
+        if (s.getId() != null) {
+            scheduleMapper.updateShiftTime(s.getId(), s.getStartTime(), s.getEndTime());
+        } else {
+            scheduleMapper.insertShift(s);
+        }
         return s;
     }
 
@@ -90,11 +95,28 @@ public class ScheduleService {
         }
     }
 
-    /** 单条保存排班记录（对齐线上 save_schedule：ON DUPLICATE KEY 原子 upsert） */
+    /**
+     * 单条保存排班记录（对齐线上 schedule_api.php 的 save_schedule）
+     * 公共假期格子上打班次时不能把假期顶掉：保留 holiday 记录、把班次代码写进 notes，
+     * 前端据此渲染「假期底色 + 班次代码」（旧系统行为）。
+     * 其余情况走 ON DUPLICATE KEY 原子 upsert。
+     */
     @Transactional
     public ScheduleRecord upsertRecord(ScheduleRecord r) {
         if (r.getEmployeeId() == null || r.getScheduleDate() == null) {
             throw new BusinessException("缺少必填字段: employeeId/scheduleDate");
+        }
+        String code = r.getValueCode() == null ? "" : r.getValueCode().trim().toUpperCase();
+        if ("shift".equalsIgnoreCase(r.getValueType()) && !code.isEmpty()) {
+            ScheduleRecord existing = scheduleMapper.findRecord(r.getEmployeeId(), r.getScheduleDate());
+            if (existing != null && "holiday".equalsIgnoreCase(existing.getValueType())) {
+                existing.setNotes(code);
+                scheduleMapper.upsertRecord(existing);
+                return existing;
+            }
+        }
+        if (!code.isEmpty()) {
+            r.setValueCode(code);
         }
         scheduleMapper.upsertRecord(r);
         return r;
