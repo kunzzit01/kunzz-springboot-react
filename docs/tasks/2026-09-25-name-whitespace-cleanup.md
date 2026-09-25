@@ -16,6 +16,7 @@
   - fix_name_whitespace_20260925.sql                               # 新增：数据修复脚本（放仓库根目录，database/ 在 .gitignore 里）
   - docs/tasks/2026-09-25-name-whitespace-cleanup.md                # 本登记文件
   - CHANGELOG.md                                                    # 只追加一条本任务记录
+  - docs/PRODUCT_NAME_RULES.md                                      # 白名单外补充：本次事故的防再犯指引（用户卡片 + 管理员体检/排查手册），原因见下方验证记录
 - 明确不碰：backend/**（含 mapper/XML 查询代码）、inventory-system/**（前端）、其它页面、
   backend/static/**、backend/target/*.jar
 - 数据处理：脚本在本机生产副本上验证通过后，**由用户在生产执行**（需先 mysqldump 备份）
