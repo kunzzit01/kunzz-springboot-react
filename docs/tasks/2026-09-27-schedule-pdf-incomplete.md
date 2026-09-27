@@ -39,5 +39,5 @@
 
 ## 部署提示
 
-- 本次只改前端：`backend/static/index.html` + 新 chunk（`index-BtHM1yTW*.js`/`index.es-*`），
+- 本次只改前端：`backend/static/index.html` + 新 chunk（`index-BIK_EHUV.js` / `index.es-DNUYDlE5.js`），
   后端 jar 不用重打；部署机 `git pull` 后刷新页面即可（静态免重启，必要时 Ctrl+F5 清缓存）。
