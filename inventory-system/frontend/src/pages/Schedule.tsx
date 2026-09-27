@@ -993,7 +993,17 @@ export default function Schedule() {
       if (!tableEl) return
       const prevDisplay = legendEl ? legendEl.style.display : ''
       if (legendEl) legendEl.style.display = 'block' // 临时显示图例（页面原样）
-      const canvas1 = await w.html2canvas(tableEl, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false, windowWidth: tableEl.scrollWidth })
+      // html2canvas 会把「有滚动偏移的元素」的 scrollTop/scrollLeft 原样复制进克隆文档，
+      // 克隆里的 sticky 表头/字段列于是按滚动后的位置绘制：表头落进表格中部压住行、
+      // No./名字 列横向平移——员工一多、表格超出屏幕（必先滚动）就必现，肉眼看就是「表格不完整」。
+      // onclone 在克隆文档还原滚动之后才执行，在这里把克隆文档的滚动归零：页面本身不滚动
+      // （用户看不到跳动），导出结果等于「未滚动」时的完整表格。
+      const zeroCloneScroll = (_doc: Document, clonedTable: HTMLElement) => {
+        for (let node = clonedTable.parentElement; node; node = node.parentElement) {
+          if (node.scrollTop || node.scrollLeft) { node.scrollTop = 0; node.scrollLeft = 0 }
+        }
+      }
+      const canvas1 = await w.html2canvas(tableEl, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false, windowWidth: tableEl.scrollWidth, onclone: zeroCloneScroll })
       let canvas2: HTMLCanvasElement | null = null
       if (legendEl) {
         try { canvas2 = await w.html2canvas(legendEl, { useCORS: true, backgroundColor: '#ffffff', scale: 2, logging: false }) } catch (e) { canvas2 = null }
