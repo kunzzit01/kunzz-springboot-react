@@ -1,6 +1,6 @@
 # 任务 2026-09-28-login-ip-ratelimit
 
-- 状态：进行中
+- 状态：已完成（源码 + jar 已提交并推送；待用户部署后实测线上）
 - 背景（用户实测）：一台设备连续登录失败被拦后，**换一台设备同样被拦**。
 - 根因（已实证，代码级）：
   1. 拦截来源是 `AuthController` 的登录限速（5 次失败/15 分钟 → 锁定 15 分钟，提示「登录尝试过多，请约 N
@@ -37,10 +37,23 @@
 
 ## 验证记录
 
-1. 本机 `mvn -DskipTests package` 编译打包通过（见收尾记录）。
-2. 逻辑复核：`clientIp()` 现在只在 `remoteAddr` 为本机/内网时才采用 `X-Real-IP`，公网直连（若 8081 被误暴露）
-   伪造该头无效 → 退回 socket 对端地址。
-3. 待用户部署后实测：同一网络第 6 次登录 → 429；换网络登录 → 不受影响；带假 `X-Forwarded-For` 连发
+1. `mvn -o -DskipTests compile` 通过；`mvn -o -DskipTests package` 打成 jar 通过（本机 Maven 在
+   `~/tools/apache-maven-3.9.9`，不在 PATH 上；JDK 24 编译 release 21 正常）。
+2. `BoundedExpiryMap` 行为测试 **9 项全过**：TTL 到期读取视为不存在并回收、条数封顶后 size 不超过上限、
+   最旧条目被淘汰、重新写入同一键要挪到队尾、灌入 20 万个不同键仍被压在上限内（对照组裸
+   ConcurrentHashMap 键数 = 20 万）。
+3. 端到端 **8 项全过**（不依赖数据库：`new AuthController(只抛 401 的 AuthService 替身, null)` +
+   `java.lang.reflect.Proxy` 伪造 `HttpServletRequest`，直接调真实 `controller.login()`）：
+   - A 公网直连、每次轮换伪造 `X-Forwarded-For` → 第 6 次 code=429（**改造前每次都是新桶 = 无限猜密码**）
+   - B 同出口 IP 第 6 次 429（用户实测现象语义保持）；B2 换真实出口 IP 不受该桶影响
+   - C nginx 反代（对端 127.0.0.1）按 `X-Real-IP` 分桶，第 6 次 429；C2 另一个 X-Real-IP 不受影响
+   - D 公网直连伪造 `X-Real-IP` 无效（只按 socket 对端分桶），第 6 次 429
+   - E 伪造头打不进目标 IP 的桶（定向锁死攻击被堵，目标 IP 仍返回 401）
+   - F 桶间互相隔离
+   - 日志如期输出：`[登录限速] IP x 连续失败 5 次，锁定 15 分钟（期间该出口 IP 的所有设备都无法登录）`
+4. 验证脚手架放在仓库外（`%TEMP%/kunzz-rl/`：`LimitHarness.java` + 从 fat jar 的 `BOOT-INF/lib` 取出的依赖），
+   不污染仓库、不需要 whitelist。
+5. 待用户部署后实测：同一网络第 6 次登录 → 429；换网络登录 → 不受影响；带假 `X-Forwarded-For` 连发
    6 次不再能绕过（改造前能绕过）。
 
 ## 部署提示
