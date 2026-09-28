@@ -37,35 +37,70 @@ public class AuthController {
     private final BoundedExpiryMap<Long> blockedUntil = new BoundedExpiryMap<>(WINDOW_MS, MAX_TRACKED_IPS);
 
     /**
-     * 客户端 IP（限速键）。只信 nginx 覆写的 X-Real-IP（= $remote_addr，客户端给不出假值），
-     * 且仅在直连方是本机/内网代理时才采用；否则退回 socket 对端地址。
+     * 客户端 IP（限速键）。取法必须保证「拿到的地址是代理自己算出来的」，客户端伪造不出来：
      *
-     * 不读 X-Forwarded-For 的第一个元素：生产 nginx 用 $proxy_add_x_forwarded_for（追加语义），
-     * 第一个元素是客户端自己发的 —— 拿它当键既能被伪造绕过限速，也能被伪造成别人 IP 去锁死对方。
+     * ① 直连（socket 对端是公网地址）→ 对端就是真实客户端，忽略所有请求头；
+     * ② 反代链且 X-Real-IP 已是公网地址 → 用它（nginx 用 $remote_addr 覆写，客户端给不出假值）；
+     * ③ 反代链但 X-Real-IP 仍是内网地址 → 生产上 nginx 前面还有 Traefik + socat 转发容器，
+     *    nginx 的 $remote_addr 是容器私网 IP，此时取 X-Forwarded-For 里**从右往左第一个公网地址**：
+     *    真实客户端 IP 由最外层代理追加在最右，左边才是客户端自己发的（可伪造）——
+     *    所以既不能取第一个元素（可伪造），也不能盲取最右（那里可能是内网代理跳）。
      */
     private String clientIp(jakarta.servlet.http.HttpServletRequest req) {
         String peer = req.getRemoteAddr();
-        if (isTrustedPeer(peer)) {
-            String realIp = req.getHeader("X-Real-IP");
-            if (realIp != null) {
-                String v = realIp.trim();
-                // $remote_addr 恒为 IP 字面量；这里再挡掉明显的异常值，避免脏键
-                if (!v.isEmpty() && v.length() <= 45 && v.indexOf(',') < 0) {
-                    return v;
-                }
-            }
+        if (!isPrivateOrLoopback(peer)) {
+            return peer;
         }
-        return peer;
+        String realIp = trimIp(req.getHeader("X-Real-IP"));
+        if (realIp != null && !isPrivateOrLoopback(realIp)) {
+            return realIp;
+        }
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null) {
+            String[] parts = xff.split(",");
+            String rightmost = null;
+            for (int i = parts.length - 1; i >= 0; i--) {
+                String v = trimIp(parts[i]);
+                if (v == null) continue;
+                if (rightmost == null) rightmost = v; // 兜底：整条链都是内网时取最右一跳
+                if (!isPrivateOrLoopback(v)) return v;
+            }
+            if (rightmost != null) return rightmost;
+        }
+        return realIp != null ? realIp : peer;
     }
 
-    /** 直连方是本机/内网（生产为 nginx 反代 127.0.0.1:8081）才认为它能代表真实客户端 */
-    private boolean isTrustedPeer(String peer) {
-        try {
-            java.net.InetAddress a = java.net.InetAddress.getByName(peer); // peer 来自 socket，无 DNS 解析风险
-            return a.isLoopbackAddress() || a.isSiteLocalAddress() || a.isLinkLocalAddress();
-        } catch (Exception e) {
-            return false;
+    /** IP 字面量基本校验（限长 + 拒绝逗号等脏值）：请求头里的异常值不拿来做键 */
+    private String trimIp(String raw) {
+        if (raw == null) return null;
+        String v = raw.trim();
+        return (v.isEmpty() || v.length() > 45 || v.indexOf(',') >= 0) ? null : v;
+    }
+
+    /**
+     * 内网 / 回环 / 链路本地 / ULA —— 这类地址不可能是"来自公网的客户端"，只可能是中间的代理跳。
+     * 手写判断而不是 InetAddress.getByName：后者遇到主机名会触发 DNS 解析（公网接口上是可被利用的慢查询）。
+     */
+    private boolean isPrivateOrLoopback(String ip) {
+        if (ip == null) return true;
+        if (ip.indexOf(':') >= 0) { // IPv6（本部署是 IPv4，这里只做保守判断）
+            String v = ip.toLowerCase();
+            return v.equals("::1") || v.startsWith("fe80:") || v.startsWith("fc") || v.startsWith("fd")
+                    || v.startsWith("::ffff:") || !v.matches("[0-9a-f:.]+");
         }
+        String[] o = ip.split("\\.");
+        if (o.length != 4) return true;
+        int a, b;
+        try {
+            a = Integer.parseInt(o[0]);
+            b = Integer.parseInt(o[1]);
+        } catch (NumberFormatException e) {
+            return true;
+        }
+        return a == 0 || a == 127 || a == 10
+                || (a == 172 && b >= 16 && b <= 31)
+                || (a == 192 && b == 168)
+                || (a == 169 && b == 254);
     }
 
     @PostMapping("/login")

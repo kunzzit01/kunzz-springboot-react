@@ -16,8 +16,11 @@
 - 用户决策：**限速按 IP 为准**（保持"一个出口 IP 一个桶"，不改为按账号锁定）。因此本次不改封锁语义
   （仍是 5 次/15 分钟、锁 15 分钟、锁定期内不放行正确密码），只修上面 2、3 两个真缺陷。
 - 修法：
-  1. 客户端 IP 只信 nginx 覆写的 `X-Real-IP`（`$remote_addr`，客户端给不出假值），且仅在直连方是本机/内网
-     代理时才采用；否则退回 `getRemoteAddr()`。**不再读 XFF 第一个元素** → IP 不可伪造。
+  1. 客户端 IP 分三段取（目标：拿到的必须是「代理自己算出来的地址」，客户端伪造不出来）：
+     ① 直连（socket 对端是公网地址）→ 用对端，忽略全部请求头；
+     ② 反代链且 `X-Real-IP` 已是公网地址 → 用它（nginx 用 `$remote_addr` 覆写，客户端给不出假值）；
+     ③ 反代链但 `X-Real-IP` 仍是内网地址 → 取 `X-Forwarded-For` **从右往左第一个公网地址**。
+     绝不取 XFF 第一个元素（那是客户端自己发的，可伪造）。
   2. 新增 `security/BoundedExpiryMap`（条数封顶 + 到期回收，插入顺序淘汰），登录失败计数、封锁标记、
      忘记密码 IP 计数三处全部换用 → 内存有界。
   3. 封锁/拒绝时打 `log.warn`（谁被锁、锁多久），便于事后定位"全公司被锁"这类运维事件。
@@ -35,6 +38,22 @@
 > 前端零改动：错误契约不变（HTTP 200 + body `code:429`），前端拦截器已能展示该 message；
 > 改成真 HTTP 429 反而会让登录页静默无提示（`api/http.ts` 的 4xx 分支不弹窗）。
 
+## 生产入口链路（推 VPS 前查证，这段决定了修法 ③ 的存在）
+
+```
+客户端 ──443(TLS)──> Traefik ──TCP──> kunzz-bridge(alpine/socat) ──> nginx:8080 ──/api/──> 后端:8081
+```
+
+- socat 是纯 TCP 转发、不改请求头 → nginx 的 `$remote_addr` 以及它写给后端的 `X-Real-IP` 都是
+  **转发容器的私网 IP**（VPS_DEPLOY 修订版步骤里的 `172.18.0.x` 网段）；真实客户端 IP 由 Traefik
+  追加在 `X-Forwarded-For` 的最右，左边的内容是客户端自己发的（可伪造）。
+- 若只信 `X-Real-IP`：**域名入口会把所有用户算成同一个 IP**（= 全公司共用 5 次额度，比不改还糟），
+  直连入口反而正常。所以必须有第 ③ 段回落。
+- 另一条入口 `http://187.127.125.136:8080/`（nginx 直接对外）：对端就是真实客户端公网 IP，走第 ① 段。
+- 可选加固（不必需，代码已能自适应两种拓扑）：给 nginx 加
+  `set_real_ip_from <转发容器网段>; real_ip_header X-Forwarded-For;` 让 `$remote_addr` 直接等于真实客户端，
+  之后本代码会走第 ② 段，行为不变。
+
 ## 验证记录
 
 1. `mvn -o -DskipTests compile` 通过；`mvn -o -DskipTests package` 打成 jar 通过（本机 Maven 在
@@ -42,14 +61,15 @@
 2. `BoundedExpiryMap` 行为测试 **9 项全过**：TTL 到期读取视为不存在并回收、条数封顶后 size 不超过上限、
    最旧条目被淘汰、重新写入同一键要挪到队尾、灌入 20 万个不同键仍被压在上限内（对照组裸
    ConcurrentHashMap 键数 = 20 万）。
-3. 端到端 **8 项全过**（不依赖数据库：`new AuthController(只抛 401 的 AuthService 替身, null)` +
+3. 端到端 **11 项全过**（不依赖数据库：`new AuthController(只抛 401 的 AuthService 替身, null)` +
    `java.lang.reflect.Proxy` 伪造 `HttpServletRequest`，直接调真实 `controller.login()`）：
-   - A 公网直连、每次轮换伪造 `X-Forwarded-For` → 第 6 次 code=429（**改造前每次都是新桶 = 无限猜密码**）
-   - B 同出口 IP 第 6 次 429（用户实测现象语义保持）；B2 换真实出口 IP 不受该桶影响
-   - C nginx 反代（对端 127.0.0.1）按 `X-Real-IP` 分桶，第 6 次 429；C2 另一个 X-Real-IP 不受影响
-   - D 公网直连伪造 `X-Real-IP` 无效（只按 socket 对端分桶），第 6 次 429
-   - E 伪造头打不进目标 IP 的桶（定向锁死攻击被堵，目标 IP 仍返回 401）
-   - F 桶间互相隔离
+   - 入口① 直连（对端=公网）：A 每次轮换伪造 `X-Forwarded-For` → 仍按对端分桶、第 6 次 code=429
+     （**改造前每次都是新桶 = 无限猜密码**）；D 伪造 `X-Real-IP` 无效；B 同出口 IP 第 6 次 429
+     （用户实测现象语义保持）；B2 换真实出口 IP 不受该桶影响
+   - 入口② 域名链（对端与 `X-Real-IP` 都是转发容器私网 IP `172.18.0.5`）：G 同一真实客户端每次伪造
+     不同前缀 → 不换桶、第 6 次 429；H 另一个真实客户端不受影响；I 把受害者 IP 写进伪造前缀 →
+     锁的是攻击者自己，I2 受害者 IP 仍可正常尝试（**定向锁死被堵**）；J nginx 直连反代
+     （`X-Real-IP` 已是公网）按 `X-Real-IP` 分桶；K 整条链都是内网时兜底取最右一跳且稳定；M 无请求头不崩
    - 日志如期输出：`[登录限速] IP x 连续失败 5 次，锁定 15 分钟（期间该出口 IP 的所有设备都无法登录）`
 4. 验证脚手架放在仓库外（`%TEMP%/kunzz-rl/`：`LimitHarness.java` + 从 fat jar 的 `BOOT-INF/lib` 取出的依赖），
    不污染仓库、不需要 whitelist。
