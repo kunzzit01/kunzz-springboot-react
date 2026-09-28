@@ -5,6 +5,7 @@ import com.kunzz.inventory.entity.EmailVerification;
 import com.kunzz.inventory.entity.User;
 import com.kunzz.inventory.repository.EmailVerificationRepository;
 import com.kunzz.inventory.repository.UserRepository;
+import com.kunzz.inventory.security.BoundedExpiryMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,13 +46,15 @@ public class PasswordResetService {
     /** 同一 IP 每小时最多申请几次（防止拿本接口刷别人邮箱） */
     private static final int MAX_REQUESTS_PER_IP = 10;
     private static final long IP_WINDOW_MS = 60 * 60 * 1000L;
+    /** 计数容器条数上限：键来自客户端 IP，用无界 Map 会被轮换 IP 头灌爆堆内存 */
+    private static final int MAX_TRACKED_IPS = 10_000;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
     /** 错误次数：邮箱 → 次数。放内存的理由同 AuthController.login 的失败计数：单容器部署够用 */
     private final Map<String, Integer> wrongAttempts = new ConcurrentHashMap<>();
     /** 申请次数：IP → [次数, 窗口起点ms] */
-    private final Map<String, long[]> ipRequests = new ConcurrentHashMap<>();
+    private final BoundedExpiryMap<long[]> ipRequests = new BoundedExpiryMap<>(IP_WINDOW_MS, MAX_TRACKED_IPS);
 
     /** 第一步：给已绑定账号的邮箱发 6 位验证码 */
     public void requestCode(String rawEmail, String ip) {
@@ -147,10 +150,10 @@ public class PasswordResetService {
     private void checkIpLimit(String ip) {
         String key = ip == null || ip.isBlank() ? "unknown" : ip;
         long now = System.currentTimeMillis();
-        long[] slot = ipRequests.computeIfAbsent(key, k -> new long[]{0, now});
-        if (now - slot[1] > IP_WINDOW_MS) {
-            slot[0] = 0;
-            slot[1] = now;
+        long[] slot = ipRequests.get(key);
+        if (slot == null || now - slot[1] > IP_WINDOW_MS) { // 条目到期即视为新窗口
+            slot = new long[]{0, now};
+            ipRequests.put(key, slot);
         }
         if (++slot[0] > MAX_REQUESTS_PER_IP) {
             throw new BusinessException(429, "操作过于频繁，请稍后再试");
