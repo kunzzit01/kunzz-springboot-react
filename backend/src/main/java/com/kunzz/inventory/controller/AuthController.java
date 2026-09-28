@@ -79,28 +79,21 @@ public class AuthController {
 
     /**
      * 内网 / 回环 / 链路本地 / ULA —— 这类地址不可能是"来自公网的客户端"，只可能是中间的代理跳。
-     * 手写判断而不是 InetAddress.getByName：后者遇到主机名会触发 DNS 解析（公网接口上是可被利用的慢查询）。
+     * 先做字面量正则再交给 InetAddress：后者遇到主机名会触发 DNS 解析（公网接口上等于一个可被利用的慢查询）。
      */
     private boolean isPrivateOrLoopback(String ip) {
         if (ip == null) return true;
-        if (ip.indexOf(':') >= 0) { // IPv6（本部署是 IPv4，这里只做保守判断）
-            String v = ip.toLowerCase();
-            return v.equals("::1") || v.startsWith("fe80:") || v.startsWith("fc") || v.startsWith("fd")
-                    || v.startsWith("::ffff:") || !v.matches("[0-9a-f:.]+");
-        }
-        String[] o = ip.split("\\.");
-        if (o.length != 4) return true;
-        int a, b;
+        boolean hasColon = ip.indexOf(':') >= 0;
+        boolean looksLiteral = hasColon ? ip.matches("[0-9a-fA-F:.]+") : ip.matches("\\d{1,3}(\\.\\d{1,3}){3}");
+        if (!looksLiteral) return true;
         try {
-            a = Integer.parseInt(o[0]);
-            b = Integer.parseInt(o[1]);
-        } catch (NumberFormatException e) {
+            java.net.InetAddress a = java.net.InetAddress.getByName(ip);
+            if (a.isLoopbackAddress() || a.isSiteLocalAddress() || a.isLinkLocalAddress()) return true;
+            byte[] b = a.getAddress();
+            return b.length == 16 && (b[0] & 0xfe) == 0xfc; // IPv6 ULA fc00::/7（isSiteLocalAddress 不覆盖）
+        } catch (Exception e) {
             return true;
         }
-        return a == 0 || a == 127 || a == 10
-                || (a == 172 && b >= 16 && b <= 31)
-                || (a == 192 && b == 168)
-                || (a == 169 && b == 254);
     }
 
     @PostMapping("/login")

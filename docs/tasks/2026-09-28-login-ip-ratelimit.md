@@ -61,7 +61,7 @@
 2. `BoundedExpiryMap` 行为测试 **9 项全过**：TTL 到期读取视为不存在并回收、条数封顶后 size 不超过上限、
    最旧条目被淘汰、重新写入同一键要挪到队尾、灌入 20 万个不同键仍被压在上限内（对照组裸
    ConcurrentHashMap 键数 = 20 万）。
-3. 端到端 **11 项全过**（不依赖数据库：`new AuthController(只抛 401 的 AuthService 替身, null)` +
+3. 端到端 **15 项全过**（不依赖数据库：`new AuthController(只抛 401 的 AuthService 替身, null)` +
    `java.lang.reflect.Proxy` 伪造 `HttpServletRequest`，直接调真实 `controller.login()`）：
    - 入口① 直连（对端=公网）：A 每次轮换伪造 `X-Forwarded-For` → 仍按对端分桶、第 6 次 code=429
      （**改造前每次都是新桶 = 无限猜密码**）；D 伪造 `X-Real-IP` 无效；B 同出口 IP 第 6 次 429
@@ -70,6 +70,8 @@
      不同前缀 → 不换桶、第 6 次 429；H 另一个真实客户端不受影响；I 把受害者 IP 写进伪造前缀 →
      锁的是攻击者自己，I2 受害者 IP 仍可正常尝试（**定向锁死被堵**）；J nginx 直连反代
      （`X-Real-IP` 已是公网）按 `X-Real-IP` 分桶；K 整条链都是内网时兜底取最右一跳且稳定；M 无请求头不崩
+   - 边界：N/N2 IPv6 回环（`::1` 与 `0:0:0:0:0:0:0:1` 展开写法）走反代分支；N3 非 IP 字面量的对端
+     不被当成公网直连（也不会触发 DNS）；N4 公网 v6 对端按对端分桶
    - 日志如期输出：`[登录限速] IP x 连续失败 5 次，锁定 15 分钟（期间该出口 IP 的所有设备都无法登录）`
 4. 验证脚手架放在仓库外（`%TEMP%/kunzz-rl/`：`LimitHarness.java` + 从 fat jar 的 `BOOT-INF/lib` 取出的依赖），
    不污染仓库、不需要 whitelist。
