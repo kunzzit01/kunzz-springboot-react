@@ -4,6 +4,7 @@ import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.dto.*;
 import com.kunzz.inventory.entity.*;
 import com.kunzz.inventory.mapper.DishwareBreakMapper;
+import com.kunzz.inventory.mapper.DishwareStockMapper;
 import com.kunzz.inventory.mapper.DishwareTransferMapper;
 import com.kunzz.inventory.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -34,6 +36,7 @@ public class DishwareService {
     private final DishwareTransferMapper dishwareTransferMapper;
     private final DishwareSetStockRepository setStockRepo;
     private final DishwareLocationRepository locationRepo;
+    private final DishwareStockMapper dishwareStockMapper;
 
     // ---------- 碗碟信息 ----------
 
@@ -80,15 +83,59 @@ public class DishwareService {
     @Transactional(readOnly = true)
     public List<DishwareStockVO> listStocks(String keyword, String category) {
         List<DishwareInfo> infos = infoRepo.findAllByOrderByIdAsc();
-        Map<Integer, DishwareStock> stocks = stockRepo.findAll().stream()
-                .collect(Collectors.toMap(DishwareStock::getDishwareId, Function.identity(), (a, b) -> a));
+
+        // 五个桶 = 启用店面按 display_order 前 5 个
+        // （对齐旧系统 restaurants = [17 文华楼, 2 中央, 3 J1, 4 J2, 5 J3]）
+        List<DishwareLocation> active = locationRepo.findAllByOrderByDisplayOrderAscIdAsc().stream()
+                .filter(l -> Boolean.TRUE.equals(l.getIsActive()))
+                .toList();
+        Integer[] bucketLoc = new Integer[5];
+        for (int i = 0; i < 5 && i < active.size(); i++) bucketLoc[i] = active.get(i).getId();
+
+        // 数量取自 dishware_stock_by_restaurant（真实数据源）
+        // —— dishware_stock 那张聚合表在旧系统里就没在维护（实测几乎全 0），不能作为数据源
+        Map<Integer, Map<Integer, Integer>> byRestaurant = new HashMap<>();
+        for (Map<String, Object> r : dishwareStockMapper.stockByRestaurant()) {
+            int dishwareId = toInt(r.get("dishwareId"));
+            int restaurantId = toInt(r.get("restaurantId"));
+            if (dishwareId <= 0 || restaurantId <= 0) continue;
+            byRestaurant.computeIfAbsent(dishwareId, k -> new HashMap<>())
+                    .merge(restaurantId, toInt(r.get("qty")), Integer::sum);
+        }
+
+        // 行 id 仍取 dishware_stock（不改变既有契约；页面编辑用的是 dishwareId）
+        Map<Integer, Integer> stockIds = stockRepo.findAll().stream()
+                .collect(Collectors.toMap(DishwareStock::getDishwareId, DishwareStock::getId, (a, b) -> a));
+
         return infos.stream()
                 .filter(i -> keyword == null || keyword.isBlank()
                         || i.getProductName().toLowerCase().contains(keyword.toLowerCase())
                         || (i.getCodeNumber() != null && i.getCodeNumber().toLowerCase().contains(keyword.toLowerCase())))
                 .filter(i -> category == null || category.isBlank() || category.equals(i.getCategory()))
-                .map(i -> DishwareStockVO.from(i, stocks.get(i.getId())))
+                .map(i -> {
+                    Map<Integer, Integer> m = byRestaurant.getOrDefault(i.getId(), Map.of());
+                    int wenhua = bucketQty(m, bucketLoc[0]);
+                    int central = bucketQty(m, bucketLoc[1]);
+                    int j1 = bucketQty(m, bucketLoc[2]);
+                    int j2 = bucketQty(m, bucketLoc[3]);
+                    int j3 = bucketQty(m, bucketLoc[4]);
+                    return new DishwareStockVO(
+                            stockIds.get(i.getId()), i.getId(), i.getProductName(), i.getCodeNumber(),
+                            i.getCategory(), i.getSize(), i.getUnitPrice(), i.getPhotoPath(),
+                            wenhua, central, j1, j2, j3, wenhua + central + j1 + j2 + j3);
+                })
                 .toList();
+    }
+
+    /** 取某店面在该碗碟上的数量（店面未映射到时算 0） */
+    private static int bucketQty(Map<Integer, Integer> m, Integer locId) {
+        return locId == null ? 0 : m.getOrDefault(locId, 0);
+    }
+
+    private static int toInt(Object o) {
+        if (o == null) return 0;
+        if (o instanceof Number n) return n.intValue();
+        try { return Integer.parseInt(String.valueOf(o).trim()); } catch (Exception e) { return 0; }
     }
 
     @Transactional

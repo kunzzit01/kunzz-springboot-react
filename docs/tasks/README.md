@@ -81,3 +81,4 @@
 | 2026-09-30-branch-remark-own-sequence | 已完成 | 进出货/货品备注：分店自己生成备注编号不再被中央调拨继承号带偏（只统计分店自己 mint 的号，`main_record_id IS NULL` 且为入库行）；实测 J1 生成 SA-001/SA-002、中央仍 SA-229 不变 | main |
 | 2026-09-30-branch-list-remark-fields | 已完成 | 进出货：分店列表不显示备注编号（listBranch 漏取两列）/ 编辑分店记录把编号清掉；补列 + updateInout 分店分支保留原值加固 | main |
 | 2026-09-30-branch-remark-from-one | 已完成 | 分店自动编号改为「从 1 起取最小未出现号」（不接中央继承号、也不接本店旧号）；中央不变；实测 J1 SB-001/SB-002、SA-001，中央 SB-455 | main |
+| 2026-09-30-dishware-stock-by-restaurant | 已完成 | 碗碟页数量几乎全 0：读错了表（dishware_stock → 改为按 dishware_stock_by_restaurant 汇总，对齐旧 PHP action=stock）；实测五桶 [585,1701,2520,2451,2901] | main |

@@ -6,6 +6,19 @@
 ---
 ## 🗓️ 2026-09-30
 
+### [2026-09-30-dishware-stock-by-restaurant] 碗碟页数量几乎全 0：读错了表
+
+- **现象**：碗碟页数量几乎全 0（文化楼 0 / 中央 0 / J1 4 / J2 6 / J3 3，合计 13），实际应约 1 万件。
+- **根因**：`DishwareService.listStocks` 读的是 `dishware_stock` —— 旧系统里就没在维护、实测几乎全 0 的聚合表；
+  真实数量在 `dishware_stock_by_restaurant`（按店面）。
+- **权威对照**：旧版 live PHP `dishware_api.php?action=stock`（实测仍可访问）从 by_restaurant 汇总，
+  映射 `restaurants = [17 文华楼, 2 中央, 3 J1, 4 J2, 5 J3]`（= 启用店面按 display_order 前 5）；
+  旧站 `action=list` 也读 `dishware_stock` → 同样全 0。
+- **修法**：新增 `DishwareStockMapper.stockByRestaurant()`；`listStocks` 改为按启用店面（display_order）前 5
+  汇总 by_restaurant，total = 五桶之和。编辑功能本次不动（仍写 `dishware_stock`）。
+- **实测**：`GET /api/dishware/stock` 五桶 `[585, 1701, 2520, 2451, 2901]`（与旧站一致）、非零 313 行，
+  item 249 → J1 70 / J2 46 / J3 50 / total 166，与旧站逐一相符。
+
 ### [2026-09-30-branch-remark-from-one] 进出货/货品备注：分店自动编号改为「从 1 起取最小未出现号」
 
 - **背景/现象**：上一版（`2026-09-30-branch-remark-own-sequence`）只把「中央调拨继承号」排除出分店取号，

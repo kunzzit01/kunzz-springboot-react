@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kunzz.inventory.mapper.DishwareStockMapper">
+
+    <!--
+        按店面汇总碗碟库存（数据源对齐旧系统 dishware_api.php?action=stock）。
+        注意：Map 返回值不做驼峰转换，字段统一用 SQL 别名给出 camelCase。
+    -->
+    <select id="stockByRestaurant" resultType="java.util.LinkedHashMap">
+        SELECT dishware_id   AS dishwareId,
+               restaurant_id AS restaurantId,
+               SUM(quantity) AS qty
+        FROM dishware_stock_by_restaurant
+        GROUP BY dishware_id, restaurant_id
+    </select>
+</mapper>
