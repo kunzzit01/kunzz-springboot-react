@@ -357,39 +357,39 @@ public class StockService {
         return null;
     }
 
-    /** 备注编号自动生成（对齐旧系统 generateRemarkCode：MAX+1 循环递增 1-999，避让在库编号）
-     *  分店（jXstockedit_data）："当前最大号"只统计**本系统自己 mint 的编号**，
-     *  不含中央调拨继承来的号 → 分店自己的序列从 001 起（task 2026-09-30-branch-remark-own-sequence）。
-     *  中央表行为不变（own 池 == 全量池）。 */
+    /** 备注编号自动生成。
+     *  中央（stockinout_data）：MAX+1 循环递增、避让在库（原逻辑不变）。
+     *  分店（jXstockedit_data）：从 1 起取「本店表里从未出现过」的最小号 ——
+     *  既不接中央调拨继承来的号，也不接本店历史旧号（task 2026-09-30-branch-remark-from-one）。 */
     private String generateRemarkCode(String prefix, String table) {
         java.util.regex.Pattern pat = java.util.regex.Pattern
                 .compile("^" + java.util.regex.Pattern.quote(prefix) + "-(\\d{1,3})$");
-
-        // 全量池：同前缀所有编号 + 净库存（用于"避让在库"，含中央调拨继承来的号，避免撞号）
         List<Map<String, Object>> rows = stockInoutMapper.remarkCodePool(table, prefix);
-        java.util.Set<Integer> inStockSet = new java.util.HashSet<>();
+
+        java.util.Set<Integer> nums = new java.util.HashSet<>();       // 已出现过的编号
+        java.util.Set<Integer> inStockSet = new java.util.HashSet<>(); // 净库存>0 的编号
         for (Map<String, Object> h : rows) {
             String rn = String.valueOf(h.get("remark_number"));
             java.util.regex.Matcher m = pat.matcher(rn == null ? "" : rn);
             if (m.matches()) {
                 int num = Integer.parseInt(m.group(1));
+                nums.add(num);
                 java.math.BigDecimal net = dec2(h.get("total_in")).subtract(dec2(h.get("total_out")));
                 if (net.signum() > 0) inStockSet.add(num);
             }
         }
 
-        // 计号池：分店只数"自己 mint 的编号"，中央用全量池
-        boolean branchTable = table != null && table.endsWith("stockedit_data");
-        List<Map<String, Object>> ownRows = branchTable
-                ? stockInoutMapper.remarkCodePoolOwn(table, prefix)
-                : rows;
-        int lastVal = 0;
-        for (Map<String, Object> h : ownRows) {
-            String rn = String.valueOf(h.get("remark_number"));
-            java.util.regex.Matcher m = pat.matcher(rn == null ? "" : rn);
-            if (m.matches()) lastVal = Math.max(lastVal, Integer.parseInt(m.group(1)));
+        // 分店：从 1 起取第一个「未出现过」的号
+        if (table != null && table.endsWith("stockedit_data")) {
+            for (int n = 1; n <= 999; n++) {
+                if (!nums.contains(n)) return prefix + "-" + String.format("%03d", n);
+            }
+            throw new BusinessException("前缀[" + prefix + "]无可用编号（所有999个编号均已存在）");
         }
 
+        // 中央：MAX+1 循环递增，避让在库
+        int lastVal = 0;
+        for (int n : nums) lastVal = Math.max(lastVal, n);
         int current = lastVal;
         for (int tries = 0; tries < 999; tries++) {
             current = (current % 999) + 1;

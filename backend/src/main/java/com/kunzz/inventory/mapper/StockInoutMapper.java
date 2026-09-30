@@ -120,10 +120,6 @@ public interface StockInoutMapper {
     /** 同前缀所有备注编号 + 净库存（用于计算下一个可用编号，避让在库） */
     List<Map<String, Object>> remarkCodePool(@Param("table") String table, @Param("prefix") String prefix);
 
-    /** 同前缀「本系统自己生成」的备注编号（分店：main_record_id 为空且为入库行；
-     *  用于分店自己的编号序列从 001 起，不被中央调拨继承来的号带偏） */
-    List<Map<String, Object>> remarkCodePoolOwn(@Param("table") String table, @Param("prefix") String prefix);
-
     /** 产品是否存在在库（净库存>0）备注编号 */
     long countInStockRemarkNumber(@Param("table") String table, @Param("productName") String productName);
 
