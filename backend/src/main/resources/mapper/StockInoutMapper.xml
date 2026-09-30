@@ -205,6 +205,21 @@
         GROUP BY remark_number
     </select>
 
+    <!-- 备注编号池 - 仅含「本系统自己生成」的编号（用于计算分店自己的下一个号）。
+         分店台账里混入的中央调拨编号（insertBranchEdit 写入，带 main_record_id）以及
+         消费该号的分店出货行（只有 out_quantity）都要排除，只保留分店自己 mint 的入库行，
+         这样分店自己的序列从 001 起，不被中央号码带偏（task 2026-09-30-branch-remark-own-sequence）。
+         中央表用不到（中央取 remarkCodePool 即可）。 -->
+    <select id="remarkCodePoolOwn" resultType="java.util.LinkedHashMap">
+        SELECT remark_number
+        FROM ${table}
+        WHERE remark_number LIKE CONCAT(#{prefix}, '-%')
+          AND deleted_at IS NULL
+          AND main_record_id IS NULL
+          AND in_quantity &gt; 0
+        GROUP BY remark_number
+    </select>
+
     <!-- 产品是否存在在库备注编号（净库存>0） -->
     <select id="countInStockRemarkNumber" resultType="long">
         SELECT COUNT(*) FROM (

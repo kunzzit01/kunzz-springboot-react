@@ -357,23 +357,39 @@ public class StockService {
         return null;
     }
 
-    /** 备注编号自动生成（对齐旧系统 generateRemarkCode：MAX+1 循环递增 1-999，避让在库编号） */
+    /** 备注编号自动生成（对齐旧系统 generateRemarkCode：MAX+1 循环递增 1-999，避让在库编号）
+     *  分店（jXstockedit_data）："当前最大号"只统计**本系统自己 mint 的编号**，
+     *  不含中央调拨继承来的号 → 分店自己的序列从 001 起（task 2026-09-30-branch-remark-own-sequence）。
+     *  中央表行为不变（own 池 == 全量池）。 */
     private String generateRemarkCode(String prefix, String table) {
+        java.util.regex.Pattern pat = java.util.regex.Pattern
+                .compile("^" + java.util.regex.Pattern.quote(prefix) + "-(\\d{1,3})$");
+
+        // 全量池：同前缀所有编号 + 净库存（用于"避让在库"，含中央调拨继承来的号，避免撞号）
         List<Map<String, Object>> rows = stockInoutMapper.remarkCodePool(table, prefix);
-        int lastVal = 0;
         java.util.Set<Integer> inStockSet = new java.util.HashSet<>();
         for (Map<String, Object> h : rows) {
             String rn = String.valueOf(h.get("remark_number"));
-            java.util.regex.Matcher m = java.util.regex.Pattern
-                    .compile("^" + java.util.regex.Pattern.quote(prefix) + "-(\\d{1,3})$")
-                    .matcher(rn == null ? "" : rn);
+            java.util.regex.Matcher m = pat.matcher(rn == null ? "" : rn);
             if (m.matches()) {
                 int num = Integer.parseInt(m.group(1));
-                lastVal = Math.max(lastVal, num);
                 java.math.BigDecimal net = dec2(h.get("total_in")).subtract(dec2(h.get("total_out")));
                 if (net.signum() > 0) inStockSet.add(num);
             }
         }
+
+        // 计号池：分店只数"自己 mint 的编号"，中央用全量池
+        boolean branchTable = table != null && table.endsWith("stockedit_data");
+        List<Map<String, Object>> ownRows = branchTable
+                ? stockInoutMapper.remarkCodePoolOwn(table, prefix)
+                : rows;
+        int lastVal = 0;
+        for (Map<String, Object> h : ownRows) {
+            String rn = String.valueOf(h.get("remark_number"));
+            java.util.regex.Matcher m = pat.matcher(rn == null ? "" : rn);
+            if (m.matches()) lastVal = Math.max(lastVal, Integer.parseInt(m.group(1)));
+        }
+
         int current = lastVal;
         for (int tries = 0; tries < 999; tries++) {
             current = (current % 999) + 1;
