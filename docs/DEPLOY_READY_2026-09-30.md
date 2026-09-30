@@ -1,8 +1,9 @@
 # 可推上 live 的修复清单 — 2026-09-30
 
 > 本文件列出**已在本地验证通过、确认可以直接推送到生产（VPS live）**的修复。
-> 本地 `main` 当前领先 `origin/main` **4 个提交**，全部属于本清单。
-> **本次无数据库结构变更** —— 部署时不需要跑 `add_new_tables.sql`，只需重建后端 jar。
+> 本地 `main` 当前领先 `origin/main` **6 个提交**，全部属于本清单。
+> **本次无数据库结构变更** —— 不需要跑 `add_new_tables.sql`。
+> 部署需要：**重建后端 jar** + **重建后台前端**（本批次含一处前端改动）。
 
 ---
 
@@ -10,12 +11,14 @@
 
 | 提交 | 任务 ID | 内容 | 状态 |
 |---|---|---|---|
+| `e20a537` | 2026-09-30-phone-page-fixes | 手机版 PDF 对齐旧版 + 员工管理补回「编辑」（**前端**） | ✅ 已验证 |
 | `8d20297` | 2026-09-30-dishware-stock-by-restaurant | 碗碟数量读对了表 | ✅ 已验证 |
 | `b21bf58` | 2026-09-30-branch-remark-from-one | 分店自动编号从 1 起取最小未出现号 | ✅ 已验证 |
 | `4f4f16b` | 2026-09-30-branch-list-remark-fields | 分店列表显示编号 + 编辑不再清号 | ✅ 已验证 |
 | `9ac1f41` | 2026-09-30-branch-remark-own-sequence | **中间提交，已被 `b21bf58` 取代**（净效果为空，随批次一起推即可） | — |
+| `5b6dc99` | —— | 本部署清单（纯文档） | — |
 
-净效果 = **2 块修复**：① 进出货/货品备注（分店）② 碗碟数量。
+净效果 = **3 块修复**：① 进出货/货品备注（分店）② 碗碟数量 ③ 手机版 PDF + 员工管理编辑。
 
 改动文件（全部）：
 - `backend/src/main/java/com/kunzz/inventory/service/StockService.java`
@@ -23,8 +26,10 @@
 - `backend/src/main/java/com/kunzz/inventory/mapper/DishwareStockMapper.java`（新增）
 - `backend/src/main/resources/mapper/DishwareStockMapper.xml`（新增）
 - `backend/src/main/java/com/kunzz/inventory/service/DishwareService.java`
-- `CHANGELOG.md`、`docs/tasks/README.md`、`docs/tasks/2026-09-30-*.md`（4 个）
-- ⚠️ **不含** `backend/target/*.jar`（构建产物，按 AGENTS.md §4 由发布步骤在 VPS 上重建）
+- `inventory-system/frontend/src/pages/Phone.tsx`
+- `inventory-system/frontend/src/styles/phone.css`
+- `CHANGELOG.md`、`docs/tasks/README.md`、`docs/tasks/2026-09-30-*.md`、本文件
+- ⚠️ **不含** `backend/target/*.jar` 与 `backend/static/**`（构建产物，按 AGENTS.md §4 在部署时重建）
 
 ---
 
@@ -73,7 +78,19 @@
 
 ---
 
-## 3. 部署到 VPS（按 `docs/VPS_DEPLOY_2026-09-17-vps-deploy.md`）
+## 3. 修复三：手机版 PDF + 员工管理（前端，`e20a537`）
+
+- **① 下载PDF 字体小/发虚**：原来只是把屏幕表格截屏再拉伸到 A4 宽（≈ 6pt、位图发虚）。
+  改为**照旧版 `phone_manage.js` 的算法复刻**：克隆表格重排版（勾选框画方框、时间转文本、
+  橙表头 `#f99e00`、隔行 `rgb(255,230,183)`、正文 12px、0.3px 黑边）→ 离屏 **200mm** 容器
+  → `html2canvas({scale:3})` → 纵向 A4 铺满页宽、超高按页切片；文件名 `手机管理_JX_YYYYMMDD.pdf`。
+- **② 员工管理缺「编辑」**：`setEmpId` 只在「添加」时置 null，编辑模态框没人能打开（死代码）。
+  表格「操作」列加回「编辑」按钮（预填 + `setEmpId`），保存走既有接口，后端不用改。
+- **验证**：本地 vite dev 实测 PDF 与页面一致、字体够大清晰；员工每行「编辑/删除」、可预填保存。
+
+---
+
+## 4. 部署到 VPS（按 `docs/VPS_DEPLOY_2026-09-17-vps-deploy.md`）
 
 ```bash
 # ① 备份（30 秒，别省）
@@ -84,15 +101,23 @@ sudo mysqldump --single-transaction u690174784_kunzz | gzip > /opt/backups/pre_u
 cd /opt/kunzz-springboot-react
 git status --short        # 应为空
 git pull --ff-only
-git log --oneline -3      # 应看到 8d20297 在最上面
+git log --oneline -3      # 应看到 e20a537 在最上面
 
-# ③ 本次只改了 backend/** → 只需重建后端（前端不用动）
+# ③ 本次改了 backend/** 与 inventory-system/frontend/** → 两样都要重建
 cd backend
 mvn -DskipTests clean package
 sudo cp target/inventory-backend-1.0.0.jar /opt/inventory/app.jar
 sudo chown kunzz:kunzz /opt/inventory/app.jar
 sudo systemctl restart inventory-backend
 sleep 10 && sudo systemctl is-active inventory-backend
+
+# ④ 重建后台前端（手机版 PDF / 员工管理改动在这里）
+cd /opt/kunzz-springboot-react/inventory-system/frontend
+npm ci              # 仅当 package-lock.json 变过才需要
+npm run build
+sudo rsync -a --delete dist/ /var/www/admin/
+sudo chown -R www-data:www-data /var/www/admin
+# 前端不需要重启服务，刷新浏览器即可
 ```
 
 > ✅ **无需跑任何 SQL**（本次无 `database/**` 与 `add_new_tables.sql` 改动）。
@@ -109,10 +134,12 @@ curl -s -o /dev/null -w "api=%{http_code}\n"  http://127.0.0.1:8080/api/auth/me 
 2. **进出货 → 切到 J1** → 带编号的行应显示编号（如 `SH-518`）
 3. **J1 新增一行进货、勾选货品备注、编号留空** → 生成 `前缀-001`（J1 自己的序列）
 4. 编辑一条带编号的 J1 记录 → 编号**不被清掉**
+5. **手机版**（`/phone?restaurant=j1`）→ 点「下载PDF」成品与页面一致、字体够大清晰；
+   员工管理每行有「编辑」+「删除」，编辑可预填保存
 
 ---
 
-## 4. 回滚
+## 5. 回滚
 
 ```bash
 # 后端回滚（最快）
@@ -120,11 +147,12 @@ cp /opt/inventory/app.jar.bak /opt/inventory/app.jar
 sudo systemctl restart inventory-backend
 ```
 - 本次为**纯代码改动，不涉及数据**；数据库无需回滚。
-- 源码回滚：`git revert 8d20297 b21bf58 4f4f16b`（或直接恢复到上一个正常提交）。
+- 源码回滚：`git revert e20a537 8d20297 b21bf58 4f4f16b`（或直接恢复到上一个正常提交）。
+- 前端回滚：恢复上一版 dist 到 `/var/www/admin/`，或 `git checkout <上一个正常提交> -- inventory-system/frontend` 后重新 build。
 
 ---
 
-## 5. 注意事项
+## 6. 注意事项
 
 - **不要**把 `backend/target/*.jar` 提交/上传 —— 在 VPS 上重建（AGENTS.md §4）。
 - 本批次**不涉及** `CHANGELOG.md` 冲突风险之外的热点文件；`CHANGELOG.md` 已按"只追加"写入。
