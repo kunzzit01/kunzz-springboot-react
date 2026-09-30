@@ -6,6 +6,19 @@
 ---
 ## 🗓️ 2026-09-30
 
+### [2026-09-30-branch-list-remark-fields] 进出货：分店列表不显示备注编号 / 编辑分店记录把编号清掉
+
+- **现象（用户反馈）**：① 中央勾选生成的编码出货给分店，分店进出货里**看不到货品编码**；
+  ② 在 J1 编辑带编码的记录后，该编码**直接被清掉**。
+- **根因（两者同一个）**：`StockInoutMapper.xml` 的 `listBranch` 查询**没取** `remark_number` / `product_remark_checked`
+  两列（库里有值，如 J1 行 `SH-518`），Service `setRemarkNumber(str(r.get("remark_number")))` 永远得到 null →
+  接口返回 `remarkNumber: null` → 前端显示 "-"/未勾选；且编辑草稿因此为空，保存时前端发 `null`/`false`，
+  `updateBranch` 无条件写 `remark_number = #{...}` → **NULL 覆盖**。
+- **修法**：① `listBranch` 补上这两列（治根因）；② 加固 `StockService.updateInout` 分店分支——
+  客户端**两个字段都未提供**时保留原值，防其它客户端误清；前端取消勾选会显式传 `false`，仍可正常清空。
+- **实测**：`GET /api/stock/inout?targetSystem=j1` 对该行返回 `remarkNumber=SH-518, checked=true`✓；
+  编辑不带备注字段 → 编号保留 ✓；显式传 false/空 → 能清 ✓。
+
 ### [2026-09-30-branch-remark-own-sequence] 进出货/货品备注：分店自动生成编号被中央调拨继承号带偏
 
 - **现象（用户反馈）**：中央把货（如 `SA-221`）调拨给 J1 后，J1 的进出货显示「进 SA-221」、货品备注也出现 `SA-221`

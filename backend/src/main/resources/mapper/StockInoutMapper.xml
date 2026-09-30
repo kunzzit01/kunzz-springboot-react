@@ -30,7 +30,8 @@
     <select id="listBranch" resultType="java.util.LinkedHashMap">
         SELECT id, date, time, product_name, code_number, in_quantity, out_quantity,
                specification, price, receiver, remark,
-               type, created_by, created_at, updated_by, updated_at, target_system
+               type, created_by, created_at, updated_by, updated_at, target_system,
+               remark_number, product_remark_checked
         FROM ${table}
         WHERE deleted_at IS NULL
         <if test="keyword != null and keyword != ''">

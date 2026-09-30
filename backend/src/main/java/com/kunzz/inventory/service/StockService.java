@@ -466,8 +466,16 @@ public class StockService {
             r.put("receiver", req.receiver());
             r.put("remark", req.remark());
             r.put("type", req.type());
-            r.put("remarkNumber", req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase());
-            r.put("productRemarkChecked", Boolean.TRUE.equals(req.productRemarkChecked()) ? 1 : 0);
+            // 备注编号/勾选：客户端两个字段都未提供时保留原值，防其它客户端误清编号；
+            // 前端取消勾选会显式传 productRemarkChecked=false（非 null），仍可正常清空。
+            if (req.remarkNumber() == null && req.productRemarkChecked() == null) {
+                Map<String, Object> old = stockInoutMapper.findBranchRowById(system + "stockedit_data", id);
+                r.put("remarkNumber", old == null ? null : old.get("remark_number"));
+                r.put("productRemarkChecked", old == null ? 0 : old.get("product_remark_checked"));
+            } else {
+                r.put("remarkNumber", req.remarkNumber() == null ? null : req.remarkNumber().trim().toUpperCase());
+                r.put("productRemarkChecked", Boolean.TRUE.equals(req.productRemarkChecked()) ? 1 : 0);
+            }
             r.put("updatedBy", operator);
             int n = stockInoutMapper.updateBranch(system + "stockedit_data", id, r);
             if (n == 0) throw new BusinessException(404, "记录不存在");

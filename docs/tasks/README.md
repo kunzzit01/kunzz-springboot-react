@@ -79,3 +79,4 @@
 | 2026-09-22-products-approve-fixes | 已完成 | 复核查出的两处：①有批准权限的人保存时不再清空批准状态（修掉"改个错别字就把原批准人顶掉"）；②`approve` 接口补「批准」权限校验 + 批准人改由服务端取（堵住任何登录用户都能批准任意记录的越权口子） | main |
 | 2026-09-25-schedule-align-old | 进行中 | 排班页对齐旧 PHP 系统：员工管理按部门分组、多选跳位/取消、假期底色被班次覆盖、批量输入不落库 | main |
 | 2026-09-30-branch-remark-own-sequence | 已完成 | 进出货/货品备注：分店自己生成备注编号不再被中央调拨继承号带偏（只统计分店自己 mint 的号，`main_record_id IS NULL` 且为入库行）；实测 J1 生成 SA-001/SA-002、中央仍 SA-229 不变 | main |
+| 2026-09-30-branch-list-remark-fields | 已完成 | 进出货：分店列表不显示备注编号（listBranch 漏取两列）/ 编辑分店记录把编号清掉；补列 + updateInout 分店分支保留原值加固 | main |
