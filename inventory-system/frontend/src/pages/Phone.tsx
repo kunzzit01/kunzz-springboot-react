@@ -109,34 +109,122 @@ export default function Phone() {
     finally { setSaving(false) }
   }
 
+  /** 下载 PDF（纵向）—— 对齐旧版 phone_manage.js 的做法：
+   *  克隆页面表格 → 重排版（勾选画成方框、时间变文字、统一字号）→ 离屏 200mm 容器 →
+   *  html2canvas(scale 3) → 铺满 A4 宽，超高按页切片。成品与页面一致且字体够大、清晰。 */
   const downloadPDF = async () => {
     if (employees.length === 0) { showMsg('没有数据可下载', 'error'); return }
+    const w = window as any
+    if (!w.html2canvas || !w.jspdf) { showMsg('PDF 库未加载', 'error'); return }
+    const { jsPDF } = w.jspdf
+    showMsg('正在生成 PDF...', 'info')
+    let container: HTMLDivElement | null = null
     try {
-      const w = window as any
-      if (!w.html2canvas || !w.jspdf) { showMsg('PDF 库未加载', 'error'); return }
-      const { jsPDF } = w.jspdf
-      const table = document.querySelector('.ph-root #phoneTable')
-      if (!table) return
-      showMsg('正在生成 PDF...', 'info')
-      const canvas = await w.html2canvas(table, { useCORS: true, backgroundColor: '#ffffff' })
-      const img = canvas.toDataURL('image/jpeg', 0.95)
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-      const pw = pdf.internal.pageSize.getWidth()
-      const ph = pdf.internal.pageSize.getHeight()
-      const imgH = canvas.height * pw / canvas.width
-      let heightLeft = imgH
-      let position = 0
-      pdf.addImage(img, 'JPEG', 0, position, pw, imgH)
-      heightLeft -= ph
-      while (heightLeft > 0) {
-        position -= ph
-        pdf.addPage()
-        pdf.addImage(img, 'JPEG', 0, position, pw, imgH)
-        heightLeft -= ph
+      const original = document.querySelector('.ph-root #phoneTable') as HTMLTableElement | null
+      if (!original) { showMsg('找不到表格', 'error'); return }
+
+      // ---------- 1. 克隆表格并重排版（对齐旧版） ----------
+      const table = original.cloneNode(true) as HTMLTableElement
+      table.style.cssText = 'width:100%;border-collapse:collapse;font-size:14px;margin:0'
+      // 输入控件 → 静态内容：复选框画成方框（选中=黑底白✓）、时间转文本
+      table.querySelectorAll('input').forEach((node) => {
+        const input = node as HTMLInputElement
+        const td = input.parentElement as HTMLTableCellElement
+        if (!td) return
+        if (input.type === 'checkbox') {
+          const checked = input.checked
+          td.innerHTML = `<div style="width:12px;height:12px;border:0.3px solid #000;margin:0 auto;`
+            + `display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;`
+            + `background:${checked ? '#000' : 'transparent'};color:${checked ? '#fff' : '#000'}">`
+            + `${checked ? '✓' : ''}</div>`
+          td.style.textAlign = 'center'
+          td.style.padding = '4px'
+        } else if (input.type === 'time') {
+          td.textContent = input.value || ''
+          td.style.textAlign = 'center'
+        }
+      })
+      const exact = (el: HTMLElement) => {
+        el.style.setProperty('-webkit-print-color-adjust', 'exact')
+        el.style.setProperty('print-color-adjust', 'exact')
       }
-      pdf.save('phone_' + restaurant + '_' + date + '.pdf')
+      table.querySelectorAll('th').forEach((node) => {
+        const th = node as HTMLTableCellElement
+        th.style.background = '#f99e00'
+        th.style.color = 'white'
+        th.style.padding = '5px 3px'
+        th.style.border = '0.3px solid #000'
+        th.style.fontWeight = 'bold'
+        th.style.textAlign = 'center'
+        th.style.fontSize = '12px'
+        exact(th)
+      })
+      // 隔行底色（与页面一致：奇数行浅橙）
+      table.querySelectorAll('tbody tr').forEach((node, index) => {
+        const tr = node as HTMLTableRowElement
+        tr.style.backgroundColor = index % 2 === 1 ? 'rgb(255, 230, 183)' : '#ffffff'
+        exact(tr)
+      })
+      table.querySelectorAll('tbody td').forEach((node) => {
+        const td = node as HTMLTableCellElement
+        td.style.padding = '4px 3px'
+        td.style.border = '0.3px solid #000'
+        td.style.textAlign = 'center'
+        td.style.fontSize = '12px'
+        exact(td)
+      })
+
+      // ---------- 2. 离屏容器（宽 200mm → 字号相对纸面够大） ----------
+      // 放进 .ph-root 内，好让 phone.css 里的列宽规则（th.no-col/name-col/...）生效
+      const root = document.querySelector('.ph-root') as HTMLElement | null
+      container = document.createElement('div')
+      container.style.cssText = 'position:absolute;left:-9999px;top:0;width:200mm;background:#fff;'
+      exact(container)
+      container.appendChild(table)
+      ;(root || document.body).appendChild(container)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const canvas = await w.html2canvas(container, {
+        scale: 3, useCORS: true, backgroundColor: '#ffffff',
+        width: container.offsetWidth, height: container.scrollHeight,
+      })
+
+      // ---------- 3. 铺到 A4 纵向（超高按页切片） ----------
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const imgW = canvas.width
+      const imgH = canvas.height
+      const finalW = pageW
+      const finalH = imgH * pageW / imgW
+
+      if (finalH <= pageH) {
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, finalW, finalH)
+      } else {
+        let sourceY = 0
+        let pageIndex = 0
+        while (sourceY < imgH) {
+          const remainingSource = imgH - sourceY
+          if (remainingSource <= 0) break
+          const displayLeft = finalH - (sourceY / imgH) * finalH
+          const pageDisplayH = Math.min(pageH, displayLeft)
+          const srcH = Math.min((pageDisplayH / finalH) * imgH, remainingSource)
+          if (srcH < 1) break
+          if (pageIndex > 0) pdf.addPage()
+          const slice = document.createElement('canvas')
+          slice.width = imgW
+          slice.height = srcH
+          slice.getContext('2d')!.drawImage(canvas, 0, sourceY, imgW, srcH, 0, 0, imgW, srcH)
+          pdf.addImage(slice.toDataURL('image/png'), 'PNG', 0, 0, finalW, (srcH / imgH) * finalH)
+          sourceY += srcH
+          pageIndex++
+        }
+      }
+
+      pdf.save(`手机管理_${restaurant}_${date.replace(/-/g, '')}.pdf`)
       showMsg('PDF 已下载')
     } catch (e) { console.error(e); showMsg('PDF 生成失败', 'error') }
+    finally { container?.remove() }
   }
 
   // ---------- 员工管理 ----------
@@ -161,6 +249,15 @@ export default function Phone() {
       const es = await getScheduleEmployees(restaurant)
       setEmployees(es.filter(e => e.isActive !== false))
     } catch { showMsg('删除失败', 'error') }
+  }
+  /** 打开「编辑员工」模态框：预填当前值（对齐旧系统：员工管理每行都有编辑/删除） */
+  const openEditEmployee = (e: Emp) => {
+    setEmpId(e.id)
+    setEmpName(e.name || '')
+    setEmpPhone(e.phone || '')
+    setEmpArea(e.workArea || 'service_line')
+    setEmpPosition(e.position || '')
+    setEmpModal(true)
   }
 
   // 按部门分组 + 职位排序的行
@@ -329,7 +426,8 @@ export default function Phone() {
                         <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{e.phone}</td>
                         <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{e.position}</td>
                         <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>{departments.find(d => d.key === e.workArea)?.name || e.workArea}</td>
-                        <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center' }}>
+                        <td style={{ padding: '10px 8px', border: '1px solid #d1d5db', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                          <button className="btn-action btn-edit" style={{ padding: '6px 12px', fontSize: 12, marginRight: 8 }} onClick={() => openEditEmployee(e)}>编辑</button>
                           <button className="btn-action btn-delete" style={{ padding: '6px 12px', fontSize: 12 }} onClick={() => deleteEmployee(e.id)}>删除</button>
                         </td>
                       </tr>
@@ -372,6 +470,9 @@ export default function Phone() {
               <select id="employeePosition" value={empPosition} onChange={(e) => setEmpPosition(e.target.value)}>
                 <option value="">-- 请选择职位 --</option>
                 {(positionHierarchy[empArea] || []).map(p => <option key={p} value={p}>{p}</option>)}
+                {/* 已存档的职位不在当前区域的层级表里时，补一个选项，避免编辑时下拉显示空白 */}
+                {empPosition && !(positionHierarchy[empArea] || []).includes(empPosition) &&
+                  <option value={empPosition}>{empPosition}</option>}
               </select>
             </div>
             <div className="form-actions">

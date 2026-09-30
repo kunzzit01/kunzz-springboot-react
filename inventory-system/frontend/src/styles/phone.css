@@ -445,6 +445,11 @@
            color: white;
        }.ph-root .btn-delete:hover{
            background: #dc2626;
+       }.ph-root .btn-edit{
+           background: #f59e0b;
+           color: white;
+       }.ph-root .btn-edit:hover{
+           background: #d97706;
        }.ph-root .employee-list table tr:hover, .ph-root .shift-list table tr:hover{
            background: #fff9f1 !important;
        }.ph-root .employee-list tbody tr:nth-child(even), .ph-root .employee-list tbody tr:nth-child(odd){
