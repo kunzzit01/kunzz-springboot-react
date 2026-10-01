@@ -662,6 +662,8 @@
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     animation: slideIn 0.3s ease-out;
+}.stl-root /* 库存预警弹窗：更宽，给“货品名称”留够位置 */ .low-stock-modal-content{
+    width: clamp(620px, 55vw, 1040px);
 }.stl-root .export-date-modal-content{
     width: clamp(400px, 33.33vw, 500px);
     max-height: auto;
@@ -771,18 +773,36 @@
     width: 100%;
     border-collapse: collapse;
     margin-top: 16px;
+    table-layout: fixed;
 }.stl-root .low-stock-table th, .stl-root .low-stock-table td{
-    padding: clamp(8px, 0.63vw, 12px);
-    font-size: clamp(8px, 0.84vw, 16px);
+    padding: clamp(10px, 0.78vw, 15px) clamp(8px, 0.63vw, 12px);
+    font-size: clamp(9px, 0.84vw, 16px);
     text-align: left;
+    white-space: nowrap;
     border-bottom: 1px solid #e5e7eb;
+}.stl-root /* 列宽：货品名称加宽不换行，编号/规格收窄，数字列右对齐 */
+.low-stock-table th:nth-child(1), .stl-root .low-stock-table td:nth-child(1){
+    width: 34%;
+    white-space: normal;
+}.stl-root .low-stock-table th:nth-child(2), .stl-root .low-stock-table td:nth-child(2){
+    width: 16%;
+}.stl-root .low-stock-table th:nth-child(3), .stl-root .low-stock-table td:nth-child(3){
+    width: 13%;
+}.stl-root .low-stock-table th:nth-child(4), .stl-root .low-stock-table td:nth-child(4){
+    width: 18%;
+    text-align: right;
+}.stl-root .low-stock-table th:nth-child(5), .stl-root .low-stock-table td:nth-child(5){
+    width: 19%;
+    text-align: right;
 }.stl-root .low-stock-table th{
-    background-color: #f9fafb;
+    background-color: #fff3e6;
     font-size: clamp(10px, 0.84vw, 16px);
     font-weight: 600;
-    color: #374151;
+    color: #9a3412;
+}.stl-root .low-stock-table tbody tr:nth-child(even){
+    background-color: #fffaf5;
 }.stl-root .low-stock-table tbody tr:hover{
-    background-color: #f9fafb;
+    background-color: #fff2e0;
 }.stl-root .stock-critical{
     color: #dc2626;
     font-weight: 700;

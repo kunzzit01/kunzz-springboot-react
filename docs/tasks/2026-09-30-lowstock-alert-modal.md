@@ -9,6 +9,7 @@
   - docs/tasks/README.md
   - CHANGELOG.md
   - inventory-system/frontend/src/pages/StockRecords.tsx
+  - inventory-system/frontend/src/styles/stocklist.css
 - 明确不碰：其它 backend/**、inventory-system/**、website/**、database/**、backend/static/**（构建产物）
 - 计划推送分支：main
 
@@ -30,9 +31,10 @@
 
 - 数据不用改后端：页面已加载四个系统的 `mergedData` 与 `lowStock`
 - 判定与表格行高亮**完全一致**：按货品名汇总总库存 vs 最低库存，`diff <= 0.001` 即预警
-- **跟随当前查看的系统**：进页与切换系统时各自动弹一次（每个系统各只弹一次）；
-  弹窗标题带系统名（如「库存预警 - J2」）
-- 复用**现成的** CSS 类渲染（不再新写样式）
+- **跟随当前查看的系统**：进页与**每次切换分店**时各自动弹一次（同一分店实时刷新不重复弹）；
+  弹窗标题带系统名（如「库存预警 - J3」）
+- 复用现成的 CSS 类渲染；并做样式重排：弹窗加宽 `clamp(620px,55vw,1040px)`；
+  列宽重分配（名称 34% 不换行、数字列右对齐 `nowrap`）；表头浅橙底 + 深橙字、偶数行淡橙
 - 弹窗底部加「设置最低库存」→ 复用页面已有的 `goMinimum()`
 
 ## 为什么不是“只查中央”

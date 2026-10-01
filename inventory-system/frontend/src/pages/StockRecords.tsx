@@ -299,7 +299,8 @@ export default function StockRecords() {
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
   // 最低库存预警弹窗（对齐旧版 stocklistall.js checkLowStockAlerts → showLowStockModal：进页自动弹、只看中央）
   const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
-  const lowStockAlertShown = useRef<Set<string>>(new Set())
+  // 记录“已经为哪个系统弹过”，用于“每次切换分店都弹”但实时刷新不重复弹
+  const lowStockAlertShown = useRef<string | null>(null)
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
   // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
   const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
@@ -559,11 +560,12 @@ export default function StockRecords() {
     return out.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()))
   }, [mergedData, lowStock, system])
 
-  // 进页/切系统自动弹一次（每个系统各只自动弹一次；数据与最低库存都就绪且有预警时）
+  // 进页 / 每次切换分店都自动弹一次（用户要求）；
+  // 只在系统变化（或首次数据就绪）时判一次 —— 实时刷新相同系统不重复弹
   useEffect(() => {
     if (!mergedData[system] || Object.keys(lowStock).length === 0) return
-    if (lowStockAlertShown.current.has(system)) return
-    lowStockAlertShown.current.add(system)
+    if (lowStockAlertShown.current === system) return
+    lowStockAlertShown.current = system
     if (lowStockAlerts.length > 0) setLowStockAlertOpen(true)
   }, [system, mergedData, lowStock, lowStockAlerts])
 
