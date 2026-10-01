@@ -6,6 +6,22 @@
 ---
 ## 🗓️ 2026-09-30
 
+### [2026-09-30-lowstock-alert-modal] 总库存：补回旧版的「低库存预警弹窗」
+
+- **现象**：总库存页对低库存货品只有**行高亮**（`tr.low-stock-row`），**没有旧版的预警弹窗**。
+- **根因**：重写时 CSS 全搬了（`stocklist.css` 里 `.low-stock-modal` / `.low-stock-modal-content` /
+  `.low-stock-table` / `.stock-critical` / `.stock-warning` / `.alert-summary` 都在），**React 组件丢了**。
+- **对照旧版**（`backend/js/stocklistall.js`，旧站免登录可读）：`initApp()` → `checkLowStockAlerts()`
+  （`apiCall('central','?action=low_stock_alerts')`，**只查中央**）→ `showLowStockModal()`；
+  弹窗列出 货品名称 / 货品编号 / 规格 / 当前库存 / 最低库存，当前库存按阈值红/橙着色，
+  右上角 × 或点遮罩关闭，另有「跳最低库存设置」。
+- **做法**：不改后端 —— 页面已加载 `mergedData.central`（含编号/规格/库存）与 `lowStock.central`；
+  判定与表格行高亮**完全一致**（按货品名汇总总库存 vs 最低库存，`diff ≤ 0.001`）；
+  **进页自动弹一次、只看中央**；复用现成 CSS 类；底部「设置最低库存」复用 `goMinimum()`。
+- **验证**：本地给中央临时设 8 个最低库存 → 进页自动弹出，8 行，名称/编号/规格/当前库存/最低库存齐全，
+  红/橙着色正确，关闭与跳转可用（**验证后已还原临时数据**：中央恢复 309 行、非零 0 条）。
+  注：真实 live 中央最低库存本就全为 0，与旧站 `low_stock_alerts` 返回 0 条一致。
+
 ### [2026-09-30-phone-page-fixes] 手机版：PDF 成品对齐旧版（字体小/发虚）+ 员工管理加回「编辑」
 
 - **① 下载PDF（字体小、发虚）**：新系统 `downloadPDF` 只是把屏幕上的交互表格截屏再拉伸到 A4 宽

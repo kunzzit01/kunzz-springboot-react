@@ -297,6 +297,9 @@ export default function StockRecords() {
   const [typeSel, setTypeSel] = useState<Record<string, Set<string>>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
+  // 最低库存预警弹窗（对齐旧版 stocklistall.js checkLowStockAlerts → showLowStockModal：进页自动弹、只看中央）
+  const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
+  const lowStockAlertShown = useRef(false)
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
   // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
   const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
@@ -520,6 +523,49 @@ export default function StockRecords() {
     })
     return m
   }, [data])
+
+  // 中央低库存预警清单 —— 判定与表格行高亮完全一致：
+  // 按货品名汇总总库存 vs 最低库存，diff <= 0.001 即预警（只看中央，对齐旧版）
+  const lowStockAlerts = useMemo(() => {
+    type AlertRow = { name: string; code: string; spec: string; stock: number; min: number; formattedStock: string; minDisplay: string; critical: boolean }
+    const d = mergedData.central
+    const mins = lowStock.central || {}
+    if (!d) return [] as AlertRow[]
+    const totals: Record<string, number> = {}
+    ;(d.summary || []).forEach((it) => {
+      const name = (it.product_name || '').trim()
+      totals[name] = (totals[name] || 0) + (parseFloat(String(it.total_stock)) || 0)
+    })
+    const out: AlertRow[] = []
+    Object.keys(mins).forEach((name) => {
+      const min = mins[name]
+      if (!(min > 0)) return
+      const total = totals[name]
+      if (total === undefined) return // 该货品没有库存行 → 表格里也不会有高亮行，跳过
+      if (total - min > 0.001) return
+      const it = (d.summary || []).find(x => (x.product_name || '').trim() === name)
+      const specRaw = (it?.specification || '').trim()
+      out.push({
+        name,
+        code: it?.code_number || '-',
+        spec: specRaw || '-',
+        stock: total,
+        min,
+        formattedStock: it?.formatted_stock || (it ? formatStockQuantity(it) : '0'),
+        minDisplay: specRaw.toLowerCase() === 'kilo' ? min.toFixed(3) : min.toFixed(2),
+        critical: total <= 0 || total <= min * 0.5,
+      })
+    })
+    return out.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()))
+  }, [mergedData, lowStock])
+
+  // 进页自动弹一次（等数据与最低库存都就绪，且确实有预警）
+  useEffect(() => {
+    if (lowStockAlertShown.current) return
+    if (!mergedData.central || Object.keys(lowStock).length === 0) return
+    lowStockAlertShown.current = true
+    if (lowStockAlerts.length > 0) setLowStockAlertOpen(true)
+  }, [mergedData, lowStock, lowStockAlerts])
 
   // 过滤后的行（搜索 + 类型）；选中具体类型时：冰箱分类→位次→货品名 排序（9/3）
   // 兑底：多值 freezer 取首项按 FREEZER_OPTIONS 业务顺序（字母序会 C-1 跑到 K1 前）；未知 freezer 排已知名单后；
@@ -1080,6 +1126,46 @@ export default function StockRecords() {
           </div>
         )}
       </Modal>
+
+      {/* 最低库存预警弹窗（对齐旧版 low-stock-modal：进页自动弹、只看中央） */}
+      {lowStockAlertOpen && (
+        <div className="low-stock-modal" style={{ display: 'block' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setLowStockAlertOpen(false) }}>
+          <div className="low-stock-modal-content">
+            <div className="low-stock-modal-header">
+              <h2><i className="fas fa-exclamation-triangle" /> 库存预警</h2>
+              <button className="close-modal" onClick={() => setLowStockAlertOpen(false)}>&times;</button>
+            </div>
+            <div className="low-stock-modal-body">
+              <div style={{ padding: '10px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, color: '#b91c1c' }}>
+                <i className="fas fa-exclamation-triangle" style={{ marginRight: 8 }} />
+                发现 {lowStockAlerts.length} 个货品库存不足，请及时补货！
+              </div>
+              <table className="low-stock-table">
+                <thead>
+                  <tr><th>货品名称</th><th>货品编号</th><th>规格</th><th>当前库存</th><th>最低库存</th></tr>
+                </thead>
+                <tbody>
+                  {lowStockAlerts.map((a) => (
+                    <tr key={a.name}>
+                      <td><strong>{a.name}</strong></td>
+                      <td>{a.code}</td>
+                      <td>{a.spec}</td>
+                      <td className={a.critical ? 'stock-critical' : 'stock-warning'}>{a.formattedStock}</td>
+                      <td>{a.minDisplay}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="alert-summary" style={{ marginTop: 12 }}>共 {lowStockAlerts.length} 个货品库存不足</div>
+            </div>
+            <div className="modal-footer">
+              <span />
+              <button className="btn btn-warning" onClick={() => { setLowStockAlertOpen(false); goMinimum() }}>设置最低库存</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 导出日期范围弹窗（对齐旧 live 系统：默认本月 + 快捷按钮 + 结束日期必填） */}
       <Modal open={!!exportModal} onCancel={() => setExportModal(null)} footer={null} width={460} centered
