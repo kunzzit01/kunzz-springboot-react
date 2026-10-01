@@ -299,7 +299,7 @@ export default function StockRecords() {
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
   // 最低库存预警弹窗（对齐旧版 stocklistall.js checkLowStockAlerts → showLowStockModal：进页自动弹、只看中央）
   const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
-  const lowStockAlertShown = useRef(false)
+  const lowStockAlertShown = useRef<Set<string>>(new Set())
   const [searchExpanded, setSearchExpanded] = useState<Record<string, boolean>>({})
   // 精确搜索（按系统独立）：产品名 = 关键字（不区分大小写），对齐进出货页 smartSearch 图标切换
   const [exactMatch, setExactMatch] = useState<Record<string, boolean>>({})
@@ -524,12 +524,12 @@ export default function StockRecords() {
     return m
   }, [data])
 
-  // 中央低库存预警清单 —— 判定与表格行高亮完全一致：
-  // 按货品名汇总总库存 vs 最低库存，diff <= 0.001 即预警（只看中央，对齐旧版）
+  // 当前系统的低库存预警清单 —— 判定与表格行高亮完全一致：
+  // 按货品名汇总总库存 vs 最低库存，diff <= 0.001 即预警（跟随当前查看的系统，切系统重算）
   const lowStockAlerts = useMemo(() => {
     type AlertRow = { name: string; code: string; spec: string; stock: number; min: number; formattedStock: string; minDisplay: string; critical: boolean }
-    const d = mergedData.central
-    const mins = lowStock.central || {}
+    const d = mergedData[system]
+    const mins = lowStock[system] || {}
     if (!d) return [] as AlertRow[]
     const totals: Record<string, number> = {}
     ;(d.summary || []).forEach((it) => {
@@ -557,15 +557,15 @@ export default function StockRecords() {
       })
     })
     return out.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()))
-  }, [mergedData, lowStock])
+  }, [mergedData, lowStock, system])
 
-  // 进页自动弹一次（等数据与最低库存都就绪，且确实有预警）
+  // 进页/切系统自动弹一次（每个系统各只自动弹一次；数据与最低库存都就绪且有预警时）
   useEffect(() => {
-    if (lowStockAlertShown.current) return
-    if (!mergedData.central || Object.keys(lowStock).length === 0) return
-    lowStockAlertShown.current = true
+    if (!mergedData[system] || Object.keys(lowStock).length === 0) return
+    if (lowStockAlertShown.current.has(system)) return
+    lowStockAlertShown.current.add(system)
     if (lowStockAlerts.length > 0) setLowStockAlertOpen(true)
-  }, [mergedData, lowStock, lowStockAlerts])
+  }, [system, mergedData, lowStock, lowStockAlerts])
 
   // 过滤后的行（搜索 + 类型）；选中具体类型时：冰箱分类→位次→货品名 排序（9/3）
   // 兑底：多值 freezer 取首项按 FREEZER_OPTIONS 业务顺序（字母序会 C-1 跑到 K1 前）；未知 freezer 排已知名单后；
@@ -1127,13 +1127,13 @@ export default function StockRecords() {
         )}
       </Modal>
 
-      {/* 最低库存预警弹窗（对齐旧版 low-stock-modal：进页自动弹、只看中央） */}
+      {/* 最低库存预警弹窗（跟随当前系统：进页/切系统各自动弹一次） */}
       {lowStockAlertOpen && (
         <div className="low-stock-modal" style={{ display: 'block' }}
           onClick={(e) => { if (e.target === e.currentTarget) setLowStockAlertOpen(false) }}>
           <div className="low-stock-modal-content">
             <div className="low-stock-modal-header">
-              <h2><i className="fas fa-exclamation-triangle" /> 库存预警</h2>
+              <h2><i className="fas fa-exclamation-triangle" /> 库存预警 - {SYSTEM_NAMES[system]}</h2>
               <button className="close-modal" onClick={() => setLowStockAlertOpen(false)}>&times;</button>
             </div>
             <div className="low-stock-modal-body">
