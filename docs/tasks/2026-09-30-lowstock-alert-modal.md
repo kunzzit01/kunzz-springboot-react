@@ -49,6 +49,7 @@
 2. 本地 vite dev：`/records?system=j2` → 自动弹 3 条（COCA COLA 30→21、
    YQ MANGO SAGO MOCHI PKT 20→6、YQ WHITE PEACH MOCHI PKT 10→7）；切 J3 → 4 条
 3. 关闭按钮、点遮罩、底部「设置最低库存」都可用
+4. 长清单（中央 50+ 条）：内容区内部滚动、能滚完，底部按钮始终可见（不再被裁）
 
 ## 回滚
 

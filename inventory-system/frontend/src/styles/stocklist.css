@@ -662,8 +662,16 @@
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     animation: slideIn 0.3s ease-out;
-}.stl-root /* 库存预警弹窗：更宽，给“货品名称”留够位置 */ .low-stock-modal-content{
+}.stl-root /* 库存预警弹窗：更宽，并改为纵向 flex（头部固定 + 内容区滚动 + 底部固定） */ .low-stock-modal-content{
     width: clamp(620px, 55vw, 1040px);
+    display: flex;
+    flex-direction: column;
+}.stl-root .low-stock-modal-content .low-stock-modal-header, .stl-root .low-stock-modal-content .modal-footer{
+    flex: 0 0 auto;
+}.stl-root /* 长清单（如中央 50 条）时：内容区内部滚动，不再被裁掉 */ .low-stock-modal-body{
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
 }.stl-root .export-date-modal-content{
     width: clamp(400px, 33.33vw, 500px);
     max-height: auto;
