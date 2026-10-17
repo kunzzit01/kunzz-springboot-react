@@ -595,6 +595,10 @@ export default function StockInout() {
   const rowPrefixRef = useRef(rowPrefix)
   useEffect(() => { rowPrefixRef.current = rowPrefix }, [rowPrefix])
   // 渲染后实测可见行真实高度，校正种子估算偏差（估算误差只会触发一次重算，不裁剪内容）
+  // 依赖必须显式：早先没有依赖数组 → 每次渲染都 dispatch 一次 setState；
+  // 再加上 getBoundingClientRect() 的**亚像素**高度每次测量会轻微抖动，
+  // 于是「测量 → setRowH → 重渲染 → 再测量」永不收敛 —— 大数据量（选“今年”>80 行进虚拟滚动）切分店时
+  // 直接触发 React #185（Maximum update depth exceeded）。取整到整数像素即可让测量结果稳定。
   useLayoutEffect(() => {
     if (!useVirtual) return
     const trs = tableRef.current?.querySelectorAll('tbody tr[data-vi]')
@@ -605,7 +609,7 @@ export default function StockInout() {
       trs.forEach(tr => {
         const gi = Number(tr.getAttribute('data-vi'))
         if (!Number.isFinite(gi) || gi < 0) return
-        const h = (tr as HTMLElement).getBoundingClientRect().height
+        const h = Math.round((tr as HTMLElement).getBoundingClientRect().height)
         if (h > 0 && Math.abs((base[gi] || 0) - h) > 0.5) {
           if (!next) next = base.slice()
           next[gi] = h
@@ -613,7 +617,7 @@ export default function StockInout() {
       })
       return next || prev
     })
-  })
+  }, [rows, useVirtual, tableW, scrollTop])
   const virtual = useMemo(() => {
     if (!useVirtual) return { startIdx: 0, endIdx: rows.length, spacerTop: 0, spacerBottom: 0 }
     const { prefix, total } = rowPrefix

@@ -6,6 +6,25 @@
 ---
 ## 🗓️ 2026-10-17
 
+### [2026-10-17-inout-virtual-scroll-185] 进出货：选「今年」后切分店整页崩溃（React #185 无限更新）
+
+- **现象**：`/inout?system=j1` → 快速选择「今年」→ 展示货品 → 切分店 → 整页变成「页面出错了」
+  （Minified React error #185 = Maximum update depth exceeded）。
+- **根因**：`StockInout.tsx` 中「渲染后实测行高」的 `useLayoutEffect`：
+  ① **没写依赖数组** → 每次渲染都执行一次 `setRowH`；
+  ② 高度取 `getBoundingClientRect().height`，是**亚像素**值（如 42.375），每次测量有微小抖动；
+  ③ 于是「测量 → setRowH（新数组）→ 重渲染 → 再测量」永不收敛。
+  这段只在 `rows.length > 80`（虚拟滚动）才跑 → 平时看不出来，选「今年」（实测 2 万行）才触发。
+- **修法（两行）**：测量值 `Math.round(...)`（整数像素才稳定）；补依赖 `[rows, useVirtual, tableW, scrollTop]`
+  （不再每渲染 dispatch）。
+- **验证**：`verify-inout-year-switch.cjs`（vite dev + puppeteer + 真实后端）8 项全 PASS：
+  选「今年」不崩；J2→J3→J1→J2 反复切店标题/行数正确；滚到中间仍渲染（domRows≈34，不是 2 万）；
+  滚动后再切店不崩；全程无 #185。`npm run build` 通过。
+- **未改**：选「今年」返回 20000 行这个 payload 本身很重（后端上限）—— 属独立的大数据量/分页议题。
+
+---
+## 🗓️ 2026-10-17
+
 ### [2026-10-17-stockrecords-weak-network] 总库存：弱网下查询与切分店优化（先做这一个页面）
 
 - **背景**：用户反馈网线不好时用系统会卡，主要集中在「查询/切分店后数据迟迟不出来」。
