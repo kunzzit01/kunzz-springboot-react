@@ -84,3 +84,4 @@
 | 2026-09-30-dishware-stock-by-restaurant | 已完成 | 碗碟页数量几乎全 0：读错了表（dishware_stock → 改为按 dishware_stock_by_restaurant 汇总，对齐旧 PHP action=stock）；实测五桶 [585,1701,2520,2451,2901] | main |
 | 2026-09-30-phone-page-fixes | 已完成 | 手机版：① 下载PDF 照旧版 phone_manage.js 复刻（克隆重排+200mm 离屏+scale3+纵向分页），修字体小/发虚；② 员工管理补回「编辑」按钮（预填+保存） | main |
 | 2026-09-30-lowstock-alert-modal | 已完成 | 总库存：补回低库存预警弹窗（**跟随当前系统**，进页/切分店都弹；判定与行高亮一致）+ 弹窗样式重排（加宽/列宽/配色）；实数据 J2=3/J3=4 条 | main |
+| 2026-10-17-stockrecords-weak-network | 已完成 | 总库存弱网优化：只加载当前分店、在途请求去重与取消、失败/更新中可见可重试、预警只在本次取数成功时判；21 项自动化 + 真实后端冒烟通过（未推送） | main |

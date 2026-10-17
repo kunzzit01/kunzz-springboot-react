@@ -35,8 +35,8 @@ export interface StockQuery {
   size?: number
 }
 export interface StockSummaryItem { no?: number; product_name?: string; code_number?: string; specification?: string; total_stock?: number; price?: number; total_price?: number; formatted_stock?: string; formatted_price?: string; formatted_total_price?: string; type?: string }
-export const getStockSummary = (system: string, endDate?: string) =>
-  http.get<unknown, { summary: StockSummaryItem[]; total_value: number; formatted_total_value: string; total_products: number; type_stats?: Record<string, number>; j1_supply_value?: number; j2_supply_value?: number; j3_supply_value?: number }>('/stock/summary', { params: { system, endDate: endDate || undefined } })
+export const getStockSummary = (system: string, endDate?: string, signal?: AbortSignal) =>
+  http.get<unknown, { summary: StockSummaryItem[]; total_value: number; formatted_total_value: string; total_products: number; type_stats?: Record<string, number>; j1_supply_value?: number; j2_supply_value?: number; j3_supply_value?: number }>('/stock/summary', { params: { system, endDate: endDate || undefined }, signal })
 
 // ---------- 货品备注分析（stockremark） ----------
 export interface RemarkVariant { code_number?: string; specification?: string; in_quantity?: number; out_quantity?: number; current_stock?: number; formatted_quantity?: string; price?: number; formatted_price?: string; remark_number?: string }
@@ -202,8 +202,8 @@ export const restoreStockInout = (ids: number[], system?: string) =>
   http.put<unknown, void>('/stock/inout/restore', { ids, system })
 
 // ---------- 最低库存 ----------
-export const getMinimums = (system?: string) =>
-  http.get<unknown, StockMinimum[]>('/stock/minimum', { params: { system } })
+export const getMinimums = (system?: string, signal?: AbortSignal) =>
+  http.get<unknown, StockMinimum[]>('/stock/minimum', { params: { system }, signal })
 export const createMinimum = (data: Partial<StockMinimum>) =>
   http.post<unknown, StockMinimum>('/stock/minimum', data)
 export const updateMinimum = (id: number, data: Partial<StockMinimum>) =>

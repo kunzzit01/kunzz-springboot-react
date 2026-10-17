@@ -271,15 +271,19 @@ export default function StockRecords() {
   const [system, setSystem] = useState('central')
   // 页面权限（职员管理·权限设定→库存→系统选项）：null = 未配置（默认全部可用）；[] = 全部关闭（锁定）
   const [allowedSystems, setAllowedSystems] = useState<string[] | null>(null)
+  // 权限是否已返回（null 既表示“未配置”也表示“还没回来”，弱网下拉全部系统会白跑请求）
+  const [permsLoaded, setPermsLoaded] = useState(false)
   const locked = allowedSystems !== null && allowedSystems.length === 0
   useEffect(() => {
     getStockPerms().then((p: any) => {
       const configured = p == null ? false : (p.configured ?? ((p.systems || []).length > 0 || (p.views || []).length > 0))
-      if (!configured) return
-      const allowed = (p.systems || []).map((s: string) => s.toLowerCase())
-      setAllowedSystems(allowed)
-      setSystem(prev => (allowed.includes(prev) ? prev : (systems.map(s => s.key).find(k => allowed.includes(k)) || prev)))
-    }).catch(() => {})
+      if (configured) {
+        const allowed = (p.systems || []).map((s: string) => s.toLowerCase())
+        setAllowedSystems(allowed)
+        setSystem(prev => (allowed.includes(prev) ? prev : (systems.map(s => s.key).find(k => allowed.includes(k)) || prev)))
+      }
+      setPermsLoaded(true)
+    }).catch(() => setPermsLoaded(true))
   }, [])
   // 8/24：鼠标滚轮在供应值区域滚动即可切换显示类型卡（再滚恢复），带节流防连切
   const [showTypeCards, setShowTypeCards] = useState(false)
@@ -296,6 +300,17 @@ export default function StockRecords() {
   const [filters, setFilters] = useState<Record<string, string>>({})
   const [typeSel, setTypeSel] = useState<Record<string, Set<string>>>({})
   const [loading, setLoading] = useState<Record<string, boolean>>({})
+  // 弱网状态：失败要看得见（不能伪装成“暂无数据”）；fresh = 本次切店已成功拉到最新库存
+  const [loadError, setLoadError] = useState<Record<string, boolean>>({})
+  const [fresh, setFresh] = useState<Record<string, boolean>>({})
+  const [minState, setMinState] = useState<Record<string, 'loading' | 'ok' | 'error'>>({})
+  // 同名请求只保留最后一个：快速切店时取消在途请求，过时响应直接丢弃
+  const reqSeq = useRef<Record<string, number>>({})
+  const ctrlRef = useRef<Record<string, AbortController>>({})
+  const prevSysRef = useRef<string | null>(null)
+  // 本次切店是否已“成功”取到库存/最低库存（ref 同步生效，避免 useEffect 同一次提交里读到上一次的 true）
+  const sumOkRef = useRef<Record<string, boolean>>({})
+  const minOkRef = useRef<Record<string, boolean>>({})
   const [lowStock, setLowStock] = useState<Record<string, Record<string, number>>>({})
   // 最低库存预警弹窗（对齐旧版 stocklistall.js checkLowStockAlerts → showLowStockModal：进页自动弹、只看中央）
   const [lowStockAlertOpen, setLowStockAlertOpen] = useState(false)
@@ -363,9 +378,17 @@ export default function StockRecords() {
     const { resetFilters = true, silent = false, keepScroll = false } = opts
     const scroller = keepScroll ? scrollerOf(sys) : null
     if (scroller) scrollMemoRef.current = { sys, top: scroller.scrollTop }
+    const key = 'sum:' + sys
+    const seq = (reqSeq.current[key] || 0) + 1
+    reqSeq.current[key] = seq
+    ctrlRef.current[key]?.abort()
+    const ac = new AbortController()
+    ctrlRef.current[key] = ac
     if (!silent) setLoading(prev => ({ ...prev, [sys]: true }))
+    if (loadError[sys]) setLoadError(prev => ({ ...prev, [sys]: false }))
     try {
-      const d = await getStockSummary(sys)
+      const d = await getStockSummary(sys, undefined, ac.signal)
+      if (reqSeq.current[key] !== seq) return // 已切走/已有更新的请求：丢弃过时响应
       const rows = mergeSummaryItems(d.summary || [])
       // 必须在 setState 之前取旧行：updater 要等下一次渲染才执行，
       // 那时 rowsRef 已经被下面改成新数据了（迁移会拿不到展开过的货品名）
@@ -379,14 +402,76 @@ export default function StockRecords() {
         setOpenVariants(prev => carryVariantKeys(prevRows, rows, prev))
       }
       rowsRef.current = { ...rowsRef.current, [sys]: rows }
-    } catch {
+      sumOkRef.current[sys] = true
+      setFresh(prev => ({ ...prev, [sys]: true }))
+    } catch (e: any) {
+      if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') return
+      if (reqSeq.current[key] !== seq) return
+      sumOkRef.current[sys] = false
+      setLoadError(prev => ({ ...prev, [sys]: true }))
+      setFresh(prev => ({ ...prev, [sys]: false }))
       // 拉取失败：清掉滚动备忘，免得下次别的系统加载时误还原到此位置
       scrollMemoRef.current = null
+    } finally {
+      // 总是清掉 loading（静默刷新可能抢掉首次加载，否则会一直显示“正在更新…”）
+      if (reqSeq.current[key] === seq) setLoading(prev => (prev[sys] ? { ...prev, [sys]: false } : prev))
     }
-    if (!silent) setLoading(prev => ({ ...prev, [sys]: false }))
   }
 
-  useEffect(() => { load('central'); load('j1'); load('j2'); load('j3'); }, [])
+  // 实际取最低库存：只取当前分店；同名产品多记录取最大（对齐线上 loadLowStockSettings）
+  const loadMinimums = async (sys: string) => {
+    const key = 'min:' + sys
+    const seq = (reqSeq.current[key] || 0) + 1
+    reqSeq.current[key] = seq
+    ctrlRef.current[key]?.abort()
+    const ac = new AbortController()
+    ctrlRef.current[key] = ac
+    setMinState(prev => ({ ...prev, [sys]: 'loading' }))
+    try {
+      const list = await getMinimums(sys, ac.signal)
+      if (reqSeq.current[key] !== seq) return
+      const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+      const map: Record<string, number> = {}
+      ;(list || []).forEach((m: any) => {
+        const name = decode(String(m.productName || m.product_name || '').trim())
+        const qty = parseFloat(String(m.minimumQuantity ?? m.minimum_quantity))
+        if (name && !isNaN(qty) && (!map[name] || qty > map[name])) map[name] = qty
+      })
+      setLowStock(prev => ({ ...prev, [sys]: map }))
+      minOkRef.current[sys] = true
+      setMinState(prev => ({ ...prev, [sys]: 'ok' }))
+    } catch (e: any) {
+      if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError') return
+      if (reqSeq.current[key] !== seq) return
+      minOkRef.current[sys] = false
+      setMinState(prev => ({ ...prev, [sys]: 'error' })) // 保留上次的值显示，但不拿旧值判断预警
+    }
+  }
+
+  // 只加载当前分店（弱网优先保证正在看的那一页），切店时取消上一个在途请求
+  useEffect(() => {
+    if (!permsLoaded || locked) return
+    if (allowedSystems && !allowedSystems.includes(system)) return
+    // 切走：取消上一个分店的在途请求（弱网下别继续下载已经不要的几兆数据）
+    const prev = prevSysRef.current
+    if (prev && prev !== system) {
+      ctrlRef.current['sum:' + prev]?.abort()
+      ctrlRef.current['min:' + prev]?.abort()
+    }
+    prevSysRef.current = system
+    // 切店先作废旧“已就绪”标记：预警必须等本次库存+最低库存都取成功，不能拿上次的
+    sumOkRef.current[system] = false
+    minOkRef.current[system] = false
+    setFresh(prev => (prev[system] ? { ...prev, [system]: false } : prev))
+    setMinState(prev => (prev[system] === 'ok' ? { ...prev, [system]: 'loading' } : prev))
+    lowStockAlertShown.current = null
+    void load(system)
+    void loadMinimums(system)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permsLoaded, locked, allowedSystems, system])
+
+  // 离开页面时取消在途请求
+  useEffect(() => () => { Object.values(ctrlRef.current).forEach(c => c.abort()) }, [])
 
   // 改价日志：一次拉全量最近改价（按货品名匹配；失败静默，不影响页面）
   useEffect(() => {
@@ -431,28 +516,7 @@ export default function StockRecords() {
     reloadFreezer()
   })
 
-  // 加载最低库存设置（8/24 修复：按系统分别加载，各分店设置独立，互不影响）
-  // 同名产品多记录取最大，对齐线上 loadLowStockSettings；老库 product_name 含 HTML 实体需解码
-  useEffect(() => {
-    const decode = (s: string) => s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
-    Promise.all(['central', 'j1', 'j2', 'j3'].map((sys) =>
-      getMinimums(sys).then((list) => {
-        const map: Record<string, number> = {}
-        list.forEach((m: any) => {
-          const name = decode(String(m.productName || m.product_name || '').trim())
-          const qty = parseFloat(String(m.minimumQuantity ?? m.minimum_quantity))
-          if (name && !isNaN(qty)) {
-            if (!map[name] || qty > map[name]) map[name] = qty
-          }
-        })
-        return { sys, map }
-      }).catch(() => ({ sys, map: {} as Record<string, number> })),
-    )).then((results) => {
-      const bySys: Record<string, Record<string, number>> = {}
-      results.forEach(({ sys, map }) => { bySys[sys] = map })
-      setLowStock(bySys)
-    })
-  }, [])
+  // （最低库存改为按当前分店加载，见 loadMinimums / 切店 effect）
 
   // smartSearch：点击外部且输入为空时折叠（对齐线上 collapseSearch 逻辑）
   useEffect(() => {
@@ -491,8 +555,6 @@ export default function StockRecords() {
     url.searchParams.set('system', sys)
     window.history.replaceState({}, '', url)
     setSysOpen(false)
-    // 切换系统时总是重新拉取，保证看到最新数据（实时信号只刷当前视图）
-    load(sys)
   }
 
   // URL 初始系统
@@ -500,7 +562,6 @@ export default function StockRecords() {
     const r = new URL(window.location.href).searchParams.get('system')
     if (r && systems.some(s => s.key === r)) {
       setSystem(r)
-      if (!data[r]) load(r)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -560,14 +621,13 @@ export default function StockRecords() {
     return out.sort((a, b) => a.name.toUpperCase().localeCompare(b.name.toUpperCase()))
   }, [mergedData, lowStock, system])
 
-  // 进页 / 每次切换分店都自动弹一次（用户要求）；
-  // 只在系统变化（或首次数据就绪）时判一次 —— 实时刷新相同系统不重复弹
+  // 进页 / 每次切换分店都自动弹一次（用户要求）；库存与最低库存都“成功取到”才判断 —— 旧数据/失败不弹
   useEffect(() => {
-    if (!mergedData[system] || Object.keys(lowStock).length === 0) return
     if (lowStockAlertShown.current === system) return
+    if (!sumOkRef.current[system] || !minOkRef.current[system]) return
     lowStockAlertShown.current = system
     if (lowStockAlerts.length > 0) setLowStockAlertOpen(true)
-  }, [system, mergedData, lowStock, lowStockAlerts])
+  }, [system, fresh, minState, lowStockAlerts])
 
   // 过滤后的行（搜索 + 类型）；选中具体类型时：冰箱分类→位次→货品名 排序（9/3）
   // 兑底：多值 freezer 取首项按 FREEZER_OPTIONS 业务顺序（字母序会 C-1 跑到 K1 前）；未知 freezer 排已知名单后；
@@ -893,6 +953,15 @@ export default function StockRecords() {
           </div>
         </div>
 
+        {/* 弱网：更新中/更新失败要看得见；有旧数据时保留旧数据并明确标注，不冒充最新 */}
+        {d && (loading[sys] || loadError[sys]) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0 0', fontSize: 13, color: loadError[sys] ? '#b91c1c' : '#92400e' }}>
+            <i className={'fas ' + (loadError[sys] ? 'fa-exclamation-triangle' : 'fa-spinner fa-spin')} />
+            <span>{loadError[sys] ? '更新失败，当前显示的是上次数据' : '正在更新…'}</span>
+            {loadError[sys] && <button className="btn btn-warning" onClick={() => { void load(sys); void loadMinimums(sys) }}>重试</button>}
+          </div>
+        )}
+
         <div className="table-container">
           <div className="table-scroll-container">
             <table className={'stock-table' + (showFridge ? ' has-fridge' : '')} id={sys + '-stock-table'}>
@@ -910,13 +979,17 @@ export default function StockRecords() {
                 </tr>
               </thead>
               <tbody id={sys + '-stock-tbody'}>
-                {loading[sys] && (
-                  <tr><td colSpan={showFridge ? 9 : 8} className="no-data" style={{ padding: 30, textAlign: 'center' }}>加载中...</td></tr>
+                {!d && (
+                  <tr><td colSpan={showFridge ? 9 : 8} className="no-data" style={{ padding: 30, textAlign: 'center' }}>
+                    {loadError[sys]
+                      ? <>加载失败 <button className="btn btn-warning" style={{ marginLeft: 10 }} onClick={() => { void load(sys); void loadMinimums(sys) }}>重试</button></>
+                      : '加载中...'}
+                  </td></tr>
                 )}
-                {!loading[sys] && sysFiltered.length === 0 && (
+                {d && !loading[sys] && sysFiltered.length === 0 && (
                   <tr><td colSpan={showFridge ? 9 : 8} className="no-data">
                     <i className="fas fa-inbox"></i>
-                    <div>暂无{SYSTEM_NAMES[sys]}数据</div>
+                    <div>{filters[sys]?.trim() || (typeSel[sys]?.size ?? 0) > 0 ? '没有符合条件的货品' : `暂无${SYSTEM_NAMES[sys]}数据`}</div>
                   </td></tr>
                 )}
                 {sysFiltered.map((item, idx) => {
