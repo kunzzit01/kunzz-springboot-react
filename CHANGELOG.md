@@ -27,6 +27,28 @@
   另用真实后端（demo 登录）冒烟：中央 244 行、J3 298 行且弹出真实 4 条预警，切店只请求对应系统，无报错。
 - **已知边界**：其他页面（进出货、备注分析等）未改；实时事件仍会触发一次静默刷新（已节流 3s、会取消在途）；
   未加写操作自动重试（避免重复入账）。
+## 🗓️ 2026-10-13
+
+### [2026-10-13-restore-form-pdf] 职员管理「下载面试表」：补回 4 份真表模板（原来一直是占位 stub）
+
+- **现象**：`/staff` → 职员管理 →「下载面试表」→ 选 KUNZZHOLDINGS / TOKYO (J1/J2/J3)，
+  下载到的 PDF 只有一行 `KUNZZ Interview Application Form`，**表格、抬头、中文标签全没了**。
+- **根因（不是部署事故）**：`/form/*.pdf` 由前端 `public/form/` 提供
+  （`Staff.tsx` 里 `KUNZZHOLDINGS: '/form/kh.pdf'` …）。仓库里那 8 个文件
+  （`inventory-system/frontend/public/form/` + `backend/static/form/`）
+  **从 initial commit 起就是 559 字节的占位 stub**：单页、无嵌入字体，正文只有
+  `BT /F1 24 Tf 72 720 Td (KUNZZ Interview Application Form) Tj ET`。
+  线上 `https://www.kunzzgroup.com/form/kh.pdf` 的响应体 md5
+  （`a3aa52ddb5d03410e9c8e91b35356e3f`）与该 blob **逐字节相同** → 真模板从未进过仓库。
+- **修复**：用原始备份把 6 份 PDF 放回 **两处**（构建源 + 提交进仓库的静态副本）：
+  `kh.pdf`（KUNZZ HOLDINGS SDN BHD）、`j1.pdf`、`j2.pdf`、`j3.pdf`，
+  以及旧站同目录的 `survey.pdf` / `surveyform.pdf`（当前无代码引用，随备份归档）。
+  两处都放是必须的——只改 `backend/static/form` 的话，下次 `npm run build` 会把 stub 又推上线。
+- **不改**：`Staff.tsx` 路径逻辑、`backend/static/assets/**`、jar —— 纯静态资源替换，
+  PDF 不经打包器处理，**不需要重建前端即可生效**（部署时 `dist/form` 拷过去就行）。
+- **验证**：12 个文件 md5 与备份逐一相同；`pdftotext` 抽出的是完整四大节
+  （A. PERSONAL INFORMATION / B. POSITION APPLIED FOR / C. EMPLOYMENT HISTORY /
+  D. EMERGENCY CONTACT）中英双语表；渲染首页预览确认为橙色抬头的真表。
 
 ---
 ## 🗓️ 2026-09-30
