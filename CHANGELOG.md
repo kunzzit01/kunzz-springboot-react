@@ -4,6 +4,31 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-10-21
+
+### [2026-10-21-hire-resume-pdf] 招聘「预览 PDF」另存为变成 `f` / `.txt`：服务端补对 MIME + 文件名
+
+- **现象**：`/hire` → 点「预览 PDF」（详情弹窗里的「📄 下载/预览简历」一样）→ 简历能在浏览器里渲染出来，
+  但按「保存」时 Edge 的另存为对话框给的是：文件名 **`f`**、类型 **TXT File**（内容其实是 PDF）。
+- **根因**：`MediaController./files/{name}` 写死了两件事都不对：
+  ```java
+  @GetMapping(value = "/files/{name}", produces = "application/octet-stream")
+  ```
+  ① 不管什么文件都发 `application/octet-stream` → PDF 不被当 PDF，浏览器只能「下载」；
+  ② **没有 `Content-Disposition` 文件名** → 文件名只能从 URL 最后一段猜，
+  老数据的简历路径没有扩展名（`…/f` 这类），于是存成 `f` 并标成 TXT。
+  （新系统上传的简历是 `data/uploads/resume_xxxxxxxx.pdf`，URL = `/api/media/files/resume_xxxxxxxx.pdf`，
+  同样被这个端点用 octet-stream 下发。）
+- **改动**：
+  - 后端 `MediaController`：`/api/media/files/**` 改为按扩展名给正确 MIME（pdf/doc/docx/图片/视频/音频）；
+    扩展名未知时**嗅探文件头 `%PDF-`**（老数据有不带扩展名的简历）→ 仍按 `application/pdf` 发；
+    显式下发 `Content-Disposition: inline; filename="<name>"`（UTF-8）→ 预览进内嵌查看器、
+    **Ctrl+S / 另存为 直接落成 .pdf 且带正确文件名**；缓存改为 `private`（简历是可识别到个人的资料）。
+  - 前端 `Jobs.tsx`：新增 `openResume()`：带 `.pdf/.doc/.docx` 的新标签直开；
+    没有扩展名的老路径 `fetch` 回字节 → `Blob{type:'application/pdf'}` → `blob:` 打开，强制浏览器按 PDF 处理。
+- **注意**：后端与前端都改了 → **需要重建 jar + 重建 dist** 才在线上生效。
+
+---
 ## 🗓️ 2026-10-17
 
 ### [2026-10-17-inout-virtual-scroll-185] 进出货：选「今年」后切分店整页崩溃（React #185 无限更新）

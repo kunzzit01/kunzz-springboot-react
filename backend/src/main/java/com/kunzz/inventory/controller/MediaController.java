@@ -3,6 +3,7 @@ package com.kunzz.inventory.controller;
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.common.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -38,6 +40,24 @@ public class MediaController {
     private static final List<String> PAGE_IMAGE_EXTS = List.of("jpg", "jpeg", "png", "webp", "heic", "heif");
     private static final Map<String, String> PAGE_VIDEO_MIME = Map.of(
             "mp4", "video/mp4", "webm", "video/webm", "mov", "video/quicktime", "avi", "video/x-msvideo");
+
+    /** /api/media/files/** 的 MIME：简历（pdf/doc/docx）与后台媒体（图片/视频/音频）都靠它决定「预览」还是「下载」 */
+    private static final Map<String, String> FILE_MIME = Map.ofEntries(
+            Map.entry("pdf", "application/pdf"),
+            Map.entry("doc", "application/msword"),
+            Map.entry("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            Map.entry("png", "image/png"),
+            Map.entry("jpg", "image/jpeg"),
+            Map.entry("jpeg", "image/jpeg"),
+            Map.entry("webp", "image/webp"),
+            Map.entry("gif", "image/gif"),
+            Map.entry("svg", "image/svg+xml"),
+            Map.entry("mp4", "video/mp4"),
+            Map.entry("webm", "video/webm"),
+            Map.entry("mp3", "audio/mpeg"),
+            Map.entry("wav", "audio/wav"),
+            Map.entry("ogg", "audio/ogg"),
+            Map.entry("m4a", "audio/mp4"));
 
     /** 新旧 key 映射：后台页面 key -> 旧系统媒体 key（官网 serve 用，对齐 media_config.json） */
     private static final Map<String, String> LEGACY_KEY = Map.of(
@@ -357,10 +377,41 @@ public class MediaController {
         return ApiResponse.ok();
     }
 
-    /** 静态文件访问 */
-    @GetMapping(value = "/files/{name}", produces = "application/octet-stream")
-    public org.springframework.core.io.Resource file(@PathVariable String name) {
-        return load(uploadDir, name);
+    /**
+     * 静态文件访问（简历 PDF 与后台媒体共用）。
+     *
+     * ⚠️ 这里不能写死 produces = application/octet-stream：
+     *  - PDF 会被当成「未知类型」→ 浏览器不预览，只能下载；
+     *  - 又没有 Content-Disposition 文件名 → 文件名只能从 URL 最后一段猜，
+     *    老数据里没有扩展名的路径（…/f）会被 Edge 存成 `f` + 「TXT File」。
+     * 现在：按扩展名给 MIME（猜不出就嗅探文件头 %PDF-），并显式下发 inline 文件名。
+     * 效果：预览 = 内嵌 PDF 查看器；Ctrl+S / 另存为 = 正确的 .pdf 文件名。
+     */
+    @GetMapping(value = "/files/{name}")
+    public ResponseEntity<org.springframework.core.io.Resource> file(@PathVariable String name) {
+        org.springframework.core.io.Resource res = load(uploadDir, name);
+        String mime = FILE_MIME.getOrDefault(extNoDot(name), "");
+        if (mime.isEmpty()) {
+            mime = sniffsPdf(res) ? "application/pdf" : MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(mime))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.inline().filename(name, StandardCharsets.UTF_8).build().toString())
+                // 简历是可识别到个人的资料，只给浏览器私有缓存（不要 public）
+                .header(HttpHeaders.CACHE_CONTROL, "private, max-age=3600")
+                .body(res);
+    }
+
+    /** 扩展名猜不出类型时，看文件头是不是 %PDF-（老数据里有不带扩展名的简历） */
+    private boolean sniffsPdf(org.springframework.core.io.Resource res) {
+        try (var in = res.getInputStream()) {
+            byte[] head = in.readNBytes(5);
+            return head.length == 5 && head[0] == 0x25 && head[1] == 0x50
+                    && head[2] == 0x44 && head[3] == 0x46 && head[4] == 0x2D;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     @GetMapping(value = "/page-files/{name}")

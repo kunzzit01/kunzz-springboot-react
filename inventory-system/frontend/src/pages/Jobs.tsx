@@ -29,6 +29,32 @@ function resolveFileUrl(url?: string) {
   return window.location.origin + '/' + url.replace(/^\/+/, '')
 }
 
+/**
+ * 打开简历：预览照旧，但要确保浏览器「保存 / 另存为」落成 PDF。
+ * - 有扩展名（.pdf/.doc/.docx）：服务端已下发 application/pdf + inline 文件名，直接开新标签就行；
+ * - 老数据没有扩展名（…/f 这类）：浏览器猜不出类型（Edge 会存成 f + 「TXT File」），
+ *   取回字节后显式声明成 PDF 再打开，「保存」就一定是 .pdf。
+ */
+async function openResume(rawUrl?: string) {
+  const url = resolveFileUrl(rawUrl)
+  if (!url) return
+  if (/\.(pdf|doc|docx)(\?|#|$)/i.test(url)) {
+    window.open(url, '_blank')
+    return
+  }
+  try {
+    const res = await fetch(url)
+    if (!res.ok) throw new Error('HTTP ' + res.status)
+    const buf = await res.arrayBuffer()
+    const objUrl = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }))
+    const win = window.open(objUrl, '_blank')
+    if (!win) window.location.href = objUrl
+    setTimeout(() => URL.revokeObjectURL(objUrl), 60000)
+  } catch {
+    window.open(url, '_blank')
+  }
+}
+
 function statusMeta(v?: number) {
   return STATUS_CONFIG.find((s) => s.val === Number(v)) || STATUS_CONFIG[3]
 }
@@ -784,7 +810,7 @@ export default function Jobs() {
                       </td>
                       <td>
                         {app.resumeFileUrl ? (
-                          <button className="btn-link" onClick={() => window.open(resolveFileUrl(app.resumeFileUrl), '_blank')}>
+                          <button className="btn-link" onClick={() => void openResume(app.resumeFileUrl)}>
                             <svg className="icon-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                             </svg>
@@ -972,7 +998,7 @@ export default function Jobs() {
                   <span className="hr-modal-label items-center flex-row">简历附件：</span>
                   <span>
                     {modalApp.resumeFileUrl ? (
-                      <button className="hr-resume-btn" onClick={() => window.open(resolveFileUrl(modalApp.resumeFileUrl), '_blank')}>📄 下载/预览简历</button>
+                      <button className="hr-resume-btn" onClick={() => void openResume(modalApp.resumeFileUrl)}>📄 下载/预览简历</button>
                     ) : (
                       <span className="hr-resume-btn disabled">无简历附件</span>
                     )}

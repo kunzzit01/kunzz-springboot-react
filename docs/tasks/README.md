@@ -89,3 +89,4 @@
 | 2026-10-13-restore-form-pdf | 已完成 | 职员管理「下载面试表」下载到占位 stub（559 字节单行文本）：把真模板 kh/j1/j2/j3.pdf 放回 `inventory-system/frontend/public/form/` + `backend/static/form/`（两处，否则下次构建又推 stub）；只动 `*/form/*.pdf`、CHANGELOG、docs/tasks | main |
 | 2026-10-17-stockrecords-weak-network | 已完成 | 总库存弱网优化：只加载当前分店、在途请求去重与取消、失败/更新中可见可重试、预警只在本次取数成功时判；21 项自动化 + 真实后端冒烟通过（已推送） | main |
 | 2026-10-17-inout-virtual-scroll-185 | 已完成 | 进出货选「今年」（2 万行、进虚拟滚动）后切分店整页崩溃（React #185）：行高测量取整 + 布局 effect 补依赖；回归 8 项 + build 通过 | main |
+| 2026-10-21-hire-resume-pdf | 已完成 | 招聘「预览 PDF」另存为变 `f`/`.txt`：`/api/media/files/**` 补 MIME（pdf/doc/图片…）+ 嗅探 %PDF- + `Content-Disposition: inline; filename`；前端 `openResume()` 对无扩展名老路径改走 blob(PDF)。需重建 jar + dist | main |
