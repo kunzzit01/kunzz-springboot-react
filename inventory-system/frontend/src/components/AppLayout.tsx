@@ -151,15 +151,6 @@ export default function AppLayout() {
   const [newVersion, setNewVersion] = useState(false)
   useVersionWatcher(() => setNewVersion(true))
 
-  // 左下角显示的构建号：取 index.html 里那个带 hash 的入口 bundle 文件名。
-  // 部署后如果用户还看到旧界面，对比这里的 hash 与服务器 index.html 就知道是不是缓存。
-  const buildTag = (() => {
-    try {
-      const src = (document.querySelector('script[type="module"][src*="/assets/"]') as HTMLScriptElement | null)?.src || ''
-      return src.match(/\/assets\/index-([^./]+)\.js/)?.[1] || 'dev'
-    } catch { return 'dev' }
-  })()
-
   useEffect(() => {
     getMe().then((u) => {
       setUser(u)
@@ -464,8 +455,6 @@ export default function AppLayout() {
               <span className={'ai-toggle-switch' + (aiVisible ? ' on' : '')}><i /></span>
             </div>
             <button className="logout-btn" onClick={logout} title="登出">登出</button>
-            {/* 当前运行的前端构建 hash（排查「看到旧界面」时看这一行） */}
-            <div className="build-tag" title="当前标签页实际运行的前端构建">build {buildTag}</div>
           </div>
         </div>
       </aside>

@@ -6,6 +6,12 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-remove-build-tag] 去掉左下角 build 标记
+
+- 用户不需要侧边栏底部的 `build xxxxxxxx`（那是 `2026-10-23-build-tag` 加的排查用标记）。
+- 只删了 `AppLayout.tsx` 里计算/渲染它的几行 + `sidebar.css` 的 `.build-tag` 样式；
+  **保留** `utils/versionWatcher.ts` 的「系统已更新 → 立即刷新」提示条。
+
 ### [2026-10-23-clear-site-data] 进登录页时清一次 HTTP 缓存（`Clear-Site-Data: "cache"`）
 
 - **背景**：`2026-10-23-new-version-prompt` 之后仍有残留情况 —— 用户「登出→再进 /media/join2」

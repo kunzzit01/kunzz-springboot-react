@@ -726,13 +726,3 @@ body.sidebar-collapsed .menu-item-wrapper .submenu {
   background: #f98500;
 }
 
-/* 当前构建号（排查"看到旧界面"用）：build xxxxxxxx */
-.build-tag {
-  margin-top: 6px;
-  font-size: 10px;
-  line-height: 1.2;
-  color: #9ca3af;
-  text-align: center;
-  user-select: text;
-  letter-spacing: 0.2px;
-}
