@@ -8,6 +8,7 @@ import {
 import type { DishwareInfo, DishwareSet, DishwareStockVO } from '../types'
 import DishwareViewSelector from '../components/DishwareViewSelector'
 import '../styles/dishware.css'
+import { prepareImage, isImageFile, ImagePrepError } from '../utils/imagePrep'
 import ModalClose from '../components/ModalClose'
 import { showToast } from '../utils/toast'
 
@@ -157,10 +158,17 @@ export default function Dishware() {
     setModal({ open: true, edit: r, photoPath: r.photoPath || '', photoFile: null })
     loadSetInfoForEdit(r.dishwareId)
   }
-  const onPickPhoto = (f: File | null) => {
+  // 碗碟照片：后端只收 jpg/jpeg/png/gif，所以这里统一走 utils/imagePrep（长边 1600、q0.85、
+  // HEIC/WebP 一律重编码成 JPG），顺便把手机原图压小（task 2026-10-23-comphoto-upload-fix）
+  const onPickPhoto = async (f: File | null) => {
     if (!f) return
-    if (!/image\/(jpeg|png|gif)/.test(f.type)) { showMsg('仅支持 JPG/PNG/GIF', 'error'); return }
-    setModal(m => ({ ...m, photoFile: f }))
+    if (!isImageFile(f)) { showMsg('仅支持图片文件（JPG/PNG/GIF/WebP/HEIC）', 'error'); return }
+    try {
+      const { file } = await prepareImage(f, { maxEdge: 1600, quality: 0.85, compressOver: 0 })
+      setModal(m => ({ ...m, photoFile: file }))
+    } catch (e) {
+      showMsg(e instanceof ImagePrepError ? e.message : '图片处理失败，请换一张', 'error')
+    }
   }
   const saveModal = async () => {
     if (saving) return
@@ -564,7 +572,7 @@ export default function Dishware() {
                     <div className="photo-upload-area" onClick={() => document.getElementById('dw-photo-input')?.click()}>
                       <div className="photo-upload-icon"><i className="fas fa-cloud-upload-alt" /></div>
                       <div className="photo-upload-text">{modal.photoPath || modal.photoFile ? '点击更换照片' : '点击上传照片'}</div>
-                      <div className="photo-upload-hint">JPG, PNG, GIF · 最大 5MB</div>
+                      <div className="photo-upload-hint">JPG, PNG, GIF、HEIC（自动转 JPG）· 大图自动压缩</div>
                       {modal.photoFile && <img src={URL.createObjectURL(modal.photoFile)} className="photo-preview" alt="preview" />}
                       {!modal.photoFile && modal.photoPath && <img src={modal.photoPath} className="photo-preview" alt="preview" />}
                     </div>
@@ -745,7 +753,7 @@ export default function Dishware() {
                     <div className="photo-upload-area" onClick={() => document.getElementById('dw-photo-input')?.click()}>
                       <div className="photo-upload-icon"><i className="fas fa-cloud-upload-alt" /></div>
                       <div className="photo-upload-text">{modal.photoPath || modal.photoFile ? '点击更换照片或拖拽照片到此处' : '点击上传照片或拖拽照片到此处'}</div>
-                      <div className="photo-upload-hint">支持 JPG, PNG, GIF 格式（HEIC 自动转换），最大 5MB</div>
+                      <div className="photo-upload-hint">支持 JPG, PNG, GIF、HEIC（自动转 JPG），大图自动压缩</div>
                       {modal.photoFile && <img src={URL.createObjectURL(modal.photoFile)} className="photo-preview" alt="preview" />}
                       {!modal.photoFile && modal.photoPath && <img src={modal.photoPath} className="photo-preview" alt="preview" />}
                     </div>

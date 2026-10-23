@@ -6,6 +6,33 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-image-prep-shared] 图片上传前处理抽成共用函数 `utils/imagePrep.ts`，接到 4 个上传入口
+
+- **背景**：`2026-10-23-comphoto-upload-fix` 里 HEIC 转换 + 压缩只写在足迹照片页（`JoinComphoto.tsx`）里，
+  其它页面仍是原图直传：发展历史（限 10MB）、碗碟照片（只收 jpg/png/gif，iPhone 拍的 HEIC 直接报错）、
+  页面背景图、媒体文件。
+- **改动**：新增 `inventory-system/frontend/src/utils/imagePrep.ts`，导出：
+  - `prepareImage(file, { maxEdge, compressOver, quality, maxRawSize, convertHeic })`
+    → `{ file, compressed, originalSize }`；默认长边 2560、>2MB 重编码（JPEG q0.88、透明底补白）、
+    原文件 >60MB 报 `ImagePrepError('too-large')`；
+  - `isImageFile / isHeicFile / formatMB / ImagePrepError`；
+  - GIF、SVG、视频/PDF 一律**原样返回**（canvas 会弄掉 GIF 帧、矢量不能被栅格化）；
+  - HEIC 转换仍走 `heic2any` 动态 import（不用它的页面不会加载那个 1.3MB chunk）。
+- **接线**：
+  | 页面 | 参数 | 效果 |
+  |---|---|---|
+  | `JoinComphoto.tsx`（我们的足迹） | 默认 2560 / 2MB | 改为调共用函数，成功提示带「已自动压缩 x → y」 |
+  | `Timeline.tsx`（发展历史） | 默认 2560 / 2MB | 去掉写死的 10MB 报错，HEIC 可以传了 |
+  | `Dishware.tsx`（碗碟照片） | 1600 / q0.85 / 总是重编码 | 后端只收 jpg/png/gif，所以 HEIC/WebP 一律转 JPG 再传 |
+  | `PageUpload.tsx`（页面背景） | 1920 / q0.9（仅图片） | 视频不处理；按钮增加「处理中…」防重复点 |
+  | `Media.tsx`（媒体文件） | 默认 2560 / 2MB（仅图片） | 视频/PDF 原样上传，压缩后提示大小变化 |
+- **实测**（真实 `imagePrep.ts` 用 esbuild 打包后在无头 Chrome 跑）：
+  `23.16MB/6000×4000 → 2.58MB`、`7.45MB/4032×3024 → 1.82MB`、透明 PNG → JPEG 且透明处补白 `255,255,255`、
+  HEIC（两个样本，含 iPhone 拍摄）→ 1440×960 JPEG 且能正常渲染、30KB JPG / GIF / MP4 原样不动。
+- **需要重建**：仅前端 → `npm run build` + 同步 `backend/static/**`。
+
+---
+
 ### [2026-10-23-comphoto-upload-fix] 我们的足迹上传报「服务器内部错误」+ HEIC 假转换 + 删除按钮看不见
 
 - **现象**：`/media/join2`（我们的足迹照片）点「点击选择图片」上传，弹出红框

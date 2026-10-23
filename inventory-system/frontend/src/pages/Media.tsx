@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { message } from 'antd'
 import { deleteMedia, getMediaList, getPageImages, uploadMedia, type PageMediaInfo } from '../api'
+import { prepareImage, isImageFile, formatMB, ImagePrepError } from '../utils/imagePrep'
 import '../styles/media.css'
 
 /**
@@ -31,9 +33,19 @@ export default function Media() {
   const onUpload = async (file: File | undefined) => {
     if (!file) return
     try {
-      await uploadMedia(file)
+      // 图片：HEIC→JPG、长边 2560、大图自动压缩；其它文件（视频/PDF 等）原样上传
+      let target = file
+      if (isImageFile(file)) {
+        const { file: prepared, compressed, originalSize } = await prepareImage(file)
+        target = prepared
+        if (compressed) message.success(`已自动压缩 ${formatMB(originalSize)} → ${formatMB(prepared.size)}`)
+      }
+      await uploadMedia(target)
       load()
-    } catch { /* 拦截器已提示 */ }
+    } catch (e) {
+      if (e instanceof ImagePrepError) message.error(e.message)
+      /* 其余错误拦截器已提示 */
+    }
   }
 
   const renderPreview = (info?: PageMediaInfo) => {

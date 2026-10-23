@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getPageImages, uploadPageImage, type PageMediaInfo } from '../api'
+import { prepareImage, ImagePrepError } from '../utils/imagePrep'
 import '../styles/media.css'
 
 /**
@@ -19,8 +20,9 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string; section: st
 
 const ALLOWED_PAGE = /\.(mp4|webm|mov|avi|jpg|jpeg|png|webp|heic|heif)$/i
 const ALLOWED_IMAGE = /\.(jpg|jpeg|png|webp|heic|heif)$/i
-const HINT = '支持 MP4, WebM, MOV, AVI, JPG, PNG, WebP 格式（HEIC 自动转换）(1920x1080)'
-const HINT_IMAGE = '支持 JPG, PNG, WebP 格式（HEIC 自动转换）'
+// 图片：HEIC 自动转 JPG、长边 1920（对齐 1920x1080 建议）、大图自动压缩；视频不压缩
+const HINT = '支持 MP4, WebM, MOV, AVI, JPG, PNG, WebP、HEIC（图片自动转 JPG 并压到 1920px）'
+const HINT_IMAGE = '支持 JPG, PNG, WebP、HEIC（自动转 JPG 并压到 1920px）'
 
 export default function PageUpload() {
   const { key = 'homepage1' } = useParams()
@@ -31,6 +33,7 @@ export default function PageUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [alert, setAlert] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(() => {
@@ -59,17 +62,30 @@ export default function PageUpload() {
     pick(e.dataTransfer.files?.[0])
   }
   const upload = async () => {
-    if (!selectedFile) {
-      setAlert({ type: 'error', msg: '请先选择要上传的文件' })
+    if (!selectedFile || uploading) {
+      if (!selectedFile) setAlert({ type: 'error', msg: '请先选择要上传的文件' })
       return
     }
+    setUploading(true)
     try {
-      const res = await uploadPageImage(key, selectedFile)
+      // 只对图片做处理（HEIC→JPG、长边 1920、大图压缩）；视频/其它文件原样上传
+      const isImage = meta.accept === 'image/*' || ALLOWED_IMAGE.test(selectedFile.name)
+      let file = selectedFile
+      if (isImage) {
+        const prepared = await prepareImage(selectedFile, { maxEdge: 1920, quality: 0.9 })
+        file = prepared.file
+      }
+      const res = await uploadPageImage(key, file)
       setInfo({ url: res.url, type: res.type, updated: new Date().toLocaleString() })
       setSelectedFile(null)
       if (fileRef.current) fileRef.current.value = ''
       setAlert({ type: 'success', msg: '文件上传成功！' })
-    } catch { /* 拦截器已提示 */ }
+    } catch (e) {
+      if (e instanceof ImagePrepError) setAlert({ type: 'error', msg: e.message })
+      /* 其余错误拦截器已提示 */
+    } finally {
+      setUploading(false)
+    }
   }
 
   const fileName = info?.url.split('/').pop()?.split('?')[0] || ''
@@ -128,8 +144,8 @@ export default function PageUpload() {
               )}
             </div>
 
-            <button type="submit" className="btn" onClick={upload} disabled={!selectedFile}>
-              <i className="fas fa-upload" /> 上传文件
+            <button type="submit" className="btn" onClick={upload} disabled={!selectedFile || uploading}>
+              <i className={'fas ' + (uploading ? 'fa-spinner fa-spin' : 'fa-upload')} /> {uploading ? '处理中...' : '上传文件'}
             </button>
           </div>
         </div>

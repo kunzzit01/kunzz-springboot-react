@@ -5,6 +5,7 @@ import {
   getTimeline, addTimeline, updateTimeline, uploadTimelinePhoto, deleteTimeline,
   type TimelineItem,
 } from '../api'
+import { prepareImage, isImageFile, formatMB, ImagePrepError } from '../utils/imagePrep'
 import '../styles/timeline.css'
 
 /** 发展历史管理（对齐线上 aboutpage4upload.php：年份 tab + 记录条目 + 照片上传/删除） */
@@ -73,17 +74,25 @@ export default function Timeline() {
 
   const doUploadPhoto = async (it: TimelineItem, file?: File) => {
     if (!file) return
-    if (!/\.(jpg|jpeg|png|webp|heic|heif)$/i.test(file.name)) {
-      message.error(t('只支持图片格式（JPG, PNG, WebP）！', 'Only image formats supported (JPG, PNG, WebP)!'))
+    if (!isImageFile(file)) {
+      message.error(t('只支持图片格式（JPG, PNG, WebP, HEIC）！', 'Only image formats supported (JPG, PNG, WebP, HEIC)!'))
       return
     }
-    if (file.size > 10 * 1024 * 1024) { message.error(t('文件大小超过10MB限制！', 'File size exceeds 10MB limit!')); return }
     setUploading(prev => ({ ...prev, [String(it.id)]: true }))
     try {
-      await uploadTimelinePhoto(String(it.id), lang, file)
-      setAlert({ type: 'success', msg: t('照片上传成功！', 'Photo uploaded successfully!') })
+      // HEIC → JPG、长边 2560、大图自动压缩（见 utils/imagePrep）
+      const { file: prepared, compressed, originalSize } = await prepareImage(file)
+      await uploadTimelinePhoto(String(it.id), lang, prepared)
+      setAlert({
+        type: 'success',
+        msg: t('照片上传成功！', 'Photo uploaded successfully!')
+          + (compressed ? t(`（已自动压缩 ${formatMB(originalSize)} → ${formatMB(prepared.size)}）`, ` (compressed ${formatMB(originalSize)} → ${formatMB(prepared.size)})`) : ''),
+      })
       load(lang)
-    } catch { /* 拦截器已提示 */ } finally {
+    } catch (e) {
+      if (e instanceof ImagePrepError) message.error(t(e.message, e.message))
+      /* 拦截器已提示其它错误 */
+    } finally {
       setUploading(prev => ({ ...prev, [String(it.id)]: false }))
     }
   }
