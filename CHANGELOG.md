@@ -4,6 +4,36 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-10-23
+
+### [2026-10-23-comphoto-upload-fix] 我们的足迹上传报「服务器内部错误」+ HEIC 假转换 + 删除按钮看不见
+
+- **现象**：`/media/join2`（我们的足迹照片）点「点击选择图片」上传，弹出红框
+  **「服务器内部错误，请稍后重试（详情见后端日志）」**；页面上也看不到删除照片的按钮。
+- **根因（已在线上实测复现）**：
+  1. `application.yml` 里**从来没有配 `spring.servlet.multipart`**，Spring Boot 默认
+     `max-file-size = 1MB`。手机原图普遍 2-8MB → 请求在进 Controller 前就抛
+     `MaxUploadSizeExceededException` → 落到 `GlobalExceptionHandler.handleOther` → 只剩一句「服务器内部错误」。
+     实测：往 `/api/applications` 传 2MB 文件返回 `{"code":500,"message":"服务器内部错误…"}`，
+     传 100KB 文件返回正常业务提示 → 与「1MB 限制」完全吻合。
+  2. 文案写着「HEIC 自动转换」，但**前后端都没有任何转换代码**：HEIC 原样存成 `.heic`、以 `image/heic` 下发，
+     Chrome/Edge/Firefox 一律显示不出来。
+  3. 删除按钮其实早就有（`JoinComphoto.tsx` 里的小 ✕），但 `.delete-btn` 是**普通文档流**里的元素，
+     而 `.image-info` 是绝对定位铺在图片底部 → ✕ 被压在黑色信息条下面，实际看不见也点不到。
+- **改动**：
+  - 后端 `application.yml`：`spring.servlet.multipart` → `max-file-size: 30MB` / `max-request-size: 35MB`
+    （与 nginx `client_max_body_size 30m` 对齐）。
+  - 后端 `GlobalExceptionHandler`：单独接住 `MaxUploadSizeExceededException` →「图片太大了：单张请控制在 30MB 以内」；
+    另接 `MultipartException` →「上传请求解析失败，请重试」。不再让超大文件变成一句「服务器内部错误」。
+  - 前端 `JoinComphoto.tsx`：上传前先 `heic2any` 把 HEIC/HEIF 转成 JPEG（动态 import，普通用户不加载这 1.3MB chunk），
+    超过 2MB 或长边 > 2560 再用 canvas 等比压缩 → 弱网也能传；状态文字显示「HEIC 转换中…/上传中…」。
+    文案改为「支持 JPG, PNG, WebP, HEIC（自动转 JPG）」。
+  - 前端 `timeline.css` + `JoinComphoto.tsx`：✕ 改成绝对定位到图片右上角；卡片底部新增显眼的红色
+    **「删除照片」**按钮（走 `DELETE /api/comphotos/{n}`，带确认弹窗和「删除中…」状态）。
+- **需要重建**：改了后端 → 重建 jar；改了前端 → 重建 dist（`backend/static/**` 一起提交）。
+
+---
+
 ## 🗓️ 2026-10-21
 
 ### [2026-10-21-hire-resume-pdf] 招聘「预览 PDF」另存为变成 `f` / `.txt`：服务端补对 MIME + 文件名

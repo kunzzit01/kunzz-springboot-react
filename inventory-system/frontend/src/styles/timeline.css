@@ -308,6 +308,55 @@
   background: #c82333;
 }
 
+/* 2026-10-23：✕ 原来在正常流里，被绝对定位的 .image-info 压在图片底部，用户看不到也点不到。
+   改成叠在图片右上角（task 2026-10-23-comphoto-upload-fix）。 */
+.current-image .delete-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.current-image .delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 卡片底部操作区：上传/更新 + 删除 */
+.photo-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.photo-actions .upload-btn {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.delete-photo-btn {
+  flex: 0 0 auto;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.delete-photo-btn:hover {
+  background: #dc2626;
+}
+
+.delete-photo-btn:disabled,
+.upload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .image-info {
   position: absolute;
   bottom: 0;

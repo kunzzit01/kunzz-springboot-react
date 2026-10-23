@@ -4,6 +4,14 @@ server:
 spring:
   application:
     name: inventory-backend
+  # 上传限制（2026-10-23 修复）：Spring Boot 默认 max-file-size=1MB，
+  # 手机原图（2-8MB）会被直接拒绝并抛 MaxUploadSizeExceededException → 前端只看到「服务器内部错误」。
+  # 这里放宽到与 nginx client_max_body_size(30m) 一致；前端上传前还会自动压缩。
+  servlet:
+    multipart:
+      max-file-size: 30MB
+      max-request-size: 35MB
+      file-size-threshold: 2MB
   datasource:
     # 生产环境通过环境变量覆盖（DB_URL / DB_USERNAME / DB_PASSWORD），开发用本地默认值
     url: ${DB_URL:jdbc:mysql://localhost:3306/u690174784_kunzz?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}

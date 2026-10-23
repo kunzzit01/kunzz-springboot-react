@@ -45,6 +45,22 @@ public class GlobalExceptionHandler {
         return ApiResponse.error(404, "资源不存在: " + e.getResourcePath());
     }
 
+    /**
+     * 上传文件超过 spring.servlet.multipart.max-file-size（2026-10-23 修复）
+     * 以前落到 handleOther → 用户只看到「服务器内部错误」，完全不知道是图片太大。
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ApiResponse<Void> handleUploadTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        log.warn("上传文件超过大小限制: {}", e.getMessage());
+        return ApiResponse.error(400, "图片太大了：单张请控制在 30MB 以内（手机原图无需处理，系统会自动压缩）");
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ApiResponse<Void> handleMultipart(org.springframework.web.multipart.MultipartException e) {
+        log.warn("multipart 请求解析失败: {}", e.getMessage());
+        return ApiResponse.error(400, "上传请求解析失败，请重试（如果是大图，请压缩后再上传）");
+    }
+
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleOther(Exception e) {
         log.error("Unhandled exception", e);
