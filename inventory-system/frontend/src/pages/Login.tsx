@@ -5,9 +5,10 @@ import { login as loginApi } from '../api'
 
 /** 后台登录页：老版视觉（原生 React） */
 export default function Login() {
-  const [username, setUsername] = useState('')
+  // 「记住我」：勾选过就在下次打开时回填账号并保持勾选（以前只写不读，等于没作用）
+  const [username, setUsername] = useState(() => localStorage.getItem('inv_remember') || '')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(false)
+  const [remember, setRemember] = useState(() => !!localStorage.getItem('inv_remember'))
   const [visible, setVisible] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()

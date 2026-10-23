@@ -6,6 +6,16 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-remember-me] 登录页「记住我」没作用（只写不读）
+
+- **现象**：勾选「记住我」登录后，下次打开登录页账号没有回填、复选框也没勾上。
+- **根因**：`pages/Login.tsx` 里只有`写`（`localStorage.setItem('inv_remember', username)`），
+  从来没人`读`——用户名初值写死 `''`、复选框初值写死 `false`。
+  （手机版 `MobileLogin.tsx` 是读了的，所以手机端正常、桌面端不正常。）
+- **修复**：两个初值改成从 `inv_remember` 读。
+- **说明**：token 有效期由后端 `jwt.expiration=86400`（24h）决定，所以这个勾选框的含义是
+  「记住账号并保持勾选」；token 本身一直存 localStorage（未勾选也不会更早退出）。
+
 ### [2026-10-23-remove-build-tag] 去掉左下角 build 标记
 
 - 用户不需要侧边栏底部的 `build xxxxxxxx`（那是 `2026-10-23-build-tag` 加的排查用标记）。
