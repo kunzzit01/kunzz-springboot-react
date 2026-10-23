@@ -6,6 +6,22 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-clear-site-data] 进登录页时清一次 HTTP 缓存（`Clear-Site-Data: "cache"`）
+
+- **背景**：`2026-10-23-new-version-prompt` 之后仍有残留情况 —— 用户「登出→再进 /media/join2」
+  看到旧界面（左下角没有 `build xxxxx` 标记），F5 后才是新的。原因是那个标签页里跑的仍是
+  部署前的旧 JS（登录/登出是前端路由，不重新加载页面；bfcache 还会把旧页面原样恢复）。
+- **做法**：nginx 在 **`/login` 这份文档**上发 `Clear-Site-Data: "cache"`，
+  让浏览器每次进登录页清一次本站 HTTP 缓存；**只清 cache，不动 cookies/localStorage**（token 不丢）。
+  - `map $request_uri $kz_clear_cache { default ""; ~^/login$ "cache"; }`（http 级别，变量名全机唯一）
+  - `location = /index.html { add_header Clear-Site-Data $kz_clear_cache; }`（值为空时 nginx 不发头）
+- **改动**：`nginx-ec2.sh` 的 admin conf 生成上述两段；新增手册 `docs/CLEAR_SITE_DATA_LOGIN_2026-10-23.md`。
+- **边界（实话）**：只在 `/login` 作为**整页文档**加载时生效（从官网点「员工登录」、输 URL、F5）；
+  在后台里点「登出」（前端路由）不会触发。它只是减少旧缓存窗口，真正兜底的仍是
+  「登录后整页跳转」+「系统已更新 → 立即刷新」提示条。
+
+---
+
 ### [2026-10-23-new-version-prompt] 部署后「登入再登入还是旧界面，F5 才变新」
 
 - **现象**：新版上线后，用户登出再登录进入 `/media/join2`，看到的还是**旧文案、没有删除按钮**；

@@ -44,6 +44,15 @@ echo "==> 生成 Nginx 配置并上传到 EC2 ($EC2_HOST)..."
 # 后台（admin）配置
 # -----------------------------------------------------------------------------
 cat > /tmp/inventory-admin.conf <<EOF
+# 每次「进登录页」清一次本站 HTTP 缓存（2026-10-23）
+# 目的：部署后旧标签页/旧缓存不会继续跑旧 bundle。只清 cache，不动 cookies / localStorage（登录 token 保留）。
+# 注意：map 必须在 http 级别（本文件在 sites-enabled 里，已处于 http 上下文）；
+#       变量名全机唯一，官网那个 conf 不要重复定义。
+map \$request_uri \$kz_clear_cache {
+    default "";
+    ~^/login\$ "cache";
+}
+
 server {
     listen 80;
     server_name ${ADMIN_SERVER_NAME};
@@ -56,6 +65,8 @@ server {
     location = /index.html {
         add_header Cache-Control "no-cache, must-revalidate";
         expires -1;
+        # 只有 /login 这份文档会带这个头（值为空时 nginx 不发这个头）
+        add_header Clear-Site-Data \$kz_clear_cache;
     }
 
     # SPA 路由
