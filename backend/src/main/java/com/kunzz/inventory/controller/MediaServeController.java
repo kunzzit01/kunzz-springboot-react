@@ -6,7 +6,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
@@ -27,8 +26,10 @@ import java.util.Map;
 
 /**
  * 官网媒体 serve（对齐线上 serve_media.php）
- * GET /media/{type} 公开访问：本地有则返回本地；本地没有则从线上拉取并缓存（后台立即可见、官网上传后立即生效）
- * 注意：独立 Controller（无类级前缀），避免与方法级 /media/{type} 拼接
+ * GET /media/<home_background|about_background|joinus_background|tokyo_background> 公开访问：
+ * 本地有则返回本地；本地没有则从线上拉取并缓存（后台立即可见、官网上传后立即生效）
+ * 注意：独立 Controller（无类级前缀），路径必须逐个列举 —— 不能用 /media/{type}，
+ *       否则会把前端路由 /media/join1|join2|join3 一起吃掉（见 2026-10-23 修复）
  */
 @RestController
 public class MediaServeController {
@@ -52,8 +53,18 @@ public class MediaServeController {
     private final Path pageImageDir = Paths.get("data", "page-images").toAbsolutePath().normalize();
     private final Path pageConfigPath = Paths.get("data", "page_config.json").toAbsolutePath().normalize();
 
-    @GetMapping("/media/{type}")
-    public ResponseEntity<org.springframework.core.io.Resource> serveMedia(@PathVariable String type) {
+    /**
+     * 只接官网消费者的 4 个媒体 key。
+     * 2026-10-23：这里以前写的是 @GetMapping("/media/{type}")，会把前端路由
+     * /media/join1|join2|join3（以及任何 /media/** 页面）一起吃掉 → 刷新页面变成
+     * JSON {"code":404,"message":"类型不支持"}。改成逐个列举后，其它 /media/** 回到 SPA 回退。
+     */
+    @GetMapping({"/media/home_background", "/media/about_background",
+            "/media/joinus_background", "/media/tokyo_background"})
+    public ResponseEntity<org.springframework.core.io.Resource> serveMedia(
+            jakarta.servlet.http.HttpServletRequest request) {
+        String type = request.getRequestURI();
+        type = type.substring(type.lastIndexOf('/') + 1);
         if (!SERVE_TYPES.contains(type)) {
             throw new BusinessException(404, "类型不支持");
         }

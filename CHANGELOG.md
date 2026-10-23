@@ -6,6 +6,22 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-media-route-fix] `/media/join2` 刷新变成 JSON `{"code":404,"message":"类型不支持"}`
+
+- **现象**：浏览器直接打开或刷新 `https://kunzzgroup.com/media/join2`（join1/join3 同样），
+  页面变成一个白底 JSON：`{"code":404,"message":"类型不支持","data":null}`。
+  从其它菜单点进去（客户端路由）却正常 —— 所以只有刷新/直链才触发。
+- **根因**：`MediaServeController` 没有类级 `@RequestMapping`，方法级写的是
+  `@GetMapping("/media/{type}")` → **任何** `/media/xxx` 都被它接走，
+  前端的 `/media/join1|join2|join3` 路由根本没机会落到底层 SPA 回退（`WebConfig` 的 index.html 回退）。
+  而它只认 4 个官网 key：`home_background / about_background / joinus_background / tokyo_background`，
+  其余一律 `BusinessException(404, "类型不支持")`。
+- **修复**：改成逐个列举 4 个路径（不用 `/media/{type}`），`type` 从 requestURI 取；
+  其余 `/media/**` 回到 SPA 回退，刷新不再 404。
+- **注意**：这是后端改动 → **必须重建 jar 并重启 `inventory-backend`** 才生效。
+
+---
+
 ### [2026-10-23-image-prep-shared] 图片上传前处理抽成共用函数 `utils/imagePrep.ts`，接到 4 个上传入口
 
 - **背景**：`2026-10-23-comphoto-upload-fix` 里 HEIC 转换 + 压缩只写在足迹照片页（`JoinComphoto.tsx`）里，
