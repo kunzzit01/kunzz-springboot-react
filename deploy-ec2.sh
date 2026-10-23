@@ -109,6 +109,8 @@ APP_BASE_URL=$APP_BASE_URL
 # 运行期数据目录（与工作目录、与 git 都无关；见 backend/.../common/AppDirs.java）
 APP_DATA_DIR=$APP_DIR/data
 APP_UPLOADS_DIR=$APP_DIR/uploads
+# SPA 回退指向 nginx 的后台根目录（nginx 把 /media/* 反代给后端时必需，见 docs/NGINX_MEDIA_LOCATION_FIX_2026-10-23.md）
+APP_STATIC_DIR=$WEB_ADMIN_DIR/
 ENV
 chmod 600 $APP_DIR/inventory-backend.env
 

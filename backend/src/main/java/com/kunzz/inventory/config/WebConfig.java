@@ -37,16 +37,31 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${app.static-dir:static/}")
     private String staticDir;
 
+    /**
+     * 前端静态目录（SPA 回退的 index.html 和 assets 都在这里）。
+     * 2026-10-23：支持绝对路径（也可用环境变量 APP_STATIC_DIR 覆盖）。
+     * 背景：VPS 上 nginx 把 `/media/*` 全部反代给后端（现有 nginx 配置不改不了），
+     * 而后端 `static/` 目录下没有 index.html → `/media/join2` 刷新后变成 404 JSON。
+     * 把 APP_STATIC_DIR 指向 nginx 的 admin 根目录（如 /var/www/admin/），
+     * 后端就能自己对 /media/** 做 SPA 回退，**不需要改 nginx**。
+     */
+    private String resolveStaticLocation() {
+        String dir = staticDir == null || staticDir.isBlank() ? "static/" : staticDir.trim();
+        boolean absolute = dir.startsWith("/") || dir.matches("^[A-Za-z]:[/\\\\].*");
+        if (absolute) return dir.endsWith("/") ? dir : dir + "/";
+        String cwd = System.getProperty("user.dir");
+        return cwd + "/" + dir;
+    }
+
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String cwd = System.getProperty("user.dir");
         // uploads 目录改为绝对路径（APP_UPLOADS_DIR，默认 <cwd>/uploads），不再跟工作目录走
         String uploadsUrl = com.kunzz.inventory.common.AppDirs.uploadsDir().toUri().toString();
         if (!uploadsUrl.endsWith("/")) uploadsUrl = uploadsUrl + "/";
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations(uploadsUrl);
         registry.addResourceHandler("/**")
-                .addResourceLocations("file:" + cwd + "/" + staticDir)
+                .addResourceLocations("file:" + resolveStaticLocation())
                 .resourceChain(true)
                 .addResolver(new PathResourceResolver() {
                     @Override

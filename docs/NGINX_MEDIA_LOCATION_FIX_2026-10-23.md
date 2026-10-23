@@ -49,6 +49,13 @@ location /media/ {
 
 ## 修复
 
+有两种改法，**任选一种**（改完都不需要重建前端）：
+
+- **方案 A（推荐，改 nginx）**：把 `/media/` 收窄成 4 个 key，页面路由回到 `try_files`
+- **方案 B（不改 nginx，改后端一处环境变量）**：让后端自己把 `/media/**` 回退到 admin 的 index.html
+
+### 方案 A：改 nginx（保留现有 URL，最干净）
+
 把 `location /media/` 收窄成只匹配 4 个 key 的正则（**nginx 正则 location 优先于前缀 location**，
 所以 `/media/join2` 会落回 `location /` → `try_files` → `index.html`）：
 
@@ -78,6 +85,24 @@ sudo python3 /tmp/fix_media_location.py /etc/nginx/sites-available/<你的配置
 # 3) 校验并重载（不重启)
 sudo nginx -t && sudo systemctl reload nginx
 ```
+
+### 方案 B：不改 nginx，让后端自己兜底（需重建 jar）
+
+`WebConfig` 已支持 `app.static-dir` 写**绝对路径**。把后端指向 nginx 的 admin 根目录即可：
+
+```bash
+sudo tee -a /etc/inventory-backend.env >/dev/null <<'ENV'
+APP_STATIC_DIR=/var/www/admin/
+ENV
+sudo systemctl daemon-reload && sudo systemctl restart inventory-backend
+```
+
+原理：nginx 把 `/media/*` 反代给后端 → 后端静态资源处理器找不到文件 → 用
+`/var/www/admin/index.html` 做 SPA 回退 → 浏览器拿到的就是页面，后续 `/assets/*` 仍由 nginx 提供。
+
+> 若 `APP_STATIC_DIR` 没生效（`journalctl -u inventory-backend | grep -i static` 看不到），
+> 改用 JVM 参数：在 systemd 的 `ExecStart` 后面加 `--app.static-dir=/var/www/admin/`。
+> **方案 B 没有改 nginx 干净**：它让后端多承担一份静态托管，长期看仍建议回到方案 A。
 
 `/tmp/fix_media_location.py` 内容见本文件末尾。
 

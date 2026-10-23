@@ -19,7 +19,12 @@
   `location ~ ^/media/(home_background|about_background|joinus_background|tokyo_background)$`。
   正则 location 优先于前缀 location，所以 `/media/join2` 会落回 `location /` → `try_files` → `index.html`。
 - **手册**：`docs/NGINX_MEDIA_LOCATION_FIX_2026-10-23.md`（含线上替换脚本：找配置 → 备份 → 替换 → `nginx -t` → `reload`）。
-- **注意**：只改仓库里的 `nginx-ec2.sh` 不会自动生效——VPS 上要对 `/etc/nginx/sites-available/*` 实际文件动手。
+- **备用方案 B（不改 nginx）**：`WebConfig` 的 `app.static-dir` 现在支持**绝对路径**，
+  VPS 上只要加一行 `APP_STATIC_DIR=/var/www/admin/` 并重启，后端就能对 `/media/**` 自己做 SPA 回退
+  （原理：nginx 把 `/media/*` 反代给后端 → 后端用 admin 的 index.html 兜底）。
+  `deploy-ec2.sh` 已默认写入 `APP_STATIC_DIR=$WEB_ADMIN_DIR/`。
+- **注意**：只改仓库里的 `nginx-ec2.sh` 不会自动生效——VPS 上要对 `/etc/nginx/sites-available/*` 实际文件动手；
+  若不动 nginx，就走方案 B（重建 jar + 一行环境变量 + 重启）。
 
 ---
 

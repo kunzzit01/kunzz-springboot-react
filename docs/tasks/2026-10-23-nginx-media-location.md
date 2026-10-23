@@ -9,9 +9,11 @@
   其余 `/media/**` 回到 `try_files`。仓库 `nginx-ec2.sh` 两个 server 块已同步。
 - 白名单（只允许改这些）：
   - nginx-ec2.sh
+  - backend/src/main/java/com/kunzz/inventory/config/WebConfig.java（方案 B：static-dir 支持绝对路径）
+  - deploy-ec2.sh（环境文件写入 APP_STATIC_DIR）
   - docs/NGINX_MEDIA_LOCATION_FIX_2026-10-23.md（新增）
   - docs/tasks/2026-10-23-nginx-media-location.md
   - CHANGELOG.md（只追加）
-- 明确不碰：后端 Java、前端源码、数据库、data/uploads
+- 明确不碰：前端源码、数据库、data/uploads
 - 线上生效方式：改 `/etc/nginx/sites-available/<配置>` 后 `nginx -t && systemctl reload nginx`
 - 计划推送分支：main
