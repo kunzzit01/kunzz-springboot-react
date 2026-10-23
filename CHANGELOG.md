@@ -6,6 +6,16 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-keep-login] 「记住我」升级为真正的「保持登录」
+
+- **语义**：勾选 → token 存 localStorage（关浏览器再开仍登录）；未勾选 → token 存 sessionStorage（关浏览器即退出）。
+- **实现**：新增 `src/utils/authToken.ts`（`getToken/hasToken/setToken/clearToken`），
+  并把 8 处直接读写 `localStorage.inv_token` 的点全部换掉：
+  `api/http.ts`（请求头 + 401 清理）、`App.tsx`（两处路由守卫 + 权限守卫）、`AppLayout`（登出）、
+  `ChangePassword`、`Login`（写入）、`MobileLogin`（写入 + 切换账号）、`useMobileAccess`（手机登出）。
+- **取舍**：sessionStorage 按标签页隔离 —— 未勾选登录后新开标签页仍需重新登录。
+- **验证**：`npm run build` 通过（tsc + vite），前端无残留 `inv_token` 直读写。
+
 ### [2026-10-23-remember-me] 登录页「记住我」没作用（只写不读）
 
 - **现象**：勾选「记住我」登录后，下次打开登录页账号没有回填、复选框也没勾上。

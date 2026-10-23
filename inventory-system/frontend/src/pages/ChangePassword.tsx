@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { changePassword } from '../api'
+import { clearToken } from '../utils/authToken'
 
 /**
  * 首次登录重设密码页（临时密码登录后被强制跳转到这里）
@@ -16,7 +17,7 @@ export default function ChangePassword() {
   const navigate = useNavigate()
 
   const logout = () => {
-    localStorage.removeItem('inv_token')
+    clearToken()
     navigate('/login', { replace: true })
   }
 

@@ -6,6 +6,7 @@ import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
 import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
 import { useVersionWatcher } from '../utils/versionWatcher'
+import { clearToken } from '../utils/authToken'
 import '../styles/sidebar.css'
 
 interface LinkItem { label: string; path: string }
@@ -205,7 +206,7 @@ export default function AppLayout() {
     return Array.from(params.entries()).every(([k, v]) => curParams.get(k) === v)
   }
   const logout = () => {
-    localStorage.removeItem('inv_token')
+    clearToken()
     sessionStorage.clear()
     resetPagePerms() // 清页面权限缓存（下次登录重新拉取）
     // 回到官网主页。⚠️ 结尾斜杠不能省：nginx 里官网是 location /home/，

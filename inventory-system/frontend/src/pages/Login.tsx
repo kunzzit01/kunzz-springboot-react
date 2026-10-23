@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { login as loginApi } from '../api'
+import { setToken } from '../utils/authToken'
 
 /** 后台登录页：老版视觉（原生 React） */
 export default function Login() {
@@ -20,7 +21,8 @@ export default function Login() {
     setLoading(true)
     try {
       const res = await loginApi({ username, password })
-      localStorage.setItem('inv_token', res.token)
+      // 「记住我」：勾选→localStorage（关浏览器仍登录）；未勾选→sessionStorage（关浏览器即退出）
+      setToken(res.token, remember)
       if (remember) localStorage.setItem('inv_remember', username)
       else localStorage.removeItem('inv_remember')
       // 首次登录（临时密码）→ 强制先去重设自己的密码

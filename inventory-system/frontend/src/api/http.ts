@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { message } from 'antd'
+import { getToken, clearToken } from '../utils/authToken'
 
 const http = axios.create({
   baseURL: '/api',
@@ -7,8 +8,9 @@ const http = axios.create({
 })
 
 // 请求拦截：附加 JWT（独立 token 键，避免与其他系统冲突）
+// 2026-10-23：改用 getToken()，兼容「记住我」未勾选时存 sessionStorage 的情况
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('inv_token')
+  const token = getToken()
   if (token) {
     config.headers.Authorization = 'Bearer ' + token
   }
@@ -31,7 +33,7 @@ http.interceptors.response.use(
   (err) => {
     const status = err.response?.status
     if (status === 401) {
-      localStorage.removeItem('inv_token')
+      clearToken()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
       }

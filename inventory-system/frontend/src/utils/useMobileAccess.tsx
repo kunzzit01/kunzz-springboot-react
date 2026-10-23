@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getMe, getStockPerms } from '../api'
+import { clearToken } from './authToken'
 
 /**
  * 电话版（/mobile/*）双层权限：
@@ -49,7 +50,7 @@ export function useMobileAccess(): MobileAccess {
 
 /** 退出登录（对齐旧 logout.php：清凭据回手机登录页） */
 export function mobileLogout() {
-  localStorage.removeItem('inv_token')
+  clearToken()
   sessionStorage.clear()
   window.location.href = '/mobile/login'
 }

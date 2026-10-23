@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { login as loginApi, getMe, getStockPerms } from '../api'
+import { setToken, clearToken } from '../utils/authToken'
 import { showToast } from '../utils/toast'
 import '../styles/mobile-login.css'
 
@@ -56,7 +57,7 @@ export default function MobileLogin() {
     setLoading(true)
     try {
       const res = await loginApi({ username, password })
-      localStorage.setItem('inv_token', res.token)
+      setToken(res.token, remember)
       if (remember) localStorage.setItem('inv_remember', username)
       else localStorage.removeItem('inv_remember')
       if (res.mustChangePassword) {
@@ -81,7 +82,7 @@ export default function MobileLogin() {
                   {s.toUpperCase()}
                 </button>
               ))}
-              <button type="button" className="switch-account" onClick={() => { localStorage.removeItem('inv_token'); setChoosing(null) }}>
+              <button type="button" className="switch-account" onClick={() => { clearToken(); setChoosing(null) }}>
                 切换账号
               </button>
             </form>

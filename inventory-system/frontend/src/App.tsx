@@ -3,6 +3,7 @@ import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import AppLayout from './components/AppLayout'
 import { loadPagePerms, canAccess, resetPagePerms } from './utils/pagePerms'
+import { hasToken } from './utils/authToken'
 import Login from './pages/Login'
 import ChangePassword from './pages/ChangePassword'
 import ForgotPassword from './pages/ForgotPassword'
@@ -54,7 +55,7 @@ function MobileRedirect({ to }: { to: string }) {
 
 /** 手机页鉴权：未登录 → 手机专用登录页（带 redirect 回跳） */
 function RequireMobileAuth({ children }: { children: ReactElement }) {
-  const token = localStorage.getItem('inv_token')
+  const token = hasToken()
   const location = useLocation()
   if (!token) {
     return <Navigate to={'/mobile/login?redirect=' + encodeURIComponent(location.pathname + location.search)} replace />
@@ -63,7 +64,7 @@ function RequireMobileAuth({ children }: { children: ReactElement }) {
 }
 
 function RequireAuth({ children }: { children: ReactElement }) {
-  const token = localStorage.getItem('inv_token')
+  const token = hasToken()
   const location = useLocation()
   if (!token) {
     return <Navigate to="/login" state={{ from: location }} replace />
@@ -77,7 +78,7 @@ function RequirePage({ children }: { children: ReactElement }) {
   const [state, setState] = useState<'loading' | 'ok' | 'denied'>('loading')
   useEffect(() => {
     // 登出后缓存作废
-    if (!localStorage.getItem('inv_token')) { resetPagePerms(); setState('ok'); return }
+    if (!hasToken()) { resetPagePerms(); setState('ok'); return }
     loadPagePerms()
       .then(({ perms, isSpecial }) => setState(canAccess(perms, location.pathname, location.search, isSpecial) ? 'ok' : 'denied'))
       .catch(() => setState('ok')) // 权限接口异常时不误伤（与 AppLayout 语义一致）
