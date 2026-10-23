@@ -15,6 +15,7 @@ import '../styles/timeline.css'
  *     盖在图片底部，被压在下面基本点不到。
  */
 const MAX_UPLOAD = 30 * 1024 * 1024
+const MAX_RAW = 60 * 1024 * 1024 // 原文件超过这个连浏览器都吃紧，直接拒绝
 const MAX_EDGE = 2560 // 长边上限，超过就等比缩小
 const COMPRESS_OVER = 2 * 1024 * 1024 // 大于 2MB 才重编码
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.heic,.heif,image/*'
@@ -48,6 +49,9 @@ async function shrink(file: File): Promise<File> {
     canvas.height = Math.max(1, Math.round(img.naturalHeight * scale))
     const ctx = canvas.getContext('2d')
     if (!ctx) return file
+    // 透明底叠白底：JPEG 不支持透明，不填会变成黑底（PNG 带 alpha 的情况）
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.88))
     if (!blob) return file
@@ -91,7 +95,7 @@ export default function JoinComphoto() {
       message.error('只支持图片格式（JPG、PNG、WebP、HEIC）！')
       return
     }
-    if (file.size > MAX_UPLOAD) { message.error('图片超过 30MB 限制，请压缩后再上传'); return }
+    if (file.size > MAX_RAW) { message.error('这张图太大了（超过 60MB），请先在手机上压缩后再传'); return }
     try {
       setStatus(n, isHeic(file) ? 'HEIC 转换中...' : '处理中...')
       const prepared = await prepareImage(file)

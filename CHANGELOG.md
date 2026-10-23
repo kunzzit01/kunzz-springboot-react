@@ -26,7 +26,9 @@
   - 后端 `GlobalExceptionHandler`：单独接住 `MaxUploadSizeExceededException` →「图片太大了：单张请控制在 30MB 以内」；
     另接 `MultipartException` →「上传请求解析失败，请重试」。不再让超大文件变成一句「服务器内部错误」。
   - 前端 `JoinComphoto.tsx`：上传前先 `heic2any` 把 HEIC/HEIF 转成 JPEG（动态 import，普通用户不加载这 1.3MB chunk），
-    超过 2MB 或长边 > 2560 再用 canvas 等比压缩 → 弱网也能传；状态文字显示「HEIC 转换中…/上传中…」。
+    超过 2MB 或长边 > 2560 再用 canvas 等比压缩（JPEG q0.88，透明底自动补白），实测：
+    23MB/6000×4000 → 2.58MB、7.4MB/4032×3024 → 1.82MB（耗时 0.1–0.35s，弱网也能传）；
+    原文件 >60MB 才直接拒绝（避免浏览器解码卡死）；状态文字显示「HEIC 转换中…/上传中…」。
     文案改为「支持 JPG, PNG, WebP, HEIC（自动转 JPG）」。
   - 前端 `timeline.css` + `JoinComphoto.tsx`：✕ 改成绝对定位到图片右上角；卡片底部新增显眼的红色
     **「删除照片」**按钮（走 `DELETE /api/comphotos/{n}`，带确认弹窗和「删除中…」状态）。
