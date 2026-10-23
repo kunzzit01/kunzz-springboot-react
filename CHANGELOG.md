@@ -6,6 +6,30 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-data-dir-outside-repo] 运行期数据目录移出仓库（照片“消失”的根因）
+
+- **现象**：部署后 `/media/join2` 显示「已上传: 0」，之前传的照片不见了；
+  `/api/comphotos_api.php` 返回 `{"photos":[]}`，`/api/comphotos-files/1.jpg` 返回「文件不存在」。
+- **根因（两条同时存在）**：
+  1. 后端所有路径写死 `Paths.get("data")` / `System.getProperty("user.dir") + "/uploads"`，
+     **跟着进程工作目录走**。换一个 WorkingDirectory（或换启动方式）就去读另一个空目录，
+     与“照片丢了”看起来一模一样。
+  2. `backend/data/**` 与 `backend/uploads/**` **被纳入 git**：`data/media_config.json` 的提交版是 `{ }`，
+     任何一次 `git reset / checkout / clean / rsync --delete` 都会把线上传的照片和配置回滚掉。
+- **改动**：
+  - 新增 `common/AppDirs.java`：数据目录 = `APP_DATA_DIR`（或 `-Dapp.data.dir`，默认 `data`），
+    上传目录 = `APP_UPLOADS_DIR`（或 `-Dapp.uploads.dir`，默认 `uploads`），启动时打一行
+    `[AppDirs] data=..., uploads=...`（排查“已上传 0”先看这行）。
+  - 所有硬编码点改造：`ComphotoController`、`MediaController`、`MediaServeController`、`TimelineController`、
+    `DishwareController`、`CorporateService`、`JobService`、`WebConfig`（`/uploads/**` 资源映射改绝对路径）。
+  - **取消跟踪** `backend/data/**` + `backend/uploads/**`（390 个文件，磁盘文件不动）+ `.gitignore` 固定。
+  - `deploy-ec2.sh`：不再无条件用本地 `data/` 覆盖服务器；环境文件写入 `APP_DATA_DIR/APP_UPLOADS_DIR`。
+  - 新手册 `docs/DATA_DIR_OUTSIDE_REPO_2026-10-23.md`（VPS 迁移顺序：先搬数据 → 再 `git pull`）。
+- **验证**：用 `.m2` 依赖 + `javac` 全量编译通过（213 个 class，无 error；本机没有 mvn）。
+- **注意**：VPS 上必须先搬数据再 pull，否则 git 会删掉工作区里那 390 个文件（数据已不在版本控制中）。
+
+---
+
 ### [2026-10-23-media-route-fix] `/media/join2` 刷新变成 JSON `{"code":404,"message":"类型不支持"}`
 
 - **现象**：浏览器直接打开或刷新 `https://kunzzgroup.com/media/join2`（join1/join3 同样），

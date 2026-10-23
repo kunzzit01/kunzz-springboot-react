@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ import java.util.Map;
 public class CorporateService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Path dataDir = Paths.get("data").toAbsolutePath().normalize();
+    private final Path dataDir = AppDirs.dataDir();
     private final Path jsonFile = dataDir.resolve("corporate_strategy.json");
 
     /** 初始化：首次从老系统复制默认蓝图 */

@@ -72,7 +72,16 @@ SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=accept-new"
 ssh $SSH_OPTS "$EC2_USER@$EC2_HOST" "mkdir -p $APP_DIR $WEB_ADMIN_DIR $WEB_SITE_DIR"
 
 scp $SSH_OPTS "$BACKEND_JAR" "$EC2_USER@$EC2_HOST:$APP_DIR/inventory-backend-1.0.0.jar"
-scp -r $SSH_OPTS "$ROOT/backend/data" "$EC2_USER@$EC2_HOST:$APP_DIR/data"
+# 运行期数据（data/uploads）从 2026-10-23 起不再纳入 git，也不再随部署覆盖：
+# 它们由 APP_DATA_DIR / APP_UPLOADS_DIR 指向服务器上的独立目录，
+# 只在本地存在 seed 数据时才「首次初始化」拷贝（目标已存在则不覆盖）。
+if [ -d "$ROOT/backend/data" ]; then
+  ssh $SSH_OPTS "$EC2_USER@$EC2_HOST" "mkdir -p $APP_DIR/data"
+  scp -r $SSH_OPTS "$ROOT/backend/data/." "$EC2_USER@$EC2_HOST:$APP_DIR/data/" \
+    || echo "⚠ data/ 同步失败（不影响已存在的数据）"
+else
+  echo "==> 跳过 backend/data（仓库已不跟踪运行数据；首次部署请用备份包初始化）"
+fi
 # 前端 dist 先传到临时目录再复制，避免直接覆盖目录
 scp -r $SSH_OPTS "$ROOT/inventory-system/frontend/dist" "$EC2_USER@$EC2_HOST:/tmp/_tmp_admin" \
   && ssh $SSH_OPTS "$EC2_USER@$EC2_HOST" "cp -r /tmp/_tmp_admin/* $WEB_ADMIN_DIR/ && rm -rf /tmp/_tmp_admin"
@@ -97,6 +106,9 @@ SMTP_PORT=$SMTP_PORT
 SMTP_USER=$SMTP_USER
 SMTP_PASS=$SMTP_PASS
 APP_BASE_URL=$APP_BASE_URL
+# 运行期数据目录（与工作目录、与 git 都无关；见 backend/.../common/AppDirs.java）
+APP_DATA_DIR=$APP_DIR/data
+APP_UPLOADS_DIR=$APP_DIR/uploads
 ENV
 chmod 600 $APP_DIR/inventory-backend.env
 

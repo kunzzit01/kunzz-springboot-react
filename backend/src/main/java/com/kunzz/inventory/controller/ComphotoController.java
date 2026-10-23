@@ -2,6 +2,7 @@ package com.kunzz.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -30,9 +31,10 @@ public class ComphotoController {
     private static final List<String> IMAGE_EXTS = List.of("jpg", "jpeg", "png", "webp", "heic", "heif");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Path dataDir = Paths.get("data").toAbsolutePath().normalize();
-    private final Path comphotoDir = Paths.get("data", "comphotos").toAbsolutePath().normalize();
-    private final Path configPath = dataDir.resolve("media_config.json");
+    // 目录由 AppDirs 统一决定（APP_DATA_DIR，默认 ./data），不再跟工作目录走
+    private final Path dataDir = AppDirs.dataDir();
+    private final Path comphotoDir = AppDirs.data("comphotos");
+    private final Path configPath = AppDirs.data("media_config.json");
 
     // ---------- 公开 API（对齐线上 comphotos_api.php，官网消费） ----------
 

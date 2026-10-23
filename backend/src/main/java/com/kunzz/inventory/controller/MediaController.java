@@ -1,6 +1,7 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.ContentDisposition;
@@ -27,8 +28,9 @@ import java.util.*;
 @RequestMapping("/api/media")
 public class MediaController {
 
-    private final Path uploadDir = Paths.get("data", "uploads").toAbsolutePath().normalize();
-    private final Path pageImageDir = Paths.get("data", "page-images").toAbsolutePath().normalize();
+    // 目录由 AppDirs 统一决定（APP_DATA_DIR，默认 ./data）
+    private final Path uploadDir = AppDirs.data("uploads");
+    private final Path pageImageDir = AppDirs.data("page-images");
 
     /** 背景音乐（对齐线上 bgmusicupload.php：单文件、上传即替换、配置带元信息） */
     private static final List<String> AUDIO_EXTS = List.of("mp3", "wav", "ogg", "m4a");
@@ -67,9 +69,9 @@ public class MediaController {
 
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Path bgMusicDir = Paths.get("data", "bgmusic").toAbsolutePath().normalize();
-    private final Path bgMusicConfigPath = Paths.get("data", "bgmusic_config.json").toAbsolutePath().normalize();
-    private final Path pageConfigPath = Paths.get("data", "page_config.json").toAbsolutePath().normalize();
+    private final Path bgMusicDir = AppDirs.data("bgmusic");
+    private final Path bgMusicConfigPath = AppDirs.data("bgmusic_config.json");
+    private final Path pageConfigPath = AppDirs.data("page_config.json");
 
     // ---------- 背景音乐（对齐线上 bgmusicupload.php） ----------
 

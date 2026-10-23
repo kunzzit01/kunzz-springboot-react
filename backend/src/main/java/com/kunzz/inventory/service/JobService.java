@@ -1,5 +1,6 @@
 package com.kunzz.inventory.service;
 
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.dto.PageResult;
 import com.kunzz.inventory.entity.JobApplication;
@@ -282,7 +283,8 @@ public class JobService {
 
     // ---------- 官网应聘提交（加入我们 → job_applications） ----------
 
-    private final Path resumeDir = Paths.get("data", "uploads").toAbsolutePath().normalize();
+    // 简历存到数据目录的 uploads/（APP_DATA_DIR/uploads，默认 ./data/uploads）
+    private final Path resumeDir = AppDirs.data("uploads");
 
     /** 接收官网应聘申请：multipart 表单 + 简历文件 */
     @Transactional

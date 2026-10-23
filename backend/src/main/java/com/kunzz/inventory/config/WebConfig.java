@@ -3,8 +3,7 @@ package com.kunzz.inventory.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.Resource;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
@@ -41,8 +40,11 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String cwd = System.getProperty("user.dir");
+        // uploads 目录改为绝对路径（APP_UPLOADS_DIR，默认 <cwd>/uploads），不再跟工作目录走
+        String uploadsUrl = com.kunzz.inventory.common.AppDirs.uploadsDir().toUri().toString();
+        if (!uploadsUrl.endsWith("/")) uploadsUrl = uploadsUrl + "/";
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:" + cwd + "/" + UPLOAD_DIR);
+                .addResourceLocations(uploadsUrl);
         registry.addResourceHandler("/**")
                 .addResourceLocations("file:" + cwd + "/" + staticDir)
                 .resourceChain(true)

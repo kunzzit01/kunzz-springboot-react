@@ -1,5 +1,6 @@
 package com.kunzz.inventory.controller;
 
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpHeaders;
@@ -50,8 +51,8 @@ public class MediaServeController {
     private static final DateTimeFormatter DT_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Path pageImageDir = Paths.get("data", "page-images").toAbsolutePath().normalize();
-    private final Path pageConfigPath = Paths.get("data", "page_config.json").toAbsolutePath().normalize();
+    private final Path pageImageDir = AppDirs.data("page-images");
+    private final Path pageConfigPath = AppDirs.data("page_config.json");
 
     /**
      * 只接官网消费者的 4 个媒体 key。

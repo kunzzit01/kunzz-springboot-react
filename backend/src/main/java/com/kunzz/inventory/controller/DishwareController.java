@@ -1,6 +1,7 @@
 package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.dto.*;
 import com.kunzz.inventory.entity.*;
 import com.kunzz.inventory.service.DishwareService;
@@ -34,11 +35,11 @@ public class DishwareController {
             throw new com.kunzz.inventory.common.BusinessException("不支持的文件格式：" + ext);
         }
         try {
-            String dir = System.getProperty("user.dir") + "/uploads/dishware/";
-            java.io.File d = new java.io.File(dir);
+            // 碗碟照片存到 APP_UPLOADS_DIR/dishware（默认 ./uploads/dishware），不再跟工作目录走
+            java.io.File d = AppDirs.uploads("dishware").toFile();
             if (!d.exists()) d.mkdirs();
             String filename = UUID.randomUUID().toString().replace("-", "") + "." + ext;
-            java.io.File target = new java.io.File(dir + filename);
+            java.io.File target = new java.io.File(d, filename);
             photo.transferTo(target);
             return ApiResponse.ok(Map.of("photoPath", "uploads/dishware/" + filename));
         } catch (Exception e) {

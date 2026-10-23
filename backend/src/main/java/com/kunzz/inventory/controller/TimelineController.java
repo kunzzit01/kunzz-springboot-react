@@ -2,6 +2,7 @@ package com.kunzz.inventory.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kunzz.inventory.common.ApiResponse;
+import com.kunzz.inventory.common.AppDirs;
 import com.kunzz.inventory.common.BusinessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -36,8 +37,8 @@ public class TimelineController {
     private static final String REMOTE_IMG_BASE = "https://www.kunzzgroup.com/";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final Path dataDir = Paths.get("data").toAbsolutePath().normalize();
-    private final Path timelineDir = Paths.get("data", "timeline").toAbsolutePath().normalize();
+    private final Path dataDir = AppDirs.dataDir();
+    private final Path timelineDir = AppDirs.data("timeline");
 
     private Path configFile(String lang) {
         return dataDir.resolve("en".equals(lang) ? "timeline_config_en.json" : "timeline_config.json");

@@ -30,10 +30,17 @@ database/*
 !database/u690174784_kunzz.sql
 *.sql.bak
 
-# ---------- 用户上传数据 ----------
-# 碗碟照片需要随仓库分发（新用户直接可用），故纳入版本库；
-# 若后续图片过多导致仓库过大，可改为只推送 backend/uploads/dishware/ 或使用 Git LFS
-# backend/uploads/
+# ---------- 用户上传数据（2026-10-23 起不再纳入版本控制） ----------
+# 原因：`backend/data/**` 与 `backend/uploads/**` 是**运行期会被程序改写**的数据
+# （media_config.json、comphotos/、timeline/、碗碟照片……），历史上把它们纳入 git，
+# 一次 `git reset --hard` / `git checkout` / `rsync --delete` 就会把线上传的照片和配置回滚掉
+# （2026-10-23 真实丢过一次：/media/join2 照片变成「已上传 0」）。
+# 现在运行期目录由环境变量指定，落在仓库外：
+#   APP_DATA_DIR=/opt/inventory/data   APP_UPLOADS_DIR=/opt/inventory/uploads
+# 本地开发不配这两个变量 → 仍然用 ./data 与 ./uploads（只是不再被 git 管）。
+# 需要从历史里恢复旧文件：git checkout e7155dd -- backend/data backend/uploads
+/backend/data/
+/backend/uploads/
 
 # ---------- live 同步脚本凭证（绝不可推送，仓库是公开的） ----------
 live-credentials.json
