@@ -6,6 +6,23 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-nginx-media-location] `/media/join2` 刷新变 JSON —— nginx `location /media/` 吞了前端页面路由
+
+- **现象**：`/media/join2`、`/media/join3`、`/media/music`、`/media/about4`、`/media/homepage1` …
+  从菜单点进去正常，**一刷新就变成 JSON**：`{"code":404,"message":"资源不存在: media/join2"}`
+  （之前是「类型不支持」——修了 `MediaServeController` 后换了句报错，但根因没变）。
+- **根因**：VPS nginx 后台 server 块里写了 `location /media/ { proxy_pass 后端 }`，
+  把所有 `/media/*` 都代理给后端；而后端的 `/media/**` 只认 4 个官网背景 key，
+  其余一律 404。前端的页面路由刚好也在 `/media/` 下，所以 `try_files → index.html` 永远轮不到。
+  实测对照：`/zzz-nonexistent` → 200 html（走 try_files）；`/media/join2` → 404 JSON（走代理）。
+- **改动**：`nginx-ec2.sh` 两个 server 块改成只匹配 4 个 key 的正则 location：
+  `location ~ ^/media/(home_background|about_background|joinus_background|tokyo_background)$`。
+  正则 location 优先于前缀 location，所以 `/media/join2` 会落回 `location /` → `try_files` → `index.html`。
+- **手册**：`docs/NGINX_MEDIA_LOCATION_FIX_2026-10-23.md`（含线上替换脚本：找配置 → 备份 → 替换 → `nginx -t` → `reload`）。
+- **注意**：只改仓库里的 `nginx-ec2.sh` 不会自动生效——VPS 上要对 `/etc/nginx/sites-available/*` 实际文件动手。
+
+---
+
 ### [2026-10-23-data-dir-outside-repo] 运行期数据目录移出仓库（照片“消失”的根因）
 
 - **现象**：部署后 `/media/join2` 显示「已上传: 0」，之前传的照片不见了；

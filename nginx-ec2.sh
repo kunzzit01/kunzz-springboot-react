@@ -66,10 +66,15 @@ server {
         client_max_body_size ${UPLOAD_MAX};
     }
 
-    # 媒体文件（背景音乐 / 页面图片 / 视频）
-    location /media/ {
+    # 官网背景媒体（只这 4 个 key）→ 后端
+    # ⚠️ 不能写 `location /media/`：后台页面路由 /media/join2、/media/music、/media/:key 会被
+    #    一起代理给后端，刷新页面就变成 JSON 404（2026-10-23 修复）
+    location ~ ^/media/(home_background|about_background|joinus_background|tokyo_background)$ {
         proxy_pass http://127.0.0.1:${BACKEND_PORT};
         proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
     }
     location /uploads/ {
         proxy_pass http://127.0.0.1:${BACKEND_PORT};
@@ -95,7 +100,8 @@ server {
     location / { try_files \$uri \$uri/ /index.html; }
 
     # 官网媒体与 API → 后端
-    location /media/ {
+    # ⚠️ 同 admin：只代理 4 个背景 key，不能用 location /media/
+    location ~ ^/media/(home_background|about_background|joinus_background|tokyo_background)$ {
         proxy_pass http://127.0.0.1:${BACKEND_PORT};
         proxy_set_header Host \$host;
         client_max_body_size ${UPLOAD_MAX};
