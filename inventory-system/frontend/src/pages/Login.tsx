@@ -31,13 +31,20 @@ export default function Login() {
       message.success('欢迎回来，' + (res.user.displayName || res.user.username) + '！')
       // 跳转优先级：?redirect= 参数（对齐旧手机版 login.php?redirect=stocklistjX.php）
       // > 登录前被拦截的页面（保留完整路径+查询，电话版 /mobile/*?system=jX 依赖 system 定位分店）> 主页
+      //
+      // 2026-10-23：这里用「整页跳转」而不是 navigate()。
+      // 原因是登录是前端路由，不会重新拉 index.html —— 如果部署了新版本，
+      // 用户登出再登入后跑的还是内存里的旧 JS（症状：进页面是旧版，F5 才变新）。
+      // 整页跳转会重新取一次 index.html，顺带拿到最新 bundle。
       const redirectParam = new URLSearchParams(window.location.search).get('redirect')
+      let target: string
       if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
-        navigate(redirectParam, { replace: true })
-        return
+        target = redirectParam
+      } else {
+        const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
+        target = (from?.pathname || '/dashboard') + (from?.search || '')
       }
-      const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
-      navigate((from?.pathname || '/dashboard') + (from?.search || ''), { replace: true })
+      window.location.replace(target)
     } catch {
       /* 拦截器已提示 */
     } finally {

@@ -691,3 +691,37 @@ body.sidebar-collapsed .menu-item-wrapper .submenu {
 .informationmenu.collapsed .ai-toggle-row { width: auto; padding: 6px 8px; }
 .informationmenu.collapsed .ai-toggle-label,
 .informationmenu.collapsed .ai-toggle-switch { display: none; }
+
+/* 新版本提示条（2026-10-23）：部署后旧标签页仍在跑旧 JS，提示用户刷新 */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 20000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #1f2937;
+  color: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.update-toast button {
+  background: #f99e00;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.update-toast button:hover {
+  background: #f98500;
+}

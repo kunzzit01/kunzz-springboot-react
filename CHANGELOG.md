@@ -6,6 +6,28 @@
 ---
 ## 🗓️ 2026-10-23
 
+### [2026-10-23-new-version-prompt] 部署后「登入再登入还是旧界面，F5 才变新」
+
+- **现象**：新版上线后，用户登出再登录进入 `/media/join2`，看到的还是**旧文案、没有删除按钮**；
+  手动 F5 一下就变了。服务器上旧 bundle 已经 404（确认不是后端/nginx 问题）。
+- **根因三层**：
+  1. 登录走的是前端路由（`navigate`），**不会重新拉 `index.html`** → 标签页里跑的还是内存中的旧 JS；
+  2. nginx 对 `/index.html` **没发任何 `Cache-Control`**（只有 ETag/Last-Modified）→ 浏览器按启发式缓存；
+     而 `/assets/*.js` 是 `max-age=2592000, immutable` → 旧 bundle 能从磁盘缓存直接跑，根本不打网络；
+  3. 没有「有新版本」提示，用户不知道要刷新。
+- **改动**：
+  - 新增 `src/utils/versionWatcher.ts`：定时（5min）+ 窗口获得焦点时拉 `/index.html`（`cache: no-store`），
+    比对入口 bundle hash；发现变化就回调；
+  - `AppLayout` + `sidebar.css`：弹底部提示条「系统已更新，刷新后使用最新版本 / 立即刷新」
+    （**不自动刷新**，避免打断正在填的表单）；
+  - `Login.tsx`：登录成功后改为整页跳转（`window.location.replace`），自然拿到最新 bundle；
+  - `nginx-ec2.sh`：两个 server 块加 `location = /index.html { add_header Cache-Control "no-cache, must-revalidate"; expires -1; }`
+    （带 hash 的 `/assets/*` 仍可长缓存）。
+- **验证**：`npm run build` 通过；用构建产物 `dist/index.html` 验过探测器正则能抓到 `/assets/index-*.js`。
+- **线上还需要**：重建前端 + 同步 `/var/www/admin/`；nginx 的 `index.html` no-cache 片段需要手动加。
+
+---
+
 ### [2026-10-23-nginx-media-location] `/media/join2` 刷新变 JSON —— nginx `location /media/` 吞了前端页面路由
 
 - **现象**：`/media/join2`、`/media/join3`、`/media/music`、`/media/about4`、`/media/homepage1` …

@@ -51,6 +51,13 @@ server {
     root ${WEB_ADMIN_DIR};
     index index.html;
 
+    # index.html 绝不缓存（只有带 hash 的 /assets/* 才能长缓存）
+    # 否则部署后浏览器还在用旧 HTML → 继续跑旧 bundle（症状：登入后还是旧界面，F5 才变）
+    location = /index.html {
+        add_header Cache-Control "no-cache, must-revalidate";
+        expires -1;
+    }
+
     # SPA 路由
     location / {
         try_files \$uri \$uri/ /index.html;
@@ -96,6 +103,12 @@ server {
 
     root ${WEB_SITE_DIR};
     index index.html;
+
+    # index.html 不缓存（同 admin，见上面说明）
+    location = /index.html {
+        add_header Cache-Control "no-cache, must-revalidate";
+        expires -1;
+    }
 
     location / { try_files \$uri \$uri/ /index.html; }
 

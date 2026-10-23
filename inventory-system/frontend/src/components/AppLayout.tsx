@@ -5,6 +5,7 @@ import { resetPagePerms } from '../utils/pagePerms'
 import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
 import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
+import { useVersionWatcher } from '../utils/versionWatcher'
 import '../styles/sidebar.css'
 
 interface LinkItem { label: string; path: string }
@@ -145,6 +146,10 @@ export default function AppLayout() {
   // 当前 hover 的品牌面板 key（鼠标在菜单项或面板上时保持打开）
   const [hoverPanel, setHoverPanel] = useState<string | null>(null)
   const hoverTimer = useRef<any>(null)
+
+  // 部署后旧标签页还在跑旧 JS → 检测到新 bundle 就提示刷新（见 utils/versionWatcher.ts）
+  const [newVersion, setNewVersion] = useState(false)
+  useVersionWatcher(() => setNewVersion(true))
 
   useEffect(() => {
     getMe().then((u) => {
@@ -463,6 +468,12 @@ export default function AppLayout() {
         </div>
       )}
       <main className="kz-main">
+        {newVersion && (
+          <div className="update-toast" role="status">
+            <span>系统已更新，刷新后使用最新版本</span>
+            <button type="button" onClick={() => window.location.reload()}>立即刷新</button>
+          </div>
+        )}
         <Outlet />
       </main>
     </>
