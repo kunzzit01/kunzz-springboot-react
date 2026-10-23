@@ -50,7 +50,9 @@ cat > /tmp/inventory-admin.conf <<EOF
 #       变量名全机唯一，官网那个 conf 不要重复定义。
 map \$request_uri \$kz_clear_cache {
     default "";
-    ~^/login\$ "cache";
+    # 注意：值必须输出成带双引号的 \"cache\"（Chrome 只认 quoted-string，
+    # 写成 "cache" 会被 nginx 当配置引号吃掉，浏览器报 Unrecognized type: cache）
+    ~^/login\$ "\"cache\"";
 }
 
 server {

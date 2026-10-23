@@ -14,11 +14,13 @@ bfcache 还会把旧页面原样恢复）。现象：登出→再进入某页还
 
 ```bash
 # 1) 变量定义（map 必须在 http 级别，conf.d 正好在这个上下文；变量名全机唯一）
+#    注意：值里的双引号必须转义 —— 最终输出的头必须是 Clear-Site-Data: "cache"（带引号）
+#    写成 "cache" 会被 nginx 当配置引号吃掉，Chrome 会报 Unrecognized type: cache 并且**不生效**
 sudo tee /etc/nginx/conf.d/kunzz-clear-cache.conf >/dev/null <<'CONF'
 # 只有 /login 这份文档会带上 Clear-Site-Data: "cache"
 map $request_uri $kz_clear_cache {
     default "";
-    ~^/login$ "cache";
+    ~^/login$ "\"cache\"";
 }
 CONF
 
@@ -46,14 +48,19 @@ sudo nginx -t && sudo systemctl reload nginx
 ## 验证
 
 ```bash
-# 登录页：应该有
+# 登录页：应该有，**且值必须带双引号**
 curl -sD - -o /dev/null https://www.kunzzgroup.com/login | grep -i clear-site-data
-# 期望： Clear-Site-Data: "cache"
+# 期望： Clear-Site-Data: "cache"      ← 带引号；不带引号 Chrome 会忽略
 
 # 其它页面：不应该有（值为空时 nginx 不发这个头）
 curl -sD - -o /dev/null https://www.kunzzgroup.com/dashboard | grep -i clear-site-data \
   || echo "正常：dashboard 没有该头"
 ```
+
+Chrome 里怎么确认生效：打开 DevTools → Console，访问 `/login`：
+
+- ✅ 没有任何 `Clear-Site-Data` 相关警告 = 头被接受
+- ❌ 出现 `Unrecognized type: cache` / `No recognized types specified` = 值没引号（或引号被吃掉），不生效
 
 ## 触发时机（重要）
 
