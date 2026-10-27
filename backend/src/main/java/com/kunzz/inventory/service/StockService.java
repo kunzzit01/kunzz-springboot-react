@@ -170,11 +170,11 @@ public class StockService {
             if (endDate != null) ps.add(cb.lessThanOrEqualTo(root.get("date"), endDate));
             return cb.and(ps.toArray(new Predicate[0]));
         };
-        // 排序（2026-10-27 调）：业务日期 date 仍是第一键（按业务日分组，对齐旧系统）；
-        // 组内改用 created_at（实际录入时间）—— 之前用业务 time，导致“昨天晚间录入的次日账”
-        // （如 26 日 17:50 录 27 号的货，time=17:50）被排到当天最下面。
+        // 排序（2026-10-27 定稿）：**完全按实际录入时间 created_at**（方案 B，用户选定）。
+        // 不再用业务日期 date / 业务 time 做主键 —— 业务上存在“26 日晚上录 27 号账”的情况，
+        // 列表要按人真的录入先后展示；同一秒批量录入的用 id 保序（id 即插入顺序）。
         Page<StockInout> p = stockInoutRepository.findAll(spec,
-                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "date", "createdAt", "id")));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt", "id")));
         // 8/24：中央记录 type 从台账 category 补全（stockinout_data.type 为空；对齐分店显示）
         if (targetSystem == null || targetSystem.isBlank() || !List.of("j1", "j2", "j3").contains(targetSystem)) {
             Map<String, String> catMap = new java.util.HashMap<>();
