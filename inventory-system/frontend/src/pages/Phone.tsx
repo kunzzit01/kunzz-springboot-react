@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { deleteScheduleEmployee, getPhoneRecordsByDate, getScheduleEmployees, savePhoneRecordsByDate, saveScheduleEmployee } from '../api'
 import '../styles/phone.css'
 import ModalClose from '../components/ModalClose'
+import DateField from '../components/DateField'
 import { showToast } from '../utils/toast'
 
 interface Emp { id: number; name: string; phone?: string; position?: string; workArea?: string; restaurant?: string; isActive?: boolean }
@@ -305,8 +306,8 @@ export default function Phone() {
                     选择日期
                   </label>
                   <div className="enhanced-date-picker" id="date-picker">
-                    <input type="date" id="selected-date" value={date} onChange={(e) => setDate(e.target.value)}
-                      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 'clamp(8px, 0.74vw, 14px)', fontWeight: 600, color: '#374151', padding: 0, width: 140 }} />
+                    <DateField id="selected-date" compact value={date} onChange={setDate} wrapperStyle={{ width: 176 }}
+                      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 'clamp(8px, 0.74vw, 14px)', fontWeight: 600, color: '#374151', padding: 0 }} />
                   </div>
                 </div>
               </div>

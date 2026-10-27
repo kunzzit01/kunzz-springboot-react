@@ -4,6 +4,7 @@ import { createSot, deleteSot, getCodeNumbers, getPriceStock, getProducts, getSo
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stocksot.css'
+import DateField from '../components/DateField'
 import { showToast } from '../utils/toast'
 
 /** 货品异常：对齐线上 stocksot.php（Excel 模式，算式：total_price = quantity × price） */
@@ -585,7 +586,7 @@ export default function StockSot() {
                   return (
                     <tr key={key} className="new-row editing-row">
                       <td className="serial-number-cell">-</td>
-                      <td><input type="date" className="excel-input datetime-input" value={r.date || ''} onChange={(e) => setNew(idx, { date: e.target.value })} /></td>
+                      <td><DateField compact className="excel-input datetime-input" value={r.date || ''} onChange={(iso) => setNew(idx, { date: iso })} /></td>
                       <td>
                         <Combobox options={codeOptions} value={r.productCode || ''} placeholder="输入或选择编号..."
                           onChange={(v) => setNew(idx, { productCode: v })} />
@@ -628,7 +629,7 @@ export default function StockSot() {
                         <input type="checkbox" className="batch-select-checkbox" checked={selected.has(Number(r.id))} onChange={() => toggleSelect(Number(r.id))} />
                       ) : (idx + 1)}</td>
                       <td>{isEditing
-                        ? <input type="date" className="excel-input" value={editDraft.date || ''} onChange={(e) => setEditDraft({ ...editDraft, date: e.target.value })} />
+                        ? <DateField compact className="excel-input" value={editDraft.date || ''} onChange={(iso) => setEditDraft({ ...editDraft, date: iso })} />
                         : (r.date || '-')}</td>
                       <td>{isEditing
                         ? <Combobox options={codeOptions} value={editDraft.productCode || ''} onChange={(v) => setEditDraft({ ...editDraft, productCode: v })} />

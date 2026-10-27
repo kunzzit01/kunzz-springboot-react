@@ -5,6 +5,7 @@ import type { DishwareBreak, DishwareStockVO } from '../types'
 import DishwareViewSelector from '../components/DishwareViewSelector'
 import '../styles/dishware.css'
 import ModalClose from '../components/ModalClose'
+import DateField from '../components/DateField'
 import { showToast } from '../utils/toast'
 
 /**
@@ -570,7 +571,7 @@ export default function DishwareBreakPage() {
               <div className="modal-form" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                 <div className="form-group">
                   <label className="required">破损日期</label>
-                  <input type="date" value={brk.breakDate} onChange={(e) => setBrk({ ...brk, breakDate: e.target.value })} required />
+                  <DateField value={brk.breakDate} onChange={(iso) => setBrk({ ...brk, breakDate: iso })} required />
                 </div>
                 <div className="form-group">
                   <label>产品编号</label>

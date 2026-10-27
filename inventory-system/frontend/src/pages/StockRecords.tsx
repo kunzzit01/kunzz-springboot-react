@@ -7,6 +7,7 @@ import { useRealtime } from '../utils/useRealtime'
 import '../styles/stocklist.css'
 import { showToast } from '../utils/toast'
 import { Modal } from 'antd'
+import DateField from '../components/DateField'
 
 interface SummaryItem {
   no?: number
@@ -1281,15 +1282,15 @@ export default function StockRecords() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#374151' }}>
             <span style={{ width: 64 }}>开始日期</span>
-            <input type="date" max={isoToday()} value={expStart}
-              onChange={(e) => { setExpStart(e.target.value); setExpQuick('') }}
-              style={{ flex: 1, padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
+            <DateField max={isoToday()} value={expStart} wrapperStyle={{ flex: 1 }}
+              onChange={(iso) => { setExpStart(iso); setExpQuick('') }}
+              style={{ padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#374151' }}>
             <span style={{ width: 64 }}>结束日期</span>
-            <input type="date" max={isoToday()} value={expEnd}
-              onChange={(e) => { setExpEnd(e.target.value); setExpQuick('') }}
-              style={{ flex: 1, padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
+            <DateField max={isoToday()} value={expEnd} wrapperStyle={{ flex: 1 }}
+              onChange={(iso) => { setExpEnd(iso); setExpQuick('') }}
+              style={{ padding: '9px 12px', border: '1.5px solid #d1d5db', borderRadius: 10, fontSize: 14 }} />
           </label>
         </div>
         <div style={{ fontSize: 12.5, color: '#9ca3af', marginBottom: 16, lineHeight: 1.6 }}>

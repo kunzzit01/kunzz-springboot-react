@@ -1,19 +1,27 @@
 # 任务 2026-10-27-date-field
 
 - 状态：进行中
-- 需求：进出货「新增记录」弹窗的日期输入，原生 `<input type="date">` 会跟随**操作系统语言**显示成
-  `MM/DD/YYYY`（截图实测 10/27/2026），用户要求：
-  1. 不跟随电脑系统格式，统一显示 **年/月/日**（YYYY/MM/DD）；
-  2. 聚焦时**直接高亮「日」**，方便立刻改日期。
-- 做法：新增可复用组件 `DateField`（文本输入：数字自动补 `/`，聚焦选中第 9–10 位的「日」；
-  右侧保留日历图标，走隐藏的原生 date input 的 `showPicker()` 选日期）。
+- 需求（迭代 2，2026-10-27 下午）：截图反馈——日历弹层还是**浏览器原生的英文日历**
+  （`October 2026 / Su Mo Tu / Clear / Today`），与本站风格不搭。要求：
+  1. 好好设计日期选择（自绘中文日历，年/月切换、今天/清除、最小/最大禁用）；
+  2. **其它所有 `type="date"` 的日期框统一换成同款组件**（全站一套设计）；
+  3. 做成可复用 component（已收敛到 `components/DateField.tsx`）。
+- 迭代 1（已完成）：固定 `YYYY/MM/DD` 显示、聚焦高亮「日」、数字自动补 `/`。
 
 - 白名单（只允许改这些）：
-  - inventory-system/frontend/src/components/DateField.tsx（新增）
-  - inventory-system/frontend/src/styles/date-field.css（新增）
-  - inventory-system/frontend/src/pages/StockInout.tsx
+  - inventory-system/frontend/src/components/DateField.tsx（新增/重写）
+  - inventory-system/frontend/src/styles/date-field.css（新增/重写）
+  - inventory-system/frontend/src/pages/StockInout.tsx（4 处）
+  - inventory-system/frontend/src/pages/StockSot.tsx（2 处）
+  - inventory-system/frontend/src/pages/StockRecords.tsx（2 处）
+  - inventory-system/frontend/src/pages/CorporateEdit.tsx（2 处）
+  - inventory-system/frontend/src/pages/DishwareBreak.tsx（1 处）
+  - inventory-system/frontend/src/pages/Evaluation.tsx（1 处）
+  - inventory-system/frontend/src/pages/JobPositions.tsx（1 处）
+  - inventory-system/frontend/src/pages/MobileOut.tsx（1 处）
+  - inventory-system/frontend/src/pages/Phone.tsx（1 处）
+  - inventory-system/frontend/src/pages/Staff.tsx（1 处）
   - docs/tasks/2026-10-27-date-field.md
   - CHANGELOG.md（仅追加）
-- 明确不碰：其它页面/组件、backend/**、backend/static/**（产物由发布流程单独处理）
-- 范围说明：只改「新增记录」弹窗（截图所示）这一处；其它页面的 `type="date"` 后续按需再统一替换。
+- 明确不碰：backend/**、backend/static/**、其它页面（除上面列出的）、database/*.sql
 - 计划推送分支：main

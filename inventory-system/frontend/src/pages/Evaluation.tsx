@@ -4,6 +4,7 @@ import { getEvalConfigs, getEvalStandards, saveEvalStandard, createEvalForm, get
 import { jsPDF } from 'jspdf'
 import html2canvas from 'html2canvas'
 import '../styles/evaluation.css'
+import DateField from '../components/DateField'
 
 interface CriteriaConfig {
   id: number
@@ -376,7 +377,7 @@ export default function Evaluation() {
 
               <div className="ev-form-section">
                 <label htmlFor="ev-date">评估日期</label>
-                <input id="ev-date" type="date" value={evaluationDate} onChange={(e) => setEvaluationDate(e.target.value)} />
+                <DateField id="ev-date" value={evaluationDate} onChange={setEvaluationDate} />
               </div>
 
               <button className="ev-btn-primary" onClick={createNewForm}>

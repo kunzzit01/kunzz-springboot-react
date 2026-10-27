@@ -5,6 +5,7 @@ import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/staff.css'
 import '../styles/perm-tree.css'
 import ModalClose from '../components/ModalClose'
+import DateField from '../components/DateField'
 import { showToast } from '../utils/toast'
 
 // ---------- 账号类型 → 职位 ----------
@@ -926,7 +927,7 @@ export default function Staff() {
                     {fg('联络号码', 'phone_number', editForm, setEditForm)}
                     <div className="form-group">
                       <label>出生日期</label>
-                      <input type="date" name="date_of_birth" value={editForm.date_of_birth || ''} onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })} />
+                      <DateField name="date_of_birth" value={editForm.date_of_birth || ''} onChange={(iso) => setEditForm({ ...editForm, date_of_birth: iso })} />
                     </div>
                   </div>
                   <div className="form-row-3col">

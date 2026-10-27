@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getJobs, createJob, updateJob, deleteJob, type JobPosition } from '../api'
 import '../styles/jobpositions.css'
+import DateField from '../components/DateField'
 
 /** 招聘职位管理（对齐线上 joinpage3upload.php：语言切换 + 添加/编辑职位表单 + 现有职位列表） */
 const COMPANY_OPTIONS = ['KUNZZ HOLDINGS', 'TOKYO JAPANESE CUISINE', 'TOKYO IZAKAYA']
@@ -158,7 +159,7 @@ export default function JobPositions() {
             </div>
             <div className="form-group">
               <label>{t('发布日期', 'Publish Date')} *</label>
-              <input type="date" value={draft.publishDate} required onChange={(e) => set('publishDate', e.target.value)} />
+              <DateField value={draft.publishDate} required onChange={(iso) => set('publishDate', iso)} />
             </div>
             <div className="form-group">
               <label>{t('公司分类', 'Company Category')} *</label>

@@ -9,6 +9,7 @@ import { useMobileAccess, mobileLogout, MobileDenied } from '../utils/useMobileA
 import { useRealtime } from '../utils/useRealtime'
 import { useFreezerCategories } from '../utils/useFreezerCategories'
 import '../styles/mobile-stocklist.css'
+import DateField from '../components/DateField'
 
 /**
  * 电话版出货（对齐旧系统 /mobile/ch/stocklistjX.php「库存列表 (JX)」，路由 /mobile/out?system=jX）
@@ -385,7 +386,7 @@ export default function MobileOut() {
         <div className="msl-cal-overlay" onClick={() => setShowCal(false)}>
           <div className="msl-cal-modal" onClick={e => e.stopPropagation()}>
             <h3>选择日期</h3>
-            <input type="date" className="msl-date-input" value={calDraft} onChange={e => setCalDraft(e.target.value)} aria-label="选择日期" />
+            <DateField className="msl-date-input" value={calDraft} onChange={setCalDraft} aria-label="选择日期" />
             <div className="msl-cal-actions">
               <button className="msl-btn-cancel" onClick={() => setShowCal(false)}>取消</button>
               <button className="msl-btn-confirm" onClick={() => { if (calDraft) setWorkDate(calDraft); setShowCal(false) }}>确定</button>

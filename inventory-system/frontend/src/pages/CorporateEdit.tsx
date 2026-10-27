@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCorporate, saveCorporate } from '../api'
 import '../styles/corporate-edit.css'
+import DateField from '../components/DateField'
 
 /**
  * 企业蓝图编辑（对齐线上 corporate_blueprint_edit.php：8 个 Tab + 固定保存按钮）
@@ -318,9 +319,9 @@ export default function CorporateEdit() {
                       <textarea rows={2} value={obj.strategy} onChange={(e) => setStrategies(prev => ({ ...prev, [year]: prev[year].map((x, xi) => xi === oi ? { ...x, strategy: e.target.value } : x) }))} /></div>
                     <div className="form-row">
                       <div className="form-group"><label>开始日期</label>
-                        <input type="date" value={obj.startDate} onChange={(e) => setStrategies(prev => ({ ...prev, [year]: prev[year].map((x, xi) => xi === oi ? { ...x, startDate: e.target.value } : x) }))} /></div>
+                        <DateField value={obj.startDate} onChange={(iso) => setStrategies(prev => ({ ...prev, [year]: prev[year].map((x, xi) => xi === oi ? { ...x, startDate: iso } : x) }))} /></div>
                       <div className="form-group"><label>结束日期</label>
-                        <input type="date" value={obj.endDate} onChange={(e) => setStrategies(prev => ({ ...prev, [year]: prev[year].map((x, xi) => xi === oi ? { ...x, endDate: e.target.value } : x) }))} /></div>
+                        <DateField value={obj.endDate} onChange={(iso) => setStrategies(prev => ({ ...prev, [year]: prev[year].map((x, xi) => xi === oi ? { ...x, endDate: iso } : x) }))} /></div>
                     </div>
                     <div className="form-group"><label>仪表板指标 (每行一个)</label>
                       <textarea rows={3} value={obj.dashboardMetrics.join('\n')} placeholder={'System Uptime (%)\nInfrastructure Cost Reduction (%)\nImplementation Timeline Adherence (%)'}

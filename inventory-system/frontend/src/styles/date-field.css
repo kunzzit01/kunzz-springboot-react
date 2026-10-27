@@ -1,6 +1,7 @@
-/* 日期输入框（DateField）：固定「年/月/日」显示的文本输入 + 日历按钮 */
+/* ─── 统一日期输入（DateField）：固定「年/月/日」显示 + 自绘日历弹层 ───────── */
 
 .date-field {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: 6px;
@@ -12,12 +13,12 @@
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
-  letter-spacing: .06em;          /* 数字位稍微拉开，YYYY/MM/DD 更好读 */
+  letter-spacing: .06em;            /* 数字位稍微拉开，YYYY/MM/DD 更好读 */
   font-variant-numeric: tabular-nums;
 }
 
 .date-field .date-field__text::selection {
-  background: #583e04;
+  background: #ff5c00;
   color: #fff;
 }
 
@@ -35,40 +36,166 @@
   border: 2px solid #ddd;
   border-radius: 6px;
   background: #fff;
-  color: #4b5563;
+  color: #6b7280;
   cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
 }
 
 .date-field .date-field__btn:hover {
-  background: #f3f4f6;
-  border-color: #b9bdc2;
+  background: #fff7f0;
+  border-color: #ffb27a;
+  color: #ff5c00;
+}
+
+.date-field .date-field__btn:active { transform: translateY(1px); }
+.date-field .date-field__btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 表格内小尺寸 */
+.date-field--compact { gap: 4px; }
+.date-field--compact .date-field__btn { width: 28px; border-width: 1px; border-radius: 4px; font-size: 11px; }
+.date-field--compact .date-field__text { font-size: 12.5px; padding: 4px 6px; letter-spacing: .02em; }
+
+/* ─── 自绘日历弹层（portal 到 body，fixed 定位，避免被表格 overflow 裁掉） ─── */
+/* z-index 必须高于站内所有弹窗遮罩：stockinout.css 的 .modal-overlay 是 15000，
+   之前设 10050 导致日历被「新增记录」弹窗盖住，只露出底部「今天/清除」（2026-10-27 实测）。 */
+.date-cal {
+  position: fixed;
+  z-index: 100000;
+  width: 292px;
+  padding: 10px 10px 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(17, 24, 39, .18), 0 2px 6px rgba(17, 24, 39, .06);
+  font-family: inherit;
+  color: #1f2937;
+  outline: none;
+  animation: date-cal-in .12s ease-out;
+}
+
+@keyframes date-cal-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.date-cal__head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+
+.date-cal__title {
+  flex: 1 1 auto;
+  text-align: center;
+  font-size: 14.5px;
+  font-weight: 700;
   color: #111827;
+  letter-spacing: .02em;
+  user-select: none;
 }
 
-.date-field .date-field__btn:active {
-  transform: translateY(1px);
+.date-cal__nav {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .12s, color .12s;
 }
 
-.date-field .date-field__btn:disabled {
-  opacity: .5;
+.date-cal__nav:hover { background: #f3f4f6; color: #111827; }
+
+.date-cal__week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 2px 0 2px;
+  font-size: 11.5px;
+  color: #9ca3af;
+  text-align: center;
+  user-select: none;
+}
+
+.date-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.date-cal__day {
+  height: 34px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #374151;
+  font-size: 13px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background .1s, color .1s, box-shadow .1s;
+}
+
+.date-cal__day:hover { background: #fff2e8; color: #b84300; }
+
+/* 上下月补白 */
+.date-cal__day.is-out { color: #c8ccd2; }
+.date-cal__day.is-out:hover { background: #f9fafb; color: #9ca3af; }
+
+/* 今天：橙色描边 */
+.date-cal__day.is-today {
+  box-shadow: inset 0 0 0 1.5px #ff5c00;
+  color: #ff5c00;
+  font-weight: 600;
+}
+
+/* 键盘/鼠标移动的焦点日 */
+.date-cal__day.is-cursor { background: #fff2e8; }
+
+/* 选中：橙底白字 */
+.date-cal__day.is-selected,
+.date-cal__day.is-selected:hover,
+.date-cal__day.is-selected.is-today {
+  background: #ff5c00;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.date-cal__day.is-disabled,
+.date-cal__day.is-disabled:hover {
+  background: transparent;
+  color: #e5e7eb;
   cursor: not-allowed;
 }
 
-/* 原生 date input 只用来弹日历：透明、1px、贴在按钮下方，不能 display:none（否则 showPicker 无效） */
-.date-field {
-  position: relative;
+.date-cal__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #f3f4f6;
 }
 
-.date-field .date-field__native {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  border: 0;
-  opacity: 0;
-  pointer-events: none;
-  z-index: -1;
+.date-cal__link {
+  border: none;
+  background: transparent;
+  color: #ff5c00;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .12s;
 }
+
+.date-cal__link:hover { background: #fff2e8; }

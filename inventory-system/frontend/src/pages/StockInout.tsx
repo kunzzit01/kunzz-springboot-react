@@ -1768,7 +1768,7 @@ export default function StockInout() {
                   const patchEdit = (patch: Record<string, string>) => setEditDrafts(prev => ({ ...prev, [Number(r.id)]: { ...prev[Number(r.id)], ...patch } }))
                   return (
                     <tr key={r.id} data-row-id={r.id} data-vi={useVirtual ? gi : undefined} className={(isEditing ? 'editing-row' : '') + (isHl(r) ? ' highlight-flash' : '')}>
-                      <td>{isEditing ? <input type="date" className="table-input" value={editDraft.date || ''} onChange={(e) => patchEdit({ date: e.target.value })} /> : fmtDayAbbr(r.date)}</td>
+                      <td>{isEditing ? <DateField compact className="table-input" value={editDraft.date || ''} onChange={(iso) => patchEdit({ date: iso })} /> : fmtDayAbbr(r.date)}</td>
                       <td>{isEditing
                         ? <Combobox options={codeOptions} value={editDraft.codeNumber || ''} onChange={(v) => patchEdit({ codeNumber: v })} onSelect={(v) => onEditPickCode(Number(r.id), v)} style={{ width: '100%', minWidth: 0 }} />
                         : (r.codeNumber || '-')}</td>
@@ -1910,7 +1910,7 @@ export default function StockInout() {
                 {/* 行内新增（对齐 addNewRowWithDate）：始终追加到表格底部 */}
                 {!batchMode && newRows.map((nr) => (
 <tr key={nr.key} className="new-row" data-key={nr.key}>
-                    <td><input type="date" className="table-input" value={nr.date} onChange={(e) => patchNew(nr.key, { date: e.target.value })} /></td>
+                    <td><DateField compact className="table-input" value={nr.date} onChange={(iso) => patchNew(nr.key, { date: iso })} /></td>
                     <td><Combobox options={codeOptions} value={nr.codeNumber} placeholder="编号"
                       onChange={(v) => patchNew(nr.key, { codeNumber: v })}
                       onSelect={(v) => onPickCode(nr.key, v)} /></td>
@@ -2153,13 +2153,13 @@ export default function StockInout() {
               <div className="product-summary-date-row">
                 <div className="form-group">
                   <label>开始日期 *</label>
-                  <input type="date" className="form-input" value={checkForm.start}
-                    onChange={(e) => setCheckForm({ ...checkForm, start: e.target.value })} />
+                  <DateField className="form-input" value={checkForm.start}
+                    onChange={(iso) => setCheckForm({ ...checkForm, start: iso })} />
                 </div>
                 <div className="form-group">
                   <label>结束日期 *</label>
-                  <input type="date" className="form-input" value={checkForm.end}
-                    onChange={(e) => setCheckForm({ ...checkForm, end: e.target.value })} />
+                  <DateField className="form-input" value={checkForm.end}
+                    onChange={(iso) => setCheckForm({ ...checkForm, end: iso })} />
                 </div>
               </div>
               <div className="product-summary-results">
@@ -2241,7 +2241,14 @@ export default function StockInout() {
                 {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
               </select>
               <select value={calYear} onChange={(e) => setCalYear(Number(e.target.value))}>
-                {Array.from({ length: new Date().getFullYear() - 2021 }, (_, i) => 2022 + i).map(y => <option key={y} value={y}>{y}年</option>)}
+                {/* 年份范围（2026-10-27 修改）：原来只生成到「今年」，选不到 2027 及以后；
+                    现在给到 今年+5 年，方便查/选未来日期（预登下次账、排期类数据）。 */}
+                {(() => {
+                  const yTo = new Date().getFullYear() + 5
+                  const yFrom = Math.min(2020, calYear)
+                  return Array.from({ length: yTo - yFrom + 1 }, (_, i) => yFrom + i)
+                    .map(y => <option key={y} value={y}>{y}年</option>)
+                })()}
               </select>
             </div>
             <button className="calendar-nav-btn" onClick={() => { if (calMonth === 11) { setCalMonth(0); setCalYear(calYear + 1) } else setCalMonth(calMonth + 1) }}><i className="fas fa-chevron-right" /></button>
