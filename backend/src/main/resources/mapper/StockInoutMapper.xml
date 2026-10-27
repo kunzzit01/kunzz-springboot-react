@@ -2,7 +2,41 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.kunzz.inventory.mapper.StockInoutMapper">
 
-    <!-- 出库库存校验（对齐旧系统 stockeditapi / jXstockeditpageapi：事务内校验，可用库存口径 = 显示单价 ROUND(price,2)）
+    <!-- ═══ 进出货关键字：全列模糊搜索（2026-10-27） ═══
+         把表格里**所有可见列**拼成一段文本再单次 LIKE：
+           · 以后新增列只改这一处，list/count 共用，不会两处漂移；
+           · CONCAT_WS 自动跳过 NULL，不会被 NULL 吞掉整条条件；
+           · 数字/日期直接交给 MySQL 转字符串（20.000 / 8.30 / 2026-10-27）；
+           · 「总价」= ROUND(|进货-出货| × 单价, 2)，与界面显示口径一致。
+         列清单必须与 StockService.listInout 里 JPA 的 CONCAT_WS 清单保持一致（中央走 JPA，分店走这条 SQL）。 -->
+    <sql id="branchSearchHaystack">
+        CONCAT_WS('|', product_name, code_number, receiver, specification, type, remark,
+                  remark_number, created_by, target_system,
+                  DATE_FORMAT(date, '%Y-%m-%d'),
+                  in_quantity, out_quantity, price,
+                  ROUND(ABS(COALESCE(in_quantity, 0) - COALESCE(out_quantity, 0)) * COALESCE(price, 0), 2))
+    </sql>
+
+    <!-- 通配符转义（配合 ESCAPE '!'）：搜 “50%” / “a_b” 不能被当成通配符。
+         顺序同 Java 侧 StockService.escapeLike：先逃逸符自身，再逃 % 和 _。 -->
+    <sql id="branchSearchLike">
+        CONCAT('%', REPLACE(REPLACE(REPLACE(LOWER(#{keyword}), '!', '!!'), '%', '!%'), '_', '!_'), '%')
+    </sql>
+
+    <sql id="branchSearchWhere">
+        <if test="keyword != null and keyword != ''">
+            <choose>
+                <when test="exactMatch">
+                    AND product_name = #{keyword}
+                </when>
+                <otherwise>
+                    AND LOWER(<include refid="branchSearchHaystack"/>) LIKE <include refid="branchSearchLike"/> ESCAPE '!'
+                </otherwise>
+            </choose>
+        </if>
+    </sql>
+
+    <!-- 出库库存校验（对齐旧系统 stockeditapi / jXstockeditpageapi：事务内校验，可用库存口径 = 显示单价 ROUND(price,2))
          product_name 匹配时兼容 HTML 实体（&amp;） -->
     <select id="availableStockCentral" resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(CASE WHEN in_quantity > 0 THEN in_quantity ELSE 0 END), 0)
@@ -34,18 +68,7 @@
                remark_number, product_remark_checked
         FROM ${table}
         WHERE deleted_at IS NULL
-        <if test="keyword != null and keyword != ''">
-            <choose>
-                <when test="exactMatch">
-                    AND product_name = #{keyword}
-                </when>
-                <otherwise>
-                    AND (product_name LIKE CONCAT('%', #{keyword}, '%')
-                         OR code_number LIKE CONCAT('%', #{keyword}, '%')
-                         OR remark LIKE CONCAT('%', #{keyword}, '%'))
-                </otherwise>
-            </choose>
-        </if>
+        <include refid="branchSearchWhere"/>
         <if test="startDate != null and startDate != ''">
             AND date &gt;= #{startDate}
         </if>
@@ -60,18 +83,7 @@
     <select id="countBranch" resultType="long">
         SELECT COUNT(*) FROM ${table}
         WHERE deleted_at IS NULL
-        <if test="keyword != null and keyword != ''">
-            <choose>
-                <when test="exactMatch">
-                    AND product_name = #{keyword}
-                </when>
-                <otherwise>
-                    AND (product_name LIKE CONCAT('%', #{keyword}, '%')
-                         OR code_number LIKE CONCAT('%', #{keyword}, '%')
-                         OR remark LIKE CONCAT('%', #{keyword}, '%'))
-                </otherwise>
-            </choose>
-        </if>
+        <include refid="branchSearchWhere"/>
         <if test="startDate != null and startDate != ''">
             AND date &gt;= #{startDate}
         </if>

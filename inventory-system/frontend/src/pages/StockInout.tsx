@@ -1686,7 +1686,8 @@ export default function StockInout() {
                   onClick={(e) => { e.stopPropagation(); setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
                   <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
                 </span>
-                <input ref={searchInputRef} type="text" className="smartSearch-input" placeholder="输入关键字搜索..." value={kw}
+                <input ref={searchInputRef} type="text" className="smartSearch-input"
+                  placeholder="搜索全部列：货品 / 编号 / 收货单位 / 规格 / 单价 / 创建人 / 日期…" value={kw}
                   onChange={(e) => onSearchInput(e.target.value)} />
               </div>
             </div>

@@ -6,6 +6,27 @@
 ---
 ## 🗓️ 2026-10-27
 
+### [2026-10-27-inout-search] 进出货搜索框改为「全列模糊搜索」
+
+- **问题**：搜索框看起来像搜整张表，实际后端只匹配 `product_name / code_number / remark` 三列，
+  搜收货单位、规格、类型、备注编号、单价、总价、日期、创建人都搜不到。
+- **做法**：把表格里**所有可见列**用 `CONCAT_WS('|', …)` 拼成一段可搜文本，再单次 LIKE：
+  - 中央（JPA）：`StockService.listInout` 里用 `cb.function("CONCAT_WS", …)` + `cb.like(…, '!')`；
+  - 分店（MyBatis）：`StockInoutMapper.xml` 新增 `<sql id="branchSearchHaystack/branchSearchLike/branchSearchWhere">`，
+    `listBranch` 与 `countBranch` **共用同一条 where**（之前两处手写，容易改一处漏一处）；
+  - 「总价」用 `ROUND(ABS(进货-出货)×单价, 2)`，与界面显示口径一致；日期用 `DATE_FORMAT(date,'%Y-%m-%d')`，
+    所以搜 `2026-10` / `10-27` / `27` 都能命中。
+- **“稳”的四个关键点**：
+  1. **列白名单**（不用 `*`）+ `CONCAT_WS` 自动跳过 NULL，不会被 NULL 吞掉整条条件；
+  2. **通配符转义**：用户输入里的 `%` `_` `!` 用 `ESCAPE '!'` 转义（否则搜 `%` 会命中全表）；
+  3. 双侧 `LOWER()`，大小写不敏感；前置过滤（`deleted_at`、日期范围、目标系统、类型）仍在 AND 外层；
+  4. 分店 list/count 共用 `<sql>` 片段，中央与 XML 的列清单互相注明“要保持一致”。
+- **验证**（本地，真实数据）：`shoga`→2、`PS 0015`→2、`cindy`→22、`tub`→25、`37.50`→3、
+  `2026-09-17`→47、`CENTRAL`→68，而 `%`→**0**（转义生效）；分店 j2：`salmon`→1128、`kilo`→921、`2026-09`→910、`%`→0。
+  性能：15.6k 行全表扫 0.11s；极端情况（单字母 + size=20000）0.35–0.43s。
+- **未变**：`exactMatch=true` 仍是“货品名精确匹配”；搜索仍**受日期范围限制**（待确认是否改成忽略范围）。
+- 白名单见 `docs/tasks/2026-10-27-inout-search.md`。
+
 ### [2026-10-27-inout-order] 进出货列表改为完全按「实际创建时间」排序（方案 B）
 
 - **问题**：列表一直是 `ORDER BY date ASC, time ASC, id ASC`，其中 `time` 是录单时填的**业务时间**，

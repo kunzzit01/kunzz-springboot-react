@@ -7,6 +7,7 @@ import com.kunzz.inventory.entity.*;
 import com.kunzz.inventory.mapper.StockInoutMapper;
 import com.kunzz.inventory.mapper.StockMinimumMapper;
 import com.kunzz.inventory.repository.*;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -151,17 +152,34 @@ public class StockService {
             List<Predicate> ps = new ArrayList<>();
             ps.add(cb.isNull(root.get("deletedAt"))); // 排除软删除
             if (keyword != null && !keyword.isBlank()) {
-                String k = keyword.trim().toLowerCase();
+                String k = keyword.trim();
                 if (exactMatch) {
                     // 精确匹配：产品名 = 关键字（不区分大小写）
-                    ps.add(cb.equal(cb.lower(root.get("productName")), k));
+                    ps.add(cb.equal(cb.lower(root.get("productName")), k.toLowerCase()));
                 } else {
-                    String like = "%" + k + "%";
-                    ps.add(cb.or(
-                            cb.like(cb.lower(root.get("productName")), like),
-                            cb.like(cb.lower(root.get("codeNumber")), like),
-                            cb.like(cb.lower(root.get("remark")), like)
-                    ));
+                    // 全列模糊搜索（2026-10-27）：把表格里**所有可见列**拼成一个可搜文本，单次 LIKE。
+                    // 为什么要拼成一条而不是写 N 个 OR：
+                    //   · 以后加列只改这一处，不会漏；
+                    //   · 分店的 SQL 用同一套列清单（见 StockInoutMapper.xml 的 branchSearchHaystack）；
+                    //   · NULL 由 CONCAT_WS 自动跳过，不会被 NULL 吞掉整条条件；
+                    //   · 数字/日期直接作为 CONCAT_WS 参数交给数据库转字符串（20.000 / 8.30 / 2026-10-27）。
+                    // 列清单：货品名 / 编号 / 收货单位 / 规格 / 类型 / 备注 / 备注编号 / 创建人 / 目标系统
+                    //          / 日期 / 进货 / 出货 / 单价 / 总价(=|进货-出货|×单价，与界面口径一致)
+                    Expression<?> totalExpr = cb.function("ROUND", java.math.BigDecimal.class,
+                            cb.prod(
+                                    cb.abs(cb.diff(
+                                            cb.coalesce(root.get("inQuantity"), cb.literal(java.math.BigDecimal.ZERO)),
+                                            cb.coalesce(root.get("outQuantity"), cb.literal(java.math.BigDecimal.ZERO)))),
+                                    cb.coalesce(root.get("price"), cb.literal(java.math.BigDecimal.ZERO))),
+                            cb.literal(2));
+                    Expression<String> haystack = cb.function("CONCAT_WS", String.class, cb.literal("|"),
+                            root.get("productName"), root.get("codeNumber"), root.get("receiver"),
+                            root.get("specification"), root.get("type"), root.get("remark"),
+                            root.get("remarkNumber"), root.get("createdBy"), root.get("targetSystem"),
+                            cb.function("DATE_FORMAT", String.class, root.get("date"), cb.literal("%Y-%m-%d")),
+                            root.get("inQuantity"), root.get("outQuantity"), root.get("price"), totalExpr);
+                    // ESCAPE '!'：用户搜 "50%" / "a_b" 时不能被当成通配符
+                    ps.add(cb.like(cb.lower(haystack), "%" + escapeLike(k) + "%", '!'));
                 }
             }
             if (targetSystem != null && !targetSystem.isBlank()) ps.add(cb.equal(root.get("targetSystem"), targetSystem));
@@ -877,5 +895,20 @@ public class StockService {
 
     private String str(Object o) {
         return o == null ? null : String.valueOf(o);
+    }
+
+    /**
+     * 把用户输入里的 LIKE 通配符转义（配合 SQL 里的 {@code ESCAPE '!'}）。
+     *
+     * <p>不转义的话：搜 {@code %} 会变成「匹配所有」，搜 {@code a_b} 里的 {@code _} 会变“任意一个字符”，
+     * 结果就是“搜了反而多出来一堆不相关数据”。
+     * 顺序很重要：先转义逃生符自身（{@code ! → !!}），再转 {@code %} 和 {@code _}。
+     * 分店 XML 侧的等价实现见 {@code StockInoutMapper.xml} 的 branchSearchLike（用 SQL REPLACE 链做同样的事）。
+     */
+    private static String escapeLike(String s) {
+        return s.toLowerCase()
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
     }
 }
