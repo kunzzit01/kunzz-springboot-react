@@ -52,8 +52,9 @@
         <if test="endDate != null and endDate != ''">
             AND date &lt;= #{endDate}
         </if>
-        -- 对齐旧系统分店 stockedit：ORDER BY date ASC, time ASC（旧在上、新在底）
-        ORDER BY date ASC, time ASC, id ASC
+        -- 排序（2026-10-27 调）：业务日期 date 第一键，组内按 created_at（实际录入时间），
+        -- 不再用业务 time —— 否则昨天晚间录入的次日账会被排到当天最下面
+        ORDER BY date ASC, created_at ASC, id ASC
         LIMIT #{size} OFFSET #{offset}
     </select>
 

@@ -6,6 +6,23 @@
 ---
 ## 🗓️ 2026-10-27
 
+### [2026-10-27-inout-order] 进出货列表改为按「实际创建时间」排序（业务日期仍在组内归集）
+
+- **问题**：列表一直是 `ORDER BY date ASC, time ASC, id ASC`，其中 `time` 是录单时填的**业务时间**，
+  `created_at`（真正录入时间）根本没参与排序。结果「昨天 26 日晚上录的 27 号货」
+  （`time=17:50`）被排到当天**最下面**，而不是按录入先后排在上面。
+- **改法**：`date` 仍是第一排序键（保留按业务日期分组、对齐旧系统），组内改用 `created_at ASC, id ASC`：
+  - 中央：`StockService.listInout` → `Sort.by(ASC, "date", "createdAt", "id")`；
+  - 分店 mapper：`StockInoutMapper.xml` 的 `listBranch` → `ORDER BY date ASC, created_at ASC, id ASC`；
+  - 导出（StockExcelMapper）、检查弹窗明细（checkInout）保持 `date,time`，方便对账。
+- **数据核对**：`stockinout_data` 28,739 行、`j2stockedit_data` 15,889 行，`created_at` 无 NULL，可安全作排序键。
+- **验证**（本地）：造 3 条同日数据（业务 time=17:50 创建于昨天、08:55 / 09:01 创建于今天），
+  接口返回顺序为 **17:50(昨天创建) → 08:55 → 09:01**，即“昨天录的最上面”；测试数据已删除。
+- **附带发现（不属本 task 代码）**：本地库 `database/u690174784_kunzz.sql` 是 9 月快照，缺
+  `stockinout_data.updated_by` 与 `jXstockedit_data.updated_by/remark_number/product_remark_checked`，
+  导致进出货页直接 500（提示“数据库异常…请重启系统”）。已按线上库定义在**本地库**补齐这些列。
+- 白名单见 `docs/tasks/2026-10-27-inout-order.md`。
+
 ### [2026-10-27-date-field] 新增记录弹窗：日期改成固定的「年/月/日」，聚焦直接选中「日」
 
 - **问题**：弹窗里的日期用的是原生 `<input type="date">`，显式格式由**操作系统/浏览器语言**决定，
