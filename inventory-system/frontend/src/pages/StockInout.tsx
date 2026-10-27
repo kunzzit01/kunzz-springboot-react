@@ -273,8 +273,8 @@ const QUICK_RANGES: Record<string, [Date, Date]> = {
   thisYear: [(() => { const d = new Date(); return new Date(d.getFullYear(), 0, 1) })(), new Date()],
   lastYear: [(() => { const d = new Date(); return new Date(d.getFullYear() - 1, 0, 1) })(), (() => { const d = new Date(); return new Date(d.getFullYear() - 1, 11, 31) })()],
 }
-const QUICK_KEYS = ['today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear']
-const QUICK_LABELS = ['今天', '昨天', '本周', '上周', '这个月', '上个月', '今年', '去年']
+const QUICK_KEYS = ['today', 'yesterday', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear', 'allTime']
+const QUICK_LABELS = ['今天', '昨天', '本周', '上周', '这个月', '上个月', '今年', '去年', '全时段']
 
 export default function StockInout() {
   useRawPriceTooltip()
@@ -714,6 +714,13 @@ export default function StockInout() {
     }
   }
   const pickQuick = (key: string) => {
+    // 「全时段」：不传日期，便于跨月搜某个备注编号/货品（2026-10-27）
+    if (key === 'allTime') {
+      setAllTime(true)
+      setQuickLabel('全时段')
+      setQuickOpen(false); setPage(0)
+      return
+    }
     const [s, e] = QUICK_RANGES[key]
     setDateRange({ start: fmtDate(s), end: fmtDate(e) })
     setAllTime(false)   // 快速选时段 → 退出全时段
@@ -1684,33 +1691,20 @@ export default function StockInout() {
           </div>
 
           <div className="header-right-group">
-            <div className="header-search-col">
-              <div className="header-search">
-                <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
-                  onClick={(e) => { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
-                  {/* 左侧图标即搜索模式切换：放大镜=模糊（含关键字全部匹配）/ 等号=精确（产品名完全等于关键字）；点击同时展开输入框 */}
-                  <span className="smartSearch-icon"
-                    title={exactMatch ? '精确搜索：只显示产品名完全等于关键字的记录（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的记录（点击切换为精确）'}
-                    onClick={(e) => { e.stopPropagation(); setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
-                    <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
-                  </span>
-                  <input ref={searchInputRef} type="text" className="smartSearch-input"
-                    placeholder="搜索全部列：货品 / 编号 / 收货单位 / 规格 / 单价 / 创建人 / 日期…" value={kw}
-                    onChange={(e) => onSearchInput(e.target.value)} />
-                </div>
+            <div className="header-search">
+              <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
+                onClick={(e) => { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
+                {/* 左侧图标即搜索模式切换：放大镜=模糊（含关键字全部匹配）/ 等号=精确（产品名完全等于关键字）；点击同时展开输入框 */}
+                <span className="smartSearch-icon"
+                  title={exactMatch ? '精确搜索：只显示产品名完全等于关键字的记录（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的记录（点击切换为精确）'}
+                  onClick={(e) => { e.stopPropagation(); setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
+                  <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
+                </span>
+                <input ref={searchInputRef} type="text" className="smartSearch-input"
+                  placeholder="搜索全部列：货品 / 编号 / 收货单位 / 规格 / 单价 / 创建人 / 日期…" value={kw}
+                  title="搜索当前日期范围内的所有列（搜全时段用左侧「快速选择 → 全时段」）"
+                  onChange={(e) => onSearchInput(e.target.value)} />
               </div>
-              {/* 搜索范围提示（2026-10-27）：关键字只当前日期范围内生效 → 明确告知，并提供一键“全时段” */}
-              {searchKw && (
-                <div className="search-scope-hint">
-                  <i className="fas fa-filter" />
-                  {allTime
-                    ? <span>当前：<b>全时段</b>（不限日期）</span>
-                    : <span>仅搜 {dateRange.start === dateRange.end ? fmtCN(dateRange.start) : `${fmtCN(dateRange.start)} ~ ${fmtCN(dateRange.end)}`}</span>}
-                  {allTime
-                    ? <button type="button" onClick={() => { setAllTime(false); setDateRange({ start: fmtDate(new Date()), end: fmtDate(new Date()) }); setPage(0) }}>回到今天</button>
-                    : <button type="button" onClick={() => { setAllTime(true); setPage(0) }}>改为全时段</button>}
-                </div>
-              )}
             </div>
             <button className="btn btn-success" onClick={showDateRowsModal}><i className="fas fa-plus" /> 新增记录</button>
             <button className="btn btn-secondary" onClick={openCheck} title="按货品名称统计进出货"><i className="fas fa-chart-bar" /> 货品统计</button>

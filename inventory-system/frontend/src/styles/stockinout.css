@@ -418,21 +418,8 @@
 .sio-root .date-range-picker.all-time span { color: #b45309; font-weight: 600; }
 .sio-root .date-range-picker.all-time i { color: #ff7b00; }
 
-/* 搜索范围提示（2026-10-27）：搜索框下方一行小字 + “改为全时段/回到今天”按钮 */
-.sio-root .header-search-col {
-  display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex: none;
-}
-.sio-root .search-scope-hint {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: clamp(9px, 0.62vw, 11.5px); color: #6b7280; white-space: nowrap;
-}
-.sio-root .search-scope-hint i { font-size: 0.9em; color: #9ca3af; }
-.sio-root .search-scope-hint b { color: #b45309; font-weight: 700; }
-.sio-root .search-scope-hint button {
-  border: 0; background: none; padding: 0; font: inherit; font-weight: 700;
-  color: #ff7b00; cursor: pointer; text-decoration: underline;
-}
-.sio-root .search-scope-hint button:hover { color: #e06b00; }
+/* 「全时段」在时段下拉里（2026-10-27）：不再单独做提示行，避免和左边的日期范围重复。 */
+
 .sio-root .calendar-popup {
   position: fixed; z-index: 20000; background: #fff; border: 1px solid #e5e7eb;
   border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 14px; width: 300px;
