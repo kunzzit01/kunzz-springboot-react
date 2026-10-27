@@ -4,6 +4,24 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-10-27
+
+### [2026-10-27-date-guard] 进出货日期兜底校验：年份 <2000 直接拒绝保存
+
+- **起因（线上数据事故）**：2026-10-27 09:01–09:02 一批 15 条中央→j2 出库（RM 2,265.55）的 `date`
+  被写成 `0015-10-27`（应 2026-10-27），其余字段全正常、后端照单全收。后果是这 15 条在
+  「按日期区间」的报表 / Excel·PDF 导出 / 本月供货额里整批消失；而库存余额（`SUM(in)-SUM(out)`，
+  不带日期条件）反而完全正常，属于账平了、报表对不上的隐性事故。
+- **数据已修正**：`stockinout_data`(32252–32266)、`j2stockinout_data`(2361–2375)、`j2stockedit_data`(18839–18853)
+  三表 date 同改为 2026-10-27（备份在 VPS `/root/db-backup/2026-10-27-fix0015/`）。
+- **代码修复**：新增 `common/TxnDateGuard.java`（`MIN_YEAR=2000`），在四条保存路径入口调用
+  `TxnDateGuard.requireSane(date)`：`StockService.createInout`、`StockService.updateInout`、
+  `MobileStockService.batchSave/create/update`。日期为 null 时放行（保留各处「默认今天」逻辑）。
+- **验证**：全量 `javac` 编译 209 个源文件通过；单测式校验确认 `0015-10-27`/`1999-12-31` 抛 400、
+  `2026-10-27` 与 null 放行。
+- 白名单与说明见 `docs/tasks/2026-10-27-date-guard.md`。
+
+---
 ## 🗓️ 2026-10-23
 
 ### [2026-10-23-keep-login] 「记住我」升级为真正的「保持登录」

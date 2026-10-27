@@ -2,6 +2,7 @@ package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
 import com.kunzz.inventory.common.ProductName;
+import com.kunzz.inventory.common.TxnDateGuard;
 import com.kunzz.inventory.dto.MobileBatchSaveRequest;
 import com.kunzz.inventory.dto.MobileStockRequest;
 import com.kunzz.inventory.mapper.MobileStockMapper;
@@ -95,6 +96,8 @@ public class MobileStockService {
         String sys = sys(req.system());
         if (req.rows() == null || req.rows().isEmpty()) throw new BusinessException("没有要保存的出货行");
         LocalDate date = req.documentDate() != null ? req.documentDate() : LocalDate.now();
+        // 日期兜底校验（2026-10-27）：年份 <2000 直接拒绝
+        TxnDateGuard.requireSane(date);
 
         // ① 预检：按 (product, code, price) 聚合出货量，跨规格比对可用库存（对齐旧 outSummary 校验）
         Map<String, BigDecimal> summary = new LinkedHashMap<>();
@@ -153,6 +156,8 @@ public class MobileStockService {
         String name = normalizeName(req.productName());
         if (name == null) throw new BusinessException("产品名称不能为空");
         LocalDate date = req.date() != null ? req.date() : LocalDate.now();
+        // 日期兜底校验（2026-10-27）：年份 <2000 直接拒绝
+        TxnDateGuard.requireSane(date);
         LocalTime time = req.time() != null ? req.time() : LocalTime.now();
         BigDecimal in = nz(req.inQuantity());
         BigDecimal out = nz(req.outQuantity());
@@ -194,6 +199,8 @@ public class MobileStockService {
         String newName = req.productName() != null ? normalizeName(req.productName())
                 : str(old.get("product_name"));
         LocalDate date = req.date() != null ? req.date() : toLocalDate(old.get("date"));
+        // 日期兜底校验（2026-10-27）：年份 <2000 直接拒绝（历史脏数据改单时也会被拦下）
+        TxnDateGuard.requireSane(date);
         LocalTime time = req.time() != null ? req.time() : toLocalTime(old.get("time"));
         String newCode = req.codeNumber() != null ? blankToNull(req.codeNumber()) : str(old.get("code_number"));
         String newSpec = req.specification() != null ? blankToNull(req.specification()) : str(old.get("specification"));

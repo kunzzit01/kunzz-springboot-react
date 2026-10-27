@@ -1,6 +1,7 @@
 package com.kunzz.inventory.service;
 
 import com.kunzz.inventory.common.BusinessException;
+import com.kunzz.inventory.common.TxnDateGuard;
 import com.kunzz.inventory.dto.*;
 import com.kunzz.inventory.entity.*;
 import com.kunzz.inventory.mapper.StockInoutMapper;
@@ -190,6 +191,9 @@ public class StockService {
 
     @Transactional
     public StockInout createInout(StockInoutRequest req, String system) {
+        // ====== 日期兜底校验（2026-10-27）：年份 <2000 直接拒绝，防前端把 2026 提交成 0015 ======
+        TxnDateGuard.requireSane(req.date());
+
         boolean isIncoming = req.inQuantity() != null && req.inQuantity().signum() > 0;
         boolean isOutgoing = req.outQuantity() != null && req.outQuantity().signum() > 0;
 
@@ -449,6 +453,9 @@ public class StockService {
     /** 编辑进出货记录；operator = 当前登录用户显示名（只用于记录「编辑人」updated_by） */
     @Transactional
     public StockInout updateInout(Integer id, StockInoutRequest req, String system, String operator) {
+        // ====== 日期兜底校验（2026-10-27）：年份 <2000 直接拒绝，同创建路径 ======
+        TxnDateGuard.requireSane(req.date());
+
         // ====== 单价校验（对齐旧系统：不能为空且不能小于 0；0 合法） ======
         if (req.price() == null || req.price().signum() < 0) {
             throw new BusinessException("单价不能为空且不能小于0");
