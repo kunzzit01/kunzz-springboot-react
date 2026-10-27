@@ -1,0 +1,74 @@
+/* 日期输入框（DateField）：固定「年/月/日」显示的文本输入 + 日历按钮 */
+
+.date-field {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.date-field .date-field__text {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  letter-spacing: .06em;          /* 数字位稍微拉开，YYYY/MM/DD 更好读 */
+  font-variant-numeric: tabular-nums;
+}
+
+.date-field .date-field__text::selection {
+  background: #583e04;
+  color: #fff;
+}
+
+.date-field .date-field__text--invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
+.date-field .date-field__btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  color: #4b5563;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.date-field .date-field__btn:hover {
+  background: #f3f4f6;
+  border-color: #b9bdc2;
+  color: #111827;
+}
+
+.date-field .date-field__btn:active {
+  transform: translateY(1px);
+}
+
+.date-field .date-field__btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* 原生 date input 只用来弹日历：透明、1px、贴在按钮下方，不能 display:none（否则 showPicker 无效） */
+.date-field {
+  position: relative;
+}
+
+.date-field .date-field__native {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}

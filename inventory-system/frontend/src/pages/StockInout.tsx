@@ -9,6 +9,7 @@ import { useRealtime } from '../utils/useRealtime'
 import type { StockInout } from '../types'
 import '../styles/stockinout.css'
 import ModalClose from '../components/ModalClose'
+import DateField from '../components/DateField'
 import AiAssistant from '../components/AiAssistant'
 import { showToast } from '../utils/toast'
 
@@ -2052,8 +2053,9 @@ export default function StockInout() {
             <div className="modal-body">
               <div className="form-group">
                 <label htmlFor="sio-selected-date">选择日期 *</label>
-                <input ref={dateInputRef} type="date" id="sio-selected-date" className="form-input" value={rowsForm.date}
-                  onChange={(e) => setRowsForm({ ...rowsForm, date: e.target.value })} />
+                {/* 自定义日期框（2026-10-27）：固定「年/月/日」显示，不跟系统语言；聚焦直接选中「日」 */}
+                <DateField ref={dateInputRef} id="sio-selected-date" className="form-input" value={rowsForm.date}
+                  onChange={(iso) => setRowsForm({ ...rowsForm, date: iso })} />
               </div>
               <div className="form-group">
                 <label htmlFor="sio-rows-count">要创建的行数 *</label>
