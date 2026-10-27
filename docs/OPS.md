@@ -75,6 +75,30 @@ mvn -DskipTests package
 # 产物：target/inventory-backend-1.0.0.jar
 ```
 
+> **产物不入库（2026-10-27 起）**：`backend/target/` 全部被 `.gitignore` 忽略。
+> 以前 jar 被特意放行并入库，结果 `git pull` 会把工作区里较新的构建**回退成旧包**，
+> 造成“刚修好的功能上线后变回去”（2026-10-27 的排序/搜索就是这么丢的）。
+
+### 3.1.1 部署到 VPS（就地构建，推荐）
+
+```bash
+ssh root@<vps>
+cd /opt/kunzz-springboot-react
+
+git fetch origin main && git merge --ff-only origin/main
+cd backend && mvn -B -DskipTests package
+
+# 验证要上线的包确实包含新代码（可选但强烈推荐）
+unzip -p target/inventory-backend-1.0.0.jar BOOT-INF/classes/mapper/StockInoutMapper.xml \
+  | grep -Eq "ORDER BY created_at|branchSearchHaystack" && echo "新代码 OK"
+
+cp -p /opt/inventory/app.jar /opt/inventory/app.jar.bak.$(date +%Y%m%d_%H%M)
+install -o kunzz -g kunzz -m 644 target/inventory-backend-1.0.0.jar /opt/inventory/app.jar
+systemctl restart inventory-backend && sleep 10 && systemctl is-active inventory-backend
+```
+
+> 不要再用“git 里的 jar”——仓库已不再保存它；若要上传本地构建的包，用 `scp`，不要 `git add`。
+
 ### 3.2 启动（含环境变量）
 
 ```bash

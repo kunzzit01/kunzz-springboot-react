@@ -170,7 +170,7 @@ git pull --rebase origin main
 | `backend/static/index.html` | 指向带 hash 的资源名，构建即变 |
 | `backend/static/assets/index-<hash>.js/.css` | 文件名带 hash，新构建会**删旧文件加新文件** |
 | `backend/static/home/assets/**` | 同上（官网页） |
-| `backend/target/inventory-backend-1.0.0.jar` | 已被 `.gitignore` 特意放行，每次打包都变 |
+| `backend/target/inventory-backend-1.0.0.jar` | **2026-10-27 起不再纳入 git**（`.gitignore` 已忽略）：入库会被 `git pull` 回退成旧包，导致“刚修好的功能失效”。部署改为 VPS 上 `mvn package` 就地构建，见 `docs/OPS.md` 3.1 |
 | `inventory-system/frontend/package-lock.json` | 任何 `npm install` 都会改 |
 
 规则：

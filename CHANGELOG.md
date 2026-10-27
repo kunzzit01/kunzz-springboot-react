@@ -6,6 +6,20 @@
 ---
 ## 🗓️ 2026-10-27
 
+### [2026-10-27-untrack-jar] 后端 jar 退出 git，部署改为 VPS 就地构建
+
+- **事故**：排序（方案 B）+ 全列搜索改好并推了 git，但线上仍是旧逻辑。
+  原因：`backend/target/inventory-backend-1.0.0.jar` 之前被 `.gitignore` 特意放行并入库，
+  而部署流程是「`git pull` → 拷仓库里的 jar → 重启」。于是 pull 下来的是 `6df568b`（10:05）旧包：
+  里面 `ORDER BY date ASC, time ASC`、也没有 `branchSearchHaystack` → 两个修复静默回退。
+- **根治（方案 B）**：
+  - `git rm --cached backend/target/inventory-backend-1.0.0.jar`（磁盘保留）；
+  - `.gitignore` 删掉例外 `!backend/target/*.jar`；
+  - 部署固定为 **VPS 上构建**：`git pull` → `mvn -B -DskipTests package` → 校验产物 → 替换 → 重启，
+    写进 `docs/OPS.md` 3.1 / 3.1.1；
+  - `AGENTS.md` §4 热点表里关于该 jar 的说明同步修正。
+- **遗留**：git 历史里仍有旧 jar blob（仓库体积不会自动变小），彻底瘦身需重写历史，本次不做。
+
 ### [2026-10-27-inout-search] 进出货搜索框改为「全列模糊搜索」
 
 - **问题**：搜索框看起来像搜整张表，实际后端只匹配 `product_name / code_number / remark` 三列，

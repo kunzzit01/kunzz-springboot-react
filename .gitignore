@@ -7,7 +7,10 @@ dist/
 backend/target/
 *.class
 *.jar
-!backend/target/*.jar
+# 2026-10-27：不再放行后端构建产物（原来有 `!backend/target/*.jar`）。
+# 原因：jar 入库后，`git pull` 会把工作区里较新的构建**回退成旧包**，
+# 导致“刚修好的功能被覆盖”（10-27 排序/搜索就因此失效）。
+# 部署改为在 VPS 上 `mvn -DskipTests package` 就地构建，见 docs/OPS.md 3.1。
 .mvn/wrapper/maven-wrapper.jar
 
 # ---------- IDE ----------
