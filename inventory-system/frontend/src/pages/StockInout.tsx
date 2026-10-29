@@ -325,7 +325,19 @@ export default function StockInout() {
   const [undo, setUndo] = useState<{ ids: number[]; count: number } | null>(null)
   const undoTimer = useRef<number | null>(null)
   const [showTop, setShowTop] = useState(false)
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  // 搜索框默认展开与否跟随屏幕：≥1100px 直接展开（宽屏有空位，没必要只给个放大镜）
+  const [searchExpanded, setSearchExpanded] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1100 : true)
+  // 只在“跨过宽度阈值”时自动跟随，不干扰用户手动展开/收起
+  useEffect(() => {
+    let wide = typeof window !== 'undefined' ? window.innerWidth >= 1100 : true
+    const onResize = () => {
+      const next = window.innerWidth >= 1100
+      if (next !== wide) { wide = next; setSearchExpanded(next) }
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
 
