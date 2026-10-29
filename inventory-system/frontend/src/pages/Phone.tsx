@@ -305,10 +305,10 @@ export default function Phone() {
                     <i className="fas fa-calendar" style={{ color: '#ff5c00' }}></i>
                     选择日期
                   </label>
-                  <div className="enhanced-date-picker" id="date-picker">
-                    <DateField id="selected-date" compact value={date} onChange={setDate} wrapperStyle={{ width: 176 }}
-                      style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: 'clamp(8px, 0.74vw, 14px)', fontWeight: 600, color: '#374151', padding: 0 }} />
-                  </div>
+                  {/* 2026-10-29：去掉外层 .enhanced-date-picker（它自带边框），否则和 DateField 的胶囊边框叠成双框；
+                      直接用 DateField，尺寸/间距按本页控件统一 */}
+                  <DateField id="selected-date" value={date} onChange={setDate}
+                    className="ph-date-input" wrapperStyle={{ width: 'clamp(150px, 12vw, 200px)' }} />
                 </div>
               </div>
               <div className="controls-right">

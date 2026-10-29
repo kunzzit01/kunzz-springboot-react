@@ -469,3 +469,13 @@
        }.ph-root .work-area-kitchen{
            background: #ef4444;
        }
+/* 手机管理系统顶部「选择日期」的输入框（2026-10-29：统一用 DateField）
+   原来套了一层 .enhanced-date-picker（自带边框），和 DateField 的胶囊边框叠成双框，看起来又小又挤。 */
+/* 尺寸对齐本页相邻按钮（.btn-control / .btn-generate 的 padding+字号同一套 clamp） */
+.ph-root .ph-date-input {
+  padding: clamp(6px, 0.52vw, 10px) clamp(10px, 0.83vw, 16px);
+  font-size: clamp(10px, 0.73vw, 14px);
+  font-weight: 600;
+  line-height: 1.5;
+  color: #374151;
+}
