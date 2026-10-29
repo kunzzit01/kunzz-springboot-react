@@ -262,21 +262,8 @@ export default function DateRangeField({ start, end, onChange, placeholder = '�
               )
             })}
           </div>
-
-          <div className="date-cal__foot">
-            <button type="button" className="date-cal__link" onClick={() => apply(today, today)}>今天</button>
-            <button
-              type="button"
-              className="date-cal__link"
-              onClick={() => apply(
-                iso(view.y, view.m, 1),
-                iso(view.y, view.m, daysInMonth(view.y, view.m)),
-              )}
-            >
-              本月
-            </button>
-            <button type="button" className="date-cal__link date-cal__link--ghost" onClick={close}>取消</button>
-          </div>
+          {/* 页脚「今天 / 本月 / 取消」已去掉（2026-10-29 用户反馈）：页面右侧已有「快速选择（今天/这个月…）」，
+              取消也只需点外部或按 Esc，底部一排链接属于重复功能且占地方。 */}
         </div>,
         document.body,
       )}

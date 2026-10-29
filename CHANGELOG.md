@@ -118,6 +118,9 @@
   - CSS 新增 `.is-in-range`（浅橙）`.is-range-start/-end`（实心橙）与 footer 间距修正。
 - **改动范围**：`Kpi.tsx`、`Cost.tsx` 各删掉 60+ 行内联日历与 `calOpen/calView/calSelStart/selectDate/calDays/changeCalMonth/inRange`。
 - **验证**：`tsc -b`、`npm run build` 通过；无残留 `calSelStart/changeCalMonth`；无头 Chrome 渲染区间样例（1→29）校对高亮与页脚排版。
+- **2026-10-29 去掉页脚**：用户反馈「今天 / 本月 / 取消」没多大用（页面右侧本来就有「快速选择」；
+  取消只需点外部或按 Esc）—— 区间弹层不再渲染 `.date-cal__foot`，弹层高度减一截；
+  单日期 DateField 的「今天 / 清除」保留（那里是真快捷操作）。
 
 ### [2026-10-27-date-field] 导出弹窗里 6 个“自由文本日期框”也统一成 DateField
 

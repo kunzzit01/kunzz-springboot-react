@@ -254,9 +254,6 @@
   box-shadow: 0 2px 6px rgba(255, 92, 0, .35);
 }
 
-/* 底部第三个链接（取消）用灰调，别和「今天/本月」抢橙色 */
-.date-cal__foot .date-cal__link--ghost { color: #6b7280; margin-left: auto; }
-.date-cal__foot .date-cal__link--ghost:hover { background: #f3f4f6; color: #374151; }
 
 /* 触发按钮的展开态（沿用各页 .date-range-picker 的底色/边框） */
 .date-range-picker.is-open { border-color: #ff7b00 !important; box-shadow: 0 0 0 3px rgba(255, 123, 0, .12); }
