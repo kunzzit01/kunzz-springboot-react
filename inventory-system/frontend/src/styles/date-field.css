@@ -69,57 +69,58 @@
 .date-field > input[type="date"] { display: none !important; }
 
 /* ─── 自绘日历弹层（portal 到 body，fixed 定位，避免被表格 overflow 裁掉） ─── */
-/* z-index 必须高于站内所有弹窗遮罩：stockinout.css 的 .modal-overlay 是 15000，
-   之前设 10050 导致日历被「新增记录」弹窗盖住，只露出底部「今天/清除」（2026-10-27 实测）。 */
+/* z-index 必须高于站内所有弹窗遮罩：stockinout.css 的 .modal-overlay 是 15000。 */
 .date-cal {
   position: fixed;
   z-index: 100000;
-  width: 292px;
-  padding: 10px 10px 6px;
+  width: 300px;
+  padding: 12px 12px 8px;
   background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 12px 32px rgba(17, 24, 39, .18), 0 2px 6px rgba(17, 24, 39, .06);
+  border: 1px solid #e8eaed;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, .16), 0 3px 8px rgba(17, 24, 39, .06);
   font-family: inherit;
   color: #1f2937;
   outline: none;
-  animation: date-cal-in .12s ease-out;
+  animation: date-cal-in .14s ease-out;
 }
 
 @keyframes date-cal-in {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(-6px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* 头部：‹‹ ‹  2026 年 10 月  › ›› */
 .date-cal__head {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  user-select: none;
 }
 
 .date-cal__title {
   flex: 1 1 auto;
   text-align: center;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 700;
   color: #111827;
-  letter-spacing: .02em;
-  user-select: none;
+  letter-spacing: .3px;
+  cursor: default;
 }
 
 .date-cal__nav {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
-  color: #9ca3af;
-  font-size: 14px;
+  color: #6b7280;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   transition: background .12s, color .12s;
@@ -127,42 +128,52 @@
 
 .date-cal__nav:hover { background: #f3f4f6; color: #111827; }
 
+/* 年跳（« »）比月跳（‹ ›）更淡，避免抢视线 */
+.date-cal__head .date-cal__nav:first-child,
+.date-cal__head .date-cal__nav:nth-child(2) { color: #9ca3af; }
+.date-cal__head .date-cal__nav:first-child { font-size: 13px; color: #cbcfd5; }
+.date-cal__head .date-cal__nav:nth-child(4) { font-size: 13px; color: #cbcfd5; }
+
+/* 星期行 */
 .date-cal__week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  margin: 2px 0 2px;
+  margin: 4px 0 6px;
   font-size: 11.5px;
+  font-weight: 600;
   color: #9ca3af;
   text-align: center;
-  user-select: none;
+  letter-spacing: .5px;
 }
 
+/* 日期网格 */
 .date-cal__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 3px;
 }
 
 .date-cal__day {
-  height: 34px;
+  height: 36px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: transparent;
   color: #374151;
-  font-size: 13px;
+  font-size: 13.5px;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   transition: background .1s, color .1s, box-shadow .1s;
 }
 
-.date-cal__day:hover { background: #fff2e8; color: #b84300; }
+.date-cal__day:hover { background: #fff3e8; color: #b84300; }
+.date-cal__day:active { transform: scale(.96); }
 
-/* 上下月补白 */
-.date-cal__day.is-out { color: #c8ccd2; }
-.date-cal__day.is-out:hover { background: #f9fafb; color: #9ca3af; }
+/* 上下月补白：保留可读性但明显退后 */
+.date-cal__day.is-out { color: #c2c7cd; }
+.date-cal__day.is-out:hover { background: #f6f7f9; color: #9ca3af; }
 
-/* 今天：橙色描边 */
+/* 今天：橙色描边（选中时让位给实心） */
 .date-cal__day.is-today {
   box-shadow: inset 0 0 0 1.5px #ff5c00;
   color: #ff5c00;
@@ -170,7 +181,7 @@
 }
 
 /* 键盘/鼠标移动的焦点日 */
-.date-cal__day.is-cursor { background: #fff2e8; }
+.date-cal__day.is-cursor { background: #fff3e8; }
 
 /* 选中：橙底白字 */
 .date-cal__day.is-selected,
@@ -179,23 +190,26 @@
   background: #ff5c00;
   color: #fff;
   font-weight: 700;
-  box-shadow: none;
+  box-shadow: 0 2px 6px rgba(255, 92, 0, .35);
 }
 
+/* 超出 min/max 的日期 */
 .date-cal__day.is-disabled,
 .date-cal__day.is-disabled:hover {
   background: transparent;
-  color: #e5e7eb;
+  color: #e2e5e9;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
+/* 底部：今天 / 清除 */
 .date-cal__foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-top: 8px;
   padding-top: 6px;
-  border-top: 1px solid #f3f4f6;
+  border-top: 1px solid #f1f2f4;
 }
 
 .date-cal__link {
@@ -203,12 +217,16 @@
   background: transparent;
   color: #ff5c00;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
-  padding: 4px 8px;
-  border-radius: 6px;
+  padding: 5px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background .12s;
+  transition: background .12s, color .12s;
 }
 
-.date-cal__link:hover { background: #fff2e8; }
+.date-cal__link:hover { background: #fff3e8; }
+
+/* 「清除」用灰调，别和「今天」抢橙色 */
+.date-cal__foot .date-cal__link:last-child { color: #6b7280; }
+.date-cal__foot .date-cal__link:last-child:hover { background: #f3f4f6; color: #374151; }

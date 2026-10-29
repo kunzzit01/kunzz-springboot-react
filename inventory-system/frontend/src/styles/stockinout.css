@@ -503,6 +503,32 @@
   outline: none; border-color: #583e04; box-shadow: 0 0 0 3px rgba(88,62,4,.1);
 }
 
+/* 统一 select 下拉箭头（2026-10-29）
+   Chrome 新版表单控件会把原生箭头画成右侧一个独立小方块，跟我们的圆角边框叠在一起→像多出一个空格子；
+   去掉原生箭头，换成与主题一致的 SVG chevron。 */
+.sio-root select.form-input,
+.sio-root select.form-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 14px;
+  cursor: pointer;
+}
+.sio-root select.form-input:hover,
+.sio-root select.form-select:hover,
+.sio-root select.form-input:focus,
+.sio-root select.form-select:focus {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23583e04' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+.sio-root select.form-input:disabled,
+.sio-root select.form-select:disabled {
+  background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed;
+}
+
 /* 新增记录弹窗（对齐旧版 live stockeditall.css date-rows-modal：白底黑标题 + 2px 黑边 + 绿色创建按钮） */
 .sio-root .modal-content.sio-rows-modal-content {
   max-width: 400px; width: 90%; padding: 0; border: 2px solid #000;
