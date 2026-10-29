@@ -926,12 +926,24 @@ export default function StockRecords() {
 
           <div className="header-right-section">
             <div className="header-search">
-              <div className={'smartSearchWrapper' + ((searchExpanded[sys] ?? (typeof window !== 'undefined' && window.innerWidth >= 1100)) ? ' expanded' : '')}
-                onClick={(e) => { if (!(searchExpanded[sys] ?? (typeof window !== 'undefined' && window.innerWidth >= 1100))) { e.stopPropagation(); setSearchExpanded(prev => ({ ...prev, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 200) } }}>
+              <div className={'smartSearchWrapper' + ((searchExpanded[sys]) ? ' expanded' : '')}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const t = e.target as HTMLElement
+                  if (t.tagName === 'INPUT') return
+                  if (!searchExpanded[sys]) { setSearchExpanded(prev => ({ ...prev, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 200) }
+                  else if (!searchRefs.current[sys]?.value) setSearchExpanded(prev => ({ ...prev, [sys]: false }))
+                }}>
                 {/* 左侧图标即搜索模式切换：放大镜=模糊 / 等号=精确（货品名完全等于关键字）；对齐进出货页 */}
                 <span className="smartSearch-icon"
                   title={exactMatch[sys] ? '精确搜索：只显示货品名称完全等于关键字的行（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的行（点击切换为精确）'}
-                  onClick={(e) => { e.stopPropagation(); setExactMatch(prev => ({ ...prev, [sys]: !prev[sys] })); setSearchExpanded(p => ({ ...p, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 50) }}>
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // 空关键字时图标 = 展开/收起开关；有关键字时才切换「精确 / 模糊」
+                    const cur = searchRefs.current[sys]?.value || ''
+                    if (!cur.trim()) { setSearchExpanded(p => ({ ...p, [sys]: !p[sys] })); return }
+                    setExactMatch(prev => ({ ...prev, [sys]: !prev[sys] })); setSearchExpanded(p => ({ ...p, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 50)
+                  }}>
                   <i className={'fas ' + (exactMatch[sys] ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch[sys] ? '#ff7b00' : '#9ca3af' }} />
                 </span>
                 <input ref={(el) => { searchRefs.current[sys] = el }} type="text" id={sys + '-unified-filter'} className="smartSearch-input"

@@ -325,19 +325,8 @@ export default function StockInout() {
   const [undo, setUndo] = useState<{ ids: number[]; count: number } | null>(null)
   const undoTimer = useRef<number | null>(null)
   const [showTop, setShowTop] = useState(false)
-  // 搜索框默认展开与否跟随屏幕：≥1100px 直接展开（宽屏有空位，没必要只给个放大镜）
-  const [searchExpanded, setSearchExpanded] = useState(() =>
-    typeof window !== 'undefined' ? window.innerWidth >= 1100 : true)
-  // 只在“跨过宽度阈值”时自动跟随，不干扰用户手动展开/收起
-  useEffect(() => {
-    let wide = typeof window !== 'undefined' ? window.innerWidth >= 1100 : true
-    const onResize = () => {
-      const next = window.innerWidth >= 1100
-      if (next !== wide) { wide = next; setSearchExpanded(next) }
-    }
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  // 搜索框默认收起（2026-10-29 用户定稿：刷新后保持收起，需要时自己点开）
+  const [searchExpanded, setSearchExpanded] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
 
@@ -1707,7 +1696,17 @@ export default function StockInout() {
           <div className="header-right-group">
             <div className="header-search">
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
-                onClick={(e) => { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50) }}>
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const t = e.target as HTMLElement
+                  if (t.tagName === 'INPUT') return           // 点输入框本身不切换
+                  if (!searchExpanded) {
+                    setSearchExpanded(true)
+                    setTimeout(() => searchInputRef.current?.focus(), 50)
+                  } else if (!searchInputRef.current?.value) {
+                    setSearchExpanded(false)                  // 空的时候再点一下 = 收起
+                  }
+                }}>
                 {/* 左侧图标即搜索模式切换：放大镜=模糊（含关键字全部匹配）/ 等号=精确（产品名完全等于关键字）；点击同时展开输入框 */}
                 <span className="smartSearch-icon"
                   title={searchExpanded

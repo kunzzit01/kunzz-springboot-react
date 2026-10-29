@@ -194,7 +194,7 @@ export default function StockProducts() {
     if (k === sortKey) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(k); setSortDir('asc') }
   }
-  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
+  const [searchExpanded, setSearchExpanded] = useState(false)   // 默认收起（2026-10-29）
   // 搜索模式：false=全能模糊（名称/编号/规格/类型/供应商/冰箱分类） / true=精准（货品名完全等于关键字）；对齐总库存 smartSearch
   const [exactMatch, setExactMatch] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -956,11 +956,23 @@ export default function StockProducts() {
             <div className="filter-item">
               <label>搜索货品</label>
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
-                onClick={(e) => { if (!searchExpanded) { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) } }}>
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const t = e.target as HTMLElement
+                  if (t.tagName === 'INPUT') return
+                  if (!searchExpanded) { setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) }
+                  else if (!(searchRef.current as HTMLInputElement | null)?.value) setSearchExpanded(false)
+                }}>
                 {/* 左侧图标即搜索模式切换：放大镜=全能模糊 / 等号=精准（货品名完全等于关键字）；对齐总库存/进出货页 */}
                 <span className="smartSearch-icon"
                   title={exactMatch ? '精准搜索：只显示货品名字完全等于关键字的行（点击切换为全能）' : '全能搜索：货品名字/编号/规格/类型/供应商/冰箱分类 任一包含关键字（点击切换为精准）'}
-                  onClick={(e) => { e.stopPropagation(); toggleExact() }}>
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // 空关键字时图标 = 展开/收起开关；有关键字时才切换「精准 / 全能」
+                    const cur = (searchRef.current as HTMLInputElement | null)?.value || ''
+                    if (!cur.trim()) { setSearchExpanded(v => !v); return }
+                    toggleExact()
+                  }}>
                   <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
                 </span>
                 <input ref={searchRef} type="text" className="smartSearch-input" placeholder={exactMatch ? '精准：输入完整货品名字...' : '搜索名字/编号/规格/类型/供应商/冰箱分类...'}

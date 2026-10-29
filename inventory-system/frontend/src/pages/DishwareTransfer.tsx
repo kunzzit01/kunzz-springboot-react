@@ -41,7 +41,7 @@ export default function DishwareTransferPage() {
   const [trQuickOpen, setTrQuickOpen] = useState(false)
   const [trRestFilter, setTrRestFilter] = useState('')
   const [kw, setKw] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
+  const [searchExpanded, setSearchExpanded] = useState(false)   // 默认收起（2026-10-29）
   const searchRef = useRef<HTMLInputElement>(null)
 
   const trNowYear = new Date().getFullYear()
@@ -396,7 +396,13 @@ export default function DishwareTransferPage() {
           <div className="header-right-group">
             <div className="header-search">
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
-                onClick={(e) => { if (!searchExpanded) { e.stopPropagation(); setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) } }}>
+                onClick={(e) => {
+                  e.stopPropagation()
+                  const t = e.target as HTMLElement
+                  if (t.tagName === 'INPUT') return
+                  if (!searchExpanded) { setSearchExpanded(true); setTimeout(() => searchRef.current?.focus(), 200) }
+                  else if (!(searchRef.current as HTMLInputElement | null)?.value) setSearchExpanded(false)
+                }}>
                 <i className="fas fa-search smartSearch-icon"></i>
                 <input ref={searchRef} type="text" className="smartSearch-input" placeholder="搜索碗碟名称、编号或分类..."
                   onChange={(e) => setKw(e.target.value)} />
