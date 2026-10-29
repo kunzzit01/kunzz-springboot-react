@@ -10,6 +10,7 @@ import type { StockInout } from '../types'
 import '../styles/stockinout.css'
 import ModalClose from '../components/ModalClose'
 import DateField from '../components/DateField'
+import SelectField from '../components/SelectField'
 import AiAssistant from '../components/AiAssistant'
 import { showToast } from '../utils/toast'
 
@@ -2117,10 +2118,11 @@ export default function StockInout() {
                 <>
                   <div className="form-group">
                     <label>店面</label>
-                    <select className="form-input" value={exportForm.system} onChange={(e) => setExportForm({ ...exportForm, system: e.target.value })}>
-                      <option value="">请选择系统</option>
-                      <option value="j1">J1</option><option value="j2">J2</option><option value="j3">J3</option>
-                    </select>
+                    {/* 2026-10-29：原生 select 展开后是系统灰白菜单，换成自绘下拉 */}
+                    <SelectField id="export-system" value={exportForm.system}
+                      placeholder="请选择系统"
+                      options={[{ value: 'j1', label: 'J1' }, { value: 'j2', label: 'J2' }, { value: 'j3', label: 'J3' }]}
+                      onChange={(v) => setExportForm({ ...exportForm, system: v })} />
                   </div>
                   <div className="form-group">
                     <label>发票日期</label>

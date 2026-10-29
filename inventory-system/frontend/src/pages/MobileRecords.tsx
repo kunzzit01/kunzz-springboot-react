@@ -8,6 +8,7 @@ import { useMobileAccess, MobileDenied } from '../utils/useMobileAccess'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/mobile-records.css'
 import DateField from '../components/DateField'
+import SelectField from '../components/SelectField'
 
 /**
  * 手机出货记录（1:1 对齐旧系统 /jX/j1stockeditmobile.php「手机出货记录 - JX」）
@@ -412,11 +413,11 @@ export default function MobileRecords() {
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-system">店面</label>
-                <select id="exp-system" value={exportForm.system} onChange={e => setExportForm(f => ({ ...f, system: e.target.value }))}>
-                  <option value="j1">J1</option>
-                  <option value="j2">J2</option>
-                  <option value="j3">J3</option>
-                </select>
+                {/* 2026-10-29：原生 select 的系统菜单太土，换自绘下拉 */}
+                <SelectField id="exp-system" compact value={exportForm.system}
+                  placeholder="请选择系统"
+                  options={[{ value: 'j1', label: 'J1' }, { value: 'j2', label: 'J2' }, { value: 'j3', label: 'J3' }]}
+                  onChange={(v) => setExportForm(f => ({ ...f, system: v }))} />
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-inv-date">发票日期</label>

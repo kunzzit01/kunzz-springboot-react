@@ -1,0 +1,115 @@
+/* ─── 自绘下拉 SelectField（替代原生 <select> 的系统菜单） ───────────────── */
+
+.sel-field {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+/* 触发按钮：外观对齐页面里的 .form-input，避免和旁边的输入框不齐 */
+.sel-field .sel-field__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  color: #583e04;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+
+.sel-field .sel-field__trigger:hover { border-color: #c7ccd3; }
+.sel-field .sel-field__trigger:focus-visible,
+.sel-field--open .sel-field__trigger {
+  outline: none;
+  border-color: #583e04;
+  box-shadow: 0 0 0 3px rgba(88, 62, 4, .1);
+}
+
+.sel-field .sel-field__trigger:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.sel-field .sel-field__trigger.is-placeholder { color: #9ca3af; }
+
+.sel-field .sel-field__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sel-field .sel-field__chev {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: #9ca3af;
+  transition: transform .16s ease, color .16s;
+}
+
+.sel-field--open .sel-field__chev { transform: rotate(180deg); color: #583e04; }
+
+/* 小尺寸（手机版弹窗） */
+.sel-field--compact .sel-field__trigger { padding: 6px 9px; font-size: 13px; border-radius: 6px; }
+
+/* 选项面板：portal 到 body，fixed 定位（不被弹窗 overflow 裁掉） */
+.sel-pop {
+  position: fixed;
+  z-index: 100000;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, .16), 0 3px 8px rgba(17, 24, 39, .06);
+  overflow-y: auto;
+  outline: none;
+  animation: sel-pop-in .12s ease-out;
+}
+
+@keyframes sel-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.99); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sel-pop .sel-pop__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  color: #374151;
+  text-align: left;
+  cursor: pointer;
+  transition: background .1s, color .1s;
+}
+
+.sel-pop .sel-pop__opt:hover,
+.sel-pop .sel-pop__opt.is-active { background: #fff3e8; color: #b84300; }
+
+.sel-pop .sel-pop__opt.is-selected { color: #ff5c00; font-weight: 700; background: #fff7f0; }
+.sel-pop .sel-pop__opt.is-selected:hover { background: #fff3e8; }
+.sel-pop .sel-pop__opt i { font-size: 11px; }
+
+.sel-pop .sel-pop__empty {
+  padding: 10px;
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+}

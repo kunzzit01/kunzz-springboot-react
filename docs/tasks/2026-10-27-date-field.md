@@ -22,6 +22,9 @@
   - inventory-system/frontend/src/pages/Phone.tsx（1 处）
   - inventory-system/frontend/src/pages/Staff.tsx（1 处）
   - inventory-system/frontend/src/pages/MobileRecords.tsx（导出弹窗 3 处）
+  - inventory-system/frontend/src/components/SelectField.tsx（新增：自绘下拉）
+  - inventory-system/frontend/src/styles/select-field.css（新增）
+  - inventory-system/frontend/src/styles/mobile-records.css（select 箭头）
   - docs/tasks/2026-10-27-date-field.md
   - CHANGELOG.md（仅追加）
 - 明确不碰：backend/**、backend/static/**、其它页面（除上面列出的）、database/*.sql
