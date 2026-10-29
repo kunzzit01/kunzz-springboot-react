@@ -36,6 +36,9 @@
   前端 `utils/authToken`、`utils/authSession`(新)、`api/http`、`api/index`、`types`、`App.tsx`、
   `components/AppLayout`、`pages/Login`、`pages/MobileLogin`、`pages/ChangePassword`、
   `pages/Devices`(新)、`utils/useMobileAccess`、`styles/sidebar.css`。
+- **运维副本**：建表可跑 `scripts/apply_ddl_user_devices_2026-10-28.sh`
+  （`--remote root@<vps>` 一条命令从本地执行，幂等，自带校验），
+  完整上线/验证/回滚步骤见 `docs/DEPLOY_2026-10-28-remember-device.md`。
 
 
 ### [2026-10-27-untrack-jar] 后端 jar 退出 git，部署改为 VPS 就地构建

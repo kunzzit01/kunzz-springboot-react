@@ -41,6 +41,8 @@
 
 ### 其它
 - `add_new_tables_user_devices.sql`（新，DDL 需在数据库手工执行一次）
+- `scripts/apply_ddl_user_devices_2026-10-28.sh`（新，幂等建表，可 `--remote` 直接对生产执行）
+- `docs/DEPLOY_2026-10-28-remember-device.md`（新，远程部署/验证/回滚步骤）
 - `docs/tasks/2026-10-28-remember-device.md`（本文件）
 - `CHANGELOG.md`（只追加）
 
