@@ -1580,7 +1580,7 @@ export default function StockInout() {
     }
     const sd = dmy(exportForm.start)
     const ed = dmy(exportForm.end)
-    if (!sd || !ed) { showMsg('日期格式需为 DD/MM/YYYY', 'error'); return }
+    if (!sd || !ed) { showMsg('请选择开始和结束日期', 'error'); return }
     try {
       if (system === 'central') {
         // 中央 → invoice PDF（对齐旧系统 confirmExport：出库数据 + 发票模板）
@@ -2092,7 +2092,7 @@ export default function StockInout() {
         </div>
       )}
 
-      {/* 导出弹窗（对齐 export-modal：DD/MM/YYYY）；宽度由 CSS 自适应（小屏不溢出） */}
+      {/* 导出弹窗（2026-10-27 起日期用 DateField，固定 YYYY/MM/DD + 中文日历）；宽度由 CSS 自适应（小屏不溢出） */}
       {exportOpen && (
         <div className="modal-overlay" onClick={() => setExportOpen(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -2103,14 +2103,14 @@ export default function StockInout() {
             <div className="modal-body">
               <div className="form-group">
                 <label>开始日期</label>
-                <input type="text" className="form-input" placeholder="DD/MM/YYYY" value={exportForm.start}
-                  onChange={(e) => setExportForm({ ...exportForm, start: e.target.value })} />
+                <DateField className="form-input" value={exportForm.start}
+                  onChange={(iso) => setExportForm({ ...exportForm, start: iso })} />
                 <small style={{ color: '#6b7280', fontSize: 12 }}>可以选择过去或未来的日期</small>
               </div>
               <div className="form-group">
                 <label>结束日期</label>
-                <input type="text" className="form-input" placeholder="DD/MM/YYYY" value={exportForm.end}
-                  onChange={(e) => setExportForm({ ...exportForm, end: e.target.value })} />
+                <DateField className="form-input" value={exportForm.end}
+                  onChange={(iso) => setExportForm({ ...exportForm, end: iso })} />
                 <small style={{ color: '#6b7280', fontSize: 12 }}>可以选择过去或未来的日期</small>
               </div>
               {system === 'central' && (
@@ -2124,8 +2124,8 @@ export default function StockInout() {
                   </div>
                   <div className="form-group">
                     <label>发票日期</label>
-                    <input type="text" className="form-input" placeholder="DD/MM/YYYY" value={exportForm.invoiceDate}
-                      onChange={(e) => setExportForm({ ...exportForm, invoiceDate: e.target.value })} />
+                    <DateField className="form-input" value={exportForm.invoiceDate}
+                      onChange={(iso) => setExportForm({ ...exportForm, invoiceDate: iso })} />
                     <small style={{ color: '#6b7280', fontSize: 12 }}>可以选择过去或未来的日期</small>
                   </div>
                   <div className="form-group">

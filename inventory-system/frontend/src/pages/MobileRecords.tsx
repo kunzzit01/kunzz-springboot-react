@@ -7,6 +7,7 @@ import { showToast } from '../utils/toast'
 import { useMobileAccess, MobileDenied } from '../utils/useMobileAccess'
 import { useRealtime } from '../utils/useRealtime'
 import '../styles/mobile-records.css'
+import DateField from '../components/DateField'
 
 /**
  * 手机出货记录（1:1 对齐旧系统 /jX/j1stockeditmobile.php「手机出货记录 - JX」）
@@ -211,8 +212,12 @@ export default function MobileRecords() {
   }
 
   // ===== 导出（对齐旧 confirmExport → 生成 PDF 发票） =====
+  /** 接受 ISO（DateField 输出）与旧 DD/MM/YYYY 两种写法 */
   const parseDMY = (s: string) => {
-    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    const t = (s || '').trim()
+    const iso = t.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]))
+    const m = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
     if (!m) return null
     return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]))
   }
@@ -333,12 +338,12 @@ export default function MobileRecords() {
 
             <button className="btn btn-warning" onClick={() => {
               const t = fmtDay(new Date())
-              const dmy = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`
+              // 日期统一用 ISO（YYYY-MM-DD）：DateField 只认这个格式
               setExportForm({
-                startDate: rangeStart ? dmy(fmtDay(rangeStart)) : dmy(t),
-                endDate: rangeEnd ? dmy(fmtDay(rangeEnd)) : dmy(t),
+                startDate: rangeStart ? fmtDay(rangeStart) : t,
+                endDate: rangeEnd ? fmtDay(rangeEnd) : t,
                 system: system,
-                invoiceDate: dmy(t),
+                invoiceDate: t,
                 invoiceSuffix: '',
               })
               setExportOpen(true)
@@ -397,13 +402,13 @@ export default function MobileRecords() {
 
               <div className="export-form-group">
                 <label htmlFor="exp-start">开始日期</label>
-                <input type="text" id="exp-start" placeholder="DD/MM/YYYY" value={exportForm.startDate}
-                  onChange={e => setExportForm(f => ({ ...f, startDate: e.target.value }))} />
+                <DateField id="exp-start" className="export-input" value={exportForm.startDate}
+                  onChange={(iso) => setExportForm(f => ({ ...f, startDate: iso }))} />
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-end">结束日期</label>
-                <input type="text" id="exp-end" placeholder="DD/MM/YYYY" value={exportForm.endDate}
-                  onChange={e => setExportForm(f => ({ ...f, endDate: e.target.value }))} />
+                <DateField id="exp-end" className="export-input" value={exportForm.endDate}
+                  onChange={(iso) => setExportForm(f => ({ ...f, endDate: iso }))} />
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-system">店面</label>
@@ -415,8 +420,8 @@ export default function MobileRecords() {
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-inv-date">发票日期</label>
-                <input type="text" id="exp-inv-date" placeholder="DD/MM/YYYY" value={exportForm.invoiceDate}
-                  onChange={e => setExportForm(f => ({ ...f, invoiceDate: e.target.value }))} />
+                <DateField id="exp-inv-date" className="export-input" value={exportForm.invoiceDate}
+                  onChange={(iso) => setExportForm(f => ({ ...f, invoiceDate: iso }))} />
               </div>
               <div className="export-form-group">
                 <label htmlFor="exp-suffix">发票号码后三位 *</label>

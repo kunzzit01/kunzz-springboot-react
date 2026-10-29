@@ -89,6 +89,20 @@
   完整上线/验证/回滚步骤见 `docs/DEPLOY_2026-10-28-remember-device.md`。
 
 
+### [2026-10-27-date-field] 导出弹窗里 6 个“自由文本日期框”也统一成 DateField
+
+- **问题**：它们不是 `type="date"`，而是 `<input type="text" placeholder="DD/MM/YYYY">` 自由文本，没有日历，
+  要手敲日期，而且默认值又是 `YYYY-MM-DD`，两种格式混着。
+- **位置（6 处）**：进出货「生成Excel」弹窗（开始/结束/发票日期）、
+  手机出货记录「生成PDF发票」弹窗（开始/结束/发票日期）。
+- **改法**：全部换 `<DateField>`（固定 `YYYY/MM/DD` + 聚焦选中「日」+ 中文日历），值统一 ISO `YYYY-MM-DD`：
+  `StockInout.doExport` 的 `dmy()` 保留兼容旧值；`MobileRecords.parseDMY()` 改为同时接受 ISO 与旧 DD/MM/YYYY，
+  弹窗初值由 `dmy(t)` 改成 `fmtDay(t)`。
+- **顺带修掉一个潜在 bug**：发票日期若手输成 `DD/MM/YYYY`，会直接把这种字符串传给 `generateInvoiceNumber()`
+  （`new Date('29/10/2026T00:00:00')` 非法）→ 发票号退化成 `J1-XXXX-001`；统一 ISO 后不会再发生。
+- **验证**：`tsc -b` 通过；全局再查 `placeholder="DD/MM/YYYY"` → 0 处（只剩注释）。
+- **未动**：`Jobs.tsx` 的日期**区间**筛选是 flatpickr RangePicker（中文显示已正常），要统一需另做 RangeField。
+
 ### [2026-10-27-untrack-jar] 后端 jar 退出 git，部署改为 VPS 就地构建
 
 - **事故**：排序（方案 B）+ 全列搜索改好并推了 git，但线上仍是旧逻辑。

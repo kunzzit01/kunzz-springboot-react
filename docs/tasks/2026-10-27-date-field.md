@@ -21,6 +21,7 @@
   - inventory-system/frontend/src/pages/MobileOut.tsx（1 处）
   - inventory-system/frontend/src/pages/Phone.tsx（1 处）
   - inventory-system/frontend/src/pages/Staff.tsx（1 处）
+  - inventory-system/frontend/src/pages/MobileRecords.tsx（导出弹窗 3 处）
   - docs/tasks/2026-10-27-date-field.md
   - CHANGELOG.md（仅追加）
 - 明确不碰：backend/**、backend/static/**、其它页面（除上面列出的）、database/*.sql
