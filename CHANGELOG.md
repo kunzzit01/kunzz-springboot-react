@@ -6,6 +6,21 @@
 ---
 ## 🗓️ 2026-10-29
 
+### [2026-10-29-brand-icons] 成本仪表盘：三个外卖卡片换品牌图标 + 卡片图标风格统一
+
+- **问题**：GrabFood / foodpanda / ShopeeFood 三张成本卡片原来都是通用图标
+  （`fa-shuttle-van` / `fa-shopping-bag` / `fa-shopping-bag`），看不出是哪家；
+  而且卡片图标字号用的是 `clamp(20px, 1.5vw, 28px)`，不同屏幕宽度下大小会飘。
+- **图标来源**：Simple Icons（simpleicons.org，图标数据 CC0，商标归各公司）：`grab` / `foodpanda` / `shopee`。
+  ShopeeFood 无独立条目，用母品牌 Shopee（购物袋 + S，即其图标主体）。
+- **做法**：新增 `components/BrandIcons.tsx`（`fill=currentColor` + `viewBox 0 0 24 24`），
+  颜色取与趋势图图例相同的品牌色：Grab `#00B14F`、foodpanda `#D70F64`、Shopee `#EE4D2D`；
+  Grab 是文字标，字号小时会糊 → 该卡 44，panda 30，Shopee 27（光学微调）。
+- **统一风格**：`cost.css` 把图标槽固定 `50×50`、业务图标固定 `24px` / `#111827`，
+  业务图标（FA solid）与品牌图标（SVG）共用同一槽位，视觉重量对齐。
+- **验证**：`tsc -b`、`npm run build` 通过；用真实 `cost.css` + FontAwesome 本地包搭无头渲染，
+  一次看过 11 张卡片：品牌色/深灰图标混排不拥抢。
+
 ### [2026-10-29-deps-security] Stage 3：puppeteer-core 25.8 → 25.16（仓库验证脚本）
 
 - **只影响 dev 工具链**，不进 `dist/`（构建产物 grep 0 命中），线上零影响；
