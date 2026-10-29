@@ -14,12 +14,13 @@
 - **图标来源**：Simple Icons（simpleicons.org，图标数据 CC0，商标归各公司）：`grab` / `foodpanda` / `shopee`。
   ShopeeFood 无独立条目，用母品牌 Shopee（购物袋 + S，即其图标主体）。
 - **做法**：新增 `components/BrandIcons.tsx`（`fill=currentColor` + `viewBox 0 0 24 24`），
-  颜色取与趋势图图例相同的品牌色：Grab `#00B14F`、foodpanda `#D70F64`、Shopee `#EE4D2D`；
-  Grab 是文字标，字号小时会糊 → 该卡 44，panda 30，Shopee 27（光学微调）。
+  **颜色与其它图标完全一致**（继承卡片图标的 `dynamic-color` → `#000`，不用品牌色，用户 2026-10-29 明确要求）：
+  Grab 文字标尺寸小时会糊 → 该卡 44，panda 30、Shopee 27（光学微调）。
 - **统一风格**：`cost.css` 把图标槽固定 `50×50`、业务图标固定 `24px` / `#111827`，
   业务图标（FA solid）与品牌图标（SVG）共用同一槽位，视觉重量对齐。
 - **验证**：`tsc -b`、`npm run build` 通过；用真实 `cost.css` + FontAwesome 本地包搭无头渲染，
-  一次看过 11 张卡片：品牌色/深灰图标混排不拥抢。
+  一次看过 10 张卡片：品牌图标与业务图标同为纯黑 solid，视觉重量对齐。
+- **注**：趋势图图例/折线仍用品牌色（Grab 绿 / foodpanda 粉 / Shopee 橙），那是有语义的区分，不动。
 
 ### [2026-10-29-deps-security] Stage 3：puppeteer-core 25.8 → 25.16（仓库验证脚本）
 
