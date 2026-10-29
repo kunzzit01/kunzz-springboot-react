@@ -81,13 +81,15 @@ if [ -n "$REMOTE" ] && [ "$LOCAL" -eq 0 ]; then
   if [ "$DRY_RUN" -eq 1 ]; then
     echo "[dry-run] scp \"$SQL\" $REMOTE:/tmp/kunzz_user_devices.sql"
     echo "[dry-run] scp \"${BASH_SOURCE[0]}\" $REMOTE:/tmp/kunzz_apply_ddl.sh"
-    echo "[dry-run] ssh $REMOTE 'sudo bash /tmp/kunzz_apply_ddl.sh --local --sql /tmp/kunzz_user_devices.sql --db $DB'"
+    echo "[dry-run] ssh $REMOTE 'bash /tmp/kunzz_apply_ddl.sh --local --sql /tmp/kunzz_user_devices.sql --db $DB'"
     exit 0
   fi
   scp -q "$SQL" "$REMOTE:/tmp/kunzz_user_devices.sql"
   scp -q "${BASH_SOURCE[0]}" "$REMOTE:/tmp/kunzz_apply_ddl.sh"
   # 远端以 sudo 跑（建表需 DDL 权限），跑完清理临时文件
-  ssh "$REMOTE" "sudo bash /tmp/kunzz_apply_ddl.sh --local --sql /tmp/kunzz_user_devices.sql --db '$DB'; rc=\$?; rm -f /tmp/kunzz_user_devices.sql /tmp/kunzz_apply_ddl.sh; exit \$rc"
+  # 远端直接用 bash 跑（以 root 登录时就是 root；非 root 账号则由脚本内部用 sudo，
+  # 这种情况下需要 `ssh -t` 让 sudo 能问密码）
+  ssh "$REMOTE" "bash /tmp/kunzz_apply_ddl.sh --local --sql /tmp/kunzz_user_devices.sql --db '$DB'; rc=\$?; rm -f /tmp/kunzz_user_devices.sql /tmp/kunzz_apply_ddl.sh; exit \$rc"
   exit $?
 fi
 

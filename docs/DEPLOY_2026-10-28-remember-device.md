@@ -28,14 +28,21 @@ mariadb --version                                           # 期望 10.11.x / 1
 
 ### 方式 A（推荐）：一条命令，本地执行
 
-在 **本地仓库根目录**（Git Bash）运行：
+**PowerShell（Windows 默认）**：
+
+```powershell
+cd C:\Users\mings\OneDrive\Desktop\kunzz-springboot-react
+powershell -ExecutionPolicy Bypass -File .\scripts\apply_ddl_user_devices_2026-10-28.ps1
+# 先看会做什么：加 -DryRun；换服务器：-Remote root@1.2.3.4
+```
+
+**Git Bash / Linux / macOS**：
 
 ```bash
 bash scripts/apply_ddl_user_devices_2026-10-28.sh --remote root@187.127.125.136
 ```
 
-它会：`scp` SQL 与脚本到 `/tmp` → `ssh` 上去以 root 执行 → 校验 `user_devices` 存在 → 清理临时文件。
-加 `--dry-run` 可先看会做什么（不改库）。
+两者行为一致：`scp` SQL 与脚本到 `/tmp` → `ssh` 上去执行 → 校验 `user_devices` 存在 → 清理临时文件。
 
 ### 方式 B：已经 ssh 在服务器上，直接跑
 
