@@ -1,6 +1,6 @@
 # 任务 2026-10-29-deps-security
 
-- 状态：**待做**（未开始；本文件只登记范围与计划，不动任何依赖）
+- 状态：**Stage 1 已完成**（2026-10-29）；Stage 2/3（vite/puppeteer，需大版本）仍待做
 - 分支：main
 - 目标：清掉 `npm audit` 报的 11 个漏洞（其中 5 个在**生产依赖**里，1 个 critical），
   且**不破坏**现有构建与功能。
@@ -32,6 +32,33 @@
 
 ---
 
+## 1.1 Stage 1 实测结果（2026-10-29）
+
+```bash
+cd inventory-system/frontend
+npm audit fix --omit=dev
+```
+
+| 包 | 升级前 | 升级后 |
+|---|---|---|
+| axios | 1.19.0 | **1.21.0** ✅ |
+| follow-redirects | 1.16.0 | **1.16.2** ✅ |
+| dompurify（jspdf 带） | 3.4.13 | **3.4.17** ✅ |
+| react-router / react-router-dom | 6.30.4 | **6.30.6**（只修了一个 advisory） |
+
+- `npm audit --omit=dev`：**5 → 2**（不是 0）。剩 2 个都是 `react-router` moderate：
+  1. `GHSA-wrjc-x8rr-h8h6` `<Link>`/`useNavigate` 反斜杠 open redirect；
+  2. `GHSA-337j-9hxr-rhxg` SSR hydration `deserializeErrors()` 注入。
+  官方修复只能 `react-router-dom@7.18.5`（**破坏性大版本**），所以本阶段不动。
+  本项目是纯 CSR（无 SSR hydration），且登录 `?redirect=` 已限定只允许站内 `/` 开头，
+  实际不可利用 → **接受为已知风险**，真要清就单开一个 v7 迁移任务（不在本任务范围）。
+- `package.json` **未改**（现有 `^1.7.9` / `^6.28.0` 已覆盖新版本），只有 `package-lock.json` 改 21 行。
+- 验证：`npm ci && npm run build` 通过（vite 7.56s，2014 modules）；
+  无头 Chrome 冒烟：`/login` 表单全在、`/dashboard`→`/login`、`/devices`→`/login`、`/`→`/login`、
+  `/mobile/login` 正常渲染，**console/pageerror 0 条**。
+
+---
+
 ## 2. 分阶段计划（每阶段单独提交、单独验收）
 
 ### Stage 1（低风险，先做）：生产依赖 patch/minor
@@ -44,6 +71,8 @@ npm ls axios dompurify follow-redirects react-router react-router-dom   # 核对
 rm -rf node_modules && npm ci && npm run build               # 干净安装 + 构建必须过
 npm audit --omit=dev                                          # 期望 0 vulnerabilities
 ```
+
+> 实测：**期望值改为 2**（只刺 react-router，见 §1.1 —— 需 7.x 破坏性升级才能清）。
 
 验收：`npm run build` 通过；回归清单（见 §4）全绿；前端发到 `/var/www/admin` 后线上点一遍。
 提交：`chore(deps): 升级 axios/dompurify/follow-redirects/react-router 至安全版本（task 2026-10-29-deps-security）`

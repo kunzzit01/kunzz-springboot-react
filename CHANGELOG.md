@@ -6,6 +6,25 @@
 ---
 ## 🗓️ 2026-10-29
 
+### [2026-10-29-deps-security] 生产依赖安全升级（Stage 1）
+
+- **背景**：`npm audit` 长期报 11 个漏洞（生产依赖 5 个，含 1 个 critical），
+  之前只登记不动手，因为怕动 `package-lock.json` 影响正在进行的业务改动。
+- **本次只做 Stage 1（patch/minor，无破坏性）**：`npm audit fix --omit=dev`
+  - axios 1.19.0 → **1.21.0**、follow-redirects 1.16.0 → **1.16.2**（axios 带的）、
+    dompurify 3.4.13 → **3.4.17**（jspdf 带的，就是那个 critical）、
+    react-router / react-router-dom 6.30.4 → **6.30.6**。
+  - `package.json` **未动**（原范围已覆盖），只有 `package-lock.json` 改 21 行。
+- **结果**：`npm audit --omit=dev` **5 → 2**。剩 2 个都是 react-router moderate
+  （`<Link>/useNavigate` 反斜杠 open redirect + SSR hydration `deserializeErrors`），
+  官方修复只能 `react-router-dom@7.18.5`（破坏性大版本）→ 本阶段不动。
+  本项目纯 CSR、无 SSR，且登录 `?redirect=` 已限定站内路径，实际不可利用 → 接受为已知风险。
+- **验证**：`npm ci && npm run build` 通过；无头 Chrome 冒烟：`/login` 表单完整、
+  `/dashboard` 与 `/devices` 均正确回登录页、`/mobile/login` 正常，**console 错误 0 条**。
+- **未做**：vite 5→8、puppeteer-core 大版本（Stage 2/3，属构建/脚本依赖，不进线上包）；
+  react-router 6→7 迁移（需单独任务）。详见 `docs/tasks/2026-10-29-deps-security.md`。
+
+
 ### [2026-10-29-hide-devices-page] 下线「登录设备」页（老板要求员工不可见）
 
 - **原因**：`/devices` 只是给「记住我」做设备撤销用的内部工具页，不想让员工看到。
