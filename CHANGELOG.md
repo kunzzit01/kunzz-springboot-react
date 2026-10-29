@@ -17,7 +17,16 @@
   用 `IntersectionObserver` + `document.hidden` 门控；删掉三层整屏动画与上述两处 `backdrop-filter`。
 - **A/B 实测**（headless Chrome + CDP `Performance.getMetrics`，10 元素 × 3 秒）：
   布局次数 181 → **0**；样式重算耗时 68.6ms → **10.9ms**；主线程总耗时 171ms → **48.2ms**。
-- **未做（P2）**：照片缩略图（现 150–400KB 显示成 100×80）、hero 图 751KB 未做 `srcset`/WebP、首包 447KB 未拆包。
+- **P2（2026-10-29 第二轮，已完成）**：
+  - **路由懒加载**（`App.jsx`，首页保持同步加载）：首包 **460 → 327 KB**（gzip 135 → 103 KB），
+    joinus / about / tokyo / 英文站各自成 chunk（joinus 21 KB，访问时才下载）；
+  - **照片缩略图**：后端新增 `/api/comphotos-files/{name}?w=240`（ImageIO 缩放 + `data/cache/thumbs/` 落盘缓存，
+    解不了 HEIC/WebP 时回退原图），官网按 `&w=240` 请求。实测 **406 KB → 8 KB（240×160）**；
+  - **`public/images/背景4.webp` 906 KB → 9.3 KB**（ffmpeg libwebp q82，肉眼一致；首页/About 全屏背景）；
+  - hero 图与福利图标加 `decoding=async` / `fetchPriority=high` / `loading=lazy`。
+- **上线注意**：`/api/` 由 nginx 反代到 Spring Boot（8082），所以**缩略图要生效必须发一次后端**；
+  只发前端也安全（旧后端忽略 `w`，返回原图）。发后端会同时带上「设备令牌」那套代码，
+  需先跑 `add_new_tables_user_devices.sql`（幂等）。
 - 详见 `docs/tasks/2026-10-29-joinus-perf.md`。
 
 ### [2026-10-29-brand-icons] 成本仪表盘：三个外卖卡片换品牌图标 + 卡片图标风格统一

@@ -24,6 +24,13 @@
   | 布局耗时 | 4.7 ms | **0 ms** |
   | 样式重算耗时 | 68.6 ms | **10.9 ms** |
   | 主线程总耗时 | 171 ms | **48.2 ms** |
-- 未做（P2）：照片缩略图（~160px）、hero `srcset`/WebP、首包拆分（swiper 动态 import）。
+- P2 已完成（2026-10-29 第二轮）：
+  - 路由懒加载：首包 460 → 327 KB（gzip 135 → 103 KB），joinus 代码独立 21 KB chunk；
+  - 照片缩略图：后端 `/api/comphotos-files/{name}?w=240` 用 ImageIO 生成 JPEG 缩略图并落盘缓存
+    （`data/cache/thumbs/`），官网按 `&w=240` 请求。实测单张 **406 KB → 8 KB（240×160）**；
+    解不了（HEIC/WebP）或异常时回退原图；
+  - `public/images/背景4.webp`（首页/About 全屏背景）**906 KB → 9.3 KB**（ffmpeg libwebp q82，肉眼一致）；
+  - hero 图 / 福利图标加 `decoding=async`、`fetchPriority=high`、`loading=lazy`。
+- 未做（可选）：照片缩略图（~160px）、hero `srcset`/WebP、首包拆分（swiper 动态 import）。
 - 白名单：`website/src/hooks/useComphotoBounce.js`、`website/src/styles/joinus.css`、本文件、`CHANGELOG.md`
 - 部署：`/var/www/website`（`npm run build` → rsync dist，base `/home/`）

@@ -18,6 +18,10 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 
 /**
  * 我们的足迹照片管理，对齐线上 joinpage2upload.php + api/comphotos_api.php
@@ -173,18 +177,60 @@ public class ComphotoController {
         return ApiResponse.ok();
     }
 
-    /** 公开文件访问 */
+    /** 公开文件访问；{@code ?w=NNN} 返回缩放后的缩略图（2026-10-29 性能优化） */
     @GetMapping("/api/comphotos-files/{name}")
-    public ResponseEntity<org.springframework.core.io.Resource> file(@PathVariable String name) {
+    public ResponseEntity<org.springframework.core.io.Resource> file(@PathVariable String name,
+                                                                    @RequestParam(required = false) Integer w) {
         Path p = comphotoDir.resolve(name).normalize();
         if (!p.startsWith(comphotoDir) || !Files.exists(p)) {
             throw new BusinessException(404, "文件不存在");
+        }
+        // 官网「我们的足迹」把 150~400KB 的原图显示成 ~100×80px，移动端解码/显存全是浪费。
+        // 加 ?w= 后按需生成 JPEG 缩略图并落盘缓存（首次生成，之后直接发文件）；失败时回退原图。
+        if (w != null && w > 0) {
+            Path thumb = thumbnail(p, Math.min(w, 1600));
+            if (thumb != null) {
+                return ResponseEntity.ok()
+                        .contentType(MediaType.IMAGE_JPEG)
+                        .header(HttpHeaders.CACHE_CONTROL, "public, max-age=31536000, immutable")
+                        .body(org.springframework.core.io.UrlResource.from(thumb.toUri()));
+            }
         }
         String mime = imageMime(extNoDot(name));
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(mime))
                 .header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
                 .body(org.springframework.core.io.UrlResource.from(p.toUri()));
+    }
+
+    /**
+     * 生成/复用缩略图（存 data/cache/thumbs/&lt;文件名&gt;@w&lt;宽&gt;.jpg）。
+     * 用 ImageIO（只保证 jpg/png 可解），HEIC/WebP 等解不了就返回 null → 回退原图。
+     */
+    private Path thumbnail(Path src, int targetW) {
+        try {
+            Path cacheDir = AppDirs.data("cache", "thumbs");
+            Files.createDirectories(cacheDir);
+            Path dst = cacheDir.resolve(src.getFileName() + "@w" + targetW + ".jpg");
+            if (Files.exists(dst)
+                    && Files.getLastModifiedTime(dst).compareTo(Files.getLastModifiedTime(src)) >= 0) {
+                return dst;
+            }
+            BufferedImage img = ImageIO.read(src.toFile());
+            if (img == null) return null;
+            int tw = Math.min(targetW, img.getWidth());
+            int th = Math.max(1, (int) Math.round(img.getHeight() * (tw / (double) img.getWidth())));
+            BufferedImage out = new BufferedImage(tw, th, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = out.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.drawImage(img, 0, 0, tw, th, null);
+            g.dispose();
+            ImageIO.write(out, "jpg", dst.toFile());
+            return dst;
+        } catch (Exception e) {
+            return null;   // 解不了（HEIC/WebP）或磁盘异常 → 由调用方回退原图
+        }
     }
 
     // ---------- 内部 ----------
