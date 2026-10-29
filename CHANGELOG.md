@@ -6,6 +6,21 @@
 ---
 ## 🗓️ 2026-10-29
 
+### [2026-10-29-deps-security] Stage 3：puppeteer-core 25.8 → 25.16（仓库验证脚本）
+
+- **只影响 dev 工具链**，不进 `dist/`（构建产物 grep 0 命中），线上零影响；
+  `puppeteer-core` 不下载 Chromium（用本机 Chrome）。
+- **版本**：puppeteer-core **25.16.0**、chromium-bidi **157.0.8090-0**、zod **4.6.7**；
+  顺带 `npm audit fix` 把 vite→postcss 带进来的 source-map-js 1.2.1 → **1.2.2**。
+- **`npm audit`：6 → 2**（只剩 react-router 两个 moderate，需 v7 才能清）。
+- **脚本回归（全部真跑）**：
+  - `verify-stockrecords-weak-network.cjs` → 全部通过（拦截/延迟/失败/乱序/取消）
+  - `verify-inout-year-switch.cjs` → 全部通过（选「今年」+ 反复切店 + 滚动，无 React #185）
+  - `verify-remark-picker.cjs` → 5 项 PASS，错误无
+  - `sync-live-stock.cjs` 未跑（会连 live 写本地库，属数据同步工具）
+- **构建**：`npm ci && npm run build` 通过。
+- **遗留**：react-router 6 → 7（唯一剩下的告警，需单独迁移任务）。
+
 ### [2026-10-29-deps-security] Stage 2：vite 5 → 7（构建链）
 
 - **只升到 vite 7.3.7，不升 8**：advisory 受影响范围是 `vite <=6.4.3`，7 已修复；

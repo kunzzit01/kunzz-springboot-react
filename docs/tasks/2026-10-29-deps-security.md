@@ -1,7 +1,6 @@
 # 任务 2026-10-29-deps-security
 
-- 状态：**Stage 1 已完成**（2026-10-29）；**Stage 2（vite）已完成**（2026-10-29）；
-  Stage 3（puppeteer-core，仅仓库脚本）与 react-router 6→7 仍待做
+- 状态：**Stage 1 / Stage 2 / Stage 3 均已完成**（2026-10-29）；只剩 react-router 6→7（两个 moderate，需单独任务）
 - 分支：main
 - 目标：清掉 `npm audit` 报的 11 个漏洞（其中 5 个在**生产依赖**里，1 个 critical），
   且**不破坏**现有构建与功能。
@@ -119,11 +118,30 @@ npm ci && npm run build
    node -v   # 重开 shell 后再确认
    ```
 
-### Stage 3（可选，仓库脚本）：puppeteer-core 升级
+### Stage 3（已完成，2026-10-29）：puppeteer-core 升级
 
-- 先确认它在哪儿被用（`grep -rn "puppeteer" --include=*.mjs --include=*.js .` 及 `docs/`），
-  升级后要把用到它的脚本跑一遍（截图/巡检类脚本）。
-- 不进线上包，出问题不影响业务。
+**实测结果**
+
+| 项 | 结果 |
+|---|---|
+| puppeteer-core | 25.8.0 → **25.16.0** ✅ |
+| chromium-bidi | 17.0.2 → **157.0.8090-0** ✅ |
+| zod | 3.25.76 → **4.6.7** ✅ |
+| source-map-js（vite→postcss 带） | 1.2.1 → **1.2.2**（`npm audit fix` 顺带清掉）✅ |
+| `npm audit` | 6 → **3** → 再 `npm audit fix` 后 **2**（只剩 react-router） |
+| `npm ci && npm run build` | ✅ 通过 |
+
+**脚本回归（全部真实跑过）**
+
+- `verify-stockrecords-weak-network.cjs` → **=== 全部通过 ===**（请求拦截/延迟/失败/乱序/取消全 PASS）
+- `verify-inout-year-switch.cjs` → **=== 全部通过 ===**（选「今年」+ 反复切店 + 滚动，无 #185）
+- `verify-remark-picker.cjs` → 5 项全 PASS，错误：无
+- `sync-live-stock.cjs` **未跑**（会连 live 拉数据并写本地库，属数据同步工具，不在本任务验收范围）
+
+**说明**：puppeteer-core 是 `devDependencies`，不进 `dist/`（`grep` 产物 0 命中），
+不影响线上；`puppeteer-core`（非 `puppeteer`）不会下载 Chromium，用本机已装 Chrome。
+若要重跑：`verify-inout-year-switch.cjs` 需要后端 8081 + demo 账号；
+`verify-remark-picker.cjs` 打的是 8081 上由后端发的 `backend/static` 旧包。
 
 ---
 
