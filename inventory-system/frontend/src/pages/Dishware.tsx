@@ -33,7 +33,7 @@ export default function Dishware() {
   const [stockView, setStockView] = useState<'dishware' | 'sets'>('dishware')
   const [kw, setKw] = useState('')
   const [cat, setCat] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const [rows, setRows] = useState<DishwareStockVO[]>([])

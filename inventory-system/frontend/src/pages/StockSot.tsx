@@ -226,7 +226,7 @@ export default function StockSot() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editDraft, setEditDraft] = useState<SotRow>({})
   const [kw, setKw] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   const [batchMode, setBatchMode] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   // 默认日期范围 = 今天（对齐线上 initEnhancedDatePickers）

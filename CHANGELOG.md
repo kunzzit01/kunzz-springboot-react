@@ -202,6 +202,18 @@
   - CSS：展开宽度改 `clamp(180px, 20vw, 340px)`，并加 1400 / 1100 / 720 三档媒体查询逐级收窄。
 - 白名单见 `docs/tasks/2026-10-27-inout-search.md`。
 
+#### 2026-10-29 补充：搜索框尺寸全站统一（其他页同修）
+
+- **问题**：除进出货，`总库存 / 库存 / SOT / 碗碟（含破损、调拨）` 的搜索框都把 `.smartSearchWrapper` 写死 `40×38`，
+  而按钮是 `clamp(...vw...)` → 换屏/缩放时只有搜索框不动（用户：“其他页面也要修”）。
+- **做法（收敛到一条全站规则，不逐页改 CSS）**：在 `src/index.css` 用 `[class$="-root"]` 命中所有页面根容器：
+  - `--sf-size: clamp(34px, 3.1vw, 52px)`、`--sf-h: calc(字高胶1.2 + 上下内距胶2)`，宽/高均 `!important` 压过各页旧值；
+  - 边框改 `inset box-shadow`（真 border 会比按钮高 2px）；`.btn` 显式 `line-height: 1.2`，高度才能对齐；
+  - `.smartSearch-icon` 宽/字号同步跟随，不再钉死 40px / 15px。
+- **默认展开**：`StockSot / StockProducts / Dishware / DishwareBreak / DishwareTransfer` 的 `searchExpanded`
+  初值改为「宽屏（≥1100px）默认展开」；`StockRecords` 是多面板（j1/j2/j3），用 `searchExpanded[sys] ?? 宽屏判断`。
+- **实测（无头量像素）**：1568px 屏 → 搜索框 h=26.81 = 按钮 h=26.81；1280px 屏 → 21.83 vs 21.81（舍入差 0.02）。
+
 ### [2026-10-27-inout-order] 进出货列表改为完全按「实际创建时间」排序（方案 B）
 
 - **问题**：列表一直是 `ORDER BY date ASC, time ASC, id ASC`，其中 `time` 是录单时填的**业务时间**，

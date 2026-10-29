@@ -194,7 +194,7 @@ export default function StockProducts() {
     if (k === sortKey) setSortDir(d => (d === 'asc' ? 'desc' : 'asc'))
     else { setSortKey(k); setSortDir('asc') }
   }
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   // 搜索模式：false=全能模糊（名称/编号/规格/类型/供应商/冰箱分类） / true=精准（货品名完全等于关键字）；对齐总库存 smartSearch
   const [exactMatch, setExactMatch] = useState(false)
   const [loading, setLoading] = useState(false)

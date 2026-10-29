@@ -41,7 +41,7 @@ export default function DishwareTransferPage() {
   const [trQuickOpen, setTrQuickOpen] = useState(false)
   const [trRestFilter, setTrRestFilter] = useState('')
   const [kw, setKw] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const trNowYear = new Date().getFullYear()

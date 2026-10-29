@@ -40,7 +40,7 @@ export default function DishwareBreakPage() {
   const [quickOpen, setQuickOpen] = useState(false)
   const [restFilter, setRestFilter] = useState('')
   const [kw, setKw] = useState('')
-  const [searchExpanded, setSearchExpanded] = useState(false)
+  const [searchExpanded, setSearchExpanded] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1100)
   const searchRef = useRef<HTMLInputElement>(null)
 
   const nowYear = new Date().getFullYear()

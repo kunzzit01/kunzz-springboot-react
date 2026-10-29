@@ -926,8 +926,8 @@ export default function StockRecords() {
 
           <div className="header-right-section">
             <div className="header-search">
-              <div className={'smartSearchWrapper' + (searchExpanded[sys] ? ' expanded' : '')}
-                onClick={(e) => { if (!searchExpanded[sys]) { e.stopPropagation(); setSearchExpanded(prev => ({ ...prev, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 200) } }}>
+              <div className={'smartSearchWrapper' + ((searchExpanded[sys] ?? (typeof window !== 'undefined' && window.innerWidth >= 1100)) ? ' expanded' : '')}
+                onClick={(e) => { if (!(searchExpanded[sys] ?? (typeof window !== 'undefined' && window.innerWidth >= 1100))) { e.stopPropagation(); setSearchExpanded(prev => ({ ...prev, [sys]: true })); setTimeout(() => searchRefs.current[sys]?.focus(), 200) } }}>
                 {/* 左侧图标即搜索模式切换：放大镜=模糊 / 等号=精确（货品名完全等于关键字）；对齐进出货页 */}
                 <span className="smartSearch-icon"
                   title={exactMatch[sys] ? '精确搜索：只显示货品名称完全等于关键字的行（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的行（点击切换为精确）'}
