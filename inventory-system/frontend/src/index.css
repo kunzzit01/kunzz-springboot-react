@@ -137,35 +137,30 @@ body {
    全站小屏搜索框适配（恢复原版外观：40px 灰边方块）
    目标1：小屏下与旁边按钮同排垂直居中对齐（不再顶天或沉底）
    目标2：展开态改为锚定右侧向左弹出的覆盖层，窄屏不被裁剪
-   说明：需 [class$="-root"] + !important 压过页面级 css 的打包顺序优势
+   说明：需 [class$="-root"] 压过页面级 css 的打包顺序优势
+   2026-10-29：**不再写死 40×38 / 图标 40px !important** —— 那样会把页面里基于 vw 的
+   自适应尺寸盖掉（用户反馈“其它按钮会缩放，就搜索框不变”）。尺寸交回各页自己的 clamp。
    ============================================================ */
 .header-search { position: relative; }
 @media (max-width: 900px) {
   /* 同排垂直居中：跟旁边按钮保持同一中轴线 */
   .header-right-group,
   .header-right-section { align-items: center !important; }
-  /* 搜索块保持原版 40px 方块，仅让自身中线对齐（不拉伸不改色） */
+  /* 只做对齐/底色，尺寸交回页面 CSS（与按钮同源的 clamp） */
   [class$="-root"] .header-search .smartSearchWrapper:not(.expanded) {
-    width: 40px !important;
-    height: 38px;
     align-self: center;
     border-color: #d1d5db !important;
     background: #fff !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
-  [class$="-root"] .smartSearch-icon {
-    width: 40px !important;
-    min-width: 40px !important;
-    font-size: 15px !important;
-    color: inherit !important;
-  }
+  [class$="-root"] .smartSearch-icon { color: inherit !important; }
   /* 展开态：安全覆盖层（中性配色，不改变观感） */
   [class$="-root"] .smartSearchWrapper.expanded {
     position: absolute !important;
     top: -2px;
     right: -4px;
     width: min(68vw, 240px) !important;
-    height: 38px !important;
+    height: auto !important;
     z-index: 90;
     background: #fff !important;
     box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22) !important;

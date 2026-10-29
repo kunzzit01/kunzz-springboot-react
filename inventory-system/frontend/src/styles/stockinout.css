@@ -605,9 +605,10 @@
   align-items: center;
   gap: clamp(6px, 0.63vw, 12px);
 }
+/* 2026-10-29 删除：这里原来写死 `width: 40px`，会盖掉 `.smartSearchWrapper` 里的
+   `--kz-search-size` 变量（它优先级更高），导致收起态永远 40px、换屏幕不跟着按钮缩放。
+   现在尺寸统一由 .smartSearchWrapper 的 clamp 决定，这里只保留 cursor。 */
 .sio-root .header-search .smartSearchWrapper:not(.expanded) {
-  width: 40px;
-  flex-shrink: 0;
   cursor: pointer;
 }
 .sio-root .header-stats {
