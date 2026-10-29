@@ -86,20 +86,38 @@ AUTH_DEVICE_TTL_DAYS=30
 
 ---
 
-## 3. 前端上线
+## 3. 前端上线（后台 dist → /var/www/admin）
 
-本次前端有改动（登录页、启动门禁、`/devices` 新页、侧边栏入口），
-`backend/static/**` 是构建产物，按 `AGENTS.md` §4 由**发布步骤**统一构建提交，避免多 task 互相回退：
+本次前端必须有改动（登录页、启动门禁、`/devices` 新页、侧边栏入口）——
+**旧前端 + 新后端**的表现是：「记住我」能签设备令牌，但重启后没人去换 JWT，
+页面仍会跳到登录页，看起来就像没生效。
+
+> 注意：生产 nginx 发的是 `/var/www/admin`（`dist/`），**不是仓库里的 `backend/static/**`**
+> （见 `docs/VPS_DEPLOY_2026-09-17-vps-deploy.md` PHASE 11）。所以本次不需要提交 static 产物。
 
 ```bash
 cd /opt/kunzz-springboot-react
-git fetch origin main && git merge --ff-only origin/main   # 拉到含新 static 的提交
-# 若这次是「就地构建前端」流程，则：
-#   cd inventory-system/frontend && npm ci && npm run build   （产物落到 backend/static/）
-ls -l backend/static/index.html                            # index.html 里的 hash 应是新的
+git fetch origin main && git merge --ff-only origin/main
+
+cd inventory-system/frontend
+npm ci            # 严格按 lock 安装，不改写 lock 文件
+npm run build     # tsc -b && vite build；TS 报错就 STOP 报告，不要硬发
+ls -lh dist/
+
+# 先备份再替换（回滚就靠这份备份）
+sudo rsync -a /var/www/admin/ /var/www/admin.bak/
+sudo rsync -a --delete dist/ /var/www/admin/
+sudo chown -R www-data:www-data /var/www/admin
 ```
 
-> 员工端症状提醒：部署后旧标签页仍跑旧 JS，需要 F5（页面已有「新版本提示条」）。
+校验服务器确实发了新 bundle（两行 hash 应相同）：
+
+```bash
+grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1
+curl -s https://www.kunzzgroup.com/ | grep -o 'assets/index-[^"]*\.js' | head -1
+```
+
+> 员工端症状提醒：部署后旧标签页仍跑旧 JS，需要 F5。
 
 ---
 
@@ -147,6 +165,12 @@ sudo mariadb u690174784_kunzz -e \
 ---
 
 ## 5. 回滚
+
+| 层级 | 动作 |
+|---|---|
+| 后端 | 换回上一个 `app.jar.bak.*` 再 `systemctl restart inventory-backend` |
+| 前端 | `sudo rsync -a /var/www/admin.bak/ /var/www/admin/` |
+| 数据库 | `DROP TABLE IF EXISTS user_devices`（不影响其它表） |
 
 ```bash
 # 只回滚后端（保留表）：换回上一个 jar 再重启
