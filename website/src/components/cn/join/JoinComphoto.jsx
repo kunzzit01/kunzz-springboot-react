@@ -15,7 +15,8 @@ export default function JoinComphoto() {
       const rect = img.getBoundingClientRect();
       clickedImgRef.current = img;
       img.classList.add('comphoto-hidden');
-      setModalSrc(img.src);
+      // 2026-10-29：卡片用的是 240px 缩略图，弹窗大图必须用原图（dataset.full）
+      setModalSrc(img.dataset.full || img.src);
       setModalStyle({
         left: rect.left,
         top: rect.top,

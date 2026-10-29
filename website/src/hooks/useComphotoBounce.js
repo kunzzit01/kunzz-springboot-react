@@ -188,9 +188,11 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
 
     photos.forEach((src, index) => {
       const img = document.createElement('img');
-      // 2026-10-29 性能：请求 240px 缩略图（实际显示 ~100×80，2x 屏也够），
+      // 2026-10-29 性能：卡片请求 240px 缩略图（实际显示 ~100×80，2x 屏也够），
       // 后端 /api/comphotos-files?w= 会生成并缓存 JPEG 缩略图，失败时回退原图。
       img.src = src + (src.includes('?') ? '&' : '?') + 'w=240';
+      // 点开大图用原图（否则把 240px 的缩略图放大 → 模糊）
+      img.dataset.full = src;
       img.className = 'comphoto';
       img.loading = 'lazy';
       img.decoding = 'async';   // 2026-10-29 性能：不阻塞主线程解码
