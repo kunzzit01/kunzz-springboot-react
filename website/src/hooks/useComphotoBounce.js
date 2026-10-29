@@ -196,8 +196,8 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
       const pos = getRandomNonOverlappingPosition();
       const velocity = generateVelocityFromAngle(generateDiagonalAngle());
 
-      img.style.left = `${pos.x}px`;
-      img.style.top = `${pos.y}px`;
+      // 2026-10-29 性能：用 transform 定位（left/top 会触发布局，每帧写 10 张 → 滚动掉帧）
+      img.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
 
       img.addEventListener('click', () => {
         isPausedRef.current = true;
@@ -243,13 +243,22 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
           photo.vy = corrected.vy;
         }
 
-        photo.element.style.left = `${photo.x}px`;
-        photo.element.style.top = `${photo.y}px`;
+        // 2026-10-29 性能：transform 只走合成层，不触发重排
+        photo.element.style.transform = `translate3d(${photo.x}px, ${photo.y}px, 0)`;
       });
     };
 
+    // 2026-10-29 性能：容器不可见或页面隐藏时跳过物理计算与样式写入
+    // （原来 rAF 一直跑，滑出视口后仍在每帧改 left/top → 滚动掉帧）
+    let visible = true;
+    const io = new IntersectionObserver(
+      (entries) => { visible = entries[0].isIntersecting; },
+      { threshold: 0.01 },
+    );
+    io.observe(container);
+
     const animate = () => {
-      updatePhotos();
+      if (visible && !document.hidden && !isPausedRef.current) updatePhotos();
       animationIdRef.current = requestAnimationFrame(animate);
     };
 
@@ -257,6 +266,7 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
 
     return () => {
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
+      io.disconnect();
       photoDataRef.current.forEach((p) => p.element.remove());
       photoDataRef.current = [];
     };

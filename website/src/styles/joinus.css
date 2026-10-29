@@ -210,7 +210,7 @@ body::-webkit-scrollbar {
             #ffa726,
             #ff9800);
     background-size: 600% 600%;
-    animation: comphoto-gradient-shift 20s linear infinite;
+    /* 2026-10-29 性能：去掉 background-position 动画（100vh 每帧整屏重绘） */
     overflow: hidden;
 }
 
@@ -228,7 +228,7 @@ body::-webkit-scrollbar {
         radial-gradient(circle at 40% 40%, rgba(255, 165, 0, 0.4) 0%, transparent 50%);
     z-index: 1;
     pointer-events: none;
-    animation: glow-pulse 10s ease-in-out infinite;
+    /* 2026-10-29 性能：去掉光晕脉冲动画（第二层整屏重绘） */
 }
 
 /* 添加动态粒子效果层 */
@@ -248,7 +248,7 @@ body::-webkit-scrollbar {
     background-size: 200px 200px, 250px 250px, 150px 150px, 180px 180px, 220px 220px;
     z-index: 2;
     pointer-events: none;
-    animation: particles-float 25s linear infinite;
+    /* 2026-10-29 性能：去掉粒子浮动动画（第三层整屏重绘） */
     opacity: 0.7;
 }
 
@@ -367,26 +367,25 @@ body::-webkit-scrollbar {
     }
 }
 
+/* 2026-10-29 性能：位置由 JS 用 transform 写入（left/top 会触发布局），
+   所以这里不能再对位置做过渡；阴影只在 hover 加。 */
 .comphoto {
     position: absolute;
+    left: 0;
+    top: 0;
     width: clamp(100px, 13vw, 200px);
     height: clamp(67px, 8.67vw, 133px);
     border-radius: clamp(4px, 0.67vw, 8px);
-    box-shadow:
-        0 4px 15px rgba(0, 0, 0, 0.3),
-        0 0 20px rgba(255, 165, 0, 0.3);
     cursor: pointer;
-    transition: all 0.3s ease;
     object-fit: cover;
     z-index: 20;
+    will-change: transform;
 }
 
 .comphoto:hover {
-    transform: scale(1.1);
     box-shadow:
         0 8px 25px rgba(0, 0, 0, 0.4),
-        0 0 30px rgba(255, 165, 0, 0.6),
-        0 0 50px rgba(255, 255, 255, 0.3);
+        0 0 30px rgba(255, 165, 0, 0.6);
     z-index: 30;
 }
 
@@ -472,7 +471,7 @@ body::-webkit-scrollbar {
 .job-section {
     padding: clamp(3.75rem, 8vw, 6.25rem) clamp(1rem, 3vw, 2rem);
     background: url('/images/背景3.webp') no-repeat center center/cover;
-    backdrop-filter: blur(clamp(1.25rem, 2vw, 1.25rem));
+    /* 2026-10-29 性能：背景图本身不透明，blur 看不到但很贵 → 去掉 */
     box-shadow: 0 clamp(1.25rem, 2vw, 1.25rem) clamp(3.75rem, 6vw, 3.75rem) rgba(0, 0, 0, 0.1);
     min-height: 100vh;
     width: 100%;
@@ -546,7 +545,7 @@ body::-webkit-scrollbar {
 
 .company-job-container {
     background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: blur(20px);
+    /* 2026-10-29 性能：97% 不透明的卡片上 blur 看不见，但要每帧重算背景 → 去掉 */
     border-radius: 16px;
     padding: clamp(0.75rem, 1.2vw, 1rem);
     width: clamp(16.0000rem, 10.7143vw + 9.1429rem, 22.0000rem);
