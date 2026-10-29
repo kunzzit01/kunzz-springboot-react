@@ -104,6 +104,21 @@
   完整上线/验证/回滚步骤见 `docs/DEPLOY_2026-10-28-remember-device.md`。
 
 
+### [2026-10-29-date-range] KPI / 成本页的「日期范围」弹层收敾到共用组件（视觉与 DateField 统一）
+
+- **问题**：KPI 仪表盘（`/kpi`）与成本页（`/cost`）的日期范围弹层是**各页行内样式手拼**的：
+  橙色方块导航按钮（借用 `.btn-secondary`）、范围用浅橙块、底部两个不明所以的「取消 / 确定」
+  （确定只是关弹层），与 DateField 的日历完全是两套观感 → 用户反馈“这里的设计跑了”。
+- **做法**：新增 `components/DateRangeField.tsx`，直接复用 `.date-cal*` 日历样式：
+  - 触发按钮仍用各页已有的 `.date-range-picker`（不动布局），展开时加 `.is-open` 橙色边框 + 焦点环；
+  - 弹层 `fixed` 定位 + portal（不会被卡片的 `overflow` 裁掉，底边空间不够自动向上）；
+  - 点第一次 = 起点、第二次 = 终点 **自动应用并关闭**（同一天点两次 = 单日）；选起点后鼠标划过实时预览区间；
+  - 键盘：←→ 日、↑↓ 周、PgUp/PgDn 月、Enter 选中、Esc 关闭；
+  - 底部：**今天 / 本月 / 取消**（取消仅关闭，不再有誤导的「确定」）；
+  - CSS 新增 `.is-in-range`（浅橙）`.is-range-start/-end`（实心橙）与 footer 间距修正。
+- **改动范围**：`Kpi.tsx`、`Cost.tsx` 各删掉 60+ 行内联日历与 `calOpen/calView/calSelStart/selectDate/calDays/changeCalMonth/inRange`。
+- **验证**：`tsc -b`、`npm run build` 通过；无残留 `calSelStart/changeCalMonth`；无头 Chrome 渲染区间样例（1→29）校对高亮与页脚排版。
+
 ### [2026-10-27-date-field] 导出弹窗里 6 个“自由文本日期框”也统一成 DateField
 
 - **问题**：它们不是 `type="date"`，而是 `<input type="text" placeholder="DD/MM/YYYY">` 自由文本，没有日历，

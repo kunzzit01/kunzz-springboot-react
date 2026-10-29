@@ -23,6 +23,9 @@
   - inventory-system/frontend/src/pages/Staff.tsx（1 处）
   - inventory-system/frontend/src/pages/MobileRecords.tsx（导出弹窗 3 处）
   - inventory-system/frontend/src/components/SelectField.tsx（新增：自绘下拉）
+  - inventory-system/frontend/src/components/DateRangeField.tsx（新增：日期区间）
+  - inventory-system/frontend/src/pages/Kpi.tsx（日期范围弹层换 DateRangeField）
+  - inventory-system/frontend/src/pages/Cost.tsx（同上）
   - inventory-system/frontend/src/styles/select-field.css（新增）
   - inventory-system/frontend/src/styles/mobile-records.css（select 箭头）
   - docs/tasks/2026-10-27-date-field.md

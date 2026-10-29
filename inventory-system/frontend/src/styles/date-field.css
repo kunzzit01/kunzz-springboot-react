@@ -206,7 +206,8 @@
 .date-cal__foot {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 6px;
   margin-top: 8px;
   padding-top: 6px;
   border-top: 1px solid #f1f2f4;
@@ -230,3 +231,33 @@
 /* 「清除」用灰调，别和「今天」抢橙色 */
 .date-cal__foot .date-cal__link:last-child { color: #6b7280; }
 .date-cal__foot .date-cal__link:last-child:hover { background: #f3f4f6; color: #374151; }
+
+/* ─── 日期区间（DateRangeField）：复用上面的 .date-cal，仅补区间高亮 ────── */
+
+/* 区间中段 */
+.date-cal__day.is-in-range {
+  background: #ffe9d6;
+  color: #a35200;
+  border-radius: 6px;
+}
+
+.date-cal__day.is-in-range:hover { background: #ffdcc0; color: #8f4600; }
+
+/* 区间起点/终点：实心橙 */
+.date-cal__day.is-range-start,
+.date-cal__day.is-range-end,
+.date-cal__day.is-range-start:hover,
+.date-cal__day.is-range-end:hover {
+  background: #ff5c00;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(255, 92, 0, .35);
+}
+
+/* 底部第三个链接（取消）用灰调，别和「今天/本月」抢橙色 */
+.date-cal__foot .date-cal__link--ghost { color: #6b7280; margin-left: auto; }
+.date-cal__foot .date-cal__link--ghost:hover { background: #f3f4f6; color: #374151; }
+
+/* 触发按钮的展开态（沿用各页 .date-range-picker 的底色/边框） */
+.date-range-picker.is-open { border-color: #ff7b00 !important; box-shadow: 0 0 0 3px rgba(255, 123, 0, .12); }
+.date-range-picker.is-disabled { opacity: .6; cursor: not-allowed; }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getKpiReport, getKpiMonthStock, getKpiSupply } from '../api'
+import DateRangeField from '../components/DateRangeField'
 import '../styles/cost.css'
 
 interface CostPoint {
@@ -140,9 +141,6 @@ export default function Cost() {
   const [costData, setCostData] = useState<Record<string, CostPoint[]>>({})
   const [loading, setLoading] = useState(true)
   const [chartType, setChartType] = useState('totalCost')
-  const [calOpen, setCalOpen] = useState(false)
-  const [calView, setCalView] = useState<{ y: number; m: number }>({ y: new Date().getFullYear(), m: new Date().getMonth() })
-  const [calSelStart, setCalSelStart] = useState<string | null>(null)
   const [quickOpen, setQuickOpen] = useState(false)
   const [restOpen, setRestOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
@@ -472,39 +470,8 @@ export default function Cost() {
     return () => document.removeEventListener('click', h)
   }, [])
 
-  // ---------- 日期范围选择 ----------
+  // ---------- 日期范围选择（弹层已改由 DateRangeField 提供，2026-10-29） ----------
   const rangeLabel = fmtDisplay(range.start) + ' - ' + fmtDisplay(range.end)
-  const selectDate = (d: string) => {
-    if (!calSelStart) {
-      setCalSelStart(d)
-    } else {
-      let s = calSelStart, e = d
-      if (e < s) { const t = s; s = e; e = t }
-      setRange({ start: s, end: e })
-      setCalSelStart(null)
-      setCalOpen(false)
-      setQuickLabel('')
-    }
-  }
-  const calDays = useMemo(() => {
-    const { y, m } = calView
-    const first = new Date(y, m, 1)
-    const startDow = first.getDay()
-    const daysIn = new Date(y, m + 1, 0).getDate()
-    const cells: (string | null)[] = []
-    for (let i = 0; i < startDow; i++) cells.push(null)
-    for (let d = 1; d <= daysIn; d++) cells.push(toYMD(new Date(y, m, d)))
-    return cells
-  }, [calView])
-  const changeCalMonth = (delta: number) => {
-    setCalView(prev => {
-      let m = prev.m + delta
-      let y = prev.y
-      if (m < 0) { m = 11; y-- } else if (m > 11) { m = 0; y++ }
-      return { y, m }
-    })
-  }
-  const inRange = (d: string) => d >= range.start && d <= range.end
 
   const selectMonthValue = (type: 'year' | 'month', v: number) => {
     setMonth(prev => {
@@ -569,39 +536,9 @@ export default function Cost() {
               <div className="date-controls">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label className="form-label" style={{ margin: 0 }}>日期范围</label>
-                  <div className="date-range-picker" id="date-range-picker" onClick={() => setCalOpen(!calOpen)}>
-                    <i className="fas fa-calendar-alt"></i>
-                    <span id="date-range-display">{rangeLabel}</span>
-                  </div>
-                  {calOpen && (
-                    <div className="calendar-popup" style={{ marginTop: 44 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }} onClick={() => changeCalMonth(-1)}>‹</button>
-                        <strong>{calView.y}年{calView.m + 1}月</strong>
-                        <button className="btn btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }} onClick={() => changeCalMonth(1)}>›</button>
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 11, color: '#999', marginBottom: 6 }}>
-                        {['日', '一', '二', '三', '四', '五', '六'].map(d => <div key={d}>{d}</div>)}
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center' }}>
-                        {calDays.map((d, i) => (
-                          <div key={i} onClick={() => d && selectDate(d)}
-                            style={{
-                              padding: '6px 0', borderRadius: 6, cursor: d ? 'pointer' : 'default', fontSize: 12,
-                              background: d && d === calSelStart ? '#ff5c00' : (d && inRange(d) ? '#fff0e6' : 'transparent'),
-                              color: d && d === calSelStart ? '#fff' : (d && inRange(d) ? '#ff5c00' : (d && (d < range.start || d > range.end) ? '#ccc' : '#333')),
-                              fontWeight: d && inRange(d) ? 700 : 400
-                            }}>
-                            {d ? Number(d.split('-')[2]) : ''}
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ marginTop: 10, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button className="btn btn-secondary" style={{ fontSize: 12 }} onClick={() => { setCalOpen(false); setCalSelStart(null) }}>取消</button>
-                        <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => { setCalOpen(false); setCalSelStart(null) }}>确定</button>
-                      </div>
-                    </div>
-                  )}
+                  {/* 2026-10-29：日历弹层收敛到 DateRangeField（与 DateField 同一套视觉） */}
+                  <DateRangeField start={range.start} end={range.end}
+                    onChange={(r) => { setRange(r); setQuickLabel('') }} />
                 </div>
 
                 <div className="divider"></div>
