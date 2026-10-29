@@ -1,14 +1,28 @@
 import http from './http'
 import type {
-  ApplicationLog, BranchRow, BranchStockTotal, Category, DashboardSummary, DishwareBreak,
+  ApplicationLog, BranchRow, BranchStockTotal, Category, DashboardSummary, DeviceItem, DishwareBreak,
   DishwareInfo, DishwareSet, DishwareSetItem, DishwareStockVO, DishwareTransfer, HandlerOption,
   LoginResponse, PageResult, StockData, StockInout, StockMinimum, StockSot,
   Supply, SupplyMaterial, UserInfo,
 } from '../types'
 
 // ---------- 认证 ----------
-export const login = (data: { username: string; password: string }) =>
+// remember=true → 后端额外签发设备令牌（重启后免密码进入，见 utils/authSession.ts）
+export const login = (data: {
+  username: string
+  password: string
+  remember?: boolean
+  deviceName?: string
+  /** 这台浏览器上一轮的设备令牌：服务端会先撤销它，避免设备列表出现重复行 */
+  previousDeviceToken?: string | null
+}) =>
   http.post<unknown, LoginResponse>('/auth/login', data)
+
+// 「登录设备」：列出 / 撤销（撤销本机要配合清本地凭据再回登录页）
+export const getDevices = () => http.get<unknown, DeviceItem[]>('/auth/devices')
+export const revokeDevice = (id: number) => http.delete<unknown, void>(`/auth/devices/${id}`)
+export const revokeOtherDevices = (deviceToken?: string | null) =>
+  http.post<unknown, number>('/auth/devices/revoke-others', { deviceToken })
 export const changePassword = (data: { oldPassword: string; newPassword: string }) =>
   http.post<unknown, void>('/auth/change-password', data)
 // 忘记密码：先申请验证码，再凭验证码设新密码（两个接口均无需登录）

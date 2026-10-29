@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { login as loginApi } from '../api'
-import { setToken } from '../utils/authToken'
+import { setToken, setDeviceAuth, clearDeviceAuth, hasValidToken, getDeviceToken } from '../utils/authToken'
+import { resetAuthSession } from '../utils/authSession'
 
 /** 后台登录页：老版视觉（原生 React） */
 export default function Login() {
@@ -20,9 +21,21 @@ export default function Login() {
     if (!username || !password) return
     setLoading(true)
     try {
-      const res = await loginApi({ username, password })
+      const res = await loginApi({
+        username, password, remember,
+        // 带上这台浏览器上一轮的设备令牌：后端先撤销它再发新的，设备列表不会越登越多行
+        previousDeviceToken: getDeviceToken(),
+      })
       // 「记住我」：勾选→localStorage（关浏览器仍登录）；未勾选→sessionStorage（关浏览器即退出）
       setToken(res.token, remember)
+      // 勾选「记住我」时后端会额外发一个设备令牌（90 天滚动）——
+      // 它才是「重启电脑后打开 /dashboard 直接进页面」的依据，见 utils/authSession.ts
+      if (remember && res.deviceToken) {
+        setDeviceAuth(res.deviceToken, res.deviceId, res.deviceExpiresAtMs)
+      } else {
+        clearDeviceAuth() // 换账号/未勾选：别把上一轮设备令牌留着
+      }
+      resetAuthSession()
       if (remember) localStorage.setItem('inv_remember', username)
       else localStorage.removeItem('inv_remember')
       // 首次登录（临时密码）→ 强制先去重设自己的密码
@@ -54,6 +67,10 @@ export default function Login() {
       setLoading(false)
     }
   }
+
+  // 已经有有效登录态（含「记住我」静默续登）→ 点「员工登录」直接进后台，不再输密码。
+  // 要换账号：在后台左下角点「登出」（会撤销本机的设备令牌）→ 回到本页。
+  if (hasValidToken()) return <Navigate to="/dashboard" replace />
 
   return (
     <section className="login-section">

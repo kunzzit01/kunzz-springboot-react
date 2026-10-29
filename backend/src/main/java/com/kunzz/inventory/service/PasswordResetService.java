@@ -36,6 +36,7 @@ public class PasswordResetService {
     private final EmailVerificationRepository verificationRepository;
     private final MailService mailService;
     private final PasswordEncoder passwordEncoder;
+    private final DeviceTokenService deviceTokenService;
 
     /** 验证码有效期（分钟） */
     private static final int CODE_TTL_MINUTES = 10;
@@ -140,6 +141,13 @@ public class PasswordResetService {
         // 已自行设密，下次登录不再强制走重设密码页
         user.setIsFirstLogin(false);
         userRepository.save(user);
+        // 2026-10-28：密码被重设 → 所有「记住我」的设备一律失效（设备丢失/令牌泄露时的补救路径）
+        try {
+            int revoked = deviceTokenService.revokeAll(user.getId());
+            if (revoked > 0) log.info("[PasswordReset] 已撤销该账号 {} 台记住设备", revoked);
+        } catch (Exception e) {
+            log.warn("[PasswordReset] 撤销记住设备失败（user_devices 表未创建？）：{}", e.toString());
+        }
         log.info("[PasswordReset] 密码已重设 userId={} username={}", user.getId(), user.getUsername());
     }
 

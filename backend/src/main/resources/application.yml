@@ -49,7 +49,12 @@ spring:
 jwt:
   # 生产环境必须通过环境变量 JWT_SECRET 注入强随机密钥（上线前务必更换）
   secret: ${JWT_SECRET:kunzz-inventory-system-jwt-secret-2026-change-in-production-0123456789}
+  # 访问令牌（JWT）有效期：24 小时。短有效期 + 「记住设备」静默续登，兼顾安全与便利
   expiration: 86400
+  # 「记住我」设备令牌有效期（天，滚动续期）：
+  #   勾选记住我后，90 天内没碰过这台设备才需要重新登入；
+  #   每次打开/续登都会把到期时间往后推 90 天（见 DeviceTokenService）。
+  device-ttl-days: ${AUTH_DEVICE_TTL_DAYS:90}
 
 # 前端登录地址（欢迎邮件里的登录按钮）
 app:

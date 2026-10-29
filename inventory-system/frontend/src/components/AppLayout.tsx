@@ -6,7 +6,8 @@ import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
 import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
 import { useVersionWatcher } from '../utils/versionWatcher'
-import { clearToken } from '../utils/authToken'
+import { clearSession } from '../utils/authToken'
+import { revokeThisDevice } from '../utils/authSession'
 import '../styles/sidebar.css'
 
 interface LinkItem { label: string; path: string }
@@ -206,12 +207,16 @@ export default function AppLayout() {
     return Array.from(params.entries()).every(([k, v]) => curParams.get(k) === v)
   }
   const logout = () => {
-    clearToken()
-    sessionStorage.clear()
-    resetPagePerms() // 清页面权限缓存（下次登录重新拉取）
-    // 回到官网主页。⚠️ 结尾斜杠不能省：nginx 里官网是 location /home/，
-    // 写成 /home 会落进后台的 location / 而回到后台登录页
-    window.location.href = '/home/'
+    // 2026-10-28：登出 = 撤销**这台设备**的「记住我」令牌（其它设备不受影响）→ 回登录页。
+    // 不撤销的话，下次打开 /dashboard 又会被设备令牌静默登回去 —— 用户就换不了账号了。
+    // 先发撤销请求（带 8s 超时）再跳转：直接跳会让 XHR 被中断，令牌留在服务端。
+    void revokeThisDevice().finally(() => {
+      clearSession()
+      sessionStorage.clear()
+      resetPagePerms() // 清页面权限缓存（下次登录重新拉取）
+      // 回登录页（而不是官网）：员工登出常见目的就是「换个账号登」
+      window.location.href = '/login'
+    })
   }
 
   /** 汉堡切换侧栏：展开/收起都清 flyout 与定时器（避免与展开态侧栏并存双高亮） */
@@ -455,6 +460,7 @@ export default function AppLayout() {
               <span className="ai-toggle-label">Kunzz宝</span>
               <span className={'ai-toggle-switch' + (aiVisible ? ' on' : '')}><i /></span>
             </div>
+            <button className="devices-btn" onClick={() => go('/devices')} title="这台账号已记住的设备">登录设备</button>
             <button className="logout-btn" onClick={logout} title="登出">登出</button>
           </div>
         </div>

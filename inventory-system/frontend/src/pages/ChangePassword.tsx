@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { message } from 'antd'
 import { changePassword } from '../api'
-import { clearToken } from '../utils/authToken'
+import { clearSession } from '../utils/authToken'
+import { revokeThisDevice } from '../utils/authSession'
 
 /**
  * 首次登录重设密码页（临时密码登录后被强制跳转到这里）
@@ -17,8 +18,11 @@ export default function ChangePassword() {
   const navigate = useNavigate()
 
   const logout = () => {
-    clearToken()
-    navigate('/login', { replace: true })
+    // 登出即撤销本机设备令牌（否则「记住我」会把用户又登回去）
+    void revokeThisDevice().finally(() => {
+      clearSession()
+      navigate('/login', { replace: true })
+    })
   }
 
   const onSubmit = async (e: React.FormEvent) => {

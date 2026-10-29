@@ -2,6 +2,8 @@ package com.kunzz.inventory.controller;
 
 import com.kunzz.inventory.common.ApiResponse;
 import com.kunzz.inventory.dto.ChangePasswordRequest;
+import com.kunzz.inventory.dto.DeviceTokenRequest;
+import com.kunzz.inventory.dto.DeviceVO;
 import com.kunzz.inventory.dto.ForgotPasswordRequest;
 import com.kunzz.inventory.dto.LoginRequest;
 import com.kunzz.inventory.dto.LoginResponse;
@@ -10,6 +12,7 @@ import com.kunzz.inventory.dto.UserVO;
 import com.kunzz.inventory.entity.User;
 import com.kunzz.inventory.security.BoundedExpiryMap;
 import com.kunzz.inventory.service.AuthService;
+import com.kunzz.inventory.service.DeviceTokenService;
 import com.kunzz.inventory.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final DeviceTokenService deviceTokenService;
 
     // ---- 登录限速（对齐 Web security basics 第 5 节）----
     // 分桶维度（2026-09-28 起）：
@@ -125,7 +129,8 @@ public class AuthController {
             return ApiResponse.error(429, "登录尝试过多，请约 " + mins + " 分钟后再试");
         }
         try {
-            ApiResponse<LoginResponse> resp = ApiResponse.ok(authService.login(request));
+            ApiResponse<LoginResponse> resp = ApiResponse.ok(
+                    authService.login(request, req.getHeader("User-Agent"), ip));
             // 登录成功清除计数（skipSuccessfulRequests 语义）：账号与 IP 两边都清 ——
             // 办公室共用出口时，一次正常登录就能把兜底计数归零，进一步减少误锁
             accountFails.remove(account); accountLockedUntil.remove(account);
@@ -189,6 +194,69 @@ public class AuthController {
         User user = (User) authentication.getPrincipal();
         authService.changePassword(user, request.oldPassword(), request.newPassword());
         return ApiResponse.ok();
+    }
+
+    // ==================== 记住设备 / 撤销设备（2026-10-28） ====================
+
+    /**
+     * 静默续登：设备令牌 → 新 JWT。
+     * 无需登录态（JWT 正好过期了才走这里），令牌本身就是凭据；失败返回 401 让前端回登录页。
+     */
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@RequestBody DeviceTokenRequest request,
+                                              jakarta.servlet.http.HttpServletRequest req) {
+        return ApiResponse.ok(authService.refresh(request.deviceToken(), clientIp(req)));
+    }
+
+    /**
+     * 登出：撤销本机设备令牌（其它设备不受影响）后回登录页。
+     * 幂等：令牌无效/已撤销也返回成功（前端只管清本地凭据）。
+     */
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@RequestBody(required = false) DeviceTokenRequest request) {
+        try {
+            deviceTokenService.revokeByToken(request == null ? null : request.deviceToken());
+        } catch (Exception e) {
+            log.warn("[记住设备] 登出撤销失败：{}", e.toString());
+        }
+        return ApiResponse.ok();
+    }
+
+    /** 当前账号已记住的设备列表（最近活跃在前，标出「当前设备」） */
+    @GetMapping("/devices")
+    public ApiResponse<java.util.List<DeviceVO>> devices(
+            Authentication authentication,
+            @RequestHeader(value = "X-Device-Token", required = false) String deviceToken) {
+        User user = (User) authentication.getPrincipal();
+        String myHash = (deviceToken == null || deviceToken.isBlank())
+                ? null : DeviceTokenService.sha256Hex(deviceToken.trim());
+        java.util.List<DeviceVO> list = deviceTokenService.activeDevices(user.getId()).stream()
+                .map(d -> new DeviceVO(d.getId(), d.getName(), d.getIp(), d.getCreatedAtMs(),
+                        d.getLastSeenMs(), d.getExpiresAtMs(),
+                        myHash != null && myHash.equals(d.getTokenHash())))
+                .toList();
+        return ApiResponse.ok(list);
+    }
+
+    /** 撤销指定的记住设备 */
+    @DeleteMapping("/devices/{id}")
+    public ApiResponse<Void> revokeDevice(@PathVariable Integer id, Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        if (!deviceTokenService.revokeById(user.getId(), id)) {
+            return ApiResponse.error(404, "设备不存在或无权操作");
+        }
+        return ApiResponse.ok();
+    }
+
+    /** 一键撤销其它所有设备（保留当前设备） */
+    @PostMapping("/devices/revoke-others")
+    public ApiResponse<Integer> revokeOtherDevices(
+            @RequestBody(required = false) DeviceTokenRequest request,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        int revoked = deviceTokenService.revokeOthers(user.getId(),
+                request == null ? null : request.deviceToken());
+        return ApiResponse.ok(revoked);
     }
 
     /** 忘记密码第一步：往邮箱发 6 位验证码（未登录可访问，路径在 SecurityConfig 白名单里） */

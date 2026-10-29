@@ -14,6 +14,23 @@ export interface LoginResponse {
   token: string
   user: UserInfo
   mustChangePassword?: boolean
+  /** 勾选了「记住我」才有：设备令牌（90 天滚动，用来静默换新 JWT） */
+  deviceToken?: string | null
+  deviceId?: number | null
+  deviceExpiresAtMs?: number | null
+}
+
+/** 「登录设备」页的一行（GET /api/auth/devices） */
+export interface DeviceItem {
+  id: number
+  name: string
+  ip?: string | null
+  /** epoch 毫秒：前端按本地时区显示 */
+  createdAtMs: number
+  lastSeenMs: number
+  expiresAtMs: number
+  /** 当前正在用的这台设备 */
+  current: boolean
 }
 
 // ---------- 分页 ----------

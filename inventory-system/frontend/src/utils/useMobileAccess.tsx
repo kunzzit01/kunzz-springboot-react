@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getMe, getStockPerms } from '../api'
-import { clearToken } from './authToken'
+import { clearSession } from './authToken'
+import { revokeThisDevice } from './authSession'
 
 /**
  * 电话版（/mobile/*）双层权限：
@@ -48,11 +49,14 @@ export function useMobileAccess(): MobileAccess {
   return state
 }
 
-/** 退出登录（对齐旧 logout.php：清凭据回手机登录页） */
+/** 退出登录（对齐旧 logout.php：清凭据回手机登录页）
+ *  2026-10-28：同时撤销本机的「记住我」设备令牌，否则下次打开又自动登回去了 */
 export function mobileLogout() {
-  clearToken()
-  sessionStorage.clear()
-  window.location.href = '/mobile/login'
+  void revokeThisDevice().finally(() => {
+    clearSession()
+    sessionStorage.clear()
+    window.location.href = '/mobile/login'
+  })
 }
 
 /** 无权限访问页（对齐旧 branch_check.php 的 403 卡片：当前账户分支 / 页面要求分支 / 返回） */

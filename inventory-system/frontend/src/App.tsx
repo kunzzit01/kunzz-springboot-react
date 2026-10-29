@@ -3,7 +3,9 @@ import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import AppLayout from './components/AppLayout'
 import { loadPagePerms, canAccess, resetPagePerms } from './utils/pagePerms'
-import { hasToken } from './utils/authToken'
+import { hasToken, hasValidToken } from './utils/authToken'
+import { ensureSession } from './utils/authSession'
+import Devices from './pages/Devices'
 import Login from './pages/Login'
 import ChangePassword from './pages/ChangePassword'
 import ForgotPassword from './pages/ForgotPassword'
@@ -72,6 +74,32 @@ function RequireAuth({ children }: { children: ReactElement }) {
   return children
 }
 
+/** 启动门禁（2026-10-28「记住这台设备」）：
+ *  JWT 不存在/已过期时，先用设备令牌静默续登，再渲染路由。
+ *  不加这一层的话，重启电脑后打开 /dashboard 会先闪一下登录页（RequireAuth 是同步判断 JWT 的）。 */
+function AutoLogin({ children }: { children: ReactElement }) {
+  const [ready, setReady] = useState(() => hasValidToken())
+  useEffect(() => {
+    if (ready) return
+    let alive = true
+    ensureSession().finally(() => { if (alive) setReady(true) })
+    return () => { alive = false }
+  }, [ready])
+  if (ready) return children
+  return (
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 12, color: '#6b7280',
+    }}>
+      <div style={{
+        width: 32, height: 32, border: '3px solid #ffd9bf', borderTopColor: '#ff5c00',
+        borderRadius: '50%', animation: 'bootspin 0.9s linear infinite',
+      }} />
+      <div style={{ fontSize: 13.5 }}>正在恢复登录状态…</div>
+    </div>
+  )
+}
+
 /** 页面级权限守卫：URL 直达也拦截（对齐旧系统 sidebar/page permissions 语义；9/3 新增） */
 function RequirePage({ children }: { children: ReactElement }) {
   const location = useLocation()
@@ -110,7 +138,8 @@ function RequirePage({ children }: { children: ReactElement }) {
 
 export default function App() {
   return (
-    <Routes>
+    <AutoLogin>
+      <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       {/* 电话版（手机端专用，无侧边栏）：
@@ -162,8 +191,11 @@ export default function App() {
         <Route path="remark" element={<RemarkAnalysis />} />
         <Route path="maintain" element={<Maintain />} />
         <Route path="phone" element={<Phone />} />
+        {/* 登录设备（记住我）：所有人可看、只管自己的设备，故不占页面权限 */}
+        <Route path="devices" element={<Devices />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AutoLogin>
   )
 }

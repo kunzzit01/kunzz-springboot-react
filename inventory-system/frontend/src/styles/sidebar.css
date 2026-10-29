@@ -399,6 +399,28 @@
   box-shadow: 0 6px 16px rgba(255, 92, 0, 0.35);
 }
 
+/* 底部「登录设备」（2026-10-28 记住我 = 记住这台设备）：次要按钮，描边式，不与登出抢主色 */
+.devices-btn {
+  width: clamp(70px, 6.25vw, 120px);
+  background: #fff;
+  border: 1px solid #ffd0b3;
+  border-radius: 20px;
+  padding: clamp(7px, 0.42vw, 9px) clamp(12px, 0.63vw, 18px);
+  color: #c2410c;
+  font-size: clamp(10px, 0.74vw, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+.devices-btn:hover {
+  border-color: #ff5c00;
+  color: #ff5c00;
+  background: #fff7f2;
+  transform: translateY(-2px);
+}
+
 /* ===== 折叠模式（精致窄栏） ===== */
 .informationmenu.collapsed {
   width: clamp(52px, 3.65vw, 72px) !important;
@@ -622,6 +644,24 @@
 .informationmenu.collapsed .logout-btn::after {
   content: '⏻';
   font-size: 17px;
+  line-height: 1;
+}
+
+/* 折叠时「登录设备」：与登出同尺寸的图标按钮 */
+.informationmenu.collapsed .devices-btn {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  font-size: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.informationmenu.collapsed .devices-btn::after {
+  content: '🖥';
+  font-size: 15px;
   line-height: 1;
 }
 

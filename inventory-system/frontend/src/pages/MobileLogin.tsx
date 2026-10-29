@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { login as loginApi, getMe, getStockPerms } from '../api'
-import { setToken, clearToken } from '../utils/authToken'
+import { setToken, setDeviceAuth, clearDeviceAuth, clearSession, hasValidToken, getDeviceToken } from '../utils/authToken'
+import { resetAuthSession } from '../utils/authSession'
 import { showToast } from '../utils/toast'
 import '../styles/mobile-login.css'
 
@@ -24,6 +25,8 @@ export default function MobileLogin() {
   const [remember, setRemember] = useState(true)
   const [loading, setLoading] = useState(false)
   const [choosing, setChoosing] = useState<string[] | null>(null)
+  /** 已经自动续登过一次（防止 effect 重入） */
+  const resumedRef = useRef(false)
 
   /** 过滤中文字符（对齐旧 login.html input 过滤） */
   const stripZh = (v: string) => v.replace(/[\u4e00-\u9fa5]/g, '')
@@ -51,13 +54,33 @@ export default function MobileLogin() {
     } catch { go('/mobile/out') }
   }
 
+  // 「记住我」已生效（重启手机/关浏览器后再打开本页）→ 直接续上，不再要求输密码。
+  // 要换账号：手机页右上角「退出登录」（会撤销本机设备令牌）→ 回到本页。
+  useEffect(() => {
+    if (resumedRef.current) return
+    if (!hasValidToken()) return
+    resumedRef.current = true
+    afterLogin()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!username || !password) return
     setLoading(true)
     try {
-      const res = await loginApi({ username, password })
+      const res = await loginApi({
+        username, password, remember,
+        previousDeviceToken: getDeviceToken(),
+      })
       setToken(res.token, remember)
+      // 勾选记住我 → 保存设备令牌（重启手机/关浏览器后直接进手机页，见 utils/authSession.ts）
+      if (remember && res.deviceToken) {
+        setDeviceAuth(res.deviceToken, res.deviceId, res.deviceExpiresAtMs)
+      } else {
+        clearDeviceAuth()
+      }
+      resetAuthSession()
       if (remember) localStorage.setItem('inv_remember', username)
       else localStorage.removeItem('inv_remember')
       if (res.mustChangePassword) {
@@ -82,7 +105,7 @@ export default function MobileLogin() {
                   {s.toUpperCase()}
                 </button>
               ))}
-              <button type="button" className="switch-account" onClick={() => { clearToken(); setChoosing(null) }}>
+              <button type="button" className="switch-account" onClick={() => { clearSession(); setChoosing(null) }}>
                 切换账号
               </button>
             </form>

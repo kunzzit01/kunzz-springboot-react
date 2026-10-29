@@ -4,7 +4,39 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
-## 🗓️ 2026-10-27
+## 🗓️ 2026-10-28
+
+### [2026-10-28-remember-device] 「记住我」= 记住这台设备（重启电脑免密码进入 + 撤销设备页）
+
+- **原来的问题**：勾选「记住我」只是把 JWT 放 localStorage，而 JWT 只有 24 小时 ——
+  第二天（更别说重启电脑后）打开 `kunzzgroup.com/dashboard` 仍会被打回登录页，
+  「记住我」实际只记住了一个账号名。
+- **做法（WhatsApp 式会话）**：
+  - 登录时勾选「记住我」→ 后端额外签发**设备令牌**（32 字节 SecureRandom，库里只存 SHA-256 摘要），
+    默认 **90 天滚动**：每次静默续登把到期时间推到 now+90d，所以「90 天没碰过这台设备」才失效。
+  - 前端启动门禁 `utils/authSession.ts`：JWT 不存在/已过期 → 用设备令牌 `POST /api/auth/refresh` 换新 JWT，
+    用户无感；接口 401 时也会先续登再重放原请求（`api/http.ts`，单飞防并发重复）。
+    JWT 生命周期没被拉长（仍 24h），拿到的是「短期凭据 + 长期可撤销的设备凭据」。
+  - 新页 `/devices`「登录设备」（侧边栏底部入口）：列出已记住的设备（设备名/IP/最后活跃/有效期至/当前设备），
+    可逐个撤销，或一键「撤销其它所有设备」。设备名由 UA 解析（如「Chrome · Windows」「Safari · iPhone」）。
+  - **登出 = 撤销本机设备令牌 + 回 `/login`**（原来回官网首页）。不撤销的话下次打开又会被静默登回去，
+    用户就换不了账号；其它设备登录态不受影响。手机版 `/mobile/login` 同样支持。
+  - 忘记密码重设成功后，该账号**所有记住设备一并撤销**（设备丢失/令牌泄露时的补救路径）。
+  - 同一台浏览器重复登录不会越登越多行：登录请求会带上「上一轮设备令牌」，
+    服务端先撤销它再发新的（`previousDeviceToken`）。
+- **时间列的坑**：`user_devices` 的时间全部用 **epoch 毫秒 BIGINT**，不用 DATETIME ——
+  生产 JVM 与数据库时区不一致（DB 存马来西亚 +8，VPS 的 systemd 未设 `-Duser.timezone`），
+  用绝对时间戳可以让「到期/续期」不受时区漂移影响，前端按本地时区显示。
+- **上线要跑一次 DDL**：`add_new_tables_user_devices.sql`（幂等）。
+  未执行也不至于登不进去：签发失败只打 warning 并降级为原来的普通 JWT，
+  只是「重启后免密进入」和「登录设备」页不生效。
+- **改动范围**：后端 `entity/UserDevice`、`repository/UserDeviceRepository`、`service/DeviceTokenService`、
+  `service/AuthService`（login/refresh）、`service/PasswordResetService`（撤销全部设备）、
+  `controller/AuthController`（+refresh/logout/devices/revoke）、`security/SecurityConfig`、`application.yml`；
+  前端 `utils/authToken`、`utils/authSession`(新)、`api/http`、`api/index`、`types`、`App.tsx`、
+  `components/AppLayout`、`pages/Login`、`pages/MobileLogin`、`pages/ChangePassword`、
+  `pages/Devices`(新)、`utils/useMobileAccess`、`styles/sidebar.css`。
+
 
 ### [2026-10-27-untrack-jar] 后端 jar 退出 git，部署改为 VPS 就地构建
 
