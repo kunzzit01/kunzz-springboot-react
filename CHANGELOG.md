@@ -6,6 +6,20 @@
 ---
 ## 🗓️ 2026-10-29
 
+### [2026-10-29-joinus-perf] 官网 joinus 滚动卡顿：照片动画改写 transform + 去掉整屏动画
+
+- **现象**：`/home/joinus` 下划卡顿。审核发现四个叠加原因：
+  1. `useComphotoBounce.js` 每帧对 10 张照片写 `left`/`top`（触发布局），CSS 又有 `transition: all .3s`（每帧重开过渡）；
+  2. 这个 rAF 循环**从不暂停**（滑出视口/标签页隐藏也跑）；
+  3. `.comphoto-section`（100vh）叠了 3 层逐帧动画：渐变 `background-position` + 光晕脉冲 + 粒子浮动 → 每帧整屏重绘；
+  4. `.company-job-container`（背景已 97% 不透明）与 `.job-section`（背景图不透明）仍加了 `backdrop-filter` → 看不见但很贵。
+- **改法**：照片定位改 `transform: translate3d()`（+`will-change`），去掉 `transition: all`；
+  用 `IntersectionObserver` + `document.hidden` 门控；删掉三层整屏动画与上述两处 `backdrop-filter`。
+- **A/B 实测**（headless Chrome + CDP `Performance.getMetrics`，10 元素 × 3 秒）：
+  布局次数 181 → **0**；样式重算耗时 68.6ms → **10.9ms**；主线程总耗时 171ms → **48.2ms**。
+- **未做（P2）**：照片缩略图（现 150–400KB 显示成 100×80）、hero 图 751KB 未做 `srcset`/WebP、首包 447KB 未拆包。
+- 详见 `docs/tasks/2026-10-29-joinus-perf.md`。
+
 ### [2026-10-29-brand-icons] 成本仪表盘：三个外卖卡片换品牌图标 + 卡片图标风格统一
 
 - **问题**：GrabFood / foodpanda / ShopeeFood 三张成本卡片原来都是通用图标
