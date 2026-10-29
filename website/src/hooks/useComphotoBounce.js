@@ -191,6 +191,7 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
       img.src = src;
       img.className = 'comphoto';
       img.loading = 'lazy';
+      img.decoding = 'async';   // 2026-10-29 性能：不阻塞主线程解码
       img.alt = `公司照片 ${index + 1}`;
 
       const pos = getRandomNonOverlappingPosition();

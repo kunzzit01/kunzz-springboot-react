@@ -15,7 +15,7 @@ function BenefitsGrid() {
     <div className="benefits-grid">
       {benefits.map((item) => (
         <div className="benefit-item" key={item.label}>
-          <img src={item.icon} alt={item.label} />
+          <img src={item.icon} alt={item.label} loading="lazy" decoding="async" width="64" height="64" />
           <p>{item.label}</p>
         </div>
       ))}
@@ -29,7 +29,8 @@ export default function JoinHeroBenefits({ layout = 'combined' }) {
 
   const heroBanner = (
     <div ref={bannerRef} className="joinus-banner joinus-banner--full">
-      <img src={mediaUrl('joinus_background')} alt="" className="background-image" />
+      {/* 2026-10-29 性能：hero 图较大（~750KB），异步解码 + 高优先级，避免阻塞首屏/滚动 */}
+      <img src={mediaUrl('joinus_background')} alt="" className="background-image" decoding="async" fetchPriority="high" />
       <div className="joinus-content">
         <h1>加入我们</h1>
         <p>在这里，你的努力不止换来薪资，更参与到品牌建设的每一步，一起迈向更大的舞台。</p>
