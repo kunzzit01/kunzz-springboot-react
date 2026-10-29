@@ -1,6 +1,6 @@
 import http from './http'
 import type {
-  ApplicationLog, BranchRow, BranchStockTotal, Category, DashboardSummary, DeviceItem, DishwareBreak,
+  ApplicationLog, BranchRow, BranchStockTotal, Category, DashboardSummary, DishwareBreak,
   DishwareInfo, DishwareSet, DishwareSetItem, DishwareStockVO, DishwareTransfer, HandlerOption,
   LoginResponse, PageResult, StockData, StockInout, StockMinimum, StockSot,
   Supply, SupplyMaterial, UserInfo,
@@ -18,11 +18,9 @@ export const login = (data: {
 }) =>
   http.post<unknown, LoginResponse>('/auth/login', data)
 
-// 「登录设备」：列出 / 撤销（撤销本机要配合清本地凭据再回登录页）
-export const getDevices = () => http.get<unknown, DeviceItem[]>('/auth/devices')
-export const revokeDevice = (id: number) => http.delete<unknown, void>(`/auth/devices/${id}`)
-export const revokeOtherDevices = (deviceToken?: string | null) =>
-  http.post<unknown, number>('/auth/devices/revoke-others', { deviceToken })
+// 「登录设备」页已于 2026-10-29 下线（任务 2026-10-29-hide-devices-page）：
+// 前端不再有任何入口/路由；后端 /api/auth/devices 接口仍保留（需登录、只返回本人设备），
+// 以后要重新开放直接还原本文件与 App.tsx / pages/Devices.tsx（见 git 历史）。
 export const changePassword = (data: { oldPassword: string; newPassword: string }) =>
   http.post<unknown, void>('/auth/change-password', data)
 // 忘记密码：先申请验证码，再凭验证码设新密码（两个接口均无需登录）

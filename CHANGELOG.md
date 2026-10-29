@@ -4,7 +4,21 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
-## 🗓️ 2026-10-28
+## 🗓️ 2026-10-29
+
+### [2026-10-29-hide-devices-page] 下线「登录设备」页（老板要求员工不可见）
+
+- **原因**：`/devices` 只是给「记住我」做设备撤销用的内部工具页，不想让员工看到。
+- **做法（彻底下线，不是权限隐藏）**：
+  - `App.tsx` 删 `/devices` 路由与 import；`AppLayout.tsx` 删侧边栏底部「登录设备」按钮；
+  - `pages/Devices.tsx` 整文件删除；`styles/sidebar.css` 删 `.devices-btn` 样式；
+  - `api/index.ts` / `types.ts` 删 `getDevices`/`revokeDevice`/`revokeOtherDevices`/`DeviceItem`。
+- **不动的部分**：后端 `DeviceTokenService` / `UserDevice` / `/api/auth/devices` 保留 ——
+  「记住我 = 90 天免密进入」的核心功能不受影响，接口仍需登录且只返回本人设备；
+  以后要恢复管理页，还原前端四个文件即可（git 历史里有）。
+- **用户可用的替代手段**：单个设备在该设备上点「登出」即撤销；全部设备走「忘记密码重设」。
+- 部署：仅前端变更 → `npm ci && npm run build` → `rsync dist/ /var/www/admin/`，后端不用重启。
+
 
 ### [2026-10-28-remember-device] 「记住我」= 记住这台设备（重启电脑免密码进入 + 撤销设备页）
 

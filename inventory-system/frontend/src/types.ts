@@ -20,19 +20,6 @@ export interface LoginResponse {
   deviceExpiresAtMs?: number | null
 }
 
-/** 「登录设备」页的一行（GET /api/auth/devices） */
-export interface DeviceItem {
-  id: number
-  name: string
-  ip?: string | null
-  /** epoch 毫秒：前端按本地时区显示 */
-  createdAtMs: number
-  lastSeenMs: number
-  expiresAtMs: number
-  /** 当前正在用的这台设备 */
-  current: boolean
-}
-
 // ---------- 分页 ----------
 export interface PageResult<T> {
   total: number

@@ -460,7 +460,6 @@ export default function AppLayout() {
               <span className="ai-toggle-label">Kunzz宝</span>
               <span className={'ai-toggle-switch' + (aiVisible ? ' on' : '')}><i /></span>
             </div>
-            <button className="devices-btn" onClick={() => go('/devices')} title="这台账号已记住的设备">登录设备</button>
             <button className="logout-btn" onClick={logout} title="登出">登出</button>
           </div>
         </div>

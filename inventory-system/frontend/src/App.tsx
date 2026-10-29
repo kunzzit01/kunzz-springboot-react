@@ -5,7 +5,6 @@ import AppLayout from './components/AppLayout'
 import { loadPagePerms, canAccess, resetPagePerms } from './utils/pagePerms'
 import { hasToken, hasValidToken } from './utils/authToken'
 import { ensureSession } from './utils/authSession'
-import Devices from './pages/Devices'
 import Login from './pages/Login'
 import ChangePassword from './pages/ChangePassword'
 import ForgotPassword from './pages/ForgotPassword'
@@ -191,8 +190,6 @@ export default function App() {
         <Route path="remark" element={<RemarkAnalysis />} />
         <Route path="maintain" element={<Maintain />} />
         <Route path="phone" element={<Phone />} />
-        {/* 登录设备（记住我）：所有人可看、只管自己的设备，故不占页面权限 */}
-        <Route path="devices" element={<Devices />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
