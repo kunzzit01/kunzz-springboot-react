@@ -965,13 +965,7 @@ export default function StockProducts() {
                 {/* 左侧图标即搜索模式切换：放大镜=全能模糊 / 等号=精准（货品名完全等于关键字）；对齐总库存/进出货页 */}
                 <span className="smartSearch-icon"
                   title={exactMatch ? '精准搜索：只显示货品名字完全等于关键字的行（点击切换为全能）' : '全能搜索：货品名字/编号/规格/类型/供应商/冰箱分类 任一包含关键字（点击切换为精准）'}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    // 空关键字时图标 = 展开/收起开关；有关键字时才切换「精准 / 全能」
-                    const cur = (searchRef.current as HTMLInputElement | null)?.value || ''
-                    if (!cur.trim()) { setSearchExpanded(v => !v); return }
-                    toggleExact()
-                  }}>
+                  onClick={(e) => { e.stopPropagation(); toggleExact() }}>
                   <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
                 </span>
                 <input ref={searchRef} type="text" className="smartSearch-input" placeholder={exactMatch ? '精准：输入完整货品名字...' : '搜索名字/编号/规格/类型/供应商/冰箱分类...'}

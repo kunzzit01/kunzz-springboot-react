@@ -1709,25 +1709,19 @@ export default function StockInout() {
                 }}>
                 {/* 左侧图标即搜索模式切换：放大镜=模糊（含关键字全部匹配）/ 等号=精确（产品名完全等于关键字）；点击同时展开输入框 */}
                 <span className="smartSearch-icon"
-                  title={searchExpanded
-                    ? (exactMatch ? '当前精确搜索（产品名完全等于关键字）——点击切换为模糊' : '当前模糊搜索（包含关键字即可）——点击切换为精确')
-                    : '点击展开搜索'}
+                  title={exactMatch ? '精确搜索：只显示产品名完全等于关键字的记录（点击切换为模糊）' : '模糊搜索：显示所有包含关键字的记录（点击切换为精确）'}
                   onClick={(e) => {
                     e.stopPropagation()
-                    // 空关键字时：图标就是展开/收起开关（用户 2026-10-29：“收不了”）；
-                    // 有关键字时：保持原有「精确 / 模糊」切换语义。
-                    if (!kw.trim()) {
-                      setSearchExpanded((v) => !v)
-                      if (!searchExpanded) setTimeout(() => searchInputRef.current?.focus(), 50)
-                      return
-                    }
-                    setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true); setTimeout(() => searchInputRef.current?.focus(), 50)
+                    // 恢复原语义（2026-10-29）：图标 = 「精确 / 模糊」切换（不得被占用）
+                    setExactMatch(!exactMatch); setPage(0); setSearchExpanded(true)
+                    setTimeout(() => searchInputRef.current?.focus(), 50)
                   }}>
-                  <i className={'fas ' + (searchExpanded && exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch && searchExpanded ? '#ff7b00' : '#9ca3af' }} />
+                  <i className={'fas ' + (exactMatch ? 'fa-equals' : 'fa-search')} style={{ color: exactMatch ? '#ff7b00' : '#9ca3af' }} />
                 </span>
                 <input ref={searchInputRef} type="text" className="smartSearch-input"
                   placeholder="搜索全部列：货品 / 编号 / 收货单位 / 规格 / 单价 / 创建人 / 日期…" value={kw}
-                  title="搜索当前日期范围内的所有列（搜全时段用左侧「快速选择 → 全时段」）"
+                  title="搜索当前日期范围内的所有列（搜全时段用左侧「快速选择 → 全时段」）；按 Esc 收起"
+                  onKeyDown={(e) => { if (e.key === 'Escape') setSearchExpanded(false) }}
                   onChange={(e) => onSearchInput(e.target.value)} />
               </div>
             </div>
