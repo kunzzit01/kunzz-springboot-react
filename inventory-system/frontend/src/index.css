@@ -154,16 +154,11 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
   }
   [class$="-root"] .smartSearch-icon { color: inherit !important; }
-  /* 展开态：安全覆盖层（中性配色，不改变观感） */
+  /* 小屏也不做浮层（2026-10-29）：保持参与排版，只把展开宽度收小，避免盖住按钮 */
   [class$="-root"] .smartSearchWrapper.expanded {
-    position: absolute !important;
-    top: -2px;
-    right: -4px;
-    width: min(68vw, 240px) !important;
-    height: auto !important;
-    z-index: 90;
-    background: #fff !important;
-    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22) !important;
+    position: static !important;
+    width: min(52vw, 220px) !important;
+    height: var(--sf-h) !important;
   }
   .sp-root .smartSearchWrapper.expanded { right: 12px !important; }
 }
@@ -228,12 +223,11 @@ body {
   overflow: hidden;
 }
 
+/* 展开态：**参与排版**（2026-10-29 用户定稿）—— 像「总库存」那样把右边按钮挤过去，
+   不用绝对定位浮层（浮层会盖住按钮）。宽度用 clamp，窄屏自动收窄减少换行。 */
 [class$="-root"] .smartSearchWrapper.expanded {
-  position: absolute !important;
-  right: 0;
-  bottom: 0;
-  z-index: 60;
-  width: clamp(180px, 22vw, 340px) !important;
+  position: static !important;
+  width: clamp(170px, 18vw, 300px) !important;
   box-shadow: inset 0 0 0 1px #ff7b00, 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
@@ -243,8 +237,3 @@ body {
   font-size: clamp(11px, 0.95vw, 17px) !important;
 }
 
-/* 位于左侧筛选栏（.filter-item）里的搜索框：向右展开（向左会溢出卡片边框） */
-[class$="-root"] .filter-item .smartSearchWrapper.expanded {
-  left: 0;
-  right: auto;
-}
