@@ -309,7 +309,7 @@ const DateField = forwardRef<HTMLInputElement, Props>(function DateField(
   const monthLabel = `${view.y} 年 ${view.m} 月`
 
   return (
-    <div className={`date-field${compact ? ' date-field--compact' : ''}`} ref={wrapRef} style={wrapperStyle}>
+    <div className={`date-field${compact ? ' date-field--compact' : ''}${invalid ? ' date-field--invalid' : ''}`} ref={wrapRef} style={wrapperStyle}>
       <input
         ref={setRefs}
         id={id}

@@ -1,59 +1,72 @@
-/* ─── 统一日期输入（DateField）：固定「年/月/日」显示 + 自绘日历弹层 ───────── */
+/* ─── 统一日期输入（DateField）：输入框与日历按钮合成一个“胶囊” ────────────
+   页面级 class（form-input / table-input / excel-input）只负责字号和内边距；
+   边框、圆角、焦点环统一由外层 .date-field 提供 —— 否则会出现“输入框一层边框 +
+   日历按钮又一层边框”的双层描边（2026-10-29 用户截图反馈：右侧出现多余空格子）。 */
 
 .date-field {
   position: relative;
   display: flex;
   align-items: stretch;
-  gap: 6px;
   width: 100%;
   min-width: 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color .15s, box-shadow .15s;
 }
 
-.date-field .date-field__text {
+.date-field:hover { border-color: #c7ccd3; }
+.date-field:focus-within { border-color: #ff5c00; box-shadow: 0 0 0 3px rgba(255, 92, 0, .12); }
+
+/* 半截日期等非法态（红框） */
+.date-field--invalid { border-color: #dc2626; }
+.date-field--invalid:focus-within { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220, 38, 38, .12); }
+
+/* 内部输入：丢掉自己的边框/圆角/背景，视觉上交给外层胶囊 */
+.date-field .date-field__text,
+.date-field .date-field__text:focus,
+.date-field .date-field__text:focus-visible {
   flex: 1 1 auto;
   width: 100%;
   min-width: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  outline: none;
   letter-spacing: .06em;            /* 数字位稍微拉开，YYYY/MM/DD 更好读 */
   font-variant-numeric: tabular-nums;
 }
 
-.date-field .date-field__text::selection {
-  background: #ff5c00;
-  color: #fff;
-}
+.date-field .date-field__text::selection { background: #ff5c00; color: #fff; }
 
-.date-field .date-field__text--invalid {
-  border-color: #dc2626 !important;
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
-}
-
+/* 右侧日历按钮：不再有独立边框，只留一条细分隔线 */
 .date-field .date-field__btn {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  border: 2px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  color: #6b7280;
+  width: 38px;
+  border: 0;
+  border-left: 1px solid #eef0f2;
+  background: #fcfcfd;
+  color: #9ca3af;
   cursor: pointer;
-  transition: background .15s, border-color .15s, color .15s;
+  transition: background .15s, color .15s;
 }
 
-.date-field .date-field__btn:hover {
-  background: #fff7f0;
-  border-color: #ffb27a;
-  color: #ff5c00;
-}
-
-.date-field .date-field__btn:active { transform: translateY(1px); }
+.date-field .date-field__btn:hover { background: #fff7f0; color: #ff5c00; }
+.date-field .date-field__btn:active { background: #ffeedd; }
 .date-field .date-field__btn:disabled { opacity: .5; cursor: not-allowed; }
 
-/* 表格内小尺寸 */
-.date-field--compact { gap: 4px; }
-.date-field--compact .date-field__btn { width: 28px; border-width: 1px; border-radius: 4px; font-size: 11px; }
+/* 表格内小尺寸（表格单元格里常与无边框输入混排，边框调淡以免抢眼） */
+.date-field--compact { border-radius: 4px; border-color: #e5e7eb; }
+.date-field--compact .date-field__btn { width: 26px; font-size: 11px; background: transparent; }
 .date-field--compact .date-field__text { font-size: 12.5px; padding: 4px 6px; letter-spacing: .02em; }
+
+/* 防御：任何遗留的原生日期框都不参与布局（避免多出一个空格子） */
+.date-field > input[type="date"] { display: none !important; }
 
 /* ─── 自绘日历弹层（portal 到 body，fixed 定位，避免被表格 overflow 裁掉） ─── */
 /* z-index 必须高于站内所有弹窗遮罩：stockinout.css 的 .modal-overlay 是 15000，

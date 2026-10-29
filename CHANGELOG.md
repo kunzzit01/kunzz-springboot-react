@@ -102,6 +102,11 @@
   （`new Date('29/10/2026T00:00:00')` 非法）→ 发票号退化成 `J1-XXXX-001`；统一 ISO 后不会再发生。
 - **验证**：`tsc -b` 通过；全局再查 `placeholder="DD/MM/YYYY"` → 0 处（只剩注释）。
 - **未动**：`Jobs.tsx` 的日期**区间**筛选是 flatpickr RangePicker（中文显示已正常），要统一需另做 RangeField。
+- **2026-10-29 视觉优化（用户反馈“右侧多出一个空格子、有点难看”）**：原来输入框和白历按钮**各自带一圈边框**，
+  叠在一起就成了“双描边 + 多余空格子”。改为**胶囊式**：边框/圆角/焦点环全部收到外层 `.date-field`，
+  内部输入 `border:none !important`（页面级 `form-input/table-input/excel-input` 只管字号与内边距），
+  右侧按钮改成无边框 + 一条细分隔线，`focus-within` 统一出橙色焦点环；紧凑版（表格内）边框调淡。
+  另加一行防御：`.date-field > input[type="date"] { display:none }`，任何遗留原生日期框都不会再占位。
 
 ### [2026-10-27-untrack-jar] 后端 jar 退出 git，部署改为 VPS 就地构建
 
