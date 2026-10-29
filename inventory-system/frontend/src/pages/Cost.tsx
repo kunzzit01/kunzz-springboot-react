@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getKpiReport, getKpiMonthStock, getKpiSupply } from '../api'
+import { FoodpandaIcon, GrabIcon, ShopeeFoodIcon } from '../components/BrandIcons'
 import DateRangeField from '../components/DateRangeField'
 import '../styles/cost.css'
 
@@ -681,9 +682,9 @@ export default function Cost() {
                 </div>
               </div>
             )}
-            {card(<i className="fas fa-shuttle-van"></i>, 'Grab Food 成本 (RM)', moneyOrDash(summary.grab))}
-            {card(<i className="fas fa-shopping-bag"></i>, 'Foodpanda 成本 (RM)', moneyOrDash(summary.fp))}
-            {card(<i className="fas fa-shopping-bag"></i>, 'Shopee Food 成本 (RM)', moneyOrDash(summary.shopee))}
+            {card(<GrabIcon size={44} style={{ color: '#00B14F' }} />, 'Grab Food 成本 (RM)', moneyOrDash(summary.grab), '')}
+            {card(<FoodpandaIcon size={30} style={{ color: '#D70F64' }} />, 'Foodpanda 成本 (RM)', moneyOrDash(summary.fp), '')}
+            {card(<ShopeeFoodIcon size={27} style={{ color: '#EE4D2D' }} />, 'Shopee Food 成本 (RM)', moneyOrDash(summary.shopee), '')}
           </div>
 
           {/* 主图表 */}

@@ -1123,3 +1123,12 @@
     padding: 14px;
     width: 320px;
 }
+
+/* ─── 成本卡片图标统一（2026-10-29） ─────────────────────────────────────
+   业务图标统一 24px、深色；外卖平台图标改用品牌 SVG（BrandIcons，颜色由组件给），
+   两者共用同一个 50×50 图标槽，视觉重量对齐。 */
+.cost-root .cost-card-vertical .icon {
+  font-size: 24px;
+  color: #111827;
+}
+.cost-root .cost-card-vertical .icon svg { display: block; }
