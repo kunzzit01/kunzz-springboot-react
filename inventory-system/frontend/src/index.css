@@ -200,18 +200,25 @@ body {
 }
 
 /* ============================================================
-   全站搜索框尺寸统一（2026-10-29）
-   各页 CSS 里都把 .smartSearchWrapper 写死成 40×38，而按钮用的是 clamp(...vw...)：
-   换屏幕/缩放页面时只有搜索框不动，看起来“缩成一小团”。
-   这里用一条全站规则统一为与按钮同源 ——
-   高度 = 字高(clamp) × 1.2 + 上下内距(clamp) × 2，边框用 inset 阴影（不占布局尺寸）。
-   注：`[class$="-root"]` 命中 sio/stl/sos/sp/dw 等所有页面根容器，!important 压过各页旧值。
+   全站搜索框统一（2026-10-29）
+   1) 尺寸：各页原来写死 40×38，而按钮用 clamp(...vw...) → 缩放时只有搜索框不动。
+      现在宽/高都按按钮同一套 clamp 公式算（边框用 inset 阴影，不占布局尺寸）。
+   2) 展开不挤位：展开态改成绝对定位（浮在收起位置上方、向左展开），
+      否则一旦变宽就把右侧按钮挤到下一行（用户 2026-10-29 反馈）。
    ============================================================ */
+[class$="-root"] { --sf-size: clamp(34px, 3.1vw, 52px); --sf-h: calc(clamp(8px, 0.74vw, 14px) * 1.2 + clamp(4px, 0.42vw, 8px) * 2); }
+
 [class$="-root"] .btn { line-height: 1.2; }
 
+/* 展开时的定位上下文 + 占位尺寸（保证浮层不改变整行布局） */
+[class$="-root"] .header-search,
+[class$="-root"] .filter-item:has(> .smartSearchWrapper) {
+  position: relative;
+  min-width: var(--sf-size);
+  min-height: var(--sf-h);
+}
+
 [class$="-root"] .smartSearchWrapper {
-  --sf-size: clamp(34px, 3.1vw, 52px);
-  --sf-h: calc(clamp(8px, 0.74vw, 14px) * 1.2 + clamp(4px, 0.42vw, 8px) * 2);
   width: var(--sf-size) !important;
   height: var(--sf-h) !important;
   border: 0 !important;
@@ -222,6 +229,10 @@ body {
 }
 
 [class$="-root"] .smartSearchWrapper.expanded {
+  position: absolute !important;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
   width: clamp(180px, 22vw, 340px) !important;
   box-shadow: inset 0 0 0 1px #ff7b00, 0 0 0 2px rgba(255, 123, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
@@ -230,4 +241,10 @@ body {
   width: var(--sf-size) !important;
   min-width: var(--sf-size) !important;
   font-size: clamp(11px, 0.95vw, 17px) !important;
+}
+
+/* 位于左侧筛选栏（.filter-item）里的搜索框：向右展开（向左会溢出卡片边框） */
+[class$="-root"] .filter-item .smartSearchWrapper.expanded {
+  left: 0;
+  right: auto;
 }

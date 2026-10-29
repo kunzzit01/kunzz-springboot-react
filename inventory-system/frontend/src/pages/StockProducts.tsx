@@ -954,7 +954,6 @@ export default function StockProducts() {
         <div className="filter-bar">
           <div className="filter-group">
             <div className="filter-item">
-              <label>搜索货品</label>
               <div className={'smartSearchWrapper' + (searchExpanded ? ' expanded' : '')}
                 onClick={(e) => {
                   e.stopPropagation()
