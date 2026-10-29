@@ -6,6 +6,21 @@
 ---
 ## 🗓️ 2026-10-29
 
+### [2026-10-29-deps-security] Stage 2：vite 5 → 7（构建链）
+
+- **只升到 vite 7.3.7，不升 8**：advisory 受影响范围是 `vite <=6.4.3`，7 已修复；
+  vite 8 换了 Rolldown 引擎，且只配 plugin-react 6（还拉 oxc/babel peer），风险不成比例。
+- **版本**：vite 5.4.21 → **7.3.7**、@vitejs/plugin-react 4.3 → **5.2.0**。
+- **`npm audit`**：全量 8 → **6**（vite / esbuild 两条消失）；`--omit=dev` 仍为 2（只刺 react-router）。
+- **新增 `build.target: 'es2020'`**（`vite.config.ts`）：vite 6+ 默认 target 抬到
+  Chrome 107 / Safari 16，仓库使用者里有旧 iPhone / 旧 Windows 浏览器 →
+  显式钉回与 vite 5 默认（`modules`）相当的 es2020，避免升级后老设备白屏。
+- **验证**：`npm ci && npm run build` 通过；`vite` dev server 正常（v7.3.7 ready）；
+  无头 Chrome 冒烟：登录页/toggles/路由守卫/手机登录页正常，console 错误 0。
+- **部署前提**：VPS 的 Node 必须 ≥ 20.19（否则 `Unsupported engine`），详见任务文档。
+- **未做**：puppeteer-core 升级（Stage 3，仅仓库脚本）、react-router 6→7（需单独任务）。
+
+
 ### [2026-10-29-deps-security] 生产依赖安全升级（Stage 1）
 
 - **背景**：`npm audit` 长期报 11 个漏洞（生产依赖 5 个，含 1 个 critical），

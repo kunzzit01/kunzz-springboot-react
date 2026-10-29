@@ -1,6 +1,7 @@
 # 任务 2026-10-29-deps-security
 
-- 状态：**Stage 1 已完成**（2026-10-29）；Stage 2/3（vite/puppeteer，需大版本）仍待做
+- 状态：**Stage 1 已完成**（2026-10-29）；**Stage 2（vite）已完成**（2026-10-29）；
+  Stage 3（puppeteer-core，仅仓库脚本）与 react-router 6→7 仍待做
 - 分支：main
 - 目标：清掉 `npm audit` 报的 11 个漏洞（其中 5 个在**生产依赖**里，1 个 critical），
   且**不破坏**现有构建与功能。
@@ -77,11 +78,46 @@ npm audit --omit=dev                                          # 期望 0 vulnera
 验收：`npm run build` 通过；回归清单（见 §4）全绿；前端发到 `/var/www/admin` 后线上点一遍。
 提交：`chore(deps): 升级 axios/dompurify/follow-redirects/react-router 至安全版本（task 2026-10-29-deps-security）`
 
-### Stage 2（可选，dev 构建链）：vite 5 → 8
+### Stage 2（可选，dev 构建链）：vite 5 → 7
 
-- 影响面：`vite.config.ts`、`@vitejs/plugin-react`（要一起升）、`esbuild`；Node 版本要求提高。
-- 属于**构建工具**，不进线上包（线上产物是 `dist/`），所以优先级低于 Stage 1。
-- 验收同上 + 检查构建产物体积/顺序不变、`npm run dev` 能跑。
+> **实测决定：只升到 vite 7.3.7，不升 8。** 原因：
+> - advisories 的受影响范围是 `vite <=6.4.3`，vite 7 已修复；升 8（Rolldown 引擎）风险不成比例。
+> - vite 8 目前只配 `@vitejs/plugin-react@6`，而 plugin-react 6 还会拉 oxc/babel 相关 peer，改动面更大。
+> - vite 7 仍是 Rollup 引擎，与 5 同构（同一套 `build.rollupOptions`）。
+
+```bash
+cd inventory-system/frontend
+node -v                                   # 必须 v20.19+ 或 v22.12+（vite 7 engines）
+npm install -D vite@^7.3.7 @vitejs/plugin-react@^5.2.0
+npm ci && npm run build
+```
+
+**Stage 2 实测结果（2026-10-29）**
+
+| 项 | 结果 |
+|---|---|
+| vite | 5.4.21 → **7.3.7** ✅ |
+| @vitejs/plugin-react | 4.3.x → **5.2.0** ✅ |
+| `npm audit` 全量 | 8 → **6**（vite / esbuild 两条已消失） |
+| `npm audit --omit=dev` | 保持 **2**（只刺 react-router） |
+| 构建 | ✅ 通过（≈8s，2014 modules） |
+| dev server | ✅ `vite v7.3.7 ready`，`/login` 与 `/src/main.tsx` 均 200 |
+| 构建产物冒烟（无头 Chrome） | ✅ 表单/toggles/路由守卫/手机登录页均正常，console 错误 0 |
+
+**两个跟升需要记住的点**
+
+1. **build.target 已显式钉回 `es2020`**（`vite.config.ts`）：vite 6+ 默认抬到
+   `baseline-widely-available`（Chrome 107 / Safari 16），仓库使用者里有旧 iPhone / 旧 Windows 浏览器，
+   不钉会出现升级后老设备白屏。
+2. **VPS 的 Node 必须先确认**：`node -v` 低于 20.19（例如 Ubuntu 自带的 Node 18）会直接
+   `npm run build` 报 `Unsupported engine`。升级方式（二选一）：
+   ```bash
+   # 方式 A：NodeSource
+   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt-get install -y nodejs
+   # 方式 B：nvm（不影响系统包）
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && . ~/.nvm/nvm.sh && nvm install 22
+   node -v   # 重开 shell 后再确认
+   ```
 
 ### Stage 3（可选，仓库脚本）：puppeteer-core 升级
 
