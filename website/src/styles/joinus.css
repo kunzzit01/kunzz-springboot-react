@@ -3162,10 +3162,6 @@ img.image-3d-rotate:hover,
    这里按视口高度压缩表单项，让它一屏内完整显示（560px 以下才退回滚动）。
    ============================================================ */
 @media (max-height: 820px) {
-    .contact-form-container {
-        height: min(calc(100vh - 150px), 84vh);
-    }
-
     .contact-form-container .feedback-card {
         padding: 10px 12px;
     }
