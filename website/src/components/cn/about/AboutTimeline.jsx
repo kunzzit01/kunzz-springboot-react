@@ -288,7 +288,9 @@ export default function AboutTimeline({ lang = 'zh' }) {
       </div>
 
       <div className="timeline-body">
-        {!isMobile && monthsInYear.length > 0 ? (
+        {/* 2026-10-30：年份只有 1 个月时，侧栏只是重复卡片上的「2022 · 9月」徽标，
+            而且会在页面左侧留一条孤立的竖线 → 只在多月份时才显示 */}
+        {!isMobile && monthsInYear.length > 1 ? (
         <div className="timeline-month-sidebar" id="monthSidebar">
           {monthsInYear.map((m) => (
             <div

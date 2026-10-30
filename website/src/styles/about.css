@@ -1987,3 +1987,150 @@ img.image-3d-rotate:hover,
     width: 100%;
   }
 }
+/* ============================================================
+   2026-10-30：「我们的发展历史」版式整顿
+   问题：整块内容顶对齐 → 下方大片空白；年份圆点对比度低；
+       月份侧栏离卡片太远、像孤儿元素。
+   原则：整块垂直居中；年份导航与卡片同宽（对齐）；侧栏贴近卡片。
+   ============================================================ */
+.timeline-section {
+    justify-content: center;
+    padding: clamp(24px, 3.2vw, 56px) clamp(16px, 2vw, 40px);
+}
+
+.timeline-section h1 {
+    margin-top: 0;
+    margin-bottom: clamp(8px, 1.2vw, 20px);
+}
+
+/* 年份导航：与卡片同宽、圆点高对比 */
+.timeline-nav {
+    max-width: min(100%, 880px);
+    margin-bottom: clamp(12px, 1.8vw, 28px);
+}
+
+.timeline-track {
+    background: rgba(255, 255, 255, 0.55);
+}
+
+.timeline-bullet {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
+    border: 1.5px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+    font-weight: 700;
+}
+
+.timeline-bullet:hover {
+    background: rgba(255, 255, 255, 0.34);
+    transform: translateY(-1px);
+}
+
+.timeline-bullet.active {
+    background: #fff;
+    color: #ff5c00;
+    border-color: #fff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+/* 主体：居中，侧栏贴近卡片 */
+.timeline-body {
+    justify-content: center;
+    align-items: stretch;
+    gap: clamp(10px, 1.4vw, 24px);
+    max-width: min(100%, 1080px);
+}
+
+.timeline-month-sidebar {
+    min-width: 46px;
+    padding: 6px 6px 6px 0;
+    justify-content: center;
+}
+
+/* 侧栏的竖直连接线（原来那根线是页面级装饰，和条目对不上） */
+.timeline-month-sidebar::before {
+    content: '';
+    position: absolute;
+    left: 12px;
+    top: 12%;
+    bottom: 12%;
+    width: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.timeline-month-sidebar .month-item {
+    padding: 8px 8px 8px 2px;
+    font-size: clamp(12px, 0.95vw, 15px);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.timeline-month-sidebar .month-dot {
+    width: 12px;
+    height: 12px;
+    border-width: 2px;
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.timeline-month-sidebar .month-item.active .month-dot {
+    background: #fff;
+    border-color: #fff;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+}
+
+/* 卡片：与导航同宽，图片定比例，内文节奏收紧 */
+.timeline-content-container {
+    max-width: min(100%, 900px);
+}
+
+.timeline-content {
+    border-radius: 18px;
+    box-shadow: 0 14px 44px rgba(0, 0, 0, 0.16);
+}
+
+.timeline-content .timeline-image {
+    flex: 0 0 clamp(160px, 20vw, 320px);
+    max-width: 320px;
+}
+
+.timeline-content .timeline-image img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.timeline-content .timeline-text h3 {
+    margin: 0 0 clamp(6px, 0.6vw, 10px);
+}
+
+.timeline-content .timeline-text p {
+    margin: 0 0 clamp(6px, 0.7vw, 12px);
+    line-height: 1.75;
+}
+
+@media (max-width: 768px) {
+    .timeline-body { gap: 0; }
+
+    .timeline-content .timeline-image {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* 2026-10-30 续：年份导航收成「内容宽」——原来 track 左右拉满 880px，圆点却挤在中间；
+   另外补足顶部留白，避免标题被固定导航栏压住。 */
+.timeline-section {
+    padding-top: clamp(88px, 11vh, 132px);
+    padding-bottom: clamp(24px, 4vh, 56px);
+}
+
+/* 注意：不要改成 width: fit-content —— 箭头是绝对定位在 .timeline-nav 两侧的，
+   滚动容器的宽度又是按百分比算的，收窄会让箭头跑位。 */
+
+/* 卡片与导航左缘对齐（导航变窄后不再居中偏移） */
+.timeline-body {
+    justify-content: center;
+}
