@@ -273,8 +273,12 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     );
     io.observe(container);
 
+    // 2026-10-30：限到约 30fps（每两帧算一次）。物理位移肉眼无差，
+    // 但把合成器提交次数砍半 —— 弱 GPU 的笔记本上翻页明显更顺。
+    let frameTick = 0;
     const animate = () => {
-      if (visible && !document.hidden && !isPausedRef.current) updatePhotos();
+      frameTick = (frameTick + 1) % 2;
+      if (frameTick === 0 && visible && !document.hidden && !isPausedRef.current) updatePhotos();
       animationIdRef.current = requestAnimationFrame(animate);
     };
 

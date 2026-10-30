@@ -421,17 +421,17 @@ body::-webkit-scrollbar {
     position: absolute;
     left: 50%;
     top: 50%;
-    transform: translate(-50%, -50%) scale(0.94);
+    transform: translate(-50%, -50%);
     opacity: 0;
-    transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.32s ease;
+    /* 2026-10-30：只做淡入，不做缩放 —— 缩放的瞬间容易被看成“没居中” */
+    transition: opacity 0.2s ease;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    will-change: transform, opacity;
+    will-change: opacity;
 }
 
 .comphoto-modal.show .comphoto-modal-content {
-    transform: translate(-50%, -50%) scale(1);
     opacity: 1;
 }
 
