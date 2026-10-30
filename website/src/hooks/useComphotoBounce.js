@@ -277,12 +277,29 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     );
     io.observe(container);
 
+    // 2026-10-30（方案 E）：用户一滚动/翻页就暂停漂浮，静止 800ms 后再恢复。
+    // 这样「滑动的那几百毫秒」里照片完全不动，主线程和合成器都只服务翻页。
+    let userActive = false;
+    let idleTimer = null;
+    const markActive = () => {
+      userActive = true;
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => { userActive = false; }, 800);
+    };
+    const onKey = (e) => {
+      if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(e.key)) markActive();
+    };
+    window.addEventListener('wheel', markActive, { passive: true, capture: true });
+    window.addEventListener('touchmove', markActive, { passive: true, capture: true });
+    window.addEventListener('scroll', markActive, { passive: true, capture: true });
+    window.addEventListener('keydown', onKey);
+
     // 2026-10-30：限到约 30fps（每两帧算一次）。物理位移肉眼无差，
     // 但把合成器提交次数砍半 —— 弱 GPU 的笔记本上翻页明显更顺。
     let frameTick = 0;
     const animate = () => {
       frameTick = (frameTick + 1) % 2;
-      if (frameTick === 0 && visible && !document.hidden && !isPausedRef.current && !reduceMotion) updatePhotos();
+      if (frameTick === 0 && visible && !document.hidden && !isPausedRef.current && !reduceMotion && !userActive) updatePhotos();
       animationIdRef.current = requestAnimationFrame(animate);
     };
 
@@ -291,6 +308,11 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     return () => {
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
       clearTimeout(resumeTimer);
+      clearTimeout(idleTimer);
+      window.removeEventListener('wheel', markActive, true);
+      window.removeEventListener('touchmove', markActive, true);
+      window.removeEventListener('scroll', markActive, true);
+      window.removeEventListener('keydown', onKey);
       io.disconnect();
       photoDataRef.current.forEach((p) => p.element.remove());
       photoDataRef.current = [];
