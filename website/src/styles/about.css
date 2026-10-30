@@ -2211,7 +2211,8 @@ img.image-3d-rotate:hover,
    ============================================================ */
 #vision .animate-on-scroll.visible .vision-card.slide-in-left,
 #vision .animate-on-scroll.visible .vision-card.slide-in-right {
-    transition-delay: 0.12s !important;
+    /* 等 Swiper 翻页(650ms)结束后再一起进场，否则动画在滑动途中就跑完了 */
+    transition-delay: 0.7s !important;
     transition-duration: 0.7s;
     transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
