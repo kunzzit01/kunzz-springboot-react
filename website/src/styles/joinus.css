@@ -3112,3 +3112,19 @@ img.image-3d-rotate:hover,
     height: auto;
     object-fit: contain;
 }
+
+/* ============================================================
+   2026-10-30：让「足迹」这一屏在离屏时**完全不参与渲染**
+   —— content-visibility:auto 会把非当前屏的绘制/布局跳过，
+   等到滑进来时才渲染，滑走的瞬间不再有额外绘制开销。
+   照片本身的分辨率/清晰度不受任何影响（只影响“何时画”，不影响“画多大”）。
+   ============================================================ */
+.vertical-swiper-shell:has(.comphoto-section) .swiper-slide {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 100vh;
+}
+
+/* 当前屏必须正常渲染 */
+.vertical-swiper-shell:has(.comphoto-section) .swiper-slide.swiper-slide-active {
+    content-visibility: visible;
+}

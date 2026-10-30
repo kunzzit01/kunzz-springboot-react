@@ -265,7 +265,9 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
       (entries) => {
         if (entries[0].isIntersecting) {
           clearTimeout(resumeTimer);
-          resumeTimer = setTimeout(() => { visible = true; }, 300);
+          // 2026-10-30：等 Swiper 的 650ms 翻页动画走完再启动物理循环，
+          // 否则照片位移和整屏位移在同一帧抢合成器，进这一屏就会顿一下。
+          resumeTimer = setTimeout(() => { visible = true; }, 700);
         } else {
           clearTimeout(resumeTimer);
           visible = false;
