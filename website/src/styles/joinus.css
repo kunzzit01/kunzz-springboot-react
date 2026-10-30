@@ -3081,3 +3081,34 @@ img.image-3d-rotate:hover,
         height: auto !important;
     }
 }
+
+/* ============================================================
+   2026-10-30：照片大图 —— 在「导航栏以下的可视区域」居中，而不是整屏居中
+   （原来整屏居中，图片顶部会顶到/压住固定导航栏，小屏看着偏下）
+   ============================================================ */
+.comphoto-modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* 顶部让出导航栏 + 8px 呼吸位 */
+    padding: calc(var(--kz-header-h, 80px) + 8px) 16px 16px;
+    box-sizing: border-box;
+}
+
+.comphoto-modal-content {
+    position: static;
+    transform: none;
+    max-width: min(92vw, 1600px);
+    max-height: calc(100vh - var(--kz-header-h, 80px) - 32px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.comphoto-modal-content img {
+    max-width: 100%;
+    max-height: calc(100vh - var(--kz-header-h, 80px) - 32px);
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}

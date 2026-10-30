@@ -39,7 +39,7 @@ export default function JoinComphoto() {
       <div
         id="comphoto-modal"
         className={`comphoto-modal${modalOpen ? ' show' : ''}`}
-        style={{ display: modalOpen ? 'block' : 'none' }}
+        /* 2026-10-30：不再用 inline display —— 交给 CSS 的 .show{display:flex} 做居中 */
         onClick={(e) => e.target.id === 'comphoto-modal' && closeModal()}
         onKeyDown={() => {}}
         role="presentation"

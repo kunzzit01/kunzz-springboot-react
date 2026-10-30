@@ -216,3 +216,11 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* ============================================================
+   2026-10-30：导航栏高度变量（与 header.css 的 80 / 50 / 56px 对齐）
+   用途：照片大图等「fixed 全屏」内容要**避开顶部导航栏**再做居中。
+   ============================================================ */
+:root { --kz-header-h: 80px; }
+@media (max-width: 1280px) { :root { --kz-header-h: 50px; } }
+@media (max-width: 768px) { :root { --kz-header-h: 56px; } }
