@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Swiper } from 'swiper/react';
 import { Mousewheel } from 'swiper/modules';
 
@@ -36,6 +37,70 @@ export default function VerticalSwiper({
   onSlideChange,
   slideCount = 4,
 }) {
+  const [instance, setInstance] = useState(null);
+
+  useEffect(() => {
+    if (!instance || instance.destroyed || typeof ResizeObserver === 'undefined') return;
+
+    let frame = 0;
+    let pending = false;
+    const observed = new Set();
+
+    // Swiper observes its viewport, not individual auto-height slides. Fonts,
+    // responsive transitions and async content can change a slide afterwards.
+    const flush = () => {
+      frame = 0;
+      if (!pending || instance.destroyed) return;
+      // Do not interrupt the user's gesture or an in-flight slide transition.
+      if (instance.animating || instance.touchEventsData?.isTouched) return;
+      pending = false;
+      instance.update();
+    };
+    const schedule = () => {
+      if (pending && !frame && !instance.destroyed) frame = requestAnimationFrame(flush);
+    };
+    const observer = new ResizeObserver((entries) => {
+      if (instance.destroyed) return;
+      for (const entry of entries) {
+        const index = instance.slides.indexOf(entry.target);
+        if (index < 0) continue;
+        const box = entry.borderBoxSize;
+        const height = (Array.isArray(box) ? box[0] : box)?.blockSize
+          ?? entry.target.getBoundingClientRect().height;
+        const cached = instance.slidesSizesGrid[index];
+        if (typeof cached === 'number' && Math.abs(height - cached) > 0.5) pending = true;
+      }
+      schedule();
+    });
+    const syncSlides = () => {
+      const current = new Set(instance.slides);
+      for (const slide of observed) {
+        if (!current.has(slide)) {
+          observer.unobserve(slide);
+          observed.delete(slide);
+        }
+      }
+      for (const slide of current) {
+        if (!observed.has(slide)) {
+          observer.observe(slide, { box: 'border-box' });
+          observed.add(slide);
+        }
+      }
+    };
+
+    syncSlides();
+    instance.on('slidesUpdated', syncSlides);
+    instance.on('transitionEnd', schedule);
+    instance.on('touchEnd', schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      observer.disconnect();
+      instance.off('slidesUpdated', syncSlides);
+      instance.off('transitionEnd', schedule);
+      instance.off('touchEnd', schedule);
+    };
+  }, [instance]);
+
   const emitSlideIndex = (swiper) => {
     if (!onSlideChange) return;
     // Match PHP: on last stretch of scroll, highlight final dot
@@ -65,7 +130,10 @@ export default function VerticalSwiper({
         longSwipesRatio={0.15}
         longSwipesMs={300}
         watchOverflow
-        onSwiper={onSwiper}
+        onSwiper={(swiper) => {
+          setInstance(swiper);
+          onSwiper?.(swiper);
+        }}
         onSlideChange={emitSlideIndex}
         onSetTransition={(_swiper, duration) => {
           setTimeout(() => emitSlideIndex(_swiper), duration + 50);

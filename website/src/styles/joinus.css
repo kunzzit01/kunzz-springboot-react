@@ -3118,14 +3118,15 @@ img.image-3d-rotate:hover,
    —— content-visibility:auto 会把非当前屏的绘制/布局跳过，
    等到滑进来时才渲染，滑走的瞬间不再有额外绘制开销。
    照片本身的分辨率/清晰度不受任何影响（只影响“何时画”，不影响“画多大”）。
+   仅完整内容屏使用占位；短页脚必须按真实高度测量，否则 Swiper 会多滑出一屏空白。
    ============================================================ */
-.vertical-swiper-shell:has(.comphoto-section) .swiper-slide {
+.vertical-swiper-shell:has(.comphoto-section) .swiper-slide:not(.footer-slide) {
     content-visibility: auto;
     contain-intrinsic-size: auto 100vh;
 }
 
 /* 当前屏必须正常渲染 */
-.vertical-swiper-shell:has(.comphoto-section) .swiper-slide.swiper-slide-active {
+.vertical-swiper-shell:has(.comphoto-section) .swiper-slide.swiper-slide-active:not(.footer-slide) {
     content-visibility: visible;
 }
 
