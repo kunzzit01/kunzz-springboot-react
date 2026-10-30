@@ -1,7 +1,7 @@
 # 任务 2026-10-30-mobile-footer-gap
 
-- 状态：实现及本地回归完成，准备部署
-- 目标：修复 JoinUs 手机滑动到页脚后大块白屏；同时审核首页、关于我们、JoinUs 中英文页和 Tokyo 的同类末屏问题，保留刚恢复的 laptop 意见卡布局和提交按钮修复。
+- 状态：白屏修复 4f15cc3 已部署并通过生产回归；双向手势补充修复本地通过，准备部署
+- 目标：修复 JoinUs 手机滑动到页脚后大块白屏；同时审核首页、关于我们、JoinUs 中英文页和 Tokyo 的同类末屏问题；补充修复用户报告的手机只能向下不能返回；保留刚恢复的 laptop 意见卡布局和提交按钮修复。
 - 白名单（只允许改这些）：
   - website/src/styles/joinus.css
   - website/src/styles/joinus-mobile.css
@@ -18,7 +18,7 @@
 
 1. JoinUs 中英文：393×664 时，Swiper 初始末屏缓存为 664px，页脚实际 317.75px，末屏下面出现 346.25px 空白；390×844 时约 523px。`content-visibility` 的整屏占位错误包含短页脚。仅从这项性能优化中排除 footer，不改变其它屏的照片/动画。
 2. 跨路由与尺寸切换：Home_en 可复现 4.5px 空隙，About_en 可复现约 65px。响应式内容高度在 Swiper 窗口 resize 测量后继续变化，而原观察器仅监听视口，不监听各个 auto-height slide。
-3. 共享 VerticalSwiper 对实际 slide border-box 尺寸增设 ResizeObserver：与缓存相差超过 0.5px 才请求 rAF 合并更新；拖拽和切屏动画期间延后到结束事件，不打断手势。观察集合增量同步，卸载取消 rAF、disconnect、解绑事件。不修改原 450ms、单次一屏或滚轮参数。
+3. 共享 VerticalSwiper 对实际 slide border-box 尺寸增设 ResizeObserver：与缓存相差超过 0.5px 才请求 rAF 合并更新；拖拽和切屏动画期间延后到结束事件，不打断手势。观察集合增量同步，卸载取消 rAF、disconnect、解绑事件。保留原 450ms 和滚轮参数。后续确认 oneWayMovement 被误用于「一次一屏」，实际会把反向拖拽也强制向前；需移除此锁定并验证上下往返。
 4. 未更改意见表单、卡片排版、原图、后端或数据库；没有通过全屏深色背景掩盖几何误算。
 
 ## 本地回归
@@ -30,3 +30,10 @@
 - 触摸与鼠标滚轮各两次均一次一屏，speed=450 保持；手势/动画期间故意改变页脚高度，更新仅在结束后执行；稳定后 idle update=0，忙碌时 update=0，无运行时错误。
 - Tokyo 属独立 raw HTML / 独立主轮播初始化路径，已静态审查但不属于共用 VerticalSwiper；未改动，不将其列为本次已运行验收的 6 页之一。初始化脚本的既有风险需独立处理，不能套用本修复宣称通过。
 - 验证环境为 Windows 无头 Chromium 手机尺寸/触控仿真，不等同于 iPhone Safari 真机验收。
+
+## 手机双向手势补充
+
+- 用户报告只能一路向下不能返回。确认 shared VerticalSwiper 的 oneWayMovement=true 会在 Swiper core 中把 diff 与 touchesDiff 强制改为向前，不是「一次一屏」开关；已移除该误用，恢复默认双向。
+- 其余 speed=450、slidesPerGroup=1、长滑阈值和滚轮门槛保持不变。
+- 本地六个中英文主站路由均使用真实 CDP 触控事件完成「顶端→底部→顶端」：首页各 3 次上划/3 次下划，关于我们各 4/4，加入我们各 6/6；均回到 translate=0，无末屏白屏。
+- 4f15cc3 的线上直达 12 组、SPA/尺寸 36 组和 laptop 12 组复核通过。串行独立页测试，避免同一个无头浏览器多页并发时背景 rAF 暂停导致的无效测量。

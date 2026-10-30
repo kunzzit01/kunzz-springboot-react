@@ -125,8 +125,7 @@ export default function VerticalSwiper({
         allowTouchMove
         touchReleaseOnEdges
         resistanceRatio={0.85}
-        // 2026-10-30：一次滑动只走一屏（触控板惯性/鼠标滚轮不会连续跳）
-        oneWayMovement
+        // 保留长滑阈值；oneWayMovement 会强制向前，不能用它限制翻页次数。
         longSwipesRatio={0.15}
         longSwipesMs={300}
         watchOverflow
