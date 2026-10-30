@@ -16,12 +16,21 @@ function resetScaleFadeIn(container) {
   });
 }
 
+/**
+ * 2026-10-30 性能：原来每个元素都做一次 `void el.offsetHeight`（强制同步布局），
+ * 而这个函数是在 IntersectionObserver 回调里执行的（正好落在滚动/翻页那一帧），
+ * 元素一多就会逐元素触发重排 → 掉帧。
+ * 现在改成「先统一清掉动画 → 下一帧 (rAF) 再统一加回」，不再强制回流。
+ */
 function playScaleFadeIn(container) {
-  container.querySelectorAll('.scale-fade-in').forEach((el) => {
-    el.style.animation = 'none';
-    void el.offsetHeight;
-    el.style.animation = '';
-    el.style.animationPlayState = 'running';
+  const els = container.querySelectorAll('.scale-fade-in');
+  if (!els.length) return;
+  els.forEach((el) => { el.style.animation = 'none'; });
+  requestAnimationFrame(() => {
+    els.forEach((el) => {
+      el.style.animation = '';
+      el.style.animationPlayState = 'running';
+    });
   });
 }
 

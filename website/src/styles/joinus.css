@@ -599,7 +599,8 @@ body::-webkit-scrollbar {
     font-size: clamp(0.8rem, 1vw, 1rem);
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    /* 2026-10-30 性能：只过渡真正会变的属性，别用 transition: all */
+    transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
     box-shadow: 0 2px 8px rgba(255, 92, 0, 0.28);
     text-align: center;
     margin-bottom: clamp(0.25rem, 0.35vw, 0.4rem);
