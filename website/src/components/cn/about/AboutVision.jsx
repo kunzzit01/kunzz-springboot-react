@@ -14,7 +14,8 @@ export default function AboutVision() {
         </p>
 
         <div className="vision-cards">
-          <AnimateOnScroll className="vision-card slide-in-left">
+          {/* 2026-10-30：不用各自的 observer，交给父级 .visible 统一触发，两张卡同时入场 */}
+          <div className="vision-card slide-in-left">
             <div className="vision-label">我们的使命</div>
             <h2>塑造积极向上和舒适的工作环境</h2>
             <p>
@@ -23,9 +24,9 @@ export default function AboutVision() {
               让每位成员都能安心发挥，共同成长。
               在这里，挑战不再冰冷，努力也值得被看见。
             </p>
-          </AnimateOnScroll>
+          </div>
 
-          <AnimateOnScroll className="vision-card slide-in-right">
+          <div className="vision-card slide-in-right">
             <div className="vision-label">我们的愿景</div>
             <h2>打造高效的团队，创造行业未来</h2>
             <p>
@@ -34,7 +35,7 @@ export default function AboutVision() {
               我们正以坚实步伐，走在打造行业标杆的路上，
               用成就说话，用信念前行。
             </p>
-          </AnimateOnScroll>
+          </div>
         </div>
       </AnimateOnScroll>
     </section>

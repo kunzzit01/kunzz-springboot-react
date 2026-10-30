@@ -2202,3 +2202,16 @@ img.image-3d-rotate:hover,
     position: relative;
     z-index: 2;
 }
+
+/* ============================================================
+   2026-10-30：Mission / Vision 两张卡片**同步入场**
+   原问题：左卡靠自己的 observer + transition-delay .6s，右卡 0s，
+   且两个 observer 触发时刻不同 → 看起来一先一后。
+   现在两张卡不各自监听，统一由父级 .vision-content.visible 触发，延迟也设成一样。
+   ============================================================ */
+#vision .animate-on-scroll.visible .vision-card.slide-in-left,
+#vision .animate-on-scroll.visible .vision-card.slide-in-right {
+    transition-delay: 0.12s !important;
+    transition-duration: 0.7s;
+    transition-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
