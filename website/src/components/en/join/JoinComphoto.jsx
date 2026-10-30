@@ -6,39 +6,17 @@ export default function JoinComphoto() {
   const containerRef = useRef(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalSrc, setModalSrc] = useState('');
-  const [modalStyle, setModalStyle] = useState({});
   const clickedImgRef = useRef(null);
 
   const { resume } = useComphotoBounce(
     containerRef,
     useCallback((img) => {
-      const rect = img.getBoundingClientRect();
       clickedImgRef.current = img;
       img.classList.add('comphoto-hidden');
-      setModalSrc(img.src);
-      setModalStyle({
-        left: rect.left,
-        top: rect.top,
-        width: rect.width,
-        height: rect.height,
-        borderRadius: '8px',
-      });
+      // 2026-10-30：与中文版同步 —— 卡片是 240px 缩略图，大图必须用原图；
+      // 并且不再用 rect 做 width/height 放大动画（会先按小尺寸光栅化再拉伸 → 模糊/尺寸异常只剩关闭键）。
+      setModalSrc(img.dataset.full || img.src);
       setModalOpen(true);
-      // Animation pause is handled inside useComphotoBounce on photo click
-
-      requestAnimationFrame(() => {
-        const scale = 8;
-        const centerX = window.innerWidth / 2;
-        const centerY = window.innerHeight / 2;
-        setModalStyle({
-          left: centerX - (rect.width * scale) / 2,
-          top: centerY - (rect.height * scale) / 2,
-          width: rect.width * scale,
-          height: rect.height * scale,
-          borderRadius: '12px',
-          transition: 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-        });
-      });
     }, []),
   );
 
@@ -69,7 +47,7 @@ export default function JoinComphoto() {
         <button type="button" className="comphoto-close" onClick={closeModal}>
           &times;
         </button>
-        <div className="comphoto-modal-content" style={modalStyle}>
+        <div className="comphoto-modal-content">
           {modalSrc ? <img id="comphoto-modal-img" src={modalSrc} alt="放大的照片" /> : null}
         </div>
       </div>
