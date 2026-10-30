@@ -2134,3 +2134,63 @@ img.image-3d-rotate:hover,
 .timeline-body {
     justify-content: center;
 }
+
+/* ============================================================
+   2026-10-30（第二轮）：「多月份」时左侧那条栏离卡片很远、竖线又长又空
+   → 改成卡片上方的「月份胶囊行」，与卡片左缘对齐，不再有孤立竖线。
+   ============================================================ */
+@media (min-width: 769px) {
+    .timeline-body {
+        flex-direction: column;
+        align-items: center;
+        gap: clamp(8px, 1vw, 14px);
+    }
+
+    .timeline-month-sidebar {
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+        width: min(100%, 900px);
+        padding: 0;
+        flex-shrink: 0;
+    }
+
+    /* 旧的竖直连接线在多月份时是视觉噪音，胶囊行不需要它 */
+    .timeline-month-sidebar::before {
+        display: none;
+    }
+
+    .timeline-month-sidebar .month-item {
+        padding: 5px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        font-size: clamp(12px, 0.95vw, 15px);
+        font-weight: 600;
+        color: #fff;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .timeline-month-sidebar .month-item:hover {
+        background: rgba(255, 255, 255, 0.28);
+    }
+
+    .timeline-month-sidebar .month-item.active {
+        background: #fff;
+        color: #ff5c00;
+        border-color: #fff;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    /* 胶囊行里不需要圆点 */
+    .timeline-month-sidebar .month-dot {
+        display: none;
+    }
+
+    .timeline-content-container {
+        max-width: min(100%, 900px);
+        width: 100%;
+    }
+}
