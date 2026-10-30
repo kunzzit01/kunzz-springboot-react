@@ -2152,7 +2152,10 @@ img.image-3d-rotate:hover,
         align-items: center;
         gap: 8px;
         min-width: 0;
-        width: min(100%, 900px);
+        /* 与卡片同宽（卡片是 clamp(320px,48vw,900px)），这样胶囊和卡片左缘对齐 */
+        width: clamp(320px, 48vw, 900px);
+        max-width: 100%;
+        margin: 0 auto;
         padding: 0;
         flex-shrink: 0;
     }
