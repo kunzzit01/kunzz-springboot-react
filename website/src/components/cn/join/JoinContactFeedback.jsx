@@ -16,6 +16,7 @@ export function FeedbackForm({ formId, compact = false, hideSubmit = false }) {
         value="https://kunzzgroup.com/frontend/success.html"
       />
 
+      <div className="fb-form-fields">
       <div className="fb-form-row">
         <div className="fb-field fb-field-wide">
           <label htmlFor={`${formId}-chineseName`}>中文姓名 *</label>
@@ -90,7 +91,7 @@ export function FeedbackForm({ formId, compact = false, hideSubmit = false }) {
         />
       </div>
 
-      <div className="fb-field">
+      <div className="fb-field fb-field--message">
         <label htmlFor={`${formId}-message`}>信息 *</label>
         <textarea
           id={`${formId}-message`}
@@ -99,6 +100,7 @@ export function FeedbackForm({ formId, compact = false, hideSubmit = false }) {
           placeholder="请输入您的意见或建议…"
           required
         />
+      </div>
       </div>
 
       {hideSubmit ? null : (

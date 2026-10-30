@@ -3129,32 +3129,65 @@ img.image-3d-rotate:hover,
     content-visibility: visible;
 }
 
-/* ============================================================
-   2026-10-30：联系/反馈屏在矮屏笔记本上「提交」按钮被裁掉
-   原因：.contact-form-container 高度写死 clamp(65vh,70vh,75vh)，
-         663px 高的窗口只有 464px；而表单内容约 517px，
-         .feedback-card{overflow:hidden} 直接把提交按钮裁掉了。
-   改法：容器改为「填满可用高度」（视口 − 上下留白），
-        表格卡片允许内部滚动并加上 swiper-no-mousewheel（滚轮交给卡片自己滚，不再被 Swiper 吃掉）。
-   ============================================================ */
-.contact-form-container {
-    /* 2026-10-30：保持原排版密度（需要 497px），容器改为「填满导航栏以下可用区」；
-       原来 70vh(464px) 装不下 → 提交按钮被裁。极矮屏仍可在卡内滚动。 */
-    height: calc(100vh - 116px);
-    max-height: none;
+/* 保留原 70vh 双卡容器、内边距和字段排版。
+   字段区与提交按钮分开：先缩短留言框，仍不足时只滚动字段，按钮始终可见。
+   手机端保持原来的自然内容高度，不引入额外布局盒。 */
+.fb-form-fields {
+    display: contents;
 }
 
-.contact-form-container .feedback-card {
-    min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
-}
+@media (min-width: 769px) {
+    .contact-form-container .joinus-feedback--inline {
+        min-height: 0;
+    }
 
-.contact-form-container .feedback-card::-webkit-scrollbar { width: 6px; }
-.contact-form-container .feedback-card::-webkit-scrollbar-thumb {
-    background: rgba(255, 92, 0, 0.35);
-    border-radius: 3px;
+    .joinus-feedback--inline > .feedback-title,
+    .joinus-feedback--inline > .feedback-subtitle,
+    .joinus-feedback--inline .fb-submit-btn {
+        flex-shrink: 0;
+    }
+
+    .joinus-feedback--inline > form {
+        flex: 0 1 auto;
+        min-height: 0;
+    }
+
+    .joinus-feedback--inline .fb-form-fields {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        scrollbar-width: thin;
+    }
+
+    .joinus-feedback--inline .fb-form-fields > * {
+        flex-shrink: 0;
+    }
+
+    .joinus-feedback--inline .fb-form-fields > .fb-field--message {
+        display: flex;
+        flex-direction: column;
+        flex: 0 1 auto;
+        min-height: 0;
+    }
+
+    .joinus-feedback--inline .fb-field--message > label {
+        flex-shrink: 0;
+    }
+
+    .joinus-feedback--inline .fb-field--message > textarea {
+        flex: 1 1 auto;
+        min-height: 55px;
+    }
+
+    .joinus-feedback--inline .fb-form-fields::-webkit-scrollbar { width: 6px; }
+    .joinus-feedback--inline .fb-form-fields::-webkit-scrollbar-thumb {
+        background: rgba(255, 92, 0, 0.35);
+        border-radius: 3px;
+    }
 }
 
 /* 2026-10-30：「请提供您宝贵的意见」标题字号与左侧「联系我们」保持一致
