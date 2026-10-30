@@ -3138,8 +3138,9 @@ img.image-3d-rotate:hover,
         表格卡片允许内部滚动并加上 swiper-no-mousewheel（滚轮交给卡片自己滚，不再被 Swiper 吃掉）。
    ============================================================ */
 .contact-form-container {
-    height: min(calc(100vh - 176px), 78vh);
-    max-height: none;
+    /* 2026-10-30：恢复原有设计高度（70vh），提交按钮靠压缩表单内容来容纳 */
+    height: clamp(65vh, 70vh, 75vh);
+    max-height: 75vh;
 }
 
 .contact-form-container .feedback-card {
@@ -3166,33 +3167,33 @@ img.image-3d-rotate:hover,
     }
 
     .contact-form-container .feedback-card {
-        padding: 12px 14px;
+        padding: 10px 12px;
     }
 
     .contact-form-container .feedback-title { font-size: 15px; margin-top: 0; }
     .contact-form-container .feedback-subtitle { display: none; }
 
-    .contact-form-container .fb-field { margin-bottom: 3px; }
-    .contact-form-container .fb-field label { margin-bottom: 2px; font-size: 10.5px; }
+    .contact-form-container .fb-field { margin-bottom: 2px; }
+    .contact-form-container .fb-field label { margin-bottom: 1px; font-size: 10px; }
 
     .contact-form-container .fb-field input[type="text"],
     .contact-form-container .fb-field input[type="email"],
     .contact-form-container .fb-field input[type="tel"],
     .contact-form-container .fb-field select,
     .contact-form-container .fb-field textarea {
-        padding-top: 5px;
-        padding-bottom: 5px;
+        padding-top: 4px;
+        padding-bottom: 4px;
     }
 
     .contact-form-container .fb-field textarea {
-        height: 48px !important;
-        min-height: 48px;
+        height: 40px !important;
+        min-height: 40px;
     }
 
     .contact-form-container .fb-submit-btn {
-        padding-top: 7px;
-        padding-bottom: 7px;
-        margin-top: 5px;
+        padding-top: 6px;
+        padding-bottom: 6px;
+        margin-top: 4px;
     }
 }
 
