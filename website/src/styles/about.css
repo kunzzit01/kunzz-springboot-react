@@ -2134,3 +2134,44 @@ img.image-3d-rotate:hover,
 .timeline-body {
     justify-content: center;
 }
+
+/* ============================================================
+   2026-10-30（最终版）：**保留原有设计**（左侧竖排月份 + 圆点 + 竖线），
+   只做三处「优化」，不改结构：
+     1) 侧栏贴近卡片（原来离卡片 140px，看着像孤儿元素）
+     2) 竖线只覆盖月份条目本身（原来拉到整列的 12%~88%，两个月份时显得很空）
+     3) 侧栏与卡片的垂直中心对齐
+   ============================================================ */
+.timeline-content-container {
+    width: clamp(320px, 48vw, 900px);
+    max-width: 100%;
+}
+
+.timeline-body {
+    gap: clamp(8px, 0.9vw, 14px);
+    max-width: min(100%, calc(clamp(320px, 48vw, 900px) + 78px));
+}
+
+.timeline-month-sidebar {
+    min-width: 0;
+    padding: 0 clamp(6px, 0.6vw, 10px) 0 0;
+    justify-content: center;
+    align-self: center;
+}
+
+.timeline-month-sidebar::before {
+    left: 12px;
+    top: 22px;
+    bottom: 22px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.4);
+}
+
+.timeline-month-sidebar .month-item {
+    padding: 10px 8px 10px 2px;
+}
+
+/* 卡片在容器里居中，容器现在就是卡片宽度 → 左缘与侧栏紧邻 */
+.timeline-cards-wrapper {
+    justify-content: center;
+}
