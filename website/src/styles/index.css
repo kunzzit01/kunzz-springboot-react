@@ -504,7 +504,8 @@ body::-webkit-scrollbar {
     height: auto !important;
     min-height: 100vh;
     min-height: 100dvh;
-    overflow-y: auto;
+    /* 2026-10-30：原来是 auto —— 内容只多 1px（取整误差）也会冒滚动条，直接不滚 */
+    overflow-y: hidden;
     overflow-x: hidden;
 }
 
