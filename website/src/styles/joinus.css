@@ -3154,3 +3154,44 @@ img.image-3d-rotate:hover,
     background: rgba(255, 92, 0, 0.35);
     border-radius: 3px;
 }
+
+/* ============================================================
+   2026-10-30（第二版）：矮屏笔记本上让表单**真正装得下**，不靠卡内滚动
+   663px 高时内容 540px、容器只有 487px → 提交按钮要滚动才看得到；
+   这里按视口高度压缩表单项，让它一屏内完整显示（560px 以下才退回滚动）。
+   ============================================================ */
+@media (max-height: 820px) {
+    .contact-form-container {
+        height: min(calc(100vh - 150px), 84vh);
+    }
+
+    .contact-form-container .feedback-card {
+        padding: 12px 14px;
+    }
+
+    .contact-form-container .feedback-title { font-size: 15px; margin-top: 0; }
+    .contact-form-container .feedback-subtitle { display: none; }
+
+    .contact-form-container .fb-field { margin-bottom: 3px; }
+    .contact-form-container .fb-field label { margin-bottom: 2px; font-size: 10.5px; }
+
+    .contact-form-container .fb-field input[type="text"],
+    .contact-form-container .fb-field input[type="email"],
+    .contact-form-container .fb-field input[type="tel"],
+    .contact-form-container .fb-field select,
+    .contact-form-container .fb-field textarea {
+        padding-top: 5px;
+        padding-bottom: 5px;
+    }
+
+    .contact-form-container .fb-field textarea {
+        height: 48px !important;
+        min-height: 48px;
+    }
+
+    .contact-form-container .fb-submit-btn {
+        padding-top: 7px;
+        padding-bottom: 7px;
+        margin-top: 5px;
+    }
+}
