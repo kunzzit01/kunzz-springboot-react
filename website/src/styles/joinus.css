@@ -3091,7 +3091,7 @@ img.image-3d-rotate:hover,
     align-items: center;
     justify-content: center;
     /* 顶部让出导航栏 + 8px 呼吸位 */
-    padding: calc(var(--kz-header-h, 80px) + 8px) 16px 16px;
+    padding: calc(var(--kz-header-h, 80px) + 8px) 16px 8px;   /* 上下留白对称，才算真正居中 */
     box-sizing: border-box;
 }
 
@@ -3099,7 +3099,7 @@ img.image-3d-rotate:hover,
     position: static;
     transform: none;
     max-width: min(92vw, 1600px);
-    max-height: calc(100vh - var(--kz-header-h, 80px) - 32px);
+    max-height: calc(100vh - var(--kz-header-h, 80px) - 16px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3107,7 +3107,7 @@ img.image-3d-rotate:hover,
 
 .comphoto-modal-content img {
     max-width: 100%;
-    max-height: calc(100vh - var(--kz-header-h, 80px) - 32px);
+    max-height: calc(100vh - var(--kz-header-h, 80px) - 16px);
     width: auto;
     height: auto;
     object-fit: contain;
