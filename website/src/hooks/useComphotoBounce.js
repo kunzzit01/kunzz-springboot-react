@@ -259,6 +259,8 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     // 2026-10-30：进入视野后延后 300ms 再跑，避免和 Swiper 的翻页动画抢帧
     let visible = false;
     let resumeTimer = null;
+    // 2026-10-30：系统开了「减少动态效果」就完全不跑这个循环（省电 + 低端设备不卡）
+    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
     const io = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -278,7 +280,7 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     let frameTick = 0;
     const animate = () => {
       frameTick = (frameTick + 1) % 2;
-      if (frameTick === 0 && visible && !document.hidden && !isPausedRef.current) updatePhotos();
+      if (frameTick === 0 && visible && !document.hidden && !isPausedRef.current && !reduceMotion) updatePhotos();
       animationIdRef.current = requestAnimationFrame(animate);
     };
 
