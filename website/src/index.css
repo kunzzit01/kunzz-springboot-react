@@ -200,3 +200,19 @@ body {
     flex: none !important;
   }
 }
+
+/* ============================================================
+   无障碍 / 省电：用户系统开启「减少动态效果」时，
+   停掉装饰性动画（循环渐变、粒子、脉冲、视差）与长过渡。
+   2026-10-30
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
