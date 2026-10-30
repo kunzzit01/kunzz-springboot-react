@@ -1,9 +1,41 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAnimateOnScroll } from '../../hooks/useAnimateOnScroll.js';
 import { mediaUrl } from '../../utils/media.js';
 
 function HeroBackground() {
   const [videoFailed, setVideoFailed] = useState(false);
+  const videoRef = useRef(null);
+
+  // 2026-10-29 性能：首页背景视频 1920×1080 / 50fps / ~19 MB，以前一旦开播就永不停，
+  // 滑到其他 slide、或标签页切走都在继续解码，和滚动抢主线程/GPU。
+  // 这里用 IntersectionObserver + visibilitychange 做到「看不见就暂停」。
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return undefined;
+
+    const play = () => { v.play().catch(() => {}); };
+    const io = new IntersectionObserver(
+      (entries) => {
+        const e = entries[0];
+        if (e.isIntersecting && !document.hidden) play();
+        else v.pause();
+      },
+      { threshold: 0.05 },
+    );
+    io.observe(v);
+
+    const onVisibility = () => {
+      if (document.hidden) { v.pause(); return; }
+      const r = v.getBoundingClientRect();
+      if (r.bottom > 0 && r.top < window.innerHeight) play();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [videoFailed]);
 
   if (videoFailed) {
     return (
@@ -17,12 +49,14 @@ function HeroBackground() {
 
   return (
     <video
+      ref={videoRef}
       className="background-video"
       autoPlay
       muted
       loop
       playsInline
       preload="metadata"
+      poster="/images/背景4.webp"
       onError={() => setVideoFailed(true)}
     >
       {/* MIME 由 /media/home_background 的 Content-Type 决定，兼容 webm/mp4 */}
