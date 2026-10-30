@@ -317,7 +317,9 @@ export default function AboutTimeline({ lang = 'zh' }) {
               return (
                 <div
                   key={`content-${year}-${month}-${index}`}
-                  className={`timeline-content-item${currentIndex === index ? ' active' : ''}`}
+                  // 2026-10-30：非当前项以前没有加任何状态类 → CSS 的 .hidden 不生效，
+                  // 所有卡片以 opacity:1 叠在同一位置，高度不同就露出白边（看起来“背后很多 layer”）。
+                  className={`timeline-content-item${currentIndex === index ? ' active' : ' hidden'}`}
                   data-year={year}
                   data-index={index}
                   data-month={month}
