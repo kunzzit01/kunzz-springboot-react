@@ -265,9 +265,8 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
       (entries) => {
         if (entries[0].isIntersecting) {
           clearTimeout(resumeTimer);
-          // 2026-10-30：等 Swiper 的 650ms 翻页动画走完再启动物理循环，
-          // 否则照片位移和整屏位移在同一帧抢合成器，进这一屏就会顿一下。
-          resumeTimer = setTimeout(() => { visible = true; }, 700);
+          // 2026-10-30：一进入该屏就尽快开始漂浮（滚动过程由 userActive 闸门保证静止）
+          resumeTimer = setTimeout(() => { visible = true; }, 60);
         } else {
           clearTimeout(resumeTimer);
           visible = false;
@@ -284,7 +283,7 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     const markActive = () => {
       userActive = true;
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { userActive = false; }, 800);
+      idleTimer = setTimeout(() => { userActive = false; }, 200);   // 2026-10-30：松手 0.2s 就恢复漂浮
     };
     const onKey = (e) => {
       if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(e.key)) markActive();
