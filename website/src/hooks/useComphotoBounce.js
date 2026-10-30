@@ -194,7 +194,8 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
       // 点开大图用原图（否则把 240px 的缩略图放大 → 模糊）
       img.dataset.full = src;
       img.className = 'comphoto';
-      img.loading = 'lazy';
+      img.loading = 'eager';   // 240px 缩略图合计 ~80KB，提前加载避免切屏瞬间集中解码
+      img.decode?.().catch(() => {});
       img.decoding = 'async';   // 2026-10-29 性能：不阻塞主线程解码
       img.alt = `公司照片 ${index + 1}`;
 
@@ -255,9 +256,19 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
 
     // 2026-10-29 性能：容器不可见或页面隐藏时跳过物理计算与样式写入
     // （原来 rAF 一直跑，滑出视口后仍在每帧改 left/top → 滚动掉帧）
-    let visible = true;
+    // 2026-10-30：进入视野后延后 300ms 再跑，避免和 Swiper 的翻页动画抢帧
+    let visible = false;
+    let resumeTimer = null;
     const io = new IntersectionObserver(
-      (entries) => { visible = entries[0].isIntersecting; },
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          clearTimeout(resumeTimer);
+          resumeTimer = setTimeout(() => { visible = true; }, 300);
+        } else {
+          clearTimeout(resumeTimer);
+          visible = false;
+        }
+      },
       { threshold: 0.01 },
     );
     io.observe(container);
@@ -271,6 +282,7 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
 
     return () => {
       if (animationIdRef.current) cancelAnimationFrame(animationIdRef.current);
+      clearTimeout(resumeTimer);
       io.disconnect();
       photoDataRef.current.forEach((p) => p.element.remove());
       photoDataRef.current = [];

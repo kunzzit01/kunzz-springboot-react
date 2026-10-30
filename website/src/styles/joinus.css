@@ -209,8 +209,8 @@ body::-webkit-scrollbar {
             #ffb347,
             #ffa726,
             #ff9800);
-    background-size: 600% 600%;
-    /* 2026-10-29 性能：去掉 background-position 动画（100vh 每帧整屏重绘） */
+    /* 2026-10-30：动画已删，600% 尺寸没有意义 —— 改回 100%，减少光栅化面积 */
+    background-size: 100% 100%;
     overflow: hidden;
 }
 
@@ -379,7 +379,9 @@ body::-webkit-scrollbar {
     cursor: pointer;
     object-fit: cover;
     z-index: 20;
-    will-change: transform;
+    /* 2026-10-30：去掉 will-change（10 张图 = 10 个常驻合成层，普通显卡上反而更卡）；
+       transform 本身已经走合成；contain 限制重绘范围 */
+    contain: layout paint;
 }
 
 .comphoto:hover {
