@@ -17,8 +17,10 @@ const MOUSEWHEEL_OPTIONS = {
   enabled: true,
   forceToAxis: true,
   sensitivity: 0.7,
-  thresholdDelta: 40,
-  thresholdTime: 650,
+  // 2026-10-30：从 40/650 调到 30/300 —— 原来两次翻页要间隔 0.65s，
+  // 笔记本触控板连划会感觉“卡住/发木”；实测 FPS 75~100 说明不是掉帧而是响应迟钝。
+  thresholdDelta: 30,
+  thresholdTime: 300,
   releaseOnEdges: false,
   eventsTarget: 'container',
 };
@@ -53,7 +55,7 @@ export default function VerticalSwiper({
         mousewheel={MOUSEWHEEL_OPTIONS}
         slidesPerView="auto"
         spaceBetween={0}
-        speed={650}
+        speed={550}
         simulateTouch
         allowTouchMove
         touchReleaseOnEdges
