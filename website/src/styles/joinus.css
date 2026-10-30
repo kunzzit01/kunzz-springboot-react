@@ -414,18 +414,34 @@ body::-webkit-scrollbar {
     backdrop-filter: blur(10px);
 }
 
+/* 2026-10-30：大图改成「固定适应视口 + transform/opacity 进场」。
+   旧实现按缩略图 rect × 8 做 width/height 动画，浏览器会先按小尺寸光栅化再放大，
+   在笔记本/低端 GPU 上看起来就是「糊」。 */
 .comphoto-modal-content {
     position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.94);
+    opacity: 0;
+    transition: transform 0.32s cubic-bezier(0.22, 0.61, 0.36, 1), opacity 0.32s ease;
+    border-radius: 12px;
     overflow: hidden;
-    border-radius: 8px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    will-change: transform, opacity;
+}
+
+.comphoto-modal.show .comphoto-modal-content {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
 }
 
 .comphoto-modal-content img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
     display: block;
+    width: auto;
+    height: auto;
+    max-width: min(92vw, 1600px);
+    max-height: 82vh;
+    object-fit: contain;
 }
 
 .comphoto-close {
