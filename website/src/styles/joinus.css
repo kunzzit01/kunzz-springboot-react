@@ -3138,9 +3138,10 @@ img.image-3d-rotate:hover,
         表格卡片允许内部滚动并加上 swiper-no-mousewheel（滚轮交给卡片自己滚，不再被 Swiper 吃掉）。
    ============================================================ */
 .contact-form-container {
-    /* 2026-10-30：恢复原有设计高度（70vh），提交按钮靠压缩表单内容来容纳 */
-    height: clamp(65vh, 70vh, 75vh);
-    max-height: 75vh;
+    /* 2026-10-30：保持原排版密度（需要 497px），容器改为「填满导航栏以下可用区」；
+       原来 70vh(464px) 装不下 → 提交按钮被裁。极矮屏仍可在卡内滚动。 */
+    height: calc(100vh - 116px);
+    max-height: none;
 }
 
 .contact-form-container .feedback-card {
@@ -3154,43 +3155,6 @@ img.image-3d-rotate:hover,
 .contact-form-container .feedback-card::-webkit-scrollbar-thumb {
     background: rgba(255, 92, 0, 0.35);
     border-radius: 3px;
-}
-
-/* ============================================================
-   2026-10-30（第二版）：矮屏笔记本上让表单**真正装得下**，不靠卡内滚动
-   663px 高时内容 540px、容器只有 487px → 提交按钮要滚动才看得到；
-   这里按视口高度压缩表单项，让它一屏内完整显示（560px 以下才退回滚动）。
-   ============================================================ */
-@media (max-height: 820px) {
-    .contact-form-container .feedback-card {
-        padding: 10px 12px;
-    }
-
-    .contact-form-container .feedback-title { font-size: 15px; margin-top: 0; }
-    .contact-form-container .feedback-subtitle { display: none; }
-
-    .contact-form-container .fb-field { margin-bottom: 2px; }
-    .contact-form-container .fb-field label { margin-bottom: 1px; font-size: 10px; }
-
-    .contact-form-container .fb-field input[type="text"],
-    .contact-form-container .fb-field input[type="email"],
-    .contact-form-container .fb-field input[type="tel"],
-    .contact-form-container .fb-field select,
-    .contact-form-container .fb-field textarea {
-        padding-top: 4px;
-        padding-bottom: 4px;
-    }
-
-    .contact-form-container .fb-field textarea {
-        height: 40px !important;
-        min-height: 40px;
-    }
-
-    .contact-form-container .fb-submit-btn {
-        padding-top: 6px;
-        padding-bottom: 6px;
-        margin-top: 4px;
-    }
 }
 
 /* 2026-10-30：「请提供您宝贵的意见」标题字号与左侧「联系我们」保持一致
