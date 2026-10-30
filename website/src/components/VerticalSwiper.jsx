@@ -3,10 +3,23 @@ import { Mousewheel } from 'swiper/modules';
 
 import 'swiper/css';
 
+/**
+ * 鼠标滚轮 / 触控板控制（2026-10-30 修“一下滚两屏”）
+ *
+ * 原因：笔记本触控板一次轻刷会连续发出几十个小的 wheel 事件，
+ * Swiper 默认的阈值很小，于是每个事件都可能切一屏 → 停不下来、一下跳两屏。
+ * 这里加两个门槛：
+ *   · thresholdDelta：累计滚动量不够 40 不切；
+ *   · thresholdTime：650ms 内最多切一屏（再快的手势也只算一次）。
+ * 同时把 sensitivity 调低，抵消触控板的惯性递增量。
+ */
 const MOUSEWHEEL_OPTIONS = {
   enabled: true,
   forceToAxis: true,
-  sensitivity: 1,
+  sensitivity: 0.7,
+  thresholdDelta: 40,
+  thresholdTime: 650,
+  releaseOnEdges: false,
   eventsTarget: 'container',
 };
 
@@ -40,11 +53,15 @@ export default function VerticalSwiper({
         mousewheel={MOUSEWHEEL_OPTIONS}
         slidesPerView="auto"
         spaceBetween={0}
-        speed={800}
+        speed={650}
         simulateTouch
         allowTouchMove
         touchReleaseOnEdges
         resistanceRatio={0.85}
+        // 2026-10-30：一次滑动只走一屏（触控板惯性/鼠标滚轮不会连续跳）
+        oneWayMovement
+        longSwipesRatio={0.15}
+        longSwipesMs={300}
         watchOverflow
         onSwiper={onSwiper}
         onSlideChange={emitSlideIndex}
