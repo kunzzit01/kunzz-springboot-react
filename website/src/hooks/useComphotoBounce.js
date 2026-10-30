@@ -281,9 +281,14 @@ export function useComphotoBounce(containerRef, onPhotoClick) {
     let userActive = false;
     let idleTimer = null;
     const markActive = () => {
+      // 2026-10-30：若这一屏已经基本对齐（≥70% 可见），说明翻页已完成，
+      // 残余的惯性滚动事件不再让照片暂停 —— 用户回到该屏时照片立刻是动的。
+      const r = container.getBoundingClientRect();
+      const overlap = Math.min(r.bottom, window.innerHeight) - Math.max(r.top, 0);
+      if (overlap >= window.innerHeight * 0.7) return;
       userActive = true;
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { userActive = false; }, 200);   // 2026-10-30：松手 0.2s 就恢复漂浮
+      idleTimer = setTimeout(() => { userActive = false; }, 150);   // 松手 0.15s 恢复
     };
     const onKey = (e) => {
       if (['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', ' ', 'Home', 'End'].includes(e.key)) markActive();
