@@ -2048,16 +2048,6 @@ img.image-3d-rotate:hover,
 }
 
 /* 侧栏的竖直连接线（原来那根线是页面级装饰，和条目对不上） */
-.timeline-month-sidebar::before {
-    content: '';
-    position: absolute;
-    left: 12px;
-    top: 12%;
-    bottom: 12%;
-    width: 2px;
-    border-radius: 2px;
-    background: rgba(255, 255, 255, 0.35);
-}
 
 .timeline-month-sidebar .month-item {
     padding: 8px 8px 8px 2px;
@@ -2159,13 +2149,6 @@ img.image-3d-rotate:hover,
     align-self: center;
 }
 
-.timeline-month-sidebar::before {
-    left: 12px;
-    top: 22px;
-    bottom: 22px;
-    width: 2px;
-    background: rgba(255, 255, 255, 0.4);
-}
 
 .timeline-month-sidebar .month-item {
     padding: 10px 8px 10px 2px;
@@ -2174,4 +2157,48 @@ img.image-3d-rotate:hover,
 /* 卡片在容器里居中，容器现在就是卡片宽度 → 左缘与侧栏紧邻 */
 .timeline-cards-wrapper {
     justify-content: center;
+}
+
+/* ============================================================
+   2026-10-30（对齐修复）：月份侧栏的「竖线」和「圆点」错位
+   原因：整列竖线用固定 px / 百分比猜位置，圆点中心却由 padding 决定，两者永远对不上。
+   改法（stepper 标准做法）：**每条 month-item 自己画一段线**，
+   横向 = 圆点圆心（padding-left 2px + 圆点半径 6px），纵向 = 条目高度；
+   首项的线从圆点中心开始、末项的线到圆点中心结束、只有一项时不画线。
+   这样圆点怎么变、条目多高都不用再算坐标，永远对得齐。
+   ============================================================ */
+.timeline-month-sidebar::before {
+    display: none;      /* 整列那条线不再需要 */
+}
+
+.timeline-month-sidebar .month-item::before {
+    content: '';
+    position: absolute;
+    /* 圆点圆心：padding-left(2px) + 圆点半径(6px) - 线宽一半(1px) = 7px */
+    left: 7px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.4);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.timeline-month-sidebar .month-item:first-child::before {
+    top: 50%;           /* 从首个圆点中心开始 */
+}
+
+.timeline-month-sidebar .month-item:last-child::before {
+    bottom: 50%;        /* 到最后一个圆点中心结束 */
+}
+
+.timeline-month-sidebar .month-item:only-child::before {
+    display: none;      /* 只有一项时没有线 */
+}
+
+/* 圆点叠在线上方（保持原来「空心环」的观感，不额外改设计） */
+.timeline-month-sidebar .month-dot {
+    position: relative;
+    z-index: 2;
 }
