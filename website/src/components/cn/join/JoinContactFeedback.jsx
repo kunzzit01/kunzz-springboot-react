@@ -204,7 +204,7 @@ export default function JoinContactFeedback() {
         </div>
 
         {!isMobile ? (
-          <div className="feedback-card joinus-feedback joinus-feedback--inline">
+          <div className="feedback-card joinus-feedback joinus-feedback--inline swiper-no-mousewheel">
             <h2 className="feedback-title">请提供您宝贵的意见</h2>
             <p className="feedback-subtitle">我们期待您的反馈，将尽快与您联系。</p>
             <FeedbackForm formId="feedbackForm" />

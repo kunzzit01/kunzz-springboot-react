@@ -3128,3 +3128,29 @@ img.image-3d-rotate:hover,
 .vertical-swiper-shell:has(.comphoto-section) .swiper-slide.swiper-slide-active {
     content-visibility: visible;
 }
+
+/* ============================================================
+   2026-10-30：联系/反馈屏在矮屏笔记本上「提交」按钮被裁掉
+   原因：.contact-form-container 高度写死 clamp(65vh,70vh,75vh)，
+         663px 高的窗口只有 464px；而表单内容约 517px，
+         .feedback-card{overflow:hidden} 直接把提交按钮裁掉了。
+   改法：容器改为「填满可用高度」（视口 − 上下留白），
+        表格卡片允许内部滚动并加上 swiper-no-mousewheel（滚轮交给卡片自己滚，不再被 Swiper 吃掉）。
+   ============================================================ */
+.contact-form-container {
+    height: min(calc(100vh - 176px), 78vh);
+    max-height: none;
+}
+
+.contact-form-container .feedback-card {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+}
+
+.contact-form-container .feedback-card::-webkit-scrollbar { width: 6px; }
+.contact-form-container .feedback-card::-webkit-scrollbar-thumb {
+    background: rgba(255, 92, 0, 0.35);
+    border-radius: 3px;
+}
