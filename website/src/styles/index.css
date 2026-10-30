@@ -1081,8 +1081,8 @@ body::-webkit-scrollbar {
         width: 100%;
         max-width: 100%;
         height: auto;
+        /* 2026-10-30：左右 padding 对齐（原来 padding-right:0 让内容整体偏右 2px） */
         padding: 0 4px 16px;
-        padding-right: 0;
         text-align: center;
         align-items: center;
         display: flex;
@@ -1110,6 +1110,10 @@ body::-webkit-scrollbar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
+        /* 2026-10-30：手机上按钮水平居中（原来 align-self: flex-start 贴在左侧） */
+        align-self: center;
+        margin-left: auto;
+        margin-right: auto;
     }
 }
 
@@ -1161,3 +1165,64 @@ body::-webkit-scrollbar {
     }
 }
 
+
+/* ============================================================
+   2026-10-30：矮屏笔记本（可视高度 ≤900px）压缩首页第 2 屏的垂直节奏
+   原因：`.about-section` 顶部 padding 80px + `.comprofile-section` 的 clamp(40,6vw,80)
+   在 1366×657 这类视口下让内容超出 100vh，slide 内出现 overflow-y 滚动条。
+   这里按 vh 收紧间距/字号，并把 slide 的溢出关掉（内容已能装下）。
+   ============================================================ */
+@media (max-height: 900px) {
+    .about-section {
+        padding-top: clamp(48px, 7vh, 80px);
+    }
+
+    .comprofile-section {
+        padding-top: clamp(8px, 2.4vh, 40px);
+        gap: clamp(28px, 4vw, 90px);
+    }
+
+    .comprofile-image img {
+        max-height: 40vh;
+        width: auto;
+    }
+
+    .stats-section {
+        padding-block: clamp(8px, 1.6vh, 18px);
+    }
+
+    .stat-number {
+        font-size: clamp(20px, 2.6vw, 44px);
+    }
+
+    .divider {
+        height: clamp(22px, 3.2vh, 56px);
+    }
+
+    .vertical-swiper-shell .swiper-slide:has(#comprofile) {
+        overflow-y: hidden;
+    }
+}
+
+@media (max-height: 720px) {
+    .about-section {
+        padding-top: 56px;
+    }
+
+    .comprofile-section {
+        padding-top: 6px;
+        gap: clamp(20px, 3vw, 56px);
+    }
+
+    .comprofile-image img {
+        max-height: 34vh;
+    }
+
+    .stat-number {
+        font-size: clamp(18px, 2.2vw, 34px);
+    }
+
+    .stat-label {
+        font-size: clamp(9px, 0.86vw, 13px);
+    }
+}
