@@ -6,6 +6,17 @@
 ---
 ## 🗓️ 2026-11-03
 
+### [2026-11-03-inout-remark-required] J3 货品备注历史补标（数据修复，已执行）
+
+- **问题**：6 个 J3 货品的「货品备注」数量虚高（SALMON 154.85 / 实际 21.52、KAWAHAGI P 的 KP-001 20 包 / 实际 0 等），
+  根因是 2026-03 起手机出货从不写备注编号。
+- **处理**：给历史出货行补 `remark_number` + `product_remark_checked=1`（UPDATE 42 行），
+  数量不足整行的拆成两行（INSERT 3 行，`out_quantity` 拆分后相加不变）——**库存总量一分没动**。
+- **结果**：逐编号净额与真实库存对齐；KAWAHAGI P 在库编号清零（进货不再被要求勾选）；
+  SALMON 只剩 `SA-242 21.52`、HIKARI 只剩 `HS-001 34`、HEAD 只剩 `SH-554/557`、BELLY 只剩 `SB-473`、A5 只剩 `AA-001/002`。
+- **可回滚**：`docs/sql/2026-11-03-remark-backfill-rollback.sql`；备份 `/opt/inventory/backup/j3stockedit_data_20261103_before_remarkfix.sql`。
+- **记录**：`docs/DATA_FIX_2026-11-03-remark-backfill.md`。
+
 ### [2026-11-03-mobile-remark-sync] 手机出货接入「货品备注」编号
 
 - **根因**：手机出货走 `/api/stock/mobile/batch-save`，`MobileStockService` 里没有 remark 字段、

@@ -9,6 +9,9 @@
   - inventory-system/frontend/src/pages/StockInout.tsx
   - docs/tasks/2026-11-03-inout-remark-required.md
   - CHANGELOG.md
+  - docs/DATA_FIX_2026-11-03-remark-backfill.md
+  - docs/sql/2026-11-03-remark-backfill.sql
+  - docs/sql/2026-11-03-remark-backfill-rollback.sql
 - 明确不碰：其它页面、backend/static/**（构建产物由发布 task 统一处理）、package-lock.json
 - CHANGELOG.md 只在顶部追加本任务小节（不改老行）
 - 计划推送分支：main
@@ -33,3 +36,12 @@
 - `inventory-system/frontend`: `npx tsc -b` 通过（exit 0）。
 - `backend`: `javac`（target/classes + ~/.m2 依赖）单文件编译 `StockService.java` 通过（exit 0）。
 - 本机无 MySQL（3306 未开），未做端到端联调；部署后需人工验证两条规则。
+
+## 数据修复（2026-11-03 已执行）
+
+- 范围：J3 六个货品（SALMON / HIKARI SHIRO MISO P / SALMON HEAD 10PCS / SALMON BELLY 10PCS / KAWAHAGI P / A5 AWAGYU）
+- 方式：给以前没写编号的出货行补 `remark_number` + `product_remark_checked=1`；数量不足整行的拆行（3 条）
+- 规模：UPDATE 42 行 + INSERT 3 行，全部带标记 `updated_by=history-remark-fix-20261103`
+- 验证：6 个货品 in/out/net 与修复前完全一致；逐编号净额无负数；KAWAHAGI P 在库编号 = 0
+- 备份：服务器 `/opt/inventory/backup/j3stockedit_data_20261103_before_remarkfix.sql`（4.1MB）
+- 细节与回滚：`docs/DATA_FIX_2026-11-03-remark-backfill.md`
