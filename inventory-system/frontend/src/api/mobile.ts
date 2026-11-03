@@ -14,6 +14,9 @@ export interface MobileRecord {
   out_quantity: number
   price?: number
   receiver?: string
+  /** 备注编号（2026-11-03 起手机出货会带上，货品备注据此扣减） */
+  remark_number?: string
+  product_remark_checked?: number
   created_at?: string
   updated_at?: string
 }
@@ -57,6 +60,9 @@ export interface MobileRecordPayload {
   receiver?: string
   /** 出货指定价格层（必选）；进货可不传由后端匹配最新价 */
   price?: number
+  /** 备注编号：货品在「货品备注」里有编号在库时必填 */
+  remarkNumber?: string
+  productRemarkChecked?: boolean
 }
 
 export const getMobileRecords = (system: string, start?: string, end?: string, productName?: string) =>
@@ -100,6 +106,9 @@ export interface MobileBatchRow {
   outQuantity: number
   price?: number
   receiver?: string
+  /** 备注编号（同一货品拆多行时每行都带同一个编号） */
+  remarkNumber?: string
+  productRemarkChecked?: boolean
 }
 
 export const batchSaveMobileRecords = (data: {

@@ -34,6 +34,8 @@ public class MobileStockService {
 
     private final MobileStockMapper mobileStockMapper;
     private final StockEditMapper stockEditMapper;
+    /** 复用桌面同一套「在库备注编号」判定（task 2026-11-03-mobile-remark-sync） */
+    private final com.kunzz.inventory.mapper.StockInoutMapper stockInoutMapper;
     private final com.kunzz.inventory.mapper.StockDataSystemMapper stockDataSystemMapper;
 
     private static final BigDecimal EPS = new BigDecimal("0.0001");
@@ -117,7 +119,24 @@ public class MobileStockService {
             checkTierStock(sys, normalizeName(sample.productName()), blankToNull(sample.codeNumber()), sample.price(), e.getValue());
         }
 
-        // ② 逐行写入（mobile 主写 → 桌面镜像直写 → total 缓存）
+        // ② 备注编号校验（task 2026-11-03-mobile-remark-sync）：
+        //    货品在「货品备注」里还有编号在库 → 手机出货必须选编号，否则这批货不进/不出货品备注。
+        java.util.Map<String, Boolean> remarkRequired = new java.util.HashMap<>();
+        for (MobileBatchSaveRequest.Row row : req.rows()) {
+            String pname = normalizeName(row.productName());
+            boolean need = remarkRequired.computeIfAbsent(pname,
+                    n -> stockInoutMapper.countInStockRemarkNumber(editTable(sys), n) > 0);
+            if (!need) continue;
+            String rn = normalizeRemark(row.remarkNumber());
+            if (rn == null) {
+                throw new BusinessException("货品 [" + pname + "] 在「货品备注」里还有编号在库，手机出货必须先选择备注编号");
+            }
+            if (stockInoutMapper.countRemarkNumberInStock(editTable(sys), pname, rn) <= 0) {
+                throw new BusinessException("备注编号 [" + rn + "] 不在库中，请重新选择");
+            }
+        }
+
+        // ③ 逐行写入（mobile 主写 → 桌面镜像直写 → total 缓存）
         List<Map<String, Object>> created = new java.util.ArrayList<>();
         for (MobileBatchSaveRequest.Row row : req.rows()) {
             String pname = normalizeName(row.productName());
@@ -136,11 +155,17 @@ public class MobileStockService {
             r.put("inQuantity", BigDecimal.ZERO);
             r.put("outQuantity", out);
             r.put("receiver", operator);
+            // 备注编号：同一货品拆成多行时，每行都带同一个编号（货品备注按编号聚合净额）
+            String remarkNumber = normalizeRemark(row.remarkNumber());
+            boolean remarkChecked = remarkNumber != null || Boolean.TRUE.equals(row.productRemarkChecked());
+            r.put("remarkNumber", remarkNumber);
+            r.put("productRemarkChecked", remarkChecked);
             mobileStockMapper.insertRecord(mobileTable(sys), r);
             Integer refId = toInt(r.get("id"));
 
             syncToDesktop(sys, pname, blankToNull(row.codeNumber()), blankToNull(row.specification()),
-                    blankToNull(row.type()), BigDecimal.ZERO, out, row.price(), date, time, refId);
+                    blankToNull(row.type()), BigDecimal.ZERO, out, row.price(), date, time, refId,
+                    remarkNumber, remarkChecked);
             applyTotal(sys, pname, blankToNull(row.codeNumber()), blankToNull(row.specification()),
                     BigDecimal.ZERO, out);
             created.add(record(sys, refId));
@@ -168,6 +193,19 @@ public class MobileStockService {
         if (out.signum() > 0 && req.price() != null) {
             checkTierStock(sys, name, code, req.price(), out);
         }
+        // 备注编号（task 2026-11-03-mobile-remark-sync）：出货时货品有编号在库就必须带编号
+        String remarkNumber = normalizeRemark(req.remarkNumber());
+        boolean remarkChecked = remarkNumber != null || Boolean.TRUE.equals(req.productRemarkChecked());
+        if (out.signum() > 0) {
+            if (remarkNumber == null
+                    && stockInoutMapper.countInStockRemarkNumber(editTable(sys), name) > 0) {
+                throw new BusinessException("货品 [" + name + "] 在「货品备注」里还有编号在库，手机出货必须先选择备注编号");
+            }
+            if (remarkNumber != null
+                    && stockInoutMapper.countRemarkNumberInStock(editTable(sys), name, remarkNumber) <= 0) {
+                throw new BusinessException("备注编号 [" + remarkNumber + "] 不在库中，请重新选择");
+            }
+        }
 
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("date", date.toString());
@@ -179,10 +217,13 @@ public class MobileStockService {
         r.put("inQuantity", in);
         r.put("outQuantity", out);
         r.put("receiver", blankToNull(req.receiver()));
+        r.put("remarkNumber", remarkNumber);
+        r.put("productRemarkChecked", remarkChecked);
         mobileStockMapper.insertRecord(mobileTable(sys), r);
         Integer refId = toInt(r.get("id"));
 
-        syncToDesktop(sys, name, code, spec, blankToNull(req.type()), in, out, req.price(), date, time, refId);
+        syncToDesktop(sys, name, code, spec, blankToNull(req.type()), in, out, req.price(), date, time, refId,
+                remarkNumber, remarkChecked);
         applyTotal(sys, name, code, spec, in, out);
         return record(sys, refId);
     }
@@ -212,6 +253,22 @@ public class MobileStockService {
         if (newOut.signum() > 0 && req.price() != null) {
             checkTierStock(sys, newName, newCode, req.price(), newOut);
         }
+        // 备注编号：请求没传就沿用原值；出货时货品有编号在库则必须带编号（task 2026-11-03-mobile-remark-sync）
+        String newRemarkNumber = req.remarkNumber() != null
+                ? normalizeRemark(req.remarkNumber()) : normalizeRemark(str(old.get("remark_number")));
+        boolean newRemarkChecked = req.productRemarkChecked() != null
+                ? Boolean.TRUE.equals(req.productRemarkChecked())
+                : (newRemarkNumber != null || isChecked(old.get("product_remark_checked")));
+        if (newOut.signum() > 0) {
+            if (newRemarkNumber == null
+                    && stockInoutMapper.countInStockRemarkNumber(editTable(sys), newName) > 0) {
+                throw new BusinessException("货品 [" + newName + "] 在「货品备注」里还有编号在库，手机出货必须先选择备注编号");
+            }
+            if (newRemarkNumber != null
+                    && stockInoutMapper.countRemarkNumberInStock(editTable(sys), newName, newRemarkNumber) <= 0) {
+                throw new BusinessException("备注编号 [" + newRemarkNumber + "] 不在库中，请重新选择");
+            }
+        }
 
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("id", id);
@@ -224,6 +281,8 @@ public class MobileStockService {
         r.put("inQuantity", newIn);
         r.put("outQuantity", newOut);
         r.put("receiver", newReceiver);
+        r.put("remarkNumber", newRemarkNumber);
+        r.put("productRemarkChecked", newRemarkChecked);
         mobileStockMapper.updateRecord(table, r);
 
         // 总数缓存：关键字段变更 → 撤旧键加新键；否则同键差值（对齐旧 updateStocklistTotal 调用）
@@ -242,7 +301,8 @@ public class MobileStockService {
 
         // 桌面镜像：删旧拆行 → 按新数据重新同步（对齐旧 PUT）
         mobileStockMapper.deleteDesktopByRef(editTable(sys), id, sys);
-        syncToDesktop(sys, newName, newCode, newSpec, newType, newIn, newOut, req.price(), date, time, id);
+        syncToDesktop(sys, newName, newCode, newSpec, newType, newIn, newOut, req.price(), date, time, id,
+                newRemarkNumber, newRemarkChecked);
         return record(sys, id);
     }
 
@@ -291,6 +351,8 @@ public class MobileStockService {
         r.put("inQuantity", bd(desktopRow.get("in_quantity")));
         r.put("outQuantity", bd(desktopRow.get("out_quantity")));
         r.put("receiver", str(desktopRow.get("receiver")));
+        r.put("remarkNumber", normalizeRemark(str(desktopRow.get("remark_number"))));
+        r.put("productRemarkChecked", isChecked(desktopRow.get("product_remark_checked")));
         mobileStockMapper.insertRecordWithRef(mobileTable(sys), r);
         // 桌面镜像行回指重建后的手机记录（链接只存在桌面表 mobile_ref_id 列上）
         mobileStockMapper.updateMobileRefId(editTable(sys), ((Number) desktopRow.get("id")).intValue(),
@@ -302,7 +364,8 @@ public class MobileStockService {
     // ---------- 桌面镜像同步（对齐 syncToJ1StockEditData 'insert'） ----------
 
     private void syncToDesktop(String sys, String productName, String codeNumber, String specification, String type,
-                               BigDecimal in, BigDecimal out, BigDecimal priceIn, LocalDate date, LocalTime time, Integer refId) {
+                               BigDecimal in, BigDecimal out, BigDecimal priceIn, LocalDate date, LocalTime time, Integer refId,
+                               String remarkNumber, boolean remarkChecked) {
         String table = editTable(sys);
 
         // 智能匹配信息：最近一条非 Mobile 来源记录 → 台账主数据兜底
@@ -318,7 +381,8 @@ public class MobileStockService {
         if (out.signum() <= 0) {
             String spec2 = (match != null && match.get("specification") != null)
                     ? str(match.get("specification")) : specification;
-            insertDesktopRow(table, date, time, codeNumber, productName, in, BigDecimal.ZERO, spec2, price2, type2, sys, refId);
+            insertDesktopRow(table, date, time, codeNumber, productName, in, BigDecimal.ZERO, spec2, price2, type2, sys, refId,
+                    remarkNumber, remarkChecked);
             return;
         }
 
@@ -329,7 +393,8 @@ public class MobileStockService {
                 directSpec = (specification != null && !specification.isBlank()) ? specification
                         : (match != null && match.get("specification") != null ? str(match.get("specification")) : null);
             }
-            insertDesktopRow(table, date, time, codeNumber, productName, BigDecimal.ZERO, out, directSpec, priceIn, type2, sys, refId);
+            insertDesktopRow(table, date, time, codeNumber, productName, BigDecimal.ZERO, out, directSpec, priceIn, type2, sys, refId,
+                    remarkNumber, remarkChecked);
             return;
         }
 
@@ -345,7 +410,8 @@ public class MobileStockService {
             String tierSpec = str(tier.get("specification"));
             insertDesktopRow(table, date, time, codeNumber, productName, BigDecimal.ZERO, deduct,
                     tierSpec, bd(tier.get("price")),
-                    tier.get("type") != null ? str(tier.get("type")) : type2, sys, refId);
+                    tier.get("type") != null ? str(tier.get("type")) : type2, sys, refId,
+                    remarkNumber, remarkChecked);
             remaining = remaining.subtract(deduct);
             lastTier = tier;
         }
@@ -354,12 +420,14 @@ public class MobileStockService {
             String fbSpec = lastTier != null && lastTier.get("specification") != null ? str(lastTier.get("specification")) : specification;
             BigDecimal fbPrice = lastTier != null && lastTier.get("price") != null ? bd(lastTier.get("price"))
                     : (match != null && match.get("price") != null ? bd(match.get("price")) : BigDecimal.ZERO);
-            insertDesktopRow(table, date, time, codeNumber, productName, BigDecimal.ZERO, remaining, fbSpec, fbPrice, type2, sys, refId);
+            insertDesktopRow(table, date, time, codeNumber, productName, BigDecimal.ZERO, remaining, fbSpec, fbPrice, type2, sys, refId,
+                    remarkNumber, remarkChecked);
         }
     }
 
     private void insertDesktopRow(String table, LocalDate date, LocalTime time, String codeNumber, String productName,
-                                  BigDecimal in, BigDecimal out, String spec, BigDecimal price, String type, String sys, Integer refId) {
+                                  BigDecimal in, BigDecimal out, String spec, BigDecimal price, String type, String sys, Integer refId,
+                                  String remarkNumber, boolean remarkChecked) {
         Map<String, Object> r = new LinkedHashMap<>();
         r.put("date", date.toString());
         r.put("time", time.toString());
@@ -372,6 +440,8 @@ public class MobileStockService {
         r.put("targetSystem", sys);
         r.put("type", type);
         r.put("mobileRefId", refId);
+        r.put("remarkNumber", remarkNumber);
+        r.put("productRemarkChecked", remarkChecked);
         mobileStockMapper.insertDesktopRow(table, r);
     }
 
@@ -420,6 +490,21 @@ public class MobileStockService {
     }
 
     private String blankToNull(String s) { return (s == null || s.isBlank()) ? null : s.trim(); }
+
+    /** 备注编号规范：去空白 + 大写（与桌面 remarkNumber 口径一致） */
+    private String normalizeRemark(String rn) {
+        String s = blankToNull(rn);
+        return s == null ? null : s.toUpperCase();
+    }
+
+    /** 数据库/JSON 里的勾选值兼容判读（0/1、true/false、'1'/'0'） */
+    private boolean isChecked(Object v) {
+        if (v == null) return false;
+        if (v instanceof Boolean b) return b;
+        if (v instanceof Number n) return n.intValue() != 0;
+        String t = String.valueOf(v).trim();
+        return "1".equals(t) || "true".equalsIgnoreCase(t);
+    }
 
     private BigDecimal nz(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
 

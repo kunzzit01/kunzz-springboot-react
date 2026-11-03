@@ -22,7 +22,11 @@ public record MobileBatchSaveRequest(
             BigDecimal outQuantity,
             /** 价格层（前端按 HIFO 拆好层，每层一行） */
             BigDecimal price,
-            String receiver
+            String receiver,
+            /** 备注编号（货品在「货品备注」里有编号在库时必填；同一货品拆多行时每行都带同一个编号） */
+            String remarkNumber,
+            /** 是否勾选「货品备注」 */
+            Boolean productRemarkChecked
     ) {
     }
 }

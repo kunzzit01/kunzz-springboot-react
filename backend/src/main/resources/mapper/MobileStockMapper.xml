@@ -20,10 +20,10 @@
     <insert id="insertRecord" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
         INSERT INTO ${table}
             (date, time, product_name, code_number, specification, type,
-             in_quantity, out_quantity, receiver)
+             in_quantity, out_quantity, receiver, remark_number, product_remark_checked)
         VALUES
             (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.specification}, #{r.type},
-             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver})
+             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver}, #{r.remarkNumber}, #{r.productRemarkChecked})
     </insert>
 
     <update id="updateRecord" parameterType="map">
@@ -32,7 +32,8 @@
             product_name = #{r.productName}, code_number = #{r.codeNumber},
             specification = #{r.specification}, type = #{r.type},
             in_quantity = #{r.inQuantity}, out_quantity = #{r.outQuantity},
-            receiver = #{r.receiver}
+            receiver = #{r.receiver},
+            remark_number = #{r.remarkNumber}, product_remark_checked = #{r.productRemarkChecked}
         WHERE id = #{r.id}
     </update>
 
@@ -143,10 +144,10 @@
     <insert id="insertRecordWithRef" parameterType="map" useGeneratedKeys="true" keyProperty="r.newId">
         INSERT INTO ${table}
             (date, time, product_name, code_number, specification, type,
-             in_quantity, out_quantity, receiver)
+             in_quantity, out_quantity, receiver, remark_number, product_remark_checked)
         VALUES
             (#{r.date}, #{r.time}, #{r.productName}, #{r.codeNumber}, #{r.specification}, #{r.type},
-             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver})
+             #{r.inQuantity}, #{r.outQuantity}, #{r.receiver}, #{r.remarkNumber}, #{r.productRemarkChecked})
     </insert>
 
     <!-- 恢复联动：桌面镜像行回指重建后的手机记录 id -->
@@ -154,14 +155,17 @@
         UPDATE ${table} SET mobile_ref_id = #{refId} WHERE id = #{id}
     </update>
 
-    <!-- 桌面表镜像单行（receiver='Mobile' 固定，mobile_ref_id 关联手机记录） -->
+    <!-- 桌面表镜像单行（receiver='Mobile' 固定，mobile_ref_id 关联手机记录）
+         2026-11-03：备注编号一并写入（手机出货挂编号后，货品备注才能与进出货同步，task 2026-11-03-mobile-remark-sync） -->
     <insert id="insertDesktopRow" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
         INSERT INTO ${table}
             (date, time, code_number, product_name, in_quantity, out_quantity,
-             specification, price, receiver, remark, target_system, type, mobile_ref_id)
+             specification, price, receiver, remark, target_system, type, mobile_ref_id,
+             remark_number, product_remark_checked)
         VALUES
             (#{r.date}, #{r.time}, #{r.codeNumber}, #{r.productName}, #{r.inQuantity}, #{r.outQuantity},
-             #{r.specification}, #{r.price}, 'Mobile', NULL, #{r.targetSystem}, #{r.type}, #{r.mobileRefId})
+             #{r.specification}, #{r.price}, 'Mobile', NULL, #{r.targetSystem}, #{r.type}, #{r.mobileRefId},
+             #{r.remarkNumber}, #{r.productRemarkChecked})
     </insert>
 
     <delete id="deleteDesktopByRef">

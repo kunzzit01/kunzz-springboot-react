@@ -4,6 +4,7 @@ import {
   getMobilePriceTiers, getMobileTotals, batchSaveMobileRecords,
   type MobilePriceTier, type MobileTotalRow,
 } from '../api/mobile'
+import { getRemarkCodeOptions } from '../api'
 import { showToast } from '../utils/toast'
 import { useMobileAccess, mobileLogout, MobileDenied } from '../utils/useMobileAccess'
 import { useRealtime } from '../utils/useRealtime'
@@ -101,6 +102,11 @@ export default function MobileOut() {
   const [savingId, setSavingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [draft, setDraft] = useState('')
+  // 备注编号（task 2026-11-03-mobile-remark-sync）：货品在「货品备注」里有编号在库时必须选一个，
+  // 否则手机出货不会从货品备注扣减（历史缺口就是这么来的）
+  const [remarkOpts, setRemarkOpts] = useState<{ remark_number: string; available: number }[]>([])
+  const [remarkPick, setRemarkPick] = useState('')
+  const [remarkLoading, setRemarkLoading] = useState(false)
 
   const [summaryCount, setSummaryCount] = useState(0)
   const loadTotals = useCallback(async () => {
@@ -181,10 +187,27 @@ export default function MobileOut() {
     if (!r) return
     setEditingId(rowKey)
     setDraft(qty3(Number(r.total_qty)))
+    setRemarkPick('')
+    setRemarkOpts([])
+    if (!r.product_name) return
+    // 先拉到「该货品在库的备注编号」再允许保存，避免手快时绕过校验
+    setRemarkLoading(true)
+    getRemarkCodeOptions(r.product_name, system)
+      .then(list => {
+        const opts = (list || []).map(o => ({ remark_number: o.remark_number, available: Number(o.available) || 0 }))
+        setRemarkOpts(opts)
+        // 只剩一个编号 → 自动选中，省一次点击
+        if (opts.length === 1) setRemarkPick(opts[0].remark_number)
+      })
+      .catch(() => setRemarkOpts([]))
+      .finally(() => setRemarkLoading(false))
   }
   const cancelEdit = () => {
     setEditingId(null)
     setDraft('')
+    setRemarkOpts([])
+    setRemarkPick('')
+    setRemarkLoading(false)
   }
 
   /** 电话版核心（对齐旧 saveRecord）：保存「剩余量」→ 差值 = 出货量 → HIFO 拆行 → batch_save */
@@ -219,6 +242,16 @@ export default function MobileOut() {
       return
     }
 
+    // ③.5 备注编号必选（该货品在货品备注里还有编号在库时，task 2026-11-03-mobile-remark-sync）
+    if (remarkLoading) {
+      showToast('正在读取该货品的备注编号，请稍候再保存', 'info')
+      return
+    }
+    if (remarkOpts.length > 0 && !remarkPick) {
+      showToast(`货品 [${record.product_name}] 在「货品备注」里还有编号在库，请先选择备注编号再出货`, 'error')
+      return
+    }
+
     // ④ 工作日期非今天 → 确认（对齐旧 confirmWorkDateBeforeSave）
     const today = fmtDay(new Date())
     if (workDate !== today && !window.confirm(`货单将保存到 ${workDate}（今天为 ${today}），是否继续？`)) return
@@ -234,6 +267,7 @@ export default function MobileOut() {
         specification: record.specification || undefined,
         type: normCategory(record.type) || undefined,
         outQuantity: outQty, receiver: me?.username || 'Mobile',
+        remarkNumber: remarkPick || undefined, productRemarkChecked: !!remarkPick,
       })
     } else {
       let remaining = outQty
@@ -253,6 +287,7 @@ export default function MobileOut() {
             type: t.type || normCategory(record.type) || undefined,
             outQuantity: deduct, price: Number(t.price),
             receiver: me?.username || 'Mobile',
+            remarkNumber: remarkPick || undefined, productRemarkChecked: !!remarkPick,
           })
           remaining -= deduct
           i++
@@ -347,6 +382,22 @@ export default function MobileOut() {
               return (
                 <div key={r.rowKey} className="msl-row">
                   <div className="msl-name">{r.product_name}</div>
+                  {editing && remarkOpts.length > 0 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '5px 0 3px' }}>
+                      <span style={{ color: '#b45309', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>备注编号</span>
+                      <select
+                        value={remarkPick}
+                        onChange={e => setRemarkPick(e.target.value)}
+                        aria-label="备注编号"
+                        style={{ flex: 1, minWidth: 0, padding: '6px 8px', borderRadius: 8, border: '1px solid #f59e0b', background: '#fff7ed', fontSize: 14, fontWeight: 600 }}
+                      >
+                        <option value="">请选择（必选）</option>
+                        {remarkOpts.map(o => (
+                          <option key={o.remark_number} value={o.remark_number}>{o.remark_number}（剩 {o.available}）</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div className="msl-footer">
                     <span className="msl-meta">{r.code_number || '—'}{r.specification ? ` · ${r.specification}` : ''}</span>
                     <span className="msl-sep" aria-hidden="true">|</span>
