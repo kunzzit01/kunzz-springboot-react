@@ -238,6 +238,16 @@ public class StockService {
             checked = true;
         }
 
+        // ====== 进货备注校验（task 2026-11-03-inout-remark-required）======
+        // 该货品在「货品备注」里还有备注编号在库（净库存>0）→ 本次进货必须勾选「货品备注」，
+        // 由后端自动生成新编号（每批进货各自可追踪）；未勾选直接拒绝，前端据此弹通知。
+        // 反过来：该货品的备注编号全部出完（在库编号 = 0）时不拦，未勾选也能直接保存。
+        if (isIncoming && !checked && req.productName() != null && !req.productName().isBlank()
+                && stockInoutMapper.countInStockRemarkNumber(rmTable, req.productName()) > 0) {
+            throw new BusinessException("货品 [" + req.productName()
+                    + "] 在「货品备注」里还有备注编号在库，进货时必须勾选「货品备注」生成备注编号后再保存");
+        }
+
         // 出货备注校验：产品有在库备注编号时，必须填编号且编号必须在库
         if (isOutgoing && stockInoutMapper.countInStockRemarkNumber(rmTable, req.productName()) > 0) {
             if (remarkNumber == null || remarkNumber.isBlank()) {

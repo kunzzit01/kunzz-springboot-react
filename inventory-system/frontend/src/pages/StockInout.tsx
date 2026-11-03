@@ -321,6 +321,8 @@ export default function StockInout() {
   const [exportForm, setExportForm] = useState({ start: '', end: '', system: '', invoiceDate: '', invoiceSuffix: '', includeIn: true, includeOut: true })
   // 保存中标志（防连点/防重复提交，对齐旧系统 batchSaveNewRows 的 disabled + spinner）
   const [saving, setSaving] = useState(false)
+  // 进货备注拦截高亮：这些行未勾选「货品备注」，但货品在货品备注里还有编号在库（task 2026-11-03-inout-remark-required）
+  const [remarkHintKeys, setRemarkHintKeys] = useState<string[]>([])
   // 删除撤销（对齐旧系统 undoDelete：删除后 10 秒内可撤销，Ctrl+Shift+Z）
   const [undo, setUndo] = useState<{ ids: number[]; count: number } | null>(null)
   const undoTimer = useRef<number | null>(null)
@@ -361,7 +363,8 @@ export default function StockInout() {
   const [calEnd, setCalEnd] = useState<Date | null>(null)
   const [calPreview, setCalPreview] = useState<Date | null>(null)
 
-  const showMsg = (msg: string, type = 'success') => showToast(msg, type)
+  // duration 可选：拦截类通知需要停留久一点，让用户看清要求（task 2026-11-03-inout-remark-required）
+  const showMsg = (msg: string, type = 'success', duration?: number) => showToast(msg, type, duration)
   // 权限锁定：配置过权限树且系统选项全空 → 整页锁定（数据区隐藏，仅显示提示）
   const locked = allowedSystems !== null && allowedSystems.length === 0
 
@@ -793,6 +796,8 @@ export default function StockInout() {
   }
   const patchNew = (key: string, patch: Partial<NewRow>) => {
     setNewRows(prev => prev.map(r => r.key === key ? { ...r, ...patch } : r))
+    // 用户勾上「货品备注」→ 立刻撤掉该行的拦截高亮
+    if (patch.remarkChecked === true) setRemarkHintKeys(prev => prev.filter(k => k !== key))
   }
   const computePrefix = (name: string) => {
     const clean = (name || '').trim().toUpperCase()
@@ -1283,6 +1288,35 @@ export default function StockInout() {
       // 避免保存时产生大量请求（请求风暴）。
       // 备注码查询缓存（同一产品只查一次，避免重复请求）
       const remarkCodesCache = new Map<string, string[]>()
+      const codesOf = async (productName: string): Promise<string[]> => {
+        let codes = remarkCodesCache.get(productName)
+        if (codes === undefined) {
+          codes = (await getRemarkCodes(productName, system)) || []
+          remarkCodesCache.set(productName, codes)
+        }
+        return codes
+      }
+      // ====== 进货备注拦截（task 2026-11-03-inout-remark-required）======
+      // 货品在「货品备注」里还有编号在库（净库存>0）→ 本次进货必须勾选「货品备注」，
+      // 由后端自动生成备注编号；该货品的编号全部出完（无在库编号）时不拦，不勾选可直接保存。
+      // 先整批校验一遍：要改的行一次性全部提示出来，省得用户逐行试错。
+      const needRemarkRows: { key: string; productName: string; codes: string[] }[] = []
+      for (const row of valid) {
+        const inQ = parseFloat(row.inQty || '0') || 0
+        if (inQ > 0 && !row.remarkChecked && row.productName) {
+          const codes = await codesOf(row.productName)
+          if (codes.length > 0) needRemarkRows.push({ key: row.key, productName: row.productName, codes })
+        }
+      }
+      if (needRemarkRows.length > 0) {
+        setRemarkHintKeys(needRemarkRows.map(r => r.key))
+        const detail = needRemarkRows
+          .map(r => r.productName + '（在库编号：' + r.codes.slice(0, 3).join('、') + (r.codes.length > 3 ? ' 等' : '') + '）')
+          .join('；')
+        showMsg('进货无法保存：' + detail + ' 还有备注编号在「货品备注」里没出完，请勾选对应行的「货品备注」复选框后再保存（系统会自动生成备注编号）；该货品的备注编号全部出完时，不勾选也能直接保存。', 'error', 9000)
+        return
+      }
+      setRemarkHintKeys([])
       const savedIds: number[] = []
       for (const row of valid) {
         const inQ = parseFloat(row.inQty || '0') || 0
@@ -1300,11 +1334,7 @@ export default function StockInout() {
         // 出货备注校验（同一产品只查询一次）。2026-09-18 起分店也各有自己的备注编号，
         // 所以不再限定中央，一律按当前页面的系统查
         if (isOutgoing && row.productName) {
-          let codes = remarkCodesCache.get(row.productName)
-          if (codes === undefined) {
-            codes = (await getRemarkCodes(row.productName, system)) || []
-            remarkCodesCache.set(row.productName, codes)
-          }
+          const codes = await codesOf(row.productName)
           if (codes.length > 0) {
             if (!remarkNumber) {
               showMsg(`货品 [${row.productName}] 有备注编码在库，出货时请填写备注编号`, 'error'); return
@@ -1774,7 +1804,7 @@ export default function StockInout() {
                   <th style={{ minWidth: 100 }}>单价</th>
                   <th style={{ minWidth: 100 }}>总价</th>
                   <th style={{ minWidth: 80 }}>类型</th>
-                  <th style={{ minWidth: 80 }}>货品备注</th>
+                  <th style={{ minWidth: 80 }} title="进货时若该货品在货品备注里还有编号在库，必须勾选此项（自动生成备注编号）；编号全部出完后不再强制">货品备注</th>
                   <th style={{ minWidth: 100 }}>备注编号</th>
                   <th className="receiver-col">供应商/出货人</th>
                   <th style={{ minWidth: 100 }}>备注</th>
@@ -2019,8 +2049,10 @@ export default function StockInout() {
                         <option value="">请选择类型</option>{TYPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                     </td>
-                    <td><input type="checkbox" className="remark-checkbox" checked={nr.remarkChecked}
-                      onChange={(e) => patchNew(nr.key, { remarkChecked: e.target.checked, remarkPrefix: e.target.checked ? nr.remarkPrefix || computePrefix(nr.productName) : '' })} /></td>
+                    <td style={remarkHintKeys.includes(nr.key) ? { background: '#fee2e2', boxShadow: 'inset 0 0 0 2px #dc2626', borderRadius: 6 } : undefined}
+                      title={remarkHintKeys.includes(nr.key) ? '该货品在「货品备注」里还有编号在库，进货时必须勾选「货品备注」' : undefined}>
+                      <input type="checkbox" className="remark-checkbox" checked={nr.remarkChecked}
+                        onChange={(e) => patchNew(nr.key, { remarkChecked: e.target.checked, remarkPrefix: e.target.checked ? nr.remarkPrefix || computePrefix(nr.productName) : '' })} /></td>
                     <td>
                       <div style={{ position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', overflow: 'hidden', opacity: nr.remarkChecked ? 1 : 0.5 }}>
