@@ -67,6 +67,14 @@ export function showToast(message: string, type: string = 'success', duration: n
   const dur = (duration !== undefined && duration !== null) ? Number(duration) : DEFAULT_DURATION
   const container = getContainer()
 
+  // 同类型 + 同文案的 toast 还在屏幕上时不再叠一条（直接复用那一条的 id）
+  // 2026-11-03：http 拦截器（业务 code!==0）与页面 catch 会对同一个错误各弹一次，最终只会显示一条
+  // （task 2026-11-03-toast-dedupe）
+  const dup = Array.from(container.querySelectorAll<HTMLElement>('.g-toast')).find(el =>
+    el.classList.contains('g-toast--' + t) && !el.classList.contains('g-toast--hiding')
+    && ((el.querySelector('.g-toast__message')?.textContent || '') === String(message)))
+  if (dup && dup.id) return dup.id
+
   // 超过上限时逐出最旧的（MAX_TOASTS = 5）
   const existing = container.querySelectorAll('.g-toast')
   const toRemove = existing.length - (MAX_TOASTS - 1)

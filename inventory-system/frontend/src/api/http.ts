@@ -1,6 +1,7 @@
 import axios from 'axios'
-import { message } from 'antd'
 import { getToken, getDeviceToken, clearSession } from '../utils/authToken'
+// 业务错误统一走自研 toast（与页面 catch 的 showMsg 同一套，且同文案自动去重，避免双通知）
+import { showToast } from '../utils/toast'
 import { refreshSession } from '../utils/authSession'
 
 const http = axios.create({
@@ -41,7 +42,8 @@ http.interceptors.response.use(
     const body = res.data
     if (body && typeof body === 'object' && 'code' in body) {
       if (body.code !== 0) {
-        message.error(body.message || '操作失败')
+        // 2026-11-03：原来弹 antd message，页面 catch 又弹自研 toast，同一条错误显示两次（task 2026-11-03-toast-dedupe）
+        showToast(body.message || '操作失败', 'error')
         return Promise.reject(new Error(body.message))
       }
       return body.data
