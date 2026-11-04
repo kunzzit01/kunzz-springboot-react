@@ -136,6 +136,29 @@ public class MobileStockService {
             }
         }
 
+        // ②.5 「整批出完」防超卖（task 2026-11-03-kilo-whole-code）：
+        //     同一编号在本次请求里的出货合计 ≤ 该编号剩余量（防两个手机同时点整批 / 页面数据过期）。
+        java.util.Map<String, BigDecimal> wholeByCode = new java.util.HashMap<>();
+        for (MobileBatchSaveRequest.Row row : req.rows()) {
+            if (!Boolean.TRUE.equals(row.wholeCode())) continue;
+            String rn = normalizeRemark(row.remarkNumber());
+            if (rn == null) continue;
+            wholeByCode.merge(normalizeName(row.productName()) + "|" + rn, nz(row.outQuantity()), BigDecimal::add);
+        }
+        for (Map.Entry<String, BigDecimal> e : wholeByCode.entrySet()) {
+            String key = e.getKey();
+            int sep = key.indexOf('|');
+            String pname = key.substring(0, sep);
+            String rn = key.substring(sep + 1);
+            BigDecimal remain = mobileStockMapper.remarkNumberStock(editTable(sys), pname, rn);
+            BigDecimal left = remain == null ? BigDecimal.ZERO : remain;
+            if (e.getValue().compareTo(left) > 0) {
+                throw new BusinessException("备注编号 [" + rn + "] 剩余 " + left.stripTrailingZeros().toPlainString()
+                        + "，本次整批出货 " + e.getValue().stripTrailingZeros().toPlainString()
+                        + " 已超过剩余量（可能已被其他手机出掉），请刷新后重试");
+            }
+        }
+
         // ③ 逐行写入（mobile 主写 → 桌面镜像直写 → total 缓存）
         List<Map<String, Object>> created = new java.util.ArrayList<>();
         for (MobileBatchSaveRequest.Row row : req.rows()) {

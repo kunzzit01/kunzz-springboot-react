@@ -64,6 +64,11 @@ public interface MobileStockMapper {
                                             @Param("codeNumber") String codeNumber);
 
     /** 指定价格的可用库存（跨规格汇总，含负数；出货指定价格层时的预检） */
+    /** 某备注编号在当前系统的在库剩余量（整批出完时防超卖，净库存>0 口径） */
+    BigDecimal remarkNumberStock(@Param("table") String table,
+                                 @Param("productName") String productName,
+                                 @Param("remarkNumber") String remarkNumber);
+
     BigDecimal availableAtPrice(@Param("table") String table,
                                 @Param("productName") String productName,
                                 @Param("codeNumber") String codeNumber,

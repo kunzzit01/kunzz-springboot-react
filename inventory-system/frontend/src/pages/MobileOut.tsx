@@ -4,7 +4,7 @@ import {
   getMobilePriceTiers, getMobileTotals, batchSaveMobileRecords,
   type MobilePriceTier, type MobileTotalRow,
 } from '../api/mobile'
-import { getRemarkCodeOptions } from '../api'
+import { getRemarkCodeOptions, getRemarkCodePriceOptions } from '../api'
 import { showToast } from '../utils/toast'
 import { useMobileAccess, mobileLogout, MobileDenied } from '../utils/useMobileAccess'
 import { useRealtime } from '../utils/useRealtime'
@@ -37,6 +37,8 @@ const fmtMonthDay = (dateStr: string) => {
 const qty3 = (n?: number) => (n == null ? '0.000' : Number(n).toFixed(3))
 
 /** 旧版统一把 Drinks 显示为 Service Line（与后台一致） */
+const isKiloRow = (spec?: string) => (spec || '').trim().toLowerCase() === 'kilo'
+
 const normCategory = (c?: string) =>
   c === 'Drinks' || c === 'drinks' ? 'Service Line' : (c || '')
 
@@ -313,6 +315,50 @@ export default function MobileOut() {
     setSavingId(null)
   }
 
+  /**
+   * Kilo「整批出完」（task 2026-11-03-kilo-whole-code）：
+   * 按选中编号自己的价格层拆行，一次出完；Packet 不显示此入口（仍走「剩余量」流程）。
+   */
+  const shipWholeCode = async (rowKey: string) => {
+    if (savingId != null) return
+    const record = rows.find(r => r.rowKey === rowKey)
+    if (!record || !record.product_name) return
+    if (!isKiloRow(record.specification)) return
+    if (!remarkPick) { showToast('请先选择备注编号', 'error'); return }
+    setSavingId(rowKey)
+    try {
+      const opts = await getRemarkCodePriceOptions(record.product_name, system)
+      const parts = (opts || []).filter(o => o.remark_number === remarkPick && Number(o.available) > 0.0005)
+      if (parts.length === 0) { showToast(`备注编号 [${remarkPick}] 已经没有剩余库存，请刷新后再试`, 'error'); return }
+      const total = parts.reduce((sum, o) => sum + (Number(o.available) || 0), 0)
+      const detail = parts.map(o => `RM ${Number(o.price).toFixed(2)}: ${Number(o.available).toFixed(3)}`).join('，')
+      if (!window.confirm(`整批出完 ${remarkPick}？
+共 ${total.toFixed(3)} ${record.specification || ''}
+${detail}
+
+出完后该编号会从「货品备注」消失。`)) return
+      const base = new Date()
+      const rowsOut = parts.map((o, i) => ({
+        time: new Date(base.getTime() + i * 1000).toTimeString().slice(0, 8),
+        productName: record.product_name || '',
+        codeNumber: record.code_number || undefined,
+        specification: o.specification != null ? String(o.specification) : (record.specification || undefined),
+        type: normCategory(record.type) || undefined,
+        outQuantity: Number(o.available),
+        price: Number(o.price),
+        receiver: me?.username || 'Mobile',
+        remarkNumber: remarkPick,
+        productRemarkChecked: true,
+        wholeCode: true,
+      }))
+      await batchSaveMobileRecords({ system, documentDate: workDate, rows: rowsOut })
+      showToast(`已整批出完：${record.product_name}｜${remarkPick}｜${total.toFixed(3)} ${record.specification || ''}`, 'success')
+      setEditingId(null); setDraft(''); setRemarkOpts([]); setRemarkPick('')
+      await loadTotals()
+    } catch { /* 拦截器已提示 */ }
+    finally { setSavingId(null) }
+  }
+
   // 退出登录（对齐旧 logout.php：清凭据回手机登录页）
   const logout = mobileLogout
 
@@ -396,6 +442,21 @@ export default function MobileOut() {
                           <option key={o.remark_number} value={o.remark_number}>{o.remark_number}（剩 {o.available}）</option>
                         ))}
                       </select>
+                      {isKiloRow(r.specification) && (
+                        <button
+                          type="button"
+                          onClick={() => shipWholeCode(r.rowKey)}
+                          disabled={!remarkPick || savingId === r.rowKey}
+                          title="按这个编号的剩余量一次出完（仅 Kilo）"
+                          style={{
+                            flex: '0 0 auto', whiteSpace: 'nowrap', padding: '6px 12px', borderRadius: 8, border: 'none',
+                            background: !remarkPick ? '#fcd34d' : '#ea580c', color: '#fff', fontWeight: 700, fontSize: 13,
+                            opacity: !remarkPick ? 0.7 : 1,
+                          }}
+                        >
+                          整批出完
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="msl-footer">

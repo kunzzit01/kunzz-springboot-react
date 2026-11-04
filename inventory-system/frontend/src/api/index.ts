@@ -147,6 +147,10 @@ export const getRemarkCodes = (productName: string, system?: string) =>
 export const getRemarkCodeOptions = (productName: string, system?: string) =>
   http.get<unknown, { remark_number: string; available: number; specification?: string }[]>(
     '/stock/remark-code-options', { params: { productName, system } })
+/** 在库备注编号 + 剩余量 + 价格层（Kilo 整批出完用：同一编号可能横跨多个价格） */
+export const getRemarkCodePriceOptions = (productName: string, system?: string) =>
+  http.get<unknown, { remark_number: string; price: number; available: number; specification?: string }[]>(
+    '/stock/remark-code-price-options', { params: { productName, system } })
 export const getStockRecords = (params: StockQuery) =>
   http.get<unknown, PageResult<StockData>>('/stock/records', { params })
 export const createStockRecord = (data: Partial<StockData>) =>

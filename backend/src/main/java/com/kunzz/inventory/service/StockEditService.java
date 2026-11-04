@@ -140,6 +140,28 @@ public class StockEditService {
         return out;
     }
 
+    /** 在库备注编号 + 剩余量 + 价格层（Kilo 整批出库：前端按编号自己的价格拆行，避免 HIFO 扣到别的批次） */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> remarkCodePriceOptions(String productName, String system) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (Map<String, Object> r : stockEditMapper.remarkCodePriceOptions(stockTable(system), productName)) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("remark_number", str(r.get("remark_number")));
+            m.put("price", r.get("price"));
+            m.put("available", r.get("net"));
+            m.put("specification", HtmlText.decode(str(r.get("specification"))));
+            out.add(m);
+        }
+        out.sort((a, b) -> {
+            int c = naturalCompare(str(a.get("remark_number")), str(b.get("remark_number")));
+            if (c != 0) return c;
+            double pa = a.get("price") == null ? 0 : Double.parseDouble(str(a.get("price")));
+            double pb = b.get("price") == null ? 0 : Double.parseDouble(str(b.get("price")));
+            return Double.compare(pa, pb);
+        });
+        return out;
+    }
+
     /** 备注编号自然排序：同前缀按数字比大小（SA-9 < SA-10），前缀不同按字典序 */
     private int naturalCompare(String a, String b) {
         int da = a.lastIndexOf('-'), db = b.lastIndexOf('-');

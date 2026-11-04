@@ -233,4 +233,11 @@ public class StockEnhanceController {
                                                                    @RequestParam(required = false) String system) {
         return ApiResponse.ok(stockEditService.remarkCodeOptions(productName, system));
     }
+
+    /** 在库备注编号 + 剩余量 + 价格层（手机版 Kilo「整批出完」用，task 2026-11-03-kilo-whole-code） */
+    @GetMapping("/remark-code-price-options")
+    public ApiResponse<List<Map<String, Object>>> remarkCodePriceOptions(@RequestParam String productName,
+                                                                        @RequestParam(required = false) String system) {
+        return ApiResponse.ok(stockEditService.remarkCodePriceOptions(productName, system));
+    }
 }

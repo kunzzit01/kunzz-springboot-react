@@ -37,4 +37,7 @@ public interface StockEditMapper {
 
     /** 在库备注编号 + 各自剩余量/单位（出货时下拉选择，不必再去货品备注页看余量） */
     List<Map<String, Object>> remarkCodeOptions(@Param("table") String table, @Param("productName") String productName);
+
+    /** 在库备注编号 + 剩余量 + 价格层（Kilo 整批出库用：同一编号可能横跨多个价格） */
+    List<Map<String, Object>> remarkCodePriceOptions(@Param("table") String table, @Param("productName") String productName);
 }

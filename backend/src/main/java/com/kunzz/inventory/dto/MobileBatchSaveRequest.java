@@ -26,7 +26,9 @@ public record MobileBatchSaveRequest(
             /** 备注编号（货品在「货品备注」里有编号在库时必填；同一货品拆多行时每行都带同一个编号） */
             String remarkNumber,
             /** 是否勾选「货品备注」 */
-            Boolean productRemarkChecked
+            Boolean productRemarkChecked,
+            /** true = 「整批出完」快捷出货（仅 Kilo）：同一编号出货合计不得超过其剩余量 */
+            Boolean wholeCode
     ) {
     }
 }

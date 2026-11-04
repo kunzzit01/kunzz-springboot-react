@@ -157,6 +157,16 @@
 
     <!-- 桌面表镜像单行（receiver='Mobile' 固定，mobile_ref_id 关联手机记录）
          2026-11-03：备注编号一并写入（手机出货挂编号后，货品备注才能与进出货同步，task 2026-11-03-mobile-remark-sync） -->
+    <!-- 某备注编号的在库剩余量（与桌面 remarkCodes 同口径：product_remark_checked=1、净库存） -->
+    <select id="remarkNumberStock" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(in_quantity), 0) - COALESCE(SUM(out_quantity), 0)
+        FROM ${table}
+        WHERE product_name = #{productName}
+          AND product_remark_checked = 1
+          AND remark_number = #{remarkNumber}
+          AND deleted_at IS NULL
+    </select>
+
     <insert id="insertDesktopRow" parameterType="map" useGeneratedKeys="true" keyProperty="r.id">
         INSERT INTO ${table}
             (date, time, code_number, product_name, in_quantity, out_quantity,

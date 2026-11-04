@@ -109,6 +109,8 @@ export interface MobileBatchRow {
   /** 备注编号（同一货品拆多行时每行都带同一个编号） */
   remarkNumber?: string
   productRemarkChecked?: boolean
+  /** true = 「整批出完」快捷出货（仅 Kilo），后端按编号剩余量防超卖 */
+  wholeCode?: boolean
 }
 
 export const batchSaveMobileRecords = (data: {
