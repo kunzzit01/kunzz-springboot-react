@@ -6,6 +6,16 @@
 ---
 ## 🗓️ 2026-11-03
 
+### [2026-11-03-mobile-remark-sync] 上线验证（live 已确认）
+
+- **线上状态**：后端 jar（11-04 10:14）重打并 `active`，含手机出货编号校验；`/var/www/admin` 已发新包
+  `index-R2KEts5m.js`；j1/j2/j3 三张手机表已加 `remark_number` / `product_remark_checked`。
+- **端到端证据**：手机真实出货 `j3stockedit_data id=22119`（2026-11-04，A5 AWAGYU 0.110，`AA-001`，checked=1，
+  receiver=Mobile）→ 桌面「货品备注」同步扣减；测试人员确认无问题。
+- **数据一致性复查**：J3「备注净额 > 实际库存」的货品 = **0**，差额 **0.000**（历史补标后全库对齐）。
+- **本次三处改动汇总**：① 进货勾选校验（`5bb0a77`）② 业务错误双通知修复（`cb79148`）
+  ③ 手机备注编号同步（`140cb3e`）+ 历史补标（`docs/sql/2026-11-03-remark-backfill.sql`，可回滚）。
+
 ### [2026-11-03-inout-remark-required] J3 货品备注历史补标（数据修复，已执行）
 
 - **问题**：6 个 J3 货品的「货品备注」数量虚高（SALMON 154.85 / 实际 21.52、KAWAHAGI P 的 KP-001 20 包 / 实际 0 等），

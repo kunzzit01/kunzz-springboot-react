@@ -1,6 +1,6 @@
 # 任务 2026-11-03-mobile-remark-sync
 
-- 状态：已完成（待执行 DDL + 部署）
+- 状态：已完成（已于 2026-11-04 上线并验证）
 - 背景：J3 有 6 个货品「货品备注」虚高（合计 ≈180），排查结论：**手机出货（`/api/stock/mobile/*`）完全不写备注编号** ——
   `MobileStockService` 没有 remark 字段、手机台账表 `jXstockeditmobile_data` 也没有这两列，
   桌面镜像 `jXstockedit_data` 插入时同样不带 → 货品备注永远扣不到。2026-03-21 之后的未勾选出货几乎都是 `receiver='Mobile'`。
@@ -51,3 +51,12 @@
 ## 注意
 
 - 历史 532 条手机出货仍无编号（本次只保证以后不再产生新的缺口）→ 需要另做数据修复（见 2026-11-03-inout-remark-required 的排查结论）。
+
+## 上线验证（2026-11-04）
+
+- 后端：`/opt/inventory/app.jar` 重打并 active，class 内可 grep 到「手机出货必须先选择备注编号」
+- 前端：`/var/www/admin/index.html` → `assets/index-R2KEts5m.js`（带「备注编号」下拉）
+- DDL：j1/j2/j3 三张 `*stockeditmobile_data` 均已含 `remark_number varchar(32) NULL`、`product_remark_checked tinyint(1) DEFAULT 0`
+- 端到端：手机真实出货 `j3stockedit_data id=22119`（2026-11-04，A5 AWAGYU 0.110，`AA-001`，checked=1，receiver=Mobile）
+- 全库复查：J3「备注净额 > 实际库存」的货品 = **0**，差额 **0.000**
+- 测试人员确认：手机出货选编号 → 桌面货品备注同步扣除，无问题
