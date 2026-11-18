@@ -8,6 +8,11 @@ import '../styles/add.css'
 import '../styles/perm-tree.css'
 import '../styles/form-ui.css'
 import { showToast } from '../utils/toast'
+import SelectField from '../components/SelectField'
+
+// 原生 <select> 的展开列表由系统绘制（蓝底系统菜单），与「所属公司」自绘下拉不一致 → 统一用 SelectField
+const toOpts = (list: string[]) => list.map(v => ({ value: v, label: v }))
+const GENDER_OPTS = [{ value: 'male', label: '男' }, { value: 'female', label: '女' }, { value: 'other', label: '其他' }]
 
 export default function AddEmployee() {
   const navigate = useNavigate()
@@ -158,26 +163,18 @@ export default function AddEmployee() {
                       {inp('联络号码', 'phone_number')}
                       <div className="form-group">
                         <label htmlFor="add_gender">性别</label>
-                        <select id="add_gender" name="gender" value={form.gender || ''} onChange={(e) => set('gender', e.target.value)}>
-                          <option value="">请选择</option>
-                          <option value="male">男</option>
-                          <option value="female">女</option>
-                          <option value="other">其他</option>
-                        </select>
+                        <SelectField id="add_gender" placeholder="请选择" options={GENDER_OPTS}
+                          value={form.gender || ''} onChange={(v) => set('gender', v)} />
                       </div>
                       <div className="form-group">
                         <label htmlFor="add_nationality">国籍</label>
-                        <select id="add_nationality" name="nationality" value={form.nationality || ''} onChange={(e) => set('nationality', e.target.value)}>
-                          <option value="">请选择国籍</option>
-                          {NATIONALITIES.map(n => <option key={n} value={n}>{n}</option>)}
-                        </select>
+                        <SelectField id="add_nationality" placeholder="请选择国籍" options={toOpts(NATIONALITIES)}
+                          value={form.nationality || ''} onChange={(v) => set('nationality', v)} />
                       </div>
                       <div className="form-group">
                         <label htmlFor="add_race">种族</label>
-                        <select id="add_race" name="race" value={form.race || ''} onChange={(e) => set('race', e.target.value)}>
-                          <option value="">请选择种族</option>
-                          {RACES.map(r => <option key={r} value={r}>{r}</option>)}
-                        </select>
+                        <SelectField id="add_race" placeholder="请选择种族" options={toOpts(RACES)}
+                          value={form.race || ''} onChange={(v) => set('race', v)} />
                       </div>
                     </div>
                     <div className="form-grid-1" style={{ marginTop: 14 }}>
@@ -201,10 +198,8 @@ export default function AddEmployee() {
                       {inp('银行账号', 'bank_account')}
                       <div className="form-group">
                         <label htmlFor="add_bank_name">银行名称</label>
-                        <select id="add_bank_name" name="bank_name" value={form.bank_name || ''} onChange={(e) => set('bank_name', e.target.value)}>
-                          <option value="">请选择银行</option>
-                          {BANKS.map(b => <option key={b} value={b}>{b}</option>)}
-                        </select>
+                        <SelectField id="add_bank_name" placeholder="请选择银行" options={toOpts(BANKS)}
+                          value={form.bank_name || ''} onChange={(v) => set('bank_name', v)} />
                       </div>
                     </div>
                   </div>
@@ -219,26 +214,23 @@ export default function AddEmployee() {
                     <div className="form-grid-2">
                       <div className={'form-group' + (errors.account_type ? ' has-error' : '')} id="group-add-account-type">
                         <label htmlFor="add_account_type">账号类型 Account Type <span className="required-mark">*</span></label>
-                        <select id="add_account_type" name="account_type" value={form.account_type || ''}
-                          onChange={(e) => set('account_type', e.target.value)}>
-                          <option value="">请选择账号类型</option>
-                          {Object.entries(accountTypeLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                        </select>
+                        <SelectField id="add_account_type" placeholder="请选择账号类型"
+                          options={Object.entries(accountTypeLabels).map(([value, label]) => ({ value, label }))}
+                          value={form.account_type || ''} onChange={(v) => set('account_type', v)} />
                         <div className="error-msg">请选择账号类型</div>
                       </div>
                       <div className="form-group">
                         <label htmlFor="add_position">职位 Position</label>
-                        <select id="add_position" name="position" value={form.position || ''} disabled={!form.account_type}
-                          onChange={(e) => set('position', e.target.value)}>
-                          <option value="">{form.account_type ? '请选择职位' : '请先选择账号类型'}</option>
-                          {(positionsByAccountType[form.account_type || ''] || []).map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
+                        <SelectField id="add_position" disabled={!form.account_type}
+                          placeholder={form.account_type ? '请选择职位' : '请先选择账号类型'}
+                          options={toOpts(positionsByAccountType[form.account_type || ''] || [])}
+                          value={form.position || ''} onChange={(v) => set('position', v)} />
                       </div>
                       <div className="form-group" id="group-add-branch">
                         <label>所属公司</label>
                         <div className={'custom-multi-select' + (branchOpen ? ' active' : '')} id="add-branch-select">
                           <div className="select-header" onClick={() => setBranchOpen(!branchOpen)}>
-                            <span className="selected-text">{branches.length > 0 ? branches.map(b => branchLabels[b]).join(', ') : '请选择区域运营单位'}</span>
+                            <span className={'selected-text' + (branches.length > 0 ? '' : ' is-placeholder')}>{branches.length > 0 ? branches.map(b => branchLabels[b]).join(', ') : '请选择区域运营单位'}</span>
                             <i className="fas fa-chevron-down"></i>
                           </div>
                           <div className="select-options" style={{ display: branchOpen ? 'block' : 'none' }}>

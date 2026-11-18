@@ -2130,3 +2130,70 @@ body { background: #f3f4f6; }.add-root .add-employee-page{
   .add-root form#addUserForm .form-group { gap: 6px !important; }
   .add-root form#addUserForm .form-group > label { margin-bottom: 0 !important; }
 }
+
+/* [v2 补充·下拉统一] 性别/国籍/种族/银行/账号类型/职位 由原生 <select>（展开是系统蓝底菜单）
+   换成 SelectField；这里让它的触发框与本页输入框逐项一致（实测输入框：高 38、圆角 6、
+   聚焦 #f97316 + 光晕），并把「所属公司」多选的展开面板改成与 SelectField 面板同一套
+   圆角/阴影/悬停/选中色。公用 select-field.css 不动（进出货页也在用）。 */
+.add-root form#addUserForm .sel-field .sel-field__trigger {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+}
+.add-root form#addUserForm .sel-field .sel-field__trigger.is-placeholder { color: #9ca3af; }
+.add-root form#addUserForm .sel-field .sel-field__trigger:focus-visible,
+.add-root form#addUserForm .sel-field--open .sel-field__trigger {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+.add-root form#addUserForm .sel-field--open .sel-field__chev { color: #f97316; }
+.add-root form#addUserForm .sel-field .sel-field__trigger:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+}
+.add-root form#addUserForm .form-group.has-error .sel-field__trigger {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* 「所属公司」多选：触发框同上 */
+.add-root form#addUserForm .custom-multi-select .select-header .selected-text.is-placeholder {
+  color: #9ca3af !important;
+  font-weight: 400 !important;
+}
+.add-root form#addUserForm .custom-multi-select.active .select-header {
+  border-color: #f97316 !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12) !important;
+}
+/* 展开面板：与 SelectField 的 .sel-pop 同一套 */
+.add-root form#addUserForm .custom-multi-select .select-options {
+  margin-top: 4px !important;
+  padding: 6px !important;
+  border: 1px solid #e8eaed !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 40px rgba(17, 24, 39, .16), 0 3px 8px rgba(17, 24, 39, .06) !important;
+  background: #fff !important;
+}
+.add-root form#addUserForm .custom-multi-select .select-options .checkbox-item {
+  padding: 9px 10px !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  color: #374151 !important;
+  background: transparent !important;
+  margin: 0 !important;
+}
+.add-root form#addUserForm .custom-multi-select .select-options .checkbox-item:hover {
+  background: #fff3e8 !important;
+  color: #b84300 !important;
+}
+.add-root form#addUserForm .custom-multi-select .select-options .checkbox-item:has(input:checked) {
+  background: #fff7f0 !important;
+  color: #ff5c00 !important;
+  font-weight: 700 !important;
+}
+.add-root form#addUserForm .custom-multi-select .select-options .checkbox-item input[type="checkbox"] {
+  accent-color: #f97316 !important;
+}
