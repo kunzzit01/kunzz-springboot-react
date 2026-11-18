@@ -2097,6 +2097,19 @@ body { background: #f3f4f6; }.add-root .add-employee-page{
     margin: 0 !important;
   }
   .add-root form#addUserForm .form-section:not(.left-card) { overflow: hidden !important; }
+  /* 账号设置卡不能裁切：「所属公司」下拉要浮出卡片、盖在权限区上面（11-18 上线后发现被切掉） */
+  .add-root form#addUserForm .form-col > .form-section:first-child:not(.left-card) {
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 5 !important;
+  }
+  .add-root form#addUserForm .form-col > .form-section:first-child:not(.left-card) > .form-section-header {
+    border-top-left-radius: inherit !important;
+    border-top-right-radius: inherit !important;
+  }
+  .add-root form#addUserForm .form-col > .form-section:first-child:not(.left-card) .select-options {
+    z-index: 50 !important;
+  }
   .add-root form#addUserForm .form-section-header,
   .add-root form#addUserForm .form-section-header-bank {
     margin: 0 !important;
