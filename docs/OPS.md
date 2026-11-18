@@ -225,6 +225,42 @@ server {
 
 > 开发环境的 vite proxy 在生产已不需要（Nginx 反代替代）。如需开发环境直连生产后端，把 `vite.config.ts` 的 target 改成生产域名即可。
 
+### 6.1 gzip 压缩（VPS 已启用，2026-11-18）
+
+**为什么要单独配置**：Ubuntu 自带的 `/etc/nginx/nginx.conf` 只有 `gzip on;`，`gzip_types` 等行是**注释掉的** →
+nginx 默认只压缩 `text/html`，**JS/CSS 原样传输**（实测主 JS 2.09 MB、CSS 0.57 MB 每次首次加载全量下发）。
+另外 80/443 是 Traefik 在前、再转给 nginx `8080`，所以要加 `gzip_proxied any`。
+
+**做法**：不改 `nginx.conf`，单独放一个文件 `/etc/nginx/conf.d/kunzz-gzip.conf`（`conf.d/*.conf` 在 `http {}` 内被 include）：
+
+```nginx
+# nginx.conf 已有 gzip on，这里不能重复写，否则 nginx -t 报 duplicate
+gzip_vary on;
+gzip_proxied any;          # 经 Traefik 转发的请求也压缩
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_types text/css application/javascript text/javascript application/json
+           image/svg+xml text/plain text/xml application/xml;
+```
+
+```bash
+nginx -t && systemctl reload nginx      # 必须先 -t 通过再 reload
+```
+
+**验证**（从外网、经 Traefik；**不要用 reload 后立刻在 VPS 本机测**——平滑重载瞬间请求可能落到旧 worker，看起来像没生效）：
+
+```bash
+JS=$(curl -s https://www.kunzzgroup.com/login | grep -oE '/assets/index-[A-Za-z0-9_-]+\.js' | head -1)
+curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip' "https://www.kunzzgroup.com$JS" | grep -i content-encoding   # 应为 gzip
+curl -s -o /dev/null -H 'Accept-Encoding: gzip' -w '%{size_download}\n' "https://www.kunzzgroup.com$JS"           # 约为原大小的 30%
+```
+
+2026-11-18 实测：主 JS 2,088,424 → 619,327 字节（−70%），CSS 574,362 → 92,488 字节（−84%），首次加载合计约 2.66 MB → 0.71 MB；
+解压后与原文件逐字节等长，缓存头（assets 30 天 immutable、HTML no-cache）不变。
+
+**撤销**：`rm /etc/nginx/conf.d/kunzz-gzip.conf && nginx -t && systemctl reload nginx`。
+**重装/迁移服务器时**：照本节重建该文件，否则会悄悄回到「JS/CSS 不压缩」。
+
 ---
 
 ## 7. 数据与备份
