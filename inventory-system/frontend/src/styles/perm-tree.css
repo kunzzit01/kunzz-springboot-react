@@ -440,3 +440,43 @@
 .staff-root .perm-level-3-panel {
   display: none !important;
 }
+
+/* ============================================================================
+   [task 2026-11-18-add-staff-layout] 添加新职员页 · 权限树方案 B 配色
+   ----------------------------------------------------------------------------
+   原样式：一级项一律实心橙色渐变（两屏橙块，满屏都是橙色重点，反而失去重点）。
+   现样式：未选 = 白底灰字；已选 = 浅橙底 + 橙字 + 淡橙描边，靠 :has() 区分状态。
+   只作用于 .add-root，员工列表页的权限弹窗（.staff-root）保持不变。
+   ============================================================================ */
+.add-root .perm-level-1 {
+  border: 1px solid #e8eaee !important;
+  border-radius: 10px !important;
+  margin-bottom: 10px !important;
+}
+.add-root .perm-level-1-item {
+  padding: 11px 15px !important;
+  background: #fff !important;
+}
+.add-root .perm-level-1-item:has(input:checked) {
+  background: #fff7ed !important;
+  box-shadow: inset 0 0 0 1px #fed7aa;
+}
+.add-root .perm-level-1-item:hover {
+  background: #fffbf5 !important;
+}
+.add-root .perm-level-1-item .perm-checkbox-label,
+.add-root .perm-level-1-item strong {
+  color: #374151 !important;
+  font-size: 14px !important;
+}
+.add-root .perm-level-1-item:has(input:checked) .perm-checkbox-label,
+.add-root .perm-level-1-item:has(input:checked) strong {
+  color: #c2410c !important;
+}
+.add-root .perm-level-1-item .perm-arrow {
+  color: #c2410c !important;
+  opacity: .7;
+}
+.add-root .perm-level-1-item input[type="checkbox"] {
+  accent-color: #f97316 !important;
+}

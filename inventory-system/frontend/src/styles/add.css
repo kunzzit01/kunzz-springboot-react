@@ -1930,3 +1930,143 @@ body { background: #f3f4f6; }.add-root .add-employee-page{
 .add-root .back-btn,
 .add-root .btn-save,
 .add-root .btn-back-action { line-height: 1.43; }
+
+
+/* ============================================================================
+   [task 2026-11-18-add-staff-layout] 添加新职员页布局重构 + 方案 B（轻量现代）
+   ----------------------------------------------------------------------------
+   问题：1440×900 下权限区内容被裁（可视 384px 装 516px）、左卡自带滚动条、
+        保存栏压住最后一行字段。根因是三层固定高度叠加：
+          1) AddEmployee.tsx 里 <div className="container" style={{height:'100vh'}}>
+          2) .add-root 自身 overflow:hidden auto（让 sticky 标题栏随内部滚动消失）
+          3) PermTree 内联 .perm-layout-container{height:420}
+   方案：整页滚动 + 标题栏 sticky top + 保存栏 sticky bottom，橙色降为左侧强调条。
+   ============================================================================ */
+
+/* ── 1. 结构：拆掉固定高度与嵌套滚动，交给 document 整页滚动 ── */
+.add-root {
+  overflow: visible !important;
+}
+.add-root > .container {
+  height: auto !important;
+  min-height: 100vh;
+}
+.add-root .add-employee-page {
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+}
+.add-root .page-header-bar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+.add-root .form-scroll-area {
+  overflow: visible !important;
+  display: block !important;
+  flex: none !important;
+  padding: 18px 22px 40px !important;
+}
+.add-root #addUserForm {
+  height: auto !important;
+  align-items: start !important;
+  max-width: 1360px;
+  margin: 0 auto;
+}
+.add-root .form-col {
+  height: auto !important;
+  overflow: visible !important;
+}
+.add-root .form-col > .left-card {
+  overflow: visible !important;
+  max-height: none !important;
+  flex: none !important;
+}
+.add-root .form-col > .form-section:last-child,
+.add-root .form-col > .editUserPermLayout:last-child {
+  flex: none !important;
+  overflow: visible !important;
+}
+.add-root .editUserPermLayout .form-section-content {
+  overflow: visible !important;
+}
+/* 权限区不再钉死 420/520px，树按内容自然撑开 */
+.add-root .editUserPermLayout .perm-layout-container {
+  height: auto !important;
+  min-height: 0 !important;
+  align-items: stretch !important;
+}
+.add-root .editUserPermLayout .perm-tree-container,
+.add-root .editUserPermLayout .perm-detail-card,
+.add-root .editUserPermLayout .perm-detail-content {
+  max-height: none !important;
+  overflow: visible !important;
+}
+/* 保存栏：sticky 吸附视口底部（不占流空间，靠 .form-scroll-area 的 40px 底部留白兜住） */
+.add-root .page-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 25;
+}
+/* 三列布局里邮箱 placeholder 原来会被截成 "e.g. user@example.cor" */
+.add-root #add_email::placeholder {
+  font-size: 12px;
+  letter-spacing: -0.01em;
+}
+
+/* ── 3. 响应式：窄屏时权限树与详情改为上下排，不再横向挤压 ── */
+@media (max-width: 1200px) {
+  .add-root #addUserForm {
+    grid-template-columns: 1fr;
+    max-width: 100%;
+  }
+  .add-root .form-scroll-area {
+    padding: 14px 14px 36px !important;
+  }
+  .add-root .page-header-bar {
+    padding: 12px 16px;
+  }
+  .add-root .editUserPermLayout .perm-layout-container {
+    flex-direction: column !important;
+    gap: 14px !important;
+  }
+  .add-root .editUserPermLayout .perm-detail-card {
+    flex: 1 1 auto !important;
+    width: 100% !important;
+    min-height: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .add-root .page-header-bar h1 {
+    font-size: 16px;
+  }
+  .add-root .form-scroll-area {
+    padding: 10px 10px 30px !important;
+  }
+  .add-root .form-grid-3,
+  .add-root .form-grid-2,
+  .add-root .form-row-2col {
+    grid-template-columns: 1fr;
+  }
+  .add-root .form-section-content {
+    padding: 14px 14px 16px;
+  }
+  .add-root .form-section-header,
+  .add-root .form-section-header-bank {
+    padding: 12px 14px 12px 20px;
+    font-size: 13px;
+  }
+  .add-root .page-action-bar {
+    padding: 12px 16px;
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .add-root .btn-save,
+  .add-root .btn-back-action {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 15px;
+  }
+}

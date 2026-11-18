@@ -131,7 +131,9 @@ export default function AddEmployee() {
 
   return (
     <div className="add-root">
-      <div className="container" style={{ padding: 0, height: '100vh', maxWidth: '100%' }}>
+      {/* height 必须是 auto：写死 100vh 会把整页锁在视口高，权限区与左卡内容被裁
+          （task 2026-11-18-add-staff-layout） */}
+      <div className="container" style={{ padding: 0, height: 'auto', minHeight: '100vh', maxWidth: '100%' }}>
         <div className="add-employee-page">
           {/* 顶部标题栏 */}
           <div className="page-header-bar">
