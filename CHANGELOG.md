@@ -41,6 +41,17 @@
   `heic2any-*.js`（动态 `import()`，只在使用者选 HEIC 图片时才加载）。
 - **排障建议**：`npm run dev` 起不来时先 `npm ls vite` 看**实际**版本，不要只信 `package.json`。
 
+### [2026-11-18-add-staff-layout] ⚠️ 已整套回退（站长要求）
+
+- **处置**：本节上面两条（布局重构 + 产物同步）已于同日按站长要求**全部撑销**，
+  用 `git revert` 生成反向提交（不改写历史），没有 reset / 强推。
+- **恢复范围**：`backend/static/` 产物回到旧 hash（`index-D4PmrMB7.js` / `index-Dq1SnKYK.css`），
+  `add.css` / `form-ui.css` / `perm-tree.css` / `AddEmployee.tsx` 与 `c5d0711` 逐字节一致（已验证）；
+  `/staff/add` 回到原始的橙色实心标题栏 + `height:100vh` 布局（**含原有的裁切问题**）。
+- **保留未回退**：本地 `node_modules` 的 heic2any 补齐与 vite 版本对齐（不在版本控制内，且属环境修正）；
+  上方 `[2026-11-18-deps-resync]` 的结论仍然有效。
+- **注意**：上面两条记录仅作历史留档，**不再反映当前代码**。
+
 ---
 ## 🗓️ 2026-11-03
 
