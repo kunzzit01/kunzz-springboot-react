@@ -124,7 +124,7 @@ API_PORT=$(ss -ltnpH 2>/dev/null | grep "pid=$API_PID," | grep -oE '127\.0\.0\.1
 API_PORT=${API_PORT:-8082}
 printf "API 直连 %-8s: %s （期望 401）\n" "$API_PORT" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$API_PORT/api/auth/me" || true)"
 printf "API 经 nginx 8080: %s （期望 401）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/auth/me)"
-printf "后台首页 8080    : %s （期望 200）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)"
+printf "后台首页 8080    : %s （期望 302，未登录跳登录页）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)"
 printf "官网 8080/home/  : %s （期望 200）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/home/)"
 
 echo
