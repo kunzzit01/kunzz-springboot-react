@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { login as loginApi, getMe, getStockPerms } from '../api'
 import { setToken, setDeviceAuth, clearDeviceAuth, clearSession, hasValidToken, getDeviceToken } from '../utils/authToken'
 import { resetAuthSession } from '../utils/authSession'
+import { safeRedirectPath } from '../utils/safeRedirect'
 import { showToast } from '../utils/toast'
 import '../styles/mobile-login.css'
 
@@ -37,8 +38,9 @@ export default function MobileLogin() {
 
   /** 登录成功后：?redirect= 优先（对齐旧 login.php），否则解析有权限的分店 */
   const afterLogin = async () => {
-    const redirect = searchParams.get('redirect')
-    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) { go(redirect); return }
+    // 同源校验：挡住 /\evil.com 这类反斜杠开放重定向（见 utils/safeRedirect.ts）
+    const redirect = safeRedirectPath(searchParams.get('redirect'))
+    if (redirect) { go(redirect); return }
     try {
       const [me, perms] = await Promise.all([getMe(), getStockPerms().catch(() => null)])
       const parts = (me.branch || '').toLowerCase().split(',').map(s => s.trim()).filter(Boolean)

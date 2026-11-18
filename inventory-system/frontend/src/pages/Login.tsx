@@ -4,6 +4,7 @@ import { message } from 'antd'
 import { login as loginApi } from '../api'
 import { setToken, setDeviceAuth, clearDeviceAuth, hasValidToken, getDeviceToken } from '../utils/authToken'
 import { resetAuthSession } from '../utils/authSession'
+import { safeRedirectPath } from '../utils/safeRedirect'
 
 /** 后台登录页：老版视觉（原生 React） */
 export default function Login() {
@@ -52,14 +53,12 @@ export default function Login() {
       // 原因是登录是前端路由，不会重新拉 index.html —— 如果部署了新版本，
       // 用户登出再登入后跑的还是内存里的旧 JS（症状：进页面是旧版，F5 才变新）。
       // 整页跳转会重新取一次 index.html，顺带拿到最新 bundle。
-      const redirectParam = new URLSearchParams(window.location.search).get('redirect')
-      let target: string
-      if (redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
-        target = redirectParam
-      } else {
-        const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
-        target = (from?.pathname || '/dashboard') + (from?.search || '')
-      }
+      // 回跳目标一律过同源校验（safeRedirectPath），挡住 /\evil.com 这类反斜杠开放重定向
+      const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from
+      const target =
+        safeRedirectPath(new URLSearchParams(window.location.search).get('redirect'))
+        ?? safeRedirectPath(from ? from.pathname + (from.search || '') : null)
+        ?? '/dashboard'
       window.location.replace(target)
     } catch {
       /* 拦截器已提示 */
