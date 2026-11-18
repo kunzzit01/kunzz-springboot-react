@@ -117,7 +117,12 @@ echo
 echo "===== 1.4 重启 + 验证 ====="
 if [ "$NEED_RESTART" = 1 ]; then systemctl restart "$SVC"; sleep 10; fi
 echo "服务状态：$(systemctl is-active "$SVC")"
-printf "API 直连 8081    : %s （期望 401）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8081/api/auth/me)"
+# 后端端口不写死：按 systemd 主进程实际监听的端口探测（11-16 加固后后端在 127.0.0.1:8082，
+# 8081 是别的程序且已关闭——写死 8081 会让直连永远 000、限速自检连不上并因 set -e 中断整个脚本）
+API_PID=$(systemctl show -p MainPID --value "$SVC" 2>/dev/null || echo 0)
+API_PORT=$(ss -ltnpH 2>/dev/null | grep "pid=$API_PID," | grep -oE '127\.0\.0\.1:[0-9]+' | head -1 | cut -d: -f2 || true)
+API_PORT=${API_PORT:-8082}
+printf "API 直连 %-8s: %s （期望 401）\n" "$API_PORT" "$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$API_PORT/api/auth/me" || true)"
 printf "API 经 nginx 8080: %s （期望 401）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/api/auth/me)"
 printf "后台首页 8080    : %s （期望 200）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)"
 printf "官网 8080/home/  : %s （期望 200）\n" "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/home/)"
@@ -125,10 +130,11 @@ printf "官网 8080/home/  : %s （期望 200）\n" "$(curl -s -o /dev/null -w '
 echo
 echo "→ 登录限速自检（用保留测试 IP $PROBE_IP，不占用任何真实用户的桶）"
 for i in 1 2 3 4 5 6; do
+  # 末尾 || true：探测失败只提示，不让 set -e/pipefail 把后面的日志与「完成」一起吞掉
   code=$(curl -s -H 'Content-Type: application/json' -H "X-Real-IP: $PROBE_IP" \
     -d '{"username":"__ratelimit_probe__","password":"x"}' \
-    http://127.0.0.1:8081/api/auth/login | grep -o '"code":[0-9]*' | head -1 | cut -d: -f2)
-  echo "   第 $i 次 → code=$code"
+    "http://127.0.0.1:$API_PORT/api/auth/login" | grep -o '"code":[0-9]*' | head -1 | cut -d: -f2 || true)
+  echo "   第 $i 次 → code=${code:-（连不上 127.0.0.1:$API_PORT）}"
 done
 echo "   （期望：前 5 次 401，第 6 次 429）"
 
