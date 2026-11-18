@@ -1930,3 +1930,190 @@ body { background: #f3f4f6; }.add-root .add-employee-page{
 .add-root .back-btn,
 .add-root .btn-save,
 .add-root .btn-back-action { line-height: 1.43; }
+
+
+/* ============================================================================
+   [task 2026-11-18-add-staff-layout-v2] tablet / laptop / desktop：锁视口、不整页滚动
+   ----------------------------------------------------------------------------
+   实测 1440×900 的问题：权限树只剩 131px 宽（详情卡被旧规则钉死 420px）、权限组件
+   被钉死 480px 高却只分到 280px（又套一层滚动）、账号设置 3 个字段占 328px。
+   做法：页面保持 100vh 不滚；右列 = 账号设置（紧凑一行）+ 权限区（吃满剩余高度），
+   树与详情按比例分宽、各自内部滚动。用 #addUserForm 提高优先级，压过前面几轮
+   互相打架的 !important（含后加载的 perm-tree.css；form-ui.css 的 40fr 52fr 用 form#addUserForm 压过），不改旧规则本身。手机（<700）不受影响。
+   ============================================================================ */
+@media (min-width: 700px) {
+  /* 页面骨架：锁在视口内，只有面板内部滚动 */
+  /* 保存栏保持一行（≤768 的手机规则会把它改成两行全宽按钮，iPad mini 竖屏会被误伤） */
+  .add-root .page-action-bar {
+    flex-direction: row !important;
+    padding: 10px 16px !important;
+    gap: 10px !important;
+  }
+  .add-root .page-action-bar .btn-save,
+  .add-root .page-action-bar .btn-back-action { width: auto !important; }
+  .add-root { overflow: hidden !important; }
+  .add-root .form-scroll-area {
+    overflow: hidden !important;
+    align-items: stretch !important;
+    padding: 12px 16px !important;
+  }
+  .add-root form#addUserForm {
+    display: grid !important;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr) !important;
+    gap: 14px !important;
+    height: 100% !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+  .add-root #addUserForm .form-col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+  /* 左卡：个人资料 + 银行，内容多于视口时卡片内部滚动 */
+  .add-root #addUserForm .left-card {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+  .add-root #addUserForm .form-group { margin-bottom: 0 !important; }
+  .add-root #addUserForm .form-grid-3,
+  .add-root #addUserForm .form-grid-2 { row-gap: 14px !important; }
+
+  /* 右列第一块：账号设置——3 个字段排一行，不再占半屏 */
+  .add-root #addUserForm .form-col > .form-section:first-child:not(.left-card) {
+    flex: 0 0 auto !important;
+  }
+  .add-root #addUserForm .form-col > .form-section:first-child:not(.left-card) .form-grid-2 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+  .add-root #addUserForm .form-col > .form-section:first-child:not(.left-card) .form-section-content {
+    padding-top: 14px !important;
+    padding-bottom: 16px !important;
+  }
+
+  /* 右列第二块：权限区吃满剩余高度 */
+  .add-root #addUserForm .editUserPermLayout {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+  .add-root #addUserForm .editUserPermLayout > .form-section-content {
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding: 14px !important;
+  }
+  .add-root #addUserForm .editUserPermLayout .perm-layout-container {
+    flex: 1 1 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+  }
+  /* 树与详情按比例分宽，各自内部滚动；树不再被挤成一条 */
+  .add-root #addUserForm .editUserPermLayout .perm-tree-container {
+    flex: 3 1 0 !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow-y: auto !important;
+  }
+  .add-root #addUserForm .editUserPermLayout .perm-detail-card {
+    flex: 2 1 0 !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+  .add-root #addUserForm .editUserPermLayout .perm-detail-content {
+    height: 100% !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* 横屏 tablet / 小 laptop（769–1199）：两列保留，右列多分宽度给权限树；
+   树与详情仍左右并排（上下排实测在 1024×768 只剩 105px 高，不可用）；左卡字段改 2 列。 */
+@media (min-width: 700px) and (max-width: 1199px) {
+  .add-root .form-scroll-area { padding: 10px 12px !important; }
+  .add-root form#addUserForm {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) !important;
+    gap: 12px !important;
+  }
+  .add-root #addUserForm .left-card .form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .add-root #addUserForm .form-col > .form-section:first-child:not(.left-card) .form-grid-2 { column-gap: 10px !important; }
+  .add-root #addUserForm .editUserPermLayout > .form-section-content { padding: 10px !important; }
+  .add-root #addUserForm .editUserPermLayout .perm-layout-container { gap: 8px !important; }
+  .add-root #addUserForm .editUserPermLayout .perm-tree-container { padding: 10px !important; }
+}
+
+/* 竖屏 tablet（700–1199 且竖屏）：宽度不够左右两栏，但高度充足 → 上下两块。
+   上：个人资料（字段 3 列，卡片内滚动）；下：账号设置 + 权限区（树与详情并排）。 */
+@media (min-width: 700px) and (max-width: 1199px) and (orientation: portrait) {
+  .add-root form#addUserForm {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1.7fr) !important;
+  }
+  .add-root #addUserForm .left-card .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+
+/* [v2 补充] 1) 标签：原来是 flex，文字与星号成了两个块，窄列下文字折行、星号被甩到最右、
+      输入框被挤低一截。改为普通文字流（星号紧跟文字），并让同一行的输入框底部对齐。
+   2) 详情面板：未选中任何项时只有一句提示却占 40% 宽 → 收起，树占满；
+      点「详细配置」才出现，点 × 关闭后再收起。:has 不支持的旧浏览器只是保持原样显示。 */
+@media (min-width: 700px) {
+  .add-root form#addUserForm .form-group > label {
+    display: block !important;
+    line-height: 1.35 !important;
+  }
+  .add-root form#addUserForm .form-group > label .required-mark {
+    display: inline !important;
+    margin-left: 2px !important;
+  }
+  .add-root form#addUserForm .form-grid-3,
+  .add-root form#addUserForm .form-grid-2,
+  .add-root form#addUserForm .form-row-2col { align-items: end !important; }
+
+  .add-root form#addUserForm .perm-detail-card:has(> .perm-detail-placeholder) {
+    display: none !important;
+  }
+}
+
+/* [v2 补充·空间利用] 实测 1536×825：每张卡片四周 24px 内边距 + 底部 16px 外边距，
+   橙色标题条缩在卡片里面（卡中卡），右列两张卡片共浪费约 110px；左栏内容 740px 装进 658px
+   被截断。改为：标题条贴齐卡片顶边、去掉卡片内外边距（间距统一交给 grid/flex 的 gap），
+   标题条与内容区收紧。省下的高度全部给权限树和左栏字段。 */
+@media (min-width: 700px) {
+  .add-root form#addUserForm .form-section {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  .add-root form#addUserForm .form-section:not(.left-card) { overflow: hidden !important; }
+  .add-root form#addUserForm .form-section-header,
+  .add-root form#addUserForm .form-section-header-bank {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 10px 16px !important;
+    min-height: 0 !important;
+  }
+  .add-root form#addUserForm .left-card > .form-section-content {
+    padding: 12px 16px 14px !important;
+  }
+  .add-root form#addUserForm .form-col > .form-section:first-child:not(.left-card) .form-section-content {
+    padding: 10px 16px 12px !important;
+  }
+  .add-root form#addUserForm .editUserPermLayout > .form-section-content { padding: 10px !important; }
+  .add-root form#addUserForm .editUserPermLayout .perm-layout-container { padding: 0 !important; gap: 10px !important; }
+  .add-root form#addUserForm .form-grid-1,
+  .add-root form#addUserForm .form-row-2col { margin-top: 12px !important; }
+  .add-root form#addUserForm .form-group { gap: 6px !important; }
+  .add-root form#addUserForm .form-group > label { margin-bottom: 0 !important; }
+}
