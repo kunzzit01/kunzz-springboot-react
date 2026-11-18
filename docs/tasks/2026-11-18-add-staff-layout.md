@@ -11,6 +11,7 @@
 - inventory-system/frontend/src/styles/form-ui.css
 - inventory-system/frontend/src/styles/perm-tree.css
 - inventory-system/frontend/src/pages/AddEmployee.tsx
+- CHANGELOG.md（只在顶部新增 2026-11-18 小节，不改老行、不重编号）
 - docs/tasks/2026-11-18-add-staff-layout.md（本文件）
 
 > 追加说明（2026-11-18 10:5x）：实施时才确认真正的配色源在 `form-ui.css`，

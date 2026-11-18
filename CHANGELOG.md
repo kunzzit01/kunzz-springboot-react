@@ -4,6 +4,44 @@
 > （原 CHANGELOG_2026-08-24/25/26/27.md 已合并至此，2026-08-28 整理）
 
 ---
+## 🗓️ 2026-11-18
+
+### [2026-11-18-add-staff-layout] 「添加新职员」页改整页滚动 + 吸顶标题栏/保存栏
+
+- **问题**：`/staff/add` 在 1440×900 下权限区内容被裁（可视 384px 装 516px）、左卡自带滚动条
+  （727px 装 774px）、底部保存栏压住最后一行字段。
+- **根因**（三层固定高度叠加，少任何一层都不会被裁）：
+  1. `AddEmployee.tsx` 里 `<div className="container" style={{height:'100vh'}}>` —— 内联把整页锁在视口高；
+  2. `add.css` 的 `.add-root { overflow: hidden auto }` —— 它自己成了滚动容器，`position:sticky` 的标题栏会跟着内部滚动一起消失；
+  3. `Staff.tsx` 的 `PermTree` 内联 `.perm-layout-container { height: 420 }` —— 权限树被压缩。
+- **改法**：改整页滚动（`height:auto` + `min-height:100vh`，`.add-root` overflow 改 `visible`），
+  标题栏 `sticky top:0`、保存栏 `sticky bottom:0`（sticky 不占流空间，靠滚动区 40px 底部留白兜住）；
+  配色走「轻量现代」——橙色从整条色块降为左侧 4px 竖条，权限一级项未选白底灰字 / 已选浅橙底橙字
+  （`:has(input:checked)`，只作用于 `.add-root`，员工列表页的权限弹窗不受影响）。
+- **钩子提醒**：真正的配色源是 `form-ui.css`（比 `add.css` **后加载**且用同特异性 + `!important` 写死橙色渐变），
+  在 `add.css` 里覆盖无效；且它只被 `AddEmployee` 引用，属本页专属。
+- **响应式**：<1200px 单列 + 权限树/详情上下排；<768px 保存/取消全宽堆叠。
+- **验证**：1440 / 1024 / 390 三档实测 `scrollHeight == clientHeight`（无裁切）、滚动后 `headerTop=0`、
+  保存栏不压内容、零 JS 报错；`tsc -b && vite build` 通过。提交 `775c7e2`。
+- ⚠️ **`backend/static/` 未重建**（按仓库规则由发布任务统一构建），线上暂未生效。
+- **记录**：`docs/tasks/2026-11-18-add-staff-layout.md`。
+
+### [2026-11-18-deps-resync] 本地 node_modules 与 package-lock.json 不同步（vite 5 → 7）
+
+- **发现**：补装 `heic2any` 时 `npm install` 报 `changed 26 packages`，其中 vite 从 **5.4.21 变成 7.3.7**。
+  这不是升级依赖，而是本地 `node_modules` 早已偏离 lock：
+  `package.json` 声明 `vite: ^7.3.7`、`package-lock.json` 锁 `7.3.7`，而本地实际装的是 `5.4.21`。
+- **含义**：这台机器此前的 `npm run dev` / `npm run build` 一直在跑**过期的 vite 5**，
+  与其它机器/CI（按 lock 用 7）的构建产物可能不一致。
+- **处置**：`npm install` 把 node_modules 同步回 lock 声明，
+  **`package.json` 与 `package-lock.json` 一个字节未改**（改前改后 md5 一致已校验）。
+- **另一处**：本机 `node_modules/heic2any` 缺失（`package.json` / lock 都已声明 0.0.4），
+  导致 vite 的 `import-analysis` 直接报错、dev server 起不来（表现为整页红色 overlay）。
+  补齐后 `AddEmployee.tsx` / `imagePrep.ts` / `main.tsx` 均 200，构建产出独立 chunk
+  `heic2any-*.js`（动态 `import()`，只在使用者选 HEIC 图片时才加载）。
+- **排障建议**：`npm run dev` 起不来时先 `npm ls vite` 看**实际**版本，不要只信 `package.json`。
+
+---
 ## 🗓️ 2026-11-03
 
 ### [2026-11-03-kilo-whole-code] 手机版 Kilo「整批出完」（Packet 不受影响）
