@@ -95,40 +95,26 @@ function Combobox({ options, value, onChange, onSelect, placeholder, disabled }:
   )
 }
 
-/** 价格下拉：选货品后加载价格+库存，支持手动输入（对齐线上 updatePriceOptions + handlePriceChange） */
-function PriceSelect({ value, options, onSelect, onManual }: {
+/** 价格下拉：选货品后加载价格+库存，只能选库存批次价格（已删「手动输入价格」，2026-11-19） */
+function PriceSelect({ value, options, onSelect }: {
   value?: number | string
   options: { price: string; available_stock: number }[]
   onSelect: (v: string) => void
-  onManual: () => void
 }) {
-  const [manual, setManual] = useState(false)
-  const [manualVal, setManualVal] = useState('')
   const current = value !== undefined && value !== null && value !== '' ? Number(value).toFixed(5) : ''
+  const hasCurrent = !!current && options.some(o => Math.abs(Number(o.price) - Number(current)) < 0.00001)
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {manual ? (
-        <input type="number" className="excel-input manual-price-input" min={0} step={0.00001} placeholder="输入价格"
-          value={manualVal} autoFocus
-          onChange={(e) => { setManualVal(e.target.value); if (e.target.value !== '') onSelect(e.target.value) }}
-          onBlur={() => { if (!manualVal) setManual(false) }} />
-      ) : (
-        <select className="excel-select" value={current} onChange={(e) => {
-          if (e.target.value === 'manual') { setManual(true); onManual(); return }
-          onSelect(e.target.value)
-        }}>
-          <option value="">请选择价格</option>
-          <option value="manual">手动输入价格</option>
-          {options.map((o, i) => {
-            const sel = current && Math.abs(Number(o.price) - Number(current)) < 0.00001
-            const label = sel ? Number(o.price).toFixed(5) : `${Number(o.price).toFixed(5)} (库存: ${o.available_stock})`
-            return <option key={i} value={o.price} selected={!!sel}>{label}</option>
-          })}
-          {current && !options.some(o => Math.abs(Number(o.price) - Number(current)) < 0.00001) && (
-            <option value={current} selected>{current}</option>
-          )}
-        </select>
-      )}
+      <select className="excel-select" value={current} disabled={!options.length && !current}
+        onChange={(e) => onSelect(e.target.value)}>
+        <option value="">{options.length || current ? '请选择价格' : '暂无库存价格'}</option>
+        {options.map((o, i) => {
+          const sel = current && Math.abs(Number(o.price) - Number(current)) < 0.00001
+          const label = sel ? Number(o.price).toFixed(5) : `${Number(o.price).toFixed(5)} (库存: ${o.available_stock})`
+          return <option key={i} value={Number(o.price).toFixed(5)}>{label}</option>
+        })}
+        {current && !hasCurrent && <option value={current}>{current}</option>}
+      </select>
     </div>
   )
 }
@@ -611,8 +597,7 @@ export default function StockSot() {
                       </td>
                       <td>
                         <PriceSelect value={r.price || ''} options={priceLists[key] || []}
-                          onSelect={(v) => setNew(idx, { price: Number(v) })}
-                          onManual={() => {}} />
+                          onSelect={(v) => setNew(idx, { price: Number(v) })} />
                       </td>
                       <td><input className="excel-input" value={rowTotal(r).toFixed(2)} readOnly /></td>
                       <td>
@@ -655,8 +640,7 @@ export default function StockSot() {
                         : (r.specification || '-')}</td>
                       <td>{isEditing
                         ? <PriceSelect value={editDraft.price || ''} options={priceLists['edit'] || []}
-                            onSelect={(v) => setEditDraft({ ...editDraft, price: Number(v) })}
-                            onManual={() => {}} />
+                            onSelect={(v) => setEditDraft({ ...editDraft, price: Number(v) })} />
                         : Number(r.price || 0).toFixed(2)}</td>
                       <td><input className="excel-input" value={isEditing ? calcTotal(editDraft).toFixed(2) : Number(r.totalPrice || 0).toFixed(2)} readOnly /></td>
                       <td>{isEditing
