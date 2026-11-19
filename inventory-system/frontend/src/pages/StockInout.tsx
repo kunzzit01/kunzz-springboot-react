@@ -1234,7 +1234,8 @@ export default function StockInout() {
     if (row && row.productName && parseFloat(v) > 0) {
       getPriceStock(row.productName, row.codeNumber || undefined, parseFloat(v), system)
         .then((list) => {
-          if (!list || !list.length) return
+          // 无库存 → 清空旧价格与选项（出货不再允许手输价格），保存时会被「请选择价格」校验拦下
+          if (!list || !list.length) { patchNew(key, { stockOptions: [], price: '' }); return }
           // 最高价那层够用就自动带价（HIFO 先出最高价）；该行已手选过价格则不覆盖用户的选择
           const auto = row.price ? null : autoPickHifoPrice(list, v)
           patchNew(key, auto ? { stockOptions: list, price: auto } : { stockOptions: list })
@@ -1278,8 +1279,18 @@ export default function StockInout() {
         if (outQ0 > 0 && system === 'central' && !row.target) {
           showMsg('当有出库数量时，请选择目标系统（J1、J2或J3）', 'error'); return
         }
+        if (outQ0 > 0 && (priceStr0 === '' || isNaN(parseFloat(priceStr0)))) {
+          showMsg(`货品 [${row.productName}] 当前无可出库存或未选择库存价格，无法出货`, 'error'); return
+        }
         if (priceStr0 === '' || isNaN(parseFloat(priceStr0)) || parseFloat(priceStr0) < 0) {
           showMsg(`货品 [${row.productName}] 单价不能为空且不能小于0`, 'error'); return
+        }
+        // 出货数量不得超过所选价格层的库存（防倒扣；后端仍会再校验一次）
+        if (outQ0 > 0) {
+          const hit = (row.stockOptions || []).find(p => parseFloat(String(p.price)) === parseFloat(priceStr0))
+          if (hit && outQ0 > Number(hit.available_stock) + 1e-9) {
+            showMsg(`货品 [${row.productName}] 价格 RM${Number(hit.price).toFixed(3)} 库存不足！可用 ${hit.available_stock}，请求出库 ${outQ0}（可用「HIFO 拆行」跨价格层出货）`, 'error'); return
+          }
         }
         valid.push(row)
       }
@@ -1868,12 +1879,14 @@ export default function StockInout() {
                       <td>
                         <div className="currency-display">
                           <span className="currency-symbol">RM</span>
-                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 && editDraft.priceMode !== 'manual' ? (
+                          {isEditing && parseFloat(editDraft.outQuantity || '0') > 0 && parseFloat(editDraft.inQuantity || '0') === 0 ? (
                             <select className="table-select" style={{ width: '100%' }} value={editPriceValue}
-                              onChange={(e) => patchEdit({ price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
-                              {/* 对齐旧系统：显示所有价格选项，库存不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
-                              <option value="">{rowPriceOptions.length ? '请选择价格' : '暂无库存价格'}</option>
-                              <option value="manual">手动输入价格</option>
+                              onChange={(e) => patchEdit({ price: e.target.value, priceMode: 'batch' })}>
+                              {/* 出货只能按库存批次价格出（已删「手动输入价格」）；原记录价格不在批次里（已被本记录吃光）时保留为一个选项 */}
+                              <option value="">{rowPriceOptions.length || editPriceMatch ? '请选择价格' : '暂无库存价格'}</option>
+                              {!editPriceMatch && String(editDraft.price ?? '').trim() !== '' && (
+                                <option value={editDraft.price}>{Number(editDraft.price).toFixed(3)} (原记录价格)</option>
+                              )}
                               {rowPriceOptions.map(p => {
                                 const enough = (parseFloat(editDraft.outQuantity || '0') || 0) <= 0 || p.available_stock >= (parseFloat(editDraft.outQuantity || '0') || 0)
                                 return <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock}{enough ? '' : ', 不足'})</option>
@@ -1882,10 +1895,6 @@ export default function StockInout() {
                           ) : isEditing ? (
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
                               <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 60, minWidth: 0 }} step="0.00001" value={editDraft.price || ''} onFocus={selectAllOnFocus} onChange={(e) => patchEdit({ price: e.target.value, priceMode: 'manual' })} />
-                              {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
-                              {parseFloat(editDraft.outQuantity || '0') > 0 && !rowPriceOptions.length && (
-                                <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
-                              )}
                             </div>
                           ) : (
                             <span className="currency-amount">{renderPriceRawTip(r.price)}</span>
@@ -2014,12 +2023,12 @@ export default function StockInout() {
                             <i className="fas fa-layer-group" /> HIFO 拆 {nr.hifoTiers} 行
                           </button>
                         )}
-                        {nr.productName && parseFloat(nr.outQty) > 0 && nr.priceMode !== 'manual' ? (
+                        {nr.productName && parseFloat(nr.outQty) > 0 ? (
                           <select className="table-select" style={{ width: '100%' }} value={nr.price}
-                            onChange={(e) => patchNew(nr.key, { price: e.target.value === 'manual' ? '' : e.target.value, priceMode: e.target.value === 'manual' ? 'manual' : 'batch' })}>
-                            {/* 对齐旧系统：显示所有价格选项，不管库存是否足够；不足的标注 (库存:X, 不足)；无库存显示「暂无库存价格」+ 手动输入 */}
+                            disabled={!(nr.stockOptions || []).length}
+                            onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'batch' })}>
+                            {/* 出货只能按库存批次价格出（已删「手动输入价格」，防止库存被倒扣）；无库存 → 「暂无库存价格」且不可选 */}
                             <option value="">{(nr.stockOptions || []).length ? '请选择价格' : '暂无库存价格'}</option>
-                            <option value="manual">手动输入价格</option>
                             {(nr.stockOptions || []).map(p => {
                               const enough = (parseFloat(nr.outQty) || 0) <= 0 || p.available_stock >= (parseFloat(nr.outQty) || 0)
                               return <option key={p.price} value={p.price}>{Number(p.price).toFixed(3)} (库存:{p.available_stock}{enough ? '' : ', 不足'})</option>
@@ -2029,10 +2038,6 @@ export default function StockInout() {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0, flexWrap: 'wrap', rowGap: 2 }}>
                             <input type="number" className="table-input" style={{ flex: '1 1 auto', width: 50, minWidth: 0 }} step="0.00001" placeholder="必填" onFocus={selectAllOnFocus}
                               value={nr.price} onChange={(e) => patchNew(nr.key, { price: e.target.value, priceMode: 'manual' })} />
-                            {/* 无库存提示：出货且无可用价格/库存批次时，用户需自行输入价格（对齐旧系统） */}
-                            {nr.productName && parseFloat(nr.outQty) > 0 && !(nr.stockOptions || []).length && (
-                              <span title="该货品当前无库存，可自行输入价格" style={{ color: '#dc2626', fontSize: 11, whiteSpace: 'nowrap', fontWeight: 600 }}>无库存</span>
-                            )}
                           </div>
                         )}
                       </div>

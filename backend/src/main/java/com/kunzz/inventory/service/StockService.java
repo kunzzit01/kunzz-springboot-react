@@ -260,9 +260,10 @@ public class StockService {
         // ====== 备注编号处理结束 ======
 
         // ====== 出库库存校验（事务内，对齐旧系统 handlePost/handleBatchSave：8/23 修复后前端不再预检查，由后端统一校验） ======
-        // RM0 单价出货（用户手动输入 0）跳过库存校验：赠品/损耗类特殊出库，按 0 价匹配不到批次会误报，直接放行
+        // 2026-11-19：出货已取消「手动输入价格」，只能按库存批次价出；RM0 不再放行，
+        // 否则可绕过校验把库存出成负数（RM0 批次本身存在时按 0 价正常匹配）
         if (isOutgoing && req.productName() != null && !req.productName().isBlank()
-                && req.price() != null && req.price().signum() > 0) {
+                && req.price() != null) {
             java.math.BigDecimal checkPrice = req.price();
             java.math.BigDecimal available;
             String sys2 = normalizeSystem(system);
