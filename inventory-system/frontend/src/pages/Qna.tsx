@@ -88,7 +88,9 @@ export default function Qna() {
     if (!PDFLib || !fontkit) { showMsg('PDF 组件未加载，请刷新页面重试', 'error'); return }
     setPdfBusy(true)
     try {
-      const fontRes = await fetch('/fonts/NotoSansSC-Regular.ttf')
+      // 注意：不能用 NotoSansSC-Regular.ttf——它实为 CFF 格式的 OpenType（文件头 OTTO），
+      // pdf-lib/fontkit 内嵌后中文全部丢字/乱码。simhei.ttf 是真 TrueType，可正常子集化。
+      const fontRes = await fetch('/fonts/simhei.ttf')
       if (!fontRes.ok) throw new Error('无法加载中文字体文件')
       const fontBytes = await fontRes.arrayBuffer()
       const { PDFDocument, rgb } = PDFLib
