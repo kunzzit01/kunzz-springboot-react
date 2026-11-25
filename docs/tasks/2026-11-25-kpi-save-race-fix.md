@@ -4,8 +4,10 @@
 - 白名单（只允许改这些）：
   - inventory-system/frontend/src/pages/KpiEdit.tsx
   - inventory-system/frontend/src/styles/kpiedit.css
-  - inventory-system/frontend/src/components/AppLayout.tsx
   - inventory-system/frontend/src/utils/navGuard.ts
+  - inventory-system/frontend/src/components/AppLayout.tsx
+  - inventory-system/frontend/src/App.tsx
+  - inventory-system/frontend/src/main.tsx
   - backend/src/main/java/com/kunzz/inventory/service/KpiService.java
   - backend/src/main/java/com/kunzz/inventory/mapper/KpiMapper.java
   - backend/src/main/resources/mapper/KpiMapper.xml
@@ -52,3 +54,16 @@ Ctrl+S 保存后行仍停在编辑态（绿色保存图标不变回铅笔），�
 侧边栏菜单是 `div + onClick → go(path)`，不是 `<a href>`，拦点击拦不住，所以在 `utils/navGuard.ts`
 开了一个注册点：`AppLayout.go()` 跳转前先问 `runNavGuard(path)`，只有 KPI 上传页注册。
 另加两道：站内 `<a href>` 点击拦截、`beforeunload`（刷新/关标签页）。
+
+### 追加 4：改用 data router + useBlocker（覆盖后退键）
+
+`navGuard` 注册点只能覆盖侧边栏 `go()`，<a> 点击要另外拦，后退键拦不住。
+改为 `createBrowserRouter(routes)` + `<RouterProvider>`（`App.tsx` 导出 `routes`，`main.tsx` 建 router），
+KpiEdit 用 `useBlocker` 一处拦下所有站内跳转（侧边栏 / 链接 / navigate() / 后台前进后退）；
+`beforeunload` 只留给出站/刷新/关标签页。`utils/navGuard.ts` 与 AppLayout 的改动随之撤销。
+
+实测（vite preview + puppeteer，mock /api）：
+- 改 25 日 → 点「成本报表」→ 弹窗，URL 仍 /kpi/upload
+- 「继续编辑」→ 留在原页，输入值 123.00 保留
+- 「保存并前往」→ POST /kpi/daily 1 次后跳到 /cost/upload
+- 跨文档返回 → 浏览器原生 beforeunload 确认框

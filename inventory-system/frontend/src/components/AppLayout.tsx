@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { getMe, getMyPermissions, getPendingCount } from '../api'
 import { resetPagePerms } from '../utils/pagePerms'
-import { runNavGuard } from '../utils/navGuard'
 import type { Permissions, UserInfo } from '../types'
 import RealtimeStatus from '../utils/RealtimeStatus'
 import { isAiVisible, setAiVisible, onAiVisibleChange } from '../utils/aiAssistantStore'
@@ -188,8 +187,6 @@ export default function AppLayout() {
   const secPermOf = (label: string) =>
     label === '集团架构' ? 'brand' : label === '营收数据' ? 'analytics' : label === '人事管理' ? 'hr' : label === '资源总库' ? 'resource' : 'visual'
   const go = (path: string) => {
-    // 当前页面（如 KPI 上传）有未保存数据时，由它自己弹窗决定「保存并切换 / 继续编辑」
-    if (!runNavGuard(path)) return
     setHoverPanel(null)
     setFlyout(null)
     // 直接定位到目标分组的最终展开态（其他组收起）：

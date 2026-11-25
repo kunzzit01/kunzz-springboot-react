@@ -1,16 +1,19 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { ConfigProvider, App as AntApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
-import App from './App'
+import { routes, AutoLogin } from './App'
 import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 import './styles/toast.css' // 全局 toast：1:1 对齐旧 live 系统（backend/css/toast.css）
 
 dayjs.locale('zh-cn')
+
+// data router：useBlocker 依赖它（KPI 上传页「有未保存数据不许离开」）
+const router = createBrowserRouter(routes)
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -38,12 +41,12 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       }}
     >
       <AntApp>
-        <BrowserRouter>
-          {/* 全局兜底：渲染期异常显示"页面出错了 + 重新加载"，而不是整页白屏 */}
+        <AutoLogin>
+          {/* 全局兜底：渲染期异常显示「页面出错了 + 重新加载」，而不是整页白屏 */}
           <ErrorBoundary>
-            <App />
+            <RouterProvider router={router} />
           </ErrorBoundary>
-        </BrowserRouter>
+        </AutoLogin>
       </AntApp>
     </ConfigProvider>
   </React.StrictMode>,

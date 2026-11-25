@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useBlocker } from 'react-router-dom'
 import { getKpiReport, saveKpiDaily, deleteKpiDaily } from '../api'
-import { setNavGuard } from '../utils/navGuard'
 import '../styles/kpiedit.css'
 import { showToast } from '../utils/toast'
 
@@ -30,7 +29,6 @@ const fmtInt = (v?: string) => {
 }
 
 export default function KpiEdit() {
-  const navigate = useNavigate()
   const [restaurant, setRestaurant] = useState('j1')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -51,8 +49,6 @@ export default function KpiEdit() {
   const loadSeq = useRef(0)
   // 切换店/月时如果还有未保存的数据 → 弹窗选「保存并切换」或「继续编辑」
   const pendingSwitchRef = useRef<(() => void) | null>(null)
-  // 要跳去的路由（侧边栏/链接）
-  const pendingNavRef = useRef<string | null>(null)
   const [askDays, setAskDays] = useState(0)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
@@ -227,11 +223,9 @@ export default function KpiEdit() {
     if (editingDay !== null && hasData(editingDay)) d.add(editingDay)
     return d.size
   }
-  // 给下面三个常驻监听器读「最新值」用的镜像（它们只注册一次）
+  // 给常驻监听器/守卫回调读「最新值」用的镜像（它们只注册一次，不能读闭包里的旧 state）
   const unsavedRef = useRef(0)
   unsavedRef.current = unsavedCount()
-  const askOpenRef = useRef(false)
-  askOpenRef.current = askDays > 0
 
   // 有未保存改动时先弹选择框（保存并切换 / 继续编辑）；返回 true 表示已直接切换
   const guardSwitch = (action: () => void): boolean => {
@@ -242,58 +236,38 @@ export default function KpiEdit() {
     return false
   }
 
+  // 未保存数据的两道拦截：站内跳转（data router）+ 刷新/关标签页（浏览器原生）
+  // ① 站内任何跳转——侧边栏、链接、浏览器后退/前进、navigate()——都先被 data router 拦下
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state === 'blocked') setAskDays(unsavedRef.current)
+  }, [blocker.state])
+
   const askSaveThenSwitch = async () => {
     const action = pendingSwitchRef.current
-    const nav = pendingNavRef.current
+    const blocked = blocker.state === 'blocked'
     setAskDays(0)
     pendingSwitchRef.current = null
-    pendingNavRef.current = null
     await saveAll()
     // 只有全部存成功才离开；有失败的天就留在当前页，方便重试
-    if (dirtyRef.current.size === 0) {
-      if (action) action()
-      else if (nav) navigate(nav)
+    if (dirtyRef.current.size > 0) {
+      if (blocked) blocker.reset()
+      return
     }
+    if (action) action()
+    else if (blocked) blocker.proceed()
   }
 
   const askKeepEditing = () => {
     setAskDays(0)
     pendingSwitchRef.current = null
-    pendingNavRef.current = null
+    if (blocker.state === 'blocked') blocker.reset()
   }
 
-  // ---- 未保存数据的三道拦截（保证离开前一定经过用户确认） ----
-  // ① 侧边栏 / 登出：AppLayout 的 go()、logout() 先问 runNavGuard
-  useEffect(() => {
-    setNavGuard((next) => {
-      if (unsavedRef.current === 0) return true
-      pendingNavRef.current = next
-      setAskDays(unsavedRef.current)
-      return false
-    })
-    return () => setNavGuard(null)
-  }, [])
-
-  // ② 站内链接（右上角「KPI 报表 / 成本报表」等 <a href>）：点下去就拦
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      if (askOpenRef.current) return
-      if (unsavedRef.current === 0) return
-      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null
-      if (!a) return
-      const href = a.getAttribute('href') || ''
-      if (!href.startsWith('/') || href.startsWith('//') || href === location.pathname + location.search) return
-      e.preventDefault()
-      e.stopPropagation()
-      pendingNavRef.current = href
-      setAskDays(unsavedRef.current)
-    }
-    document.addEventListener('click', h, true)
-    return () => document.removeEventListener('click', h, true)
-  }, [])
-
-  // ③ 刷新 / 关标签页 / 站外跳转：浏览器自带确认框（浏览器不允许自定义这个提示）
-  //    注：站内「后退键」不经过这里，要覆盖它得换成 data router + useBlocker
+  // ② 刷新 / 关标签页 / 站外跳转：浏览器自带确认框（浏览器不允许自定义这个提示）
+  //    站内的后退/前进键已由 ① 的 useBlocker 覆盖，不会走到这里
   useEffect(() => {
     const h = (e: BeforeUnloadEvent) => {
       if (unsavedRef.current === 0) return
@@ -725,7 +699,7 @@ export default function KpiEdit() {
                 <i className="fas fa-pen"></i> 继续编辑
               </button>
               <button className="btn btn-primary" onClick={askSaveThenSwitch}>
-                <i className="fas fa-save"></i> {pendingNavRef.current ? '保存并前往' : '保存并切换'}
+                <i className="fas fa-save"></i> {blocker.state === 'blocked' ? '保存并前往' : '保存并切换'}
               </button>
             </div>
           </div>

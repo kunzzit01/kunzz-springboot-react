@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom'
+import type { RouteObject } from 'react-router-dom'
 import type { ReactElement } from 'react'
 import { useEffect, useState } from 'react'
 import AppLayout from './components/AppLayout'
@@ -76,7 +77,7 @@ function RequireAuth({ children }: { children: ReactElement }) {
 /** 启动门禁（2026-10-28「记住这台设备」）：
  *  JWT 不存在/已过期时，先用设备令牌静默续登，再渲染路由。
  *  不加这一层的话，重启电脑后打开 /dashboard 会先闪一下登录页（RequireAuth 是同步判断 JWT 的）。 */
-function AutoLogin({ children }: { children: ReactElement }) {
+export function AutoLogin({ children }: { children: ReactElement }) {
   const [ready, setReady] = useState(() => hasValidToken())
   useEffect(() => {
     if (ready) return
@@ -135,64 +136,64 @@ function RequirePage({ children }: { children: ReactElement }) {
   return children
 }
 
-export default function App() {
-  return (
-    <AutoLogin>
-      <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      {/* 电话版（手机端专用，无侧边栏）：
-          /mobile/login 手机用户专用登录（登录后自动去到有权限的分店）；
-          /mobile/out 库存列表改量出货（对齐旧 /mobile/ch/stocklistjX.php）；
-          /mobile/records 手机出货记录（对齐旧 /jX/jXstockeditmobile.php，桌面「手机版」按钮落点）；
-          旧路径 /mobile/inout、/m/inout、/m/out 重定向到 /mobile/out */}
-      <Route path="/mobile/login" element={<MobileLogin />} />
-      <Route path="/mobile/out" element={<RequireMobileAuth><MobileOut /></RequireMobileAuth>} />
-      <Route path="/mobile/records" element={<RequireMobileAuth><MobileRecords /></RequireMobileAuth>} />
-      <Route path="/mobile/inout" element={<MobileRedirect to="/mobile/out" />} />
-      <Route path="/m/inout" element={<MobileRedirect to="/mobile/out" />} />
-      <Route path="/m/out" element={<MobileRedirect to="/mobile/out" />} />
-      <Route path="/change-password" element={<RequireAuth><ChangePassword /></RequireAuth>} />
-      <Route path="/" element={<RequireAuth><RequirePage><AppLayout /></RequirePage></RequireAuth>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-        <Route path="records" element={<StockRecords />} />
-        <Route path="sot" element={<StockSot />} />
-        <Route path="products" element={<StockProducts />} />
-        <Route path="inout" element={<StockInout />} />
-        <Route path="branches" element={<Branches />} />
-        <Route path="suppliers" element={<Suppliers />} />
-        <Route path="settings" element={<Settings />} />
-        <Route path="dishware" element={<Dishware />} />
-        <Route path="dishware_break" element={<DishwareBreak />} />
-        <Route path="dishware_transfer" element={<DishwareTransfer />} />
-        <Route path="staff" element={<Staff />} />
-<Route path="staff/add" element={<AddEmployee />} />
-        <Route path="hire" element={<Jobs />} />
-        <Route path="qna" element={<Qna />} />
-        <Route path="evaluation" element={<Evaluation />} />
-        <Route path="schedule" element={<Schedule />} />
-        <Route path="menu" element={<Menu />} />
-        <Route path="price" element={<Price />} />
-        <Route path="kpi" element={<Kpi />} />
-        <Route path="kpi/upload" element={<KpiEdit />} />
-<Route path="cost/upload" element={<CostEdit />} />
-<Route path="cost" element={<Cost />} />
-        <Route path="corporate" element={<Corporate />} />
-        <Route path="corporate/edit" element={<CorporateEdit />} />
-        <Route path="media" element={<Media />} />
-        <Route path="media/music" element={<BgMusic />} />
-        <Route path="media/about4" element={<Timeline />} />
-        <Route path="media/join2" element={<JoinComphoto />} />
-        <Route path="media/join3" element={<JobPositions />} />
-        <Route path="media/:key" element={<PageUpload />} />
-        <Route path="recycle" element={<Recycle />} />
-        <Route path="remark" element={<RemarkAnalysis />} />
-        <Route path="maintain" element={<Maintain />} />
-        <Route path="phone" element={<Phone />} />
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
-    </AutoLogin>
-  )
-}
+// 路由表：交给 createBrowserRouter（data router）—— 只有 data router 才支持 useBlocker，
+// KPI 上传页靠它实现「有未保存数据时离开前必须确认」（2026-11-25）。
+// 注意：JSX <Route> 换成对象数组后，路径与元素保持一一对应，别顺手改语义。
+export const routes: RouteObject[] = [
+  { path: '/login', element: <Login /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  // 电话版（手机端专用，无侧边栏）：
+  //   /mobile/login 手机用户专用登录（登录后自动去到有权限的分店）
+  //   /mobile/out 库存列表改量出货；/mobile/records 手机出货记录
+  //   旧路径 /mobile/inout、/m/inout、/m/out 重定向到 /mobile/out
+  { path: '/mobile/login', element: <MobileLogin /> },
+  { path: '/mobile/out', element: <RequireMobileAuth><MobileOut /></RequireMobileAuth> },
+  { path: '/mobile/records', element: <RequireMobileAuth><MobileRecords /></RequireMobileAuth> },
+  { path: '/mobile/inout', element: <MobileRedirect to="/mobile/out" /> },
+  { path: '/m/inout', element: <MobileRedirect to="/mobile/out" /> },
+  { path: '/m/out', element: <MobileRedirect to="/mobile/out" /> },
+  { path: '/change-password', element: <RequireAuth><ChangePassword /></RequireAuth> },
+  {
+    path: '/',
+    element: <RequireAuth><RequirePage><AppLayout /></RequirePage></RequireAuth>,
+    children: [
+      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { path: 'dashboard', element: <Dashboard /> },
+      { path: 'records', element: <StockRecords /> },
+      { path: 'sot', element: <StockSot /> },
+      { path: 'products', element: <StockProducts /> },
+      { path: 'inout', element: <StockInout /> },
+      { path: 'branches', element: <Branches /> },
+      { path: 'suppliers', element: <Suppliers /> },
+      { path: 'settings', element: <Settings /> },
+      { path: 'dishware', element: <Dishware /> },
+      { path: 'dishware_break', element: <DishwareBreak /> },
+      { path: 'dishware_transfer', element: <DishwareTransfer /> },
+      { path: 'staff', element: <Staff /> },
+      { path: 'staff/add', element: <AddEmployee /> },
+      { path: 'hire', element: <Jobs /> },
+      { path: 'qna', element: <Qna /> },
+      { path: 'evaluation', element: <Evaluation /> },
+      { path: 'schedule', element: <Schedule /> },
+      { path: 'menu', element: <Menu /> },
+      { path: 'price', element: <Price /> },
+      { path: 'kpi', element: <Kpi /> },
+      { path: 'kpi/upload', element: <KpiEdit /> },
+      { path: 'cost/upload', element: <CostEdit /> },
+      { path: 'cost', element: <Cost /> },
+      { path: 'corporate', element: <Corporate /> },
+      { path: 'corporate/edit', element: <CorporateEdit /> },
+      { path: 'media', element: <Media /> },
+      { path: 'media/music', element: <BgMusic /> },
+      { path: 'media/about4', element: <Timeline /> },
+      { path: 'media/join2', element: <JoinComphoto /> },
+      { path: 'media/join3', element: <JobPositions /> },
+      { path: 'media/:key', element: <PageUpload /> },
+      { path: 'recycle', element: <Recycle /> },
+      { path: 'remark', element: <RemarkAnalysis /> },
+      { path: 'maintain', element: <Maintain /> },
+      { path: 'phone', element: <Phone /> },
+    ],
+  },
+  { path: '*', element: <Navigate to="/" replace /> },
+]
