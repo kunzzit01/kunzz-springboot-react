@@ -39,6 +39,12 @@ export default function KpiEdit() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const preservedRef = useRef<Record<number, DayRow>>({})
+  // 脏行：只保存用户真正改过的天，避免「保存本月数据」用内存快照整月重写
+  const dirtyRef = useRef<Set<number>>(new Set())
+  // 保存锁用 ref：state 是异步的，双击 / Ctrl+S 连按能穿过 state 判空
+  const savingRef = useRef(false)
+  // 请求序号：快速换店/换月时丢弃过期响应，避免旧数据覆盖新数据
+  const loadSeq = useRef(0)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
@@ -46,6 +52,7 @@ export default function KpiEdit() {
 
   // 加载某月数据（线上 loadMonthData）
   const load = async () => {
+    const my = ++loadSeq.current
     setLoading(true)
     try {
       const res = await getKpiReport(restaurant, year + '-' + String(month).padStart(2, '0'))
@@ -67,9 +74,11 @@ export default function KpiEdit() {
           }
         }
       })
+      if (my !== loadSeq.current) return // 过期响应（已换店/换月）直接丢弃
       setRows(byDay)
+      dirtyRef.current.clear() // 新快照 = 干净
     } catch { /* ignore */ }
-    setLoading(false)
+    if (my === loadSeq.current) setLoading(false)
   }
   useEffect(() => {
     setEditingDay(null)
@@ -128,6 +137,7 @@ export default function KpiEdit() {
     } else if (INT_FIELDS.includes(field)) {
       if (v.includes('.')) v = v.split('.')[0]
     }
+    dirtyRef.current.add(day)
     setRows(prev => {
       const cur = { ...(prev[day] || {}) }
       cur[field] = v
@@ -202,40 +212,51 @@ export default function KpiEdit() {
       (parseInt(r.newCustomers || '', 10) || 0) > 0
   }
 
+  // 有未保存改动时切换店/月先确认（load() 会整表覆盖 rows）
+  const canSwitch = () => dirtyRef.current.size === 0 || window.confirm('还有 ' + dirtyRef.current.size + ' 天数据未保存，确定切换？')
+
   // 保存单行（编辑按钮保存模式）
   const saveRow = async (day: number) => {
+    if (savingRef.current) return
     if (hasData(day)) {
+      savingRef.current = true
+      setSaving(true)
       try {
         await saveKpiDaily(restaurant, buildPayload(day))
+        dirtyRef.current.delete(day)
         showMsg(day + '日数据保存成功', 'success')
       } catch { showMsg('保存' + day + '日数据失败', 'error') }
+      savingRef.current = false
+      setSaving(false)
     }
     setEditingDay(null)
   }
 
-  // 保存全部（线上 saveAllData：只存有数据的行或 DB 已存在的行）
+  // 保存全部：只提交改过的天（dirtyRef），某天失败不影响其余天
   const saveAll = async () => {
-    if (saving || loading) return
+    if (savingRef.current || loading) return
+    const days = [...dirtyRef.current].sort((a, b) => a - b)
+    if (days.length === 0) { showMsg('没有需要保存的数据', 'info'); return }
+    savingRef.current = true
     setSaving(true)
+    const failed: number[] = []
     try {
-      let successCount = 0
-      for (let d = 1; d <= daysInMonth; d++) {
-        // hasData = 有输入数据 || 数据库已存在该日（rows 里有即 DB 存在）
-        if (hasData(d) || !!rows[d]) {
+      for (const d of days) {
+        try {
           await saveKpiDaily(restaurant, buildPayload(d))
-          successCount++
-        }
+          dirtyRef.current.delete(d)
+        } catch { failed.push(d) } // 单天失败不中断整批
       }
-      if (successCount > 0) {
-        showMsg('数据保存成功！共保存 ' + successCount + ' 条记录', 'success')
-        await load()
-      } else {
-        showMsg('没有需要保存的数据', 'info')
-      }
-    } catch {
-      showMsg('保存过程中发生错误，请检查网络连接后重试', 'error')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
     }
-    setSaving(false)
+    if (failed.length === 0) {
+      showMsg('数据保存成功！共保存 ' + days.length + ' 条记录', 'success')
+      await load()
+    } else {
+      showMsg('已保存 ' + (days.length - failed.length) + ' 天，' + failed.length + ' 天失败（' + failed.join('、') + '日），请再点一次保存', 'error')
+    }
   }
 
   // 清空单日（线上 clearDayData：confirm + 删除 DB 记录）
@@ -304,10 +325,13 @@ export default function KpiEdit() {
     }
     const text = e.clipboardData.getData('text')
     if (!text) return
-    const pasteFields = ['grossSales', 'discounts', 'tax', 'serviceFee', 'adjAmount', 'tablesUsed', 'diners']
+    const pasteFields = ['grossSales', 'discounts', 'tax', 'serviceFee', 'adjAmount', 'tablesUsed', 'diners', 'newCustomers', 'returningCustomers']
     const startIdx = pasteFields.indexOf(field)
+    // 起点不在表内（不在可粘贴列）→ 拦下来，否则后面的值会整体错位一格
+    if (startIdx < 0) { showMsg('请从「总销售额」列开始粘贴整行数据', 'info'); e.preventDefault(); return }
     const lines = text.trim().split('\n').filter(l => l.trim() !== '')
     const setValues = (d: number, vals: string[], start: number) => {
+      dirtyRef.current.add(d)
       setRows(prev => {
         const cur = { ...(prev[d] || {}) }
         vals.forEach((v, i) => {
@@ -418,8 +442,8 @@ export default function KpiEdit() {
                   <div className="number-dropdown-menu" id="number-dropdown" style={{ display: 'block', position: 'absolute', zIndex: 1500 }}>
                     <div className="number-grid">
                       {['1', '2', '3'].map(n => (
-                        <button key={n} className={'number-item' + (restaurant === 'j' + n ? ' selected' : '')}
-                          onClick={() => { setRestaurant('j' + n); setNumOpen(false) }}>{n}</button>
+                        <button key={n} className={'number-item' + (restaurant === 'j' + n ? ' selected' : '')} disabled={saving}
+                          onClick={() => { if (!canSwitch()) return; setRestaurant('j' + n); setNumOpen(false) }}>{n}</button>
                       ))}
                     </div>
                   </div>
@@ -434,7 +458,8 @@ export default function KpiEdit() {
         <div className="month-selector">
           <div>
             <label htmlFor="year-select">年份:</label>
-            <select id="year-select" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            <select id="year-select" value={year} disabled={saving}
+              onChange={(e) => { if (!canSwitch()) return; setYear(Number(e.target.value)) }}>
               {Array.from({ length: new Date().getFullYear() + 2 - 2023 + 1 }, (_, i) => 2023 + i).map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -442,7 +467,8 @@ export default function KpiEdit() {
           </div>
           <div>
             <label htmlFor="month-select">月份:</label>
-            <select id="month-select" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            <select id="month-select" value={month} disabled={saving}
+              onChange={(e) => { if (!canSwitch()) return; setMonth(Number(e.target.value)) }}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                 <option key={m} value={m}>{m}月</option>
               ))}
@@ -569,7 +595,7 @@ export default function KpiEdit() {
                       <td>{inp('returningCustomers', 'returning_customers', false)}</td>
                       <td className="calculated-cell" id={'returning-customer-rate-' + day}>{c.rate.toFixed(2)}%</td>
                       <td className="action-cell">
-                        <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day}
+                        <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day} disabled={saving}
                           onClick={() => toggleEdit(day)} title={isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据'}>
                           <i className={'fas ' + (isEditing ? 'fa-save' : 'fa-edit')}></i>
                         </button>
@@ -577,7 +603,7 @@ export default function KpiEdit() {
                           onClick={() => cancelEdit(day)} title="取消编辑" style={{ display: isEditing ? 'inline-block' : 'none' }}>
                           <i className="fas fa-times"></i>
                         </button>
-                        <button className="delete-day-btn" id={'delete-btn-' + day}
+                        <button className="delete-day-btn" id={'delete-btn-' + day} disabled={saving}
                           onClick={() => clearDay(day)} title={'清空' + day + '日数据'} style={{ display: isEditing ? 'none' : 'inline-block' }}>
                           <i className="fas fa-trash-alt"></i>
                         </button>

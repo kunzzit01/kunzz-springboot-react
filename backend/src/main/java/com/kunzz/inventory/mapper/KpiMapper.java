@@ -24,14 +24,14 @@ public interface KpiMapper {
     /** 删除某分店某日日报 */
     int deleteDailyByDate(@Param("table") String table, @Param("date") LocalDate date);
 
-    /** 插入日报 */
-    int insertDaily(@Param("table") String table, @Param("d") Map<String, Object> d);
+    /** 按日期原子 upsert 日报（INSERT ... ON DUPLICATE KEY UPDATE） */
+    int upsertDaily(@Param("table") String table, @Param("d") Map<String, Object> d);
 
     /** 删除某分店某日成本 */
     int deleteCostByDate(@Param("table") String table, @Param("date") LocalDate date);
 
-    /** 插入成本 */
-    int insertCost(@Param("table") String table, @Param("c") Map<String, Object> c);
+    /** 按日期原子 upsert 成本 */
+    int upsertCost(@Param("table") String table, @Param("c") Map<String, Object> c);
 
     /** 某日期区间中央供应给 J2/J3 的合计（J1 成本仪表盘用；取自中央 stockinout_data 出库记录） */
     Map<String, Object> listSupplyBetween(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);

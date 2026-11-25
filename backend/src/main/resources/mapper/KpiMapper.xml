@@ -29,20 +29,33 @@
         DELETE FROM ${table} WHERE date = #{date}
     </delete>
 
-    <insert id="insertDaily">
+    <!-- 按日期原子 upsert：j1data/j2data/j3data 都有 UNIQUE KEY(date)。
+         用单条语句写入，避免「先删后插」在并发同日保存时撞唯一键整批回滚。 -->
+    <insert id="upsertDaily">
         INSERT INTO ${table} (date, gross_sales, discounts, service_fee, tax, adj_amount, tender_amount,
             diners, tables_used, returning_customers, new_customers)
         VALUES (#{d.date}, #{d.gross_sales}, #{d.discounts}, #{d.service_fee}, #{d.tax}, #{d.adj_amount}, #{d.tender_amount},
             #{d.diners}, #{d.tables_used}, #{d.returning_customers}, #{d.new_customers})
+        ON DUPLICATE KEY UPDATE
+            gross_sales = VALUES(gross_sales), discounts = VALUES(discounts),
+            service_fee = VALUES(service_fee), tax = VALUES(tax),
+            adj_amount = VALUES(adj_amount), tender_amount = VALUES(tender_amount),
+            diners = VALUES(diners), tables_used = VALUES(tables_used),
+            returning_customers = VALUES(returning_customers), new_customers = VALUES(new_customers)
     </insert>
 
     <delete id="deleteCostByDate">
         DELETE FROM ${table} WHERE date = #{date}
     </delete>
 
-    <insert id="insertCost">
+    <!-- 成本同款原子 upsert（j1cost/j2cost/j3cost 都有 UNIQUE KEY(date)） -->
+    <insert id="upsertCost">
         INSERT INTO ${table} (date, day_name, c_beverage, c_kitchen, c_grab, c_foodpanda, c_shopee)
         VALUES (#{c.date}, #{c.day_name}, #{c.c_beverage}, #{c.c_kitchen}, #{c.c_grab}, #{c.c_foodpanda}, #{c.c_shopee})
+        ON DUPLICATE KEY UPDATE
+            day_name = VALUES(day_name), c_beverage = VALUES(c_beverage),
+            c_kitchen = VALUES(c_kitchen), c_grab = VALUES(c_grab),
+            c_foodpanda = VALUES(c_foodpanda), c_shopee = VALUES(c_shopee)
     </insert>
 
     <!-- 中央供应给 J2/J3 的金额：中央 stockinout_data 中 target_system=j2/j3 的出库记录，

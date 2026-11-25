@@ -103,12 +103,11 @@ public class KpiService {
         return out;
     }
 
-    /** 保存日报（按日期原子 upsert） */
+    /** 保存日报（按日期原子 upsert：单条 SQL，并发同日写入不会撞唯一键回滚） */
     @Transactional
     public void saveDaily(String branch, BaseBranchDaily day) {
         if (day.getDate() == null) throw new BusinessException("日期不能为空");
         String t = dailyTable(branch);
-        kpiMapper.deleteDailyByDate(t, day.getDate());
         Map<String, Object> d = new LinkedHashMap<>();
         d.put("date", day.getDate());
         d.put("gross_sales", day.getGrossSales());
@@ -121,7 +120,7 @@ public class KpiService {
         d.put("tables_used", day.getTablesUsed());
         d.put("returning_customers", day.getReturningCustomers());
         d.put("new_customers", day.getNewCustomers());
-        kpiMapper.insertDaily(t, d);
+        kpiMapper.upsertDaily(t, d);
     }
 
     /** 删除某日日报 */
@@ -160,12 +159,11 @@ public class KpiService {
         kpiMapper.upsertMonthStock(m);
     }
 
-    /** 保存成本（按日期原子 upsert） */
+    /** 保存成本（按日期原子 upsert，同日报） */
     @Transactional
     public void saveCost(String branch, BaseBranchCost cost) {
         if (cost.getDate() == null) throw new BusinessException("日期不能为空");
         String t = costTable(branch);
-        kpiMapper.deleteCostByDate(t, cost.getDate());
         Map<String, Object> c = new LinkedHashMap<>();
         c.put("date", cost.getDate());
         c.put("day_name", cost.getDayName());
@@ -174,6 +172,6 @@ public class KpiService {
         c.put("c_grab", cost.getCGrab());
         c.put("c_foodpanda", cost.getCFoodpanda());
         c.put("c_shopee", cost.getCShopee());
-        kpiMapper.insertCost(t, c);
+        kpiMapper.upsertCost(t, c);
     }
 }
