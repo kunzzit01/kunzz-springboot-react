@@ -47,6 +47,9 @@ export default function KpiEdit() {
   const savingRef = useRef(false)
   // 请求序号：快速换店/换月时丢弃过期响应，避免旧数据覆盖新数据
   const loadSeq = useRef(0)
+  // 切换店/月时如果还有未保存的数据 → 弹窗选「保存并切换」或「继续编辑」
+  const pendingSwitchRef = useRef<(() => void) | null>(null)
+  const [askDays, setAskDays] = useState(0)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
@@ -214,8 +217,26 @@ export default function KpiEdit() {
       (parseInt(r.newCustomers || '', 10) || 0) > 0
   }
 
-  // 有未保存改动时切换店/月先确认（load() 会整表覆盖 rows）
-  const canSwitch = () => dirtyRef.current.size === 0 || window.confirm('还有 ' + dirtyRef.current.size + ' 天数据未保存，确定切换？')
+  // 有未保存改动时先弹选择框（保存并切换 / 继续编辑）；返回 true 表示已直接切换
+  const guardSwitch = (action: () => void): boolean => {
+    const dirty = new Set(dirtyRef.current)
+    if (editingDay !== null && hasData(editingDay)) dirty.add(editingDay)
+    if (dirty.size === 0) { action(); return true }
+    pendingSwitchRef.current = action
+    setAskDays(dirty.size)
+    return false
+  }
+
+  const askSaveThenSwitch = async () => {
+    const action = pendingSwitchRef.current
+    setAskDays(0)
+    pendingSwitchRef.current = null
+    await saveAll()
+    // 全部存成功才切换；有失败的天就留在当前店/月方便重试
+    if (dirtyRef.current.size === 0) action?.()
+  }
+
+  const askKeepEditing = () => { setAskDays(0); pendingSwitchRef.current = null }
 
   // 保存单行（编辑按钮保存模式）
   const saveRow = async (day: number) => {
@@ -453,7 +474,7 @@ export default function KpiEdit() {
                     <div className="number-grid">
                       {['1', '2', '3'].map(n => (
                         <button key={n} className={'number-item' + (restaurant === 'j' + n ? ' selected' : '')} disabled={saving}
-                          onClick={() => { if (!canSwitch()) return; setRestaurant('j' + n); setNumOpen(false) }}>{n}</button>
+                          onClick={() => { setNumOpen(false); guardSwitch(() => setRestaurant('j' + n)) }}>{n}</button>
                       ))}
                     </div>
                   </div>
@@ -469,7 +490,7 @@ export default function KpiEdit() {
           <div>
             <label htmlFor="year-select">年份:</label>
             <select id="year-select" value={year} disabled={saving}
-              onChange={(e) => { if (!canSwitch()) return; setYear(Number(e.target.value)) }}>
+              onChange={(e) => { const v = Number(e.target.value); if (!guardSwitch(() => setYear(v))) e.target.value = String(year) }}>
               {Array.from({ length: new Date().getFullYear() + 2 - 2023 + 1 }, (_, i) => 2023 + i).map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -478,7 +499,7 @@ export default function KpiEdit() {
           <div>
             <label htmlFor="month-select">月份:</label>
             <select id="month-select" value={month} disabled={saving}
-              onChange={(e) => { if (!canSwitch()) return; setMonth(Number(e.target.value)) }}>
+              onChange={(e) => { const v = Number(e.target.value); if (!guardSwitch(() => setMonth(v))) e.target.value = String(month) }}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                 <option key={m} value={m}>{m}月</option>
               ))}
@@ -626,6 +647,24 @@ export default function KpiEdit() {
           </div>
         </div>
       </div>
+
+      {/* 切换店/月份时：有未保存数据 → 问是否先保存（替代 window.confirm） */}
+      {askDays > 0 && (
+        <div className="ke-ask-mask" onClick={askKeepEditing}>
+          <div className="ke-ask-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ke-ask-title">还有 {askDays} 天数据没保存</div>
+            <div className="ke-ask-text">切换之前要先把这些数据保存吗？<br />选「继续编辑」就留在当前这个页面。</div>
+            <div className="ke-ask-actions">
+              <button className="btn btn-secondary" onClick={askKeepEditing}>
+                <i className="fas fa-pen"></i> 继续编辑
+              </button>
+              <button className="btn btn-primary" onClick={askSaveThenSwitch}>
+                <i className="fas fa-save"></i> 保存并切换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

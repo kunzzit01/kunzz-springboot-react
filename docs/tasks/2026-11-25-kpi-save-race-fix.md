@@ -3,6 +3,7 @@
 - 状态：已完成（2026-11-25）
 - 白名单（只允许改这些）：
   - inventory-system/frontend/src/pages/KpiEdit.tsx
+  - inventory-system/frontend/src/styles/kpiedit.css
   - backend/src/main/java/com/kunzz/inventory/service/KpiService.java
   - backend/src/main/java/com/kunzz/inventory/mapper/KpiMapper.java
   - backend/src/main/resources/mapper/KpiMapper.xml
@@ -38,3 +39,8 @@ Ctrl+S 保存后行仍停在编辑态（绿色保存图标不变回铅笔），�
 - `saveAll` 现在把**正在编辑的那天**也纳入保存集合（对齐进出货 `saveAllEdits`）
 - 全部成功 → `setEditingDay(null)` 退出编辑态；有失败的天保留编辑态方便直接重试
 - 行内按钮保存中显示 `fa-spinner` + title「保存中...」，与进出货一致
+
+### 追加 2：切换店/月份的保存询问改为站内弹窗
+
+`window.confirm` 太生硬，改成站内弹窗：「保存并切换」/「继续编辑」。
+为此把 `styles/kpiedit.css` 也加进白名单（新增 `.ke-ask-mask/.ke-ask-card` 等样式）。
