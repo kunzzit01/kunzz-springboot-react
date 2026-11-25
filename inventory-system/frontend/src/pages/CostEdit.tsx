@@ -39,10 +39,14 @@ export default function CostEdit() {
   const dirtyRef = useRef<Set<number>>(new Set())
   // 保存锁用 ref：state 异步，双击 / Ctrl+S 连按能穿过 state 判空
   const savingRef = useRef(false)
+  // 加载中点了保存 → 加载完自动补一次（避免点击被静默吞掉）
+  const pendingSaveRef = useRef(false)
   // 正在保存的那一行（只让它转圈，不整列转）
   const [savingDay, setSavingDay] = useState<number | null>(null)
   // 请求序号：快速换店/换月时丢弃过期响应
   const loadSeq = useRef(0)
+  // 编辑计数器：加载期间有人输入 → 丢弃这次加载结果，别把用户刚敲的值冲掉
+  const editSeqRef = useRef(0)
   // 离开本页前的确认弹窗
   const pendingSwitchRef = useRef<(() => void) | null>(null)
   const [askDays, setAskDays] = useState(0)
@@ -55,6 +59,7 @@ export default function CostEdit() {
   // 加载：成本数据 + KPI 净销售额（/api/kpi/report 一次返回两类行）
   const load = async () => {
     const my = ++loadSeq.current
+    const editAtStart = editSeqRef.current
     setLoading(true)
     try {
       const res = await getKpiReport(restaurant, yearMonth)
@@ -90,7 +95,8 @@ export default function CostEdit() {
           byDay[day] = { sales: kpiNet[day].toFixed(2) }
         }
       })
-      if (my !== loadSeq.current) return // 过期响应（已换店/换月）丢弃
+      // 过期响应（换店/换月）或加载期间用户已开始输入 → 丢弃，别把刚敲的值冲掉
+      if (my !== loadSeq.current || editSeqRef.current !== editAtStart) return
       setRows(byDay)
       dirtyRef.current.clear() // 新快照 = 干净
       // 加载当月库存
@@ -99,8 +105,10 @@ export default function CostEdit() {
         const v = stock.current_stock
         setStockInput(v && Number(v) > 0 ? Number(v).toFixed(2) : '')
       } catch { setStockInput('') }
-    } catch { /* ignore */ }
-    if (my === loadSeq.current) setLoading(false)
+    } catch { /* ignore */ } finally {
+      // 用 finally：前面任何提前 return 都不能把 loading 卡在 true（否则保存按钮永远排队）
+      if (my === loadSeq.current) setLoading(false)
+    }
   }
   useEffect(() => {
     setEditingDay(null)
@@ -151,6 +159,7 @@ export default function CostEdit() {
       }
     }
     dirtyRef.current.add(day)
+    editSeqRef.current++
     setRows(prev => {
       const cur = { ...(prev[day] || {}) }
       cur[field] = v
@@ -281,7 +290,13 @@ export default function CostEdit() {
 
   // 保存全部：只提交改过的天（dirtyRef）+ 正在编辑的那天；先库存（若有值）
   const saveAll = async () => {
-    if (savingRef.current || loading) return
+    if (savingRef.current) return // 保存中：按钮已显示「保存中...」
+    if (loading) {
+      // 加载中先把请求记下来，加载完自动保存（不能静默返回：用户以为点了没反应）
+      pendingSaveRef.current = true
+      showMsg('正在加载本月数据，加载完自动保存…', 'info')
+      return
+    }
     const dirty = new Set(dirtyRef.current)
     if (editingDay !== null && hasData(editingDay)) dirty.add(editingDay)
     const days = [...dirty].sort((a, b) => a - b)
@@ -345,6 +360,14 @@ export default function CostEdit() {
     })()
   }
 
+  // 加载中点了「保存修改」→ 加载结束后自动补一次，避免“点了没反应”
+  useEffect(() => {
+    if (loading || !pendingSaveRef.current) return
+    pendingSaveRef.current = false
+    void saveAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading])
+
   // ---- 快捷键 ----
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, day: number, field: string) => {
@@ -370,6 +393,7 @@ export default function CostEdit() {
     const lines = text.trim().split('\n').filter(l => l.trim() !== '')
     const setValues = (d: number, vals: string[], start: number) => {
       dirtyRef.current.add(d)
+      editSeqRef.current++
       setRows(prev => {
         const cur = { ...(prev[d] || {}) }
         vals.forEach((v, i) => {
@@ -590,7 +614,7 @@ export default function CostEdit() {
                     setStockInput(v)
                   }} />
               </div>
-              <button className="btn btn-primary" onClick={saveAll} disabled={saving || loading}>
+              <button className="btn btn-primary" onClick={saveAll} disabled={saving}>
                 {saving ? <><div className="loading"></div> 保存中...</> : <><i className="fas fa-save"></i> 保存修改</>}
               </button>
             </div>

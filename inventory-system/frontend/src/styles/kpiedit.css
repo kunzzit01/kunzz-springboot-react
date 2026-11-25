@@ -359,7 +359,13 @@
     gap: 8px;
     transition: all 0.2s;
     text-decoration: none;
-}.ke-root .btn-primary{
+}/* 禁用态必须一眼看出来，否则用户会以为「点了没反应」（2026-11-25 实测：loading 期间点击被静默吞掉） */
+.ke-root .btn:disabled{
+    opacity: 0.55;
+    cursor: not-allowed;
+    pointer-events: auto; /* 仍能触发 title/光标提示，不做成“消失的点击” */
+}
+.ke-root .btn-primary{
     background-color: #f99e00;
     color: white;
     white-space: nowrap;
