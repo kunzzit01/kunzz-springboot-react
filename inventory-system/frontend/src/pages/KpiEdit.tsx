@@ -38,6 +38,8 @@ export default function KpiEdit() {
   const [reportOpen, setReportOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  // 正在保存的那一天：只给它那一行的按钮转圈，不要整列一起转
+  const [savingDay, setSavingDay] = useState<number | null>(null)
   const preservedRef = useRef<Record<number, DayRow>>({})
   // 脏行：只保存用户真正改过的天，避免「保存本月数据」用内存快照整月重写
   const dirtyRef = useRef<Set<number>>(new Set())
@@ -221,6 +223,7 @@ export default function KpiEdit() {
     if (hasData(day)) {
       savingRef.current = true
       setSaving(true)
+      setSavingDay(day)
       try {
         await saveKpiDaily(restaurant, buildPayload(day))
         dirtyRef.current.delete(day)
@@ -228,6 +231,7 @@ export default function KpiEdit() {
       } catch { showMsg('保存' + day + '日数据失败', 'error') }
       savingRef.current = false
       setSaving(false)
+      setSavingDay(null)
     }
     setEditingDay(null)
   }
@@ -244,6 +248,7 @@ export default function KpiEdit() {
     const failed: number[] = []
     try {
       for (const d of days) {
+        setSavingDay(d)
         try {
           await saveKpiDaily(restaurant, buildPayload(d))
           dirtyRef.current.delete(d)
@@ -252,6 +257,7 @@ export default function KpiEdit() {
     } finally {
       savingRef.current = false
       setSaving(false)
+      setSavingDay(null)
     }
     if (failed.length === 0) {
       setEditingDay(null) // 全部成功 → 退出编辑态（与进出货一致）
@@ -600,8 +606,8 @@ export default function KpiEdit() {
                       <td className="calculated-cell" id={'returning-customer-rate-' + day}>{c.rate.toFixed(2)}%</td>
                       <td className="action-cell">
                         <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day} disabled={saving}
-                          onClick={() => toggleEdit(day)} title={saving ? '保存中...' : (isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据')}>
-                          <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : (isEditing ? 'fa-save' : 'fa-edit'))}></i>
+                          onClick={() => toggleEdit(day)} title={savingDay === day ? '保存中...' : (isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据')}>
+                          <i className={'fas ' + (savingDay === day ? 'fa-spinner fa-spin' : (isEditing ? 'fa-save' : 'fa-edit'))}></i>
                         </button>
                         <button className="cancel-edit-btn" id={'cancel-btn-' + day}
                           onClick={() => cancelEdit(day)} title="取消编辑" style={{ display: isEditing ? 'inline-block' : 'none' }}>
