@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useBlocker, useSearchParams } from 'react-router-dom'
 import {
   deleteScheduleEmployee, deleteScheduleRecord, deleteShift, getLeaveTypes, getScheduleEmployees, getScheduleRecords,
   getShifts, saveScheduleEmployee, saveScheduleRecords, saveShift, upsertScheduleRecord
@@ -7,6 +7,7 @@ import {
 import '../styles/schedule.css'
 import ModalClose from '../components/ModalClose'
 import { showToast } from '../utils/toast'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 
 /** XSS 防护：DB 来源的排班代码渲染为纯文本（对齐 Web security basics 第 1 节） */
 function escapeHtml(str: string): string {
@@ -126,6 +127,9 @@ export default function Schedule() {
   const [dateType, setDateType] = useState<'year' | 'month' | null>(null)
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)   // state 异步：连点会并发两个整月提交
+  const [askOpen, setAskOpen] = useState(false)
+  const [, bumpDirty] = useState(0)   // markModified 不触发渲染，靠它把“未保存数量”同步到 UI
   // 排班模态框
   const [cellSel, setCellSel] = useState<CellSel | null>(null)
   const [schType, setSchType] = useState('')
@@ -360,10 +364,11 @@ export default function Schedule() {
 
   // ---------- 保存所有更改（批处理） ----------
   const saveAllChanges = async () => {
-    if (saving) return
+    if (savingRef.current) return
     const modifiedMap = modifiedRef.current
     if (modifiedMap.size === 0) { showMsg('没有需要保存的更改', 'info'); return }
     if (!window.confirm('确定要保存 ' + modifiedMap.size + ' 个更改吗？')) return
+    savingRef.current = true
     setSaving(true)
     try {
       let next = [...records]
@@ -396,7 +401,37 @@ export default function Schedule() {
       dirtyCellsRef.current.clear()
       showMsg('所有更改已保存')
     } catch { showMsg('保存失败', 'error') }
-    finally { setSaving(false) }
+    finally { savingRef.current = false; setSaving(false) }
+  }
+
+  // ---------- 未保存数据的离开拦截 ----------
+  // 排班是 800ms 自动保存，但改完立刻切页/切月仍会丢，加一道确认
+  const unsavedRef = useRef(0)
+  unsavedRef.current = modifiedRef.current.size
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (saving) return
+    if (unsavedRef.current === 0) { blocker.proceed(); return }
+    setAskOpen(true)
+  }, [blocker.state, saving])
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+  const askKeep = () => { setAskOpen(false); if (blocker.state === 'blocked') blocker.reset() }
+  const askSaveThenGo = async () => {
+    setAskOpen(false)
+    await saveAllChanges()
+    if (unsavedRef.current === 0 && blocker.state === 'blocked') blocker.proceed()
+    else if (blocker.state === 'blocked') blocker.reset()
   }
 
   // ================= 编辑模式（对齐线上：contentEditable 直接编辑 + 自动保存 + 多选/复制/粘贴/批量输入） =================
@@ -454,12 +489,14 @@ export default function Schedule() {
 
   const markModified = (empId: number, dateStr: string, value: string) => {
     modifiedRef.current.set(cellKey(empId, dateStr), { employeeId: empId, dateStr, value })
+    bumpDirty(n => n + 1)
     const cell = cellRefs.current.get(cellKey(empId, dateStr))
     if (cell) cell.classList.add('modified')
   }
   const unmarkModified = (key: string) => {
     if (!modifiedRef.current.has(key)) return
     modifiedRef.current.delete(key)
+    bumpDirty(n => n + 1)
     const cell = cellRefs.current.get(key)
     if (cell) cell.classList.remove('modified')
   }
@@ -1156,6 +1193,12 @@ export default function Schedule() {
 
   return (
     <div className="sch-root">
+      <SaveGuardDialog
+        days={askOpen ? unsavedRef.current : 0}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeep}
+        onSaveGo={askSaveThenGo}
+      />
       <div className="container">
         <div className="header">
           <h1 id="page-title">员工排班管理系统 - {restaurant}</h1>

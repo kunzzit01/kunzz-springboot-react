@@ -11,6 +11,7 @@
   - inventory-system/frontend/src/pages/Price.tsx
   - inventory-system/frontend/src/pages/StockProducts.tsx
   - inventory-system/frontend/src/pages/DishwareTransfer.tsx
+  - inventory-system/frontend/src/pages/Schedule.tsx
   - docs/tasks/2026-11-25-save-guard-rollout.md
   - docs/PLAN_2026-11-25-save-guard-rollout.md
   - backend/static/
@@ -88,3 +89,15 @@
 - `Schedule.tsx`（排班）：一次 PUT 提交整月，**多人同时排班会互相覆盖** —— 需要先定「谁赢」策略
   （后写覆盖 / updated_at 乐观锁 / 冲突提示），再动代码
 - `Dishware.tsx` / `DishwareBreak.tsx` 主要是弹窗单条保存，只在弹窗内有草稿；是否需要离开拦截待定
+
+## 批次 3 续：排班 `/schedule`（轻量版）
+
+排班每个格子 800ms 后**自动保存**，所以只在“改完立刻切页/切月”的窗口会丢。
+本次不动「整月 PUT + 多人同时排班谁赢」的策略（需要业务拍板），只做：
+
+- M3：`savingRef`（`saveAllChanges` 防并发整月提交）
+- M5：`useBlocker` + `beforeunload` + SaveGuardDialog —— 未保存 = `modifiedRef.size`；
+  因为 `modifiedRef` 是 ref 不触发渲染，加了 `bumpDirty` 让 UI/守卫能读到最新数量
+- 「保存并前往」→ 先 `saveAllChanges()`，`modifiedRef` 清空才真正跳转
+
+验证：`/schedule` 渲染无 JS 错误；未做 UI 级 e2e（排班网格是 contentEditable + 需员工数据）
