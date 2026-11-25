@@ -827,11 +827,13 @@ input[type='number']::-webkit-outer-spin-button, .ke-root input[type='number']::
 .ke-root .ke-ask-mask{
     position: fixed;
     inset: 0;
-    background: rgba(17, 24, 39, 0.45);
+    background: rgba(17, 24, 39, 0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 3000;
+    /* 必须高于侧边栏（.informationmenu 5000）和收起态 flyout（9000），
+       否则遮罩只盖住内容区、左侧菜单还是亮的 */
+    z-index: 9500;
 }
 .ke-root .ke-ask-card{
     background: #fff;
