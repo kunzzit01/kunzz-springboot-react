@@ -227,7 +227,9 @@ export default function CostEdit() {
   // 保存单行
   const saveRow = async (day: number) => {
     if (savingRef.current) return
-    if (hasData(day)) {
+    // 改过就要写回数据库（含被清成 0/空的天）：hasData 只看“有没有值”，
+    // 用户把 1.00 退格成 0.00 时它是 false，直接跳过就会变成“点了保存没生效”
+    if (dirtyRef.current.has(day) || hasData(day)) {
       savingRef.current = true
       setSaving(true)
       setSavingDay(day)
