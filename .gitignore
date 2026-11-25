@@ -60,3 +60,6 @@ desktop.ini
 
 # ---------- AI 会话本地工作目录（产物备份、计划，不入库） ----------
 .zcode/
+.tmp-pdfcheck/
+kunzz-backups/
+本地改动备份_*.patch
