@@ -95,4 +95,16 @@ if [ -s "$tmpd/bad" ]; then
     exit 1
 fi
 
+# ---------- 构建产物自检：index.html 引用的 /assets/* 必须真的在 backend/static/assets 里 ----------
+# 2026-11-25 事故：index.html 指向 index-DLajQWp5.js，assets 里却是 index-CGaW7zFz.js → 部署后全站白屏
+if printf '%s\n' "$staged" | grep -qx 'backend/static/index.html'; then
+    if [ -x scripts/check-static.sh ]; then
+        bash scripts/check-static.sh || {
+            echo "" >&2
+            echo "[防撞] index.html 与 backend/static/assets 不配套，已拦下提交。" >&2
+            exit 1
+        }
+    fi
+fi
+
 exit 0

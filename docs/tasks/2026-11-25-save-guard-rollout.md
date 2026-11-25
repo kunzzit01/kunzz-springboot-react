@@ -12,6 +12,8 @@
   - docs/tasks/2026-11-25-save-guard-rollout.md
   - docs/PLAN_2026-11-25-save-guard-rollout.md
   - backend/static/
+  - scripts/check-static.sh
+  - .githooks/pre-commit
 - 明确不碰：其它页面、后端 Java、CHANGELOG.md
 - 计划推送分支：main
 
@@ -53,3 +55,13 @@
 - **进出货**：只做了代码级改造，未跑 UI 驱动 e2e（该页新增行需要货品/价格下拉联动，脚本成本高）
 - **价格对比**：同样只到「页面渲染正常」；逐行失败隔离与 StockSot 同构（StockSot 已 e2e 证明）
 - 上线后建议手工验一次：进出货填 2 行（第 2 行故意填无效单价）→ 保存 → 第 1 行应入库且从表单消失、第 2 行留着；再点保存只重试第 2 行
+
+## 事故：提交里 index.html 与 assets 不配套（2026-11-25 下午）
+
+`4756944` 我方失误：同步产物时把 index.html 的包名替换成**中间产物** `index-DLajQWp5.js`，
+而 assets 拷的是最终产物 `index-CGaW7zFz.js` → 仓库自身不一致 → 部署后全站白屏 + 控制台 404。
+
+修复与防呆：
+1. `backend/static/index.html` 改回 `index-CGaW7zFz.js`（与 assets 一致）
+2. 新增 `scripts/check-static.sh`：校验 index.html 引用的每个 `/assets/*` 都真实存在
+3. `.githooks/pre-commit` 追加一段：提交里含 `backend/static/index.html` 时自动跑上面的脚本，不配套直接拒绝提交
