@@ -9,6 +9,8 @@
   - inventory-system/frontend/src/pages/StockSot.tsx
   - inventory-system/frontend/src/pages/StockInout.tsx
   - inventory-system/frontend/src/pages/Price.tsx
+  - inventory-system/frontend/src/pages/StockProducts.tsx
+  - inventory-system/frontend/src/pages/DishwareTransfer.tsx
   - docs/tasks/2026-11-25-save-guard-rollout.md
   - docs/PLAN_2026-11-25-save-guard-rollout.md
   - backend/static/
@@ -65,3 +67,24 @@
 1. `backend/static/index.html` 改回 `index-CGaW7zFz.js`（与 assets 一致）
 2. 新增 `scripts/check-static.sh`：校验 index.html 引用的每个 `/assets/*` 都真实存在
 3. `.githooks/pre-commit` 追加一段：提交里含 `backend/static/index.html` 时自动跑上面的脚本，不配套直接拒绝提交
+
+## 批次 3（本次）：货品种类 / 碗碟转卖
+
+### `StockProducts.tsx`（/products）
+- M3：`savingRef`（saveEdit / saveNewRow / saveAll 三处入口）
+- M5：`useBlocker` + `beforeunload` + SaveGuardDialog（未保存 = 新增行 + 编辑中行）
+- 逐行失败收集本来就是对的（`730-763`），未改
+
+### `DishwareTransfer.tsx`（/dishware_transfer）
+- M2：`batchSaveTransfers` 逐行 try/catch —— 成功一行从草稿摘一行，失败的行留草稿；
+  提示「已保存 N 条，M 条失败（编号：原因），失败的行仍留在草稿里可重试」
+  → 修复「中途失败后重试重复插入转卖记录」
+
+### 验证
+- `tsc -b` + `vite build` 通过；`/products`、`/dishware`、`/dishware_break`、`/dishware_transfer` 四页渲染无 JS 错误
+- 未做 UI 级 e2e（碗碟/货品页都需要上传图片与弹窗联动，脚本成本高）
+
+### 待办
+- `Schedule.tsx`（排班）：一次 PUT 提交整月，**多人同时排班会互相覆盖** —— 需要先定「谁赢」策略
+  （后写覆盖 / updated_at 乐观锁 / 冲突提示），再动代码
+- `Dishware.tsx` / `DishwareBreak.tsx` 主要是弹窗单条保存，只在弹窗内有草稿；是否需要离开拦截待定

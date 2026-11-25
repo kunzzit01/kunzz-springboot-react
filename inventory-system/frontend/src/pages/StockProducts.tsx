@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { getStockProducts, createStockProduct, updateStockProduct, deleteStockProduct, approveStockProduct, getMe, getStockPerms, createFreezerCategory, renameFreezerCategory, reorderFreezerCategories, deleteFreezerCategory, getPriceChangeLogLatest } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import { useFreezerCategories } from '../utils/useFreezerCategories'
 import '../styles/stockproducts.css'
 import { showToast } from '../utils/toast'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 
 interface ProductRow {
   id?: number
@@ -199,6 +200,8 @@ export default function StockProducts() {
   const [exactMatch, setExactMatch] = useState(false)
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)   // state 异步：连点 / Ctrl+S 连按能穿过去
+  const [askOpen, setAskOpen] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   /** 正在切换启用/停用的行（防连点） */
   const [activatingId, setActivatingId] = useState<number | null>(null)
@@ -661,14 +664,15 @@ export default function StockProducts() {
 
   /** 行内保存按钮（Ctrl+S 同）：只保存当前行 */
   const saveEdit = async (id: number) => {
-    if (saving) return
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     try {
       const err = await doSaveEdit(id)
       if (err) { showMsg(err, 'error'); return }
       await load()
       showMsg('记录已保存', 'success')
-    } finally { setSaving(false) }
+    } finally { savingRef.current = false; setSaving(false) }
   }
 
   /** 放弃所有未保存的修改（编辑中行的草稿一次清空；新增行另有各自删除按钮） */
@@ -714,7 +718,8 @@ export default function StockProducts() {
 
   // 保存单条新增行（对齐编辑行 save-mode：填写完整后就地保存；只摘掉这一条，其他行不动）
   const saveNewRow = async (r: ProductRow) => {
-    if (saving) return
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     try {
       const err = await doSaveNewRow(r)
@@ -723,15 +728,16 @@ export default function StockProducts() {
       await load()
       flashAfterRow('.table-scroll-container', 'td:nth-child(3)', String(r.product_name), flash)
       showMsg('记录已保存')
-    } finally { setSaving(false) }
+    } finally { savingRef.current = false; setSaving(false) }
   }
 
   // 批量保存（新行 POST + 编辑中的行 PUT；逐条保存 —— 单条失败只拦截该条，不拖累其他行）
   const saveAll = async () => {
-    if (saving) return
+    if (savingRef.current) return
     const pendingNew = [...newRows]
     const editIds = Array.from(editing).filter(id => !!drafts[id])
     if (pendingNew.length === 0 && editIds.length === 0) { showMsg('没有可保存的数据', 'error'); return }
+    savingRef.current = true
     setSaving(true)
     const savedNewKeys: string[] = []
     const savedEditIds: number[] = []
@@ -758,7 +764,37 @@ export default function StockProducts() {
       if (failed.length === 0) showMsg(`已保存 ${okCount} 条记录`, 'success')
       else if (okCount === 0) showMsg(`保存失败：${failed[0]}`, 'error')
       else showMsg(`已保存 ${okCount} 条，${failed.length} 条失败：${failed[0]}`, 'warning')
-    } finally { setSaving(false) }
+    } finally { savingRef.current = false; setSaving(false) }
+  }
+
+  // ---------- 未保存数据的离开拦截（新增行 / 编辑中行） ----------
+  const unsavedCount = () => newRows.length + editing.size
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (saving) return
+    if (unsavedRef.current === 0) { blocker.proceed(); return }
+    setAskOpen(true)
+  }, [blocker.state, saving])
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+  const askKeep = () => { setAskOpen(false); if (blocker.state === 'blocked') blocker.reset() }
+  const askSaveThenGo = async () => {
+    setAskOpen(false)
+    await saveAll()
+    if (unsavedRef.current === 0 && blocker.state === 'blocked') blocker.proceed()
+    else if (blocker.state === 'blocked') blocker.reset()
   }
 
   // 批准（对齐旧系统：确认 + loading；仅 Approver 权限可见）
@@ -919,6 +955,12 @@ export default function StockProducts() {
 
   return (
     <div className="sp-root">
+      <SaveGuardDialog
+        days={askOpen ? unsavedCount() : 0}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeep}
+        onSaveGo={askSaveThenGo}
+      />
       <div className="container">
         <div className="header">
           <div><h1>{pageTitle}</h1></div>

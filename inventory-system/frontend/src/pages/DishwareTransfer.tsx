@@ -181,26 +181,35 @@ export default function DishwareTransferPage() {
     const valid = drafts.filter(r => r.dishwareId && r.quantity && r.toShop)
     if (valid.length === 0) { showMsg('请填写完整的转卖行（编号、数量、目标餐厅）', 'error'); return }
     setTransferSaving(true)
+    const today = new Date().toISOString().slice(0, 10)
+    // 逐行保存：成功一行从草稿里摘一行，失败的行留着（否则重试会把已成功的行再插一遍）
+    const failed: string[] = []
+    let okCount = 0
     try {
-      const today = new Date().toISOString().slice(0, 10)
       for (const d of valid) {
         const qty = Number(d.quantity)
         const row = rows.find(r => String(r.dishwareId) === d.dishwareId)
         const price = Number(row?.unitPrice || 0)
-        await createDishwareTransfer({
-          dishwareId: Number(d.dishwareId), fromShopType: from, toShopType: d.toShop,
-          quantity: qty, unitPrice: price, totalPrice: qty * price,
-          transferDate: today,
-          recordType: 'out',
-        })
+        try {
+          await createDishwareTransfer({
+            dishwareId: Number(d.dishwareId), fromShopType: from, toShopType: d.toShop,
+            quantity: qty, unitPrice: price, totalPrice: qty * price,
+            transferDate: today,
+            recordType: 'out',
+          })
+          okCount++
+          setTransferDraft(prev => ({ ...prev, [from]: (prev[from] || []).filter(x => x !== d) }))
+        } catch (e: any) {
+          failed.push(String(d.dishwareId) + '：' + (e?.response?.data?.message || '保存失败'))
+        }
       }
-      setTransferDraft(prev => ({ ...prev, [from]: [] }))
       await load()
-      if (valid.length) {
+      if (okCount > 0) {
         const savedCode = String(rows.find((r) => r.dishwareId === Number(valid[0].dishwareId))?.codeNumber || '#' + valid[0].dishwareId)
         flashAfterRow('.break-record-table-wrapper', 'td:nth-child(2)', savedCode, flash)
       }
-      showMsg('批量保存成功')
+      if (failed.length === 0) showMsg('批量保存成功（' + okCount + ' 条）')
+      else showMsg('已保存 ' + okCount + ' 条，' + failed.length + ' 条失败（' + failed[0] + '），失败的行仍留在草稿里可重试', 'error')
     } catch { showMsg('批量保存失败', 'error') } finally { setTransferSaving(false) }
   }
 
