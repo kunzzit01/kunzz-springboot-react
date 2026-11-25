@@ -257,8 +257,12 @@ export default function CostEdit() {
     unsavedRef.current > 0 &&
     (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
   useEffect(() => {
-    if (blocker.state === 'blocked') setAskDays(unsavedRef.current)
-  }, [blocker.state])
+    if (blocker.state !== 'blocked') return
+    // 刚点过「保存修改」、请求还在飞：别弹窗（用户已经表达过保存意图），等保存结束再决定
+    if (saving) return
+    if (dirtyRef.current.size === 0) { blocker.proceed(); return } // 已存完 → 直接放行
+    setAskDays(unsavedRef.current)
+  }, [blocker.state, saving])
 
   const askSaveThenSwitch = async () => {
     const action = pendingSwitchRef.current
