@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { getKpiReport, saveKpiDaily, deleteKpiDaily } from '../api'
+import { setNavGuard } from '../utils/navGuard'
 import '../styles/kpiedit.css'
 import { showToast } from '../utils/toast'
 
@@ -29,6 +30,7 @@ const fmtInt = (v?: string) => {
 }
 
 export default function KpiEdit() {
+  const navigate = useNavigate()
   const [restaurant, setRestaurant] = useState('j1')
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
@@ -49,6 +51,8 @@ export default function KpiEdit() {
   const loadSeq = useRef(0)
   // 切换店/月时如果还有未保存的数据 → 弹窗选「保存并切换」或「继续编辑」
   const pendingSwitchRef = useRef<(() => void) | null>(null)
+  // 要跳去的路由（侧边栏/链接）
+  const pendingNavRef = useRef<string | null>(null)
   const [askDays, setAskDays] = useState(0)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
@@ -217,26 +221,88 @@ export default function KpiEdit() {
       (parseInt(r.newCustomers || '', 10) || 0) > 0
   }
 
+  // 未保存的天数（脏行 + 正在编辑且已有输入的那天）
+  const unsavedCount = () => {
+    const d = new Set(dirtyRef.current)
+    if (editingDay !== null && hasData(editingDay)) d.add(editingDay)
+    return d.size
+  }
+  // 给下面三个常驻监听器读「最新值」用的镜像（它们只注册一次）
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+  const askOpenRef = useRef(false)
+  askOpenRef.current = askDays > 0
+
   // 有未保存改动时先弹选择框（保存并切换 / 继续编辑）；返回 true 表示已直接切换
   const guardSwitch = (action: () => void): boolean => {
-    const dirty = new Set(dirtyRef.current)
-    if (editingDay !== null && hasData(editingDay)) dirty.add(editingDay)
-    if (dirty.size === 0) { action(); return true }
+    const n = unsavedCount()
+    if (n === 0) { action(); return true }
     pendingSwitchRef.current = action
-    setAskDays(dirty.size)
+    setAskDays(n)
     return false
   }
 
   const askSaveThenSwitch = async () => {
     const action = pendingSwitchRef.current
+    const nav = pendingNavRef.current
     setAskDays(0)
     pendingSwitchRef.current = null
+    pendingNavRef.current = null
     await saveAll()
-    // 全部存成功才切换；有失败的天就留在当前店/月方便重试
-    if (dirtyRef.current.size === 0) action?.()
+    // 只有全部存成功才离开；有失败的天就留在当前页，方便重试
+    if (dirtyRef.current.size === 0) {
+      if (action) action()
+      else if (nav) navigate(nav)
+    }
   }
 
-  const askKeepEditing = () => { setAskDays(0); pendingSwitchRef.current = null }
+  const askKeepEditing = () => {
+    setAskDays(0)
+    pendingSwitchRef.current = null
+    pendingNavRef.current = null
+  }
+
+  // ---- 未保存数据的三道拦截（保证离开前一定经过用户确认） ----
+  // ① 侧边栏 / 登出：AppLayout 的 go()、logout() 先问 runNavGuard
+  useEffect(() => {
+    setNavGuard((next) => {
+      if (unsavedRef.current === 0) return true
+      pendingNavRef.current = next
+      setAskDays(unsavedRef.current)
+      return false
+    })
+    return () => setNavGuard(null)
+  }, [])
+
+  // ② 站内链接（右上角「KPI 报表 / 成本报表」等 <a href>）：点下去就拦
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (askOpenRef.current) return
+      if (unsavedRef.current === 0) return
+      const a = (e.target as HTMLElement | null)?.closest?.('a[href]') as HTMLAnchorElement | null
+      if (!a) return
+      const href = a.getAttribute('href') || ''
+      if (!href.startsWith('/') || href.startsWith('//') || href === location.pathname + location.search) return
+      e.preventDefault()
+      e.stopPropagation()
+      pendingNavRef.current = href
+      setAskDays(unsavedRef.current)
+    }
+    document.addEventListener('click', h, true)
+    return () => document.removeEventListener('click', h, true)
+  }, [])
+
+  // ③ 刷新 / 关标签页 / 站外跳转：浏览器自带确认框（浏览器不允许自定义这个提示）
+  //    注：站内「后退键」不经过这里，要覆盖它得换成 data router + useBlocker
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
 
   // 保存单行（编辑按钮保存模式）
   const saveRow = async (day: number) => {
@@ -653,13 +719,13 @@ export default function KpiEdit() {
         <div className="ke-ask-mask" onClick={askKeepEditing}>
           <div className="ke-ask-card" onClick={(e) => e.stopPropagation()}>
             <div className="ke-ask-title">还有 {askDays} 天数据没保存</div>
-            <div className="ke-ask-text">切换之前要先把这些数据保存吗？<br />选「继续编辑」就留在当前这个页面。</div>
+            <div className="ke-ask-text">离开之前要先把这些数据保存吗？<br />选「继续编辑」就留在当前这个页面。</div>
             <div className="ke-ask-actions">
               <button className="btn btn-secondary" onClick={askKeepEditing}>
                 <i className="fas fa-pen"></i> 继续编辑
               </button>
               <button className="btn btn-primary" onClick={askSaveThenSwitch}>
-                <i className="fas fa-save"></i> 保存并切换
+                <i className="fas fa-save"></i> {pendingNavRef.current ? '保存并前往' : '保存并切换'}
               </button>
             </div>
           </div>
