@@ -3,6 +3,7 @@ import { Link, useBlocker } from 'react-router-dom'
 import { getKpiReport, saveKpiDaily, deleteKpiDaily } from '../api'
 import '../styles/kpiedit.css'
 import '../styles/save-guard.css'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 import { showToast } from '../utils/toast'
 
 interface DayRow {
@@ -719,23 +720,12 @@ export default function KpiEdit() {
         </div>
       </div>
 
-      {/* 切换店/月份时：有未保存数据 → 问是否先保存（替代 window.confirm） */}
-      {askDays > 0 && (
-        <div className="ke-ask-mask" onClick={askKeepEditing}>
-          <div className="ke-ask-card" onClick={(e) => e.stopPropagation()}>
-            <div className="ke-ask-title">还有 {askDays} 天数据没保存</div>
-            <div className="ke-ask-text">离开之前要先把这些数据保存吗？<br />选「继续编辑」就留在当前这个页面。</div>
-            <div className="ke-ask-actions">
-              <button className="btn btn-secondary" onClick={askKeepEditing}>
-                <i className="fas fa-pen"></i> 继续编辑
-              </button>
-              <button className="btn btn-primary" onClick={askSaveThenSwitch}>
-                <i className="fas fa-save"></i> {blocker.state === 'blocked' ? '保存并前往' : '保存并切换'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <SaveGuardDialog
+        days={askDays}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeepEditing}
+        onSaveGo={askSaveThenSwitch}
+      />
 
     </div>
   )

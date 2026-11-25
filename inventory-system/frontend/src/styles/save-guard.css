@@ -1,7 +1,8 @@
 /* 「有未保存数据」时的离开确认框 —— KPI 上传页 / 成本上传页共用
    （原来是写在 kpiedit.css 里的，挪出来给两页共用；类名仍挂 .ke-root，两页根节点都是 ke-root） */
 /* ---------- 切换店/月份时的「是否先保存」选择框（替代 window.confirm） ---------- */
-.ke-root .ke-ask-mask{
+.ke-ask-mask{
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Inter', 'Noto Sans SC', 'Microsoft YaHei', sans-serif;
     position: fixed;
     inset: 0;
     background: rgba(17, 24, 39, 0.5);
@@ -12,7 +13,7 @@
        否则遮罩只盖住内容区、左侧菜单还是亮的 */
     z-index: 9500;
 }
-.ke-root .ke-ask-card{
+.ke-ask-card{
     background: #fff;
     border-radius: 14px;
     padding: 24px 26px;
@@ -24,38 +25,50 @@
     from{ opacity: 0; transform: translateY(6px) scale(0.98); }
     to{ opacity: 1; transform: none; }
 }
-.ke-root .ke-ask-title{
+.ke-ask-title{
     font-size: 17px;
     font-weight: 700;
     color: #1f2937;
     margin-bottom: 8px;
 }
-.ke-root .ke-ask-text{
+.ke-ask-text{
     font-size: 13.5px;
     line-height: 1.7;
     color: #6b7280;
     margin-bottom: 22px;
 }
-.ke-root .ke-ask-actions{
+.ke-ask-actions{
     display: flex;
     gap: 12px;
     justify-content: flex-end;
 }
-/* 两个按钮固定同尺寸：不跟随页面 vw 缩放，宽度按更长的文案定 */
-.ke-root .ke-ask-actions .btn{
+/* 弹窗 portal 到 body，拿不到各页面 .btn 的底样式，这里自给自足 */
+.ke-ask-btn{
     min-width: 140px;
     height: 42px;
     padding: 0 18px;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    font-size: 14px;
-    line-height: 1;
+    gap: 8px;
+    border: none;
     border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    font-family: inherit;
+    cursor: pointer;
     box-sizing: border-box;
+    transition: background-color 0.18s ease, transform 0.18s ease;
 }
-.ke-root .ke-ask-actions .btn i{
-    font-size: 13px;
-}
+.ke-ask-btn i{ font-size: 13px; }
+.ke-ask-btn:disabled{ opacity: 0.55; cursor: not-allowed; }
+.ke-ask-btn--ghost{ background: #6b7280; color: #fff; }
+.ke-ask-btn--ghost:hover{ background: #4b5563; transform: translateY(-1px); }
+.ke-ask-btn--primary{ background: #f99e00; color: #fff; }
+.ke-ask-btn--primary:hover{ background: #f98500; transform: translateY(-1px); }
+
 @media (max-width: 480px){
-    .ke-root .ke-ask-actions{ flex-direction: column-reverse; }
-    .ke-root .ke-ask-actions .btn{ width: 100%; }
+    .ke-ask-actions{ flex-direction: column-reverse; }
+    .ke-ask-btn{ width: 100%; }
 }

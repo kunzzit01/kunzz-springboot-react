@@ -1,11 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { createSot, deleteSot, getCodeNumbers, getPriceStock, getProducts, getSots, updateSot } from '../api'
 import { useRealtime } from '../utils/useRealtime'
 import { flashAfterRow, useRowHighlight } from '../utils/rowHighlight'
 import '../styles/stocksot.css'
 import DateField from '../components/DateField'
 import { showToast } from '../utils/toast'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 
 /** 货品异常：对齐线上 stocksot.php（Excel 模式，算式：total_price = quantity × price） */
 const VIEW_NAMES: Record<string, string> = { list: '总库存', records: '进出货', remark: '货品备注', product: '货品种类', sot: '货品异常' }
@@ -31,6 +32,7 @@ const fmtDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padS
 const todayStr = () => fmtDate(new Date())
 
 interface SotRow {
+  _key?: string   // 新增行的稳定标识（保存后按它摘除，避免重名行删错）
   id?: number
   date?: string
   productCode?: string
@@ -221,6 +223,11 @@ export default function StockSot() {
   const [quickLabel, setQuickLabel] = useState('')
   const [calOpen, setCalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)          // state 异步，双击能穿过去
+  const loadSeq = useRef(0)                // 实时推送会并发触发 load()
+  const [savingKey, setSavingKey] = useState<string | null>(null)  // 只让当前行转圈
+  const [askOpen, setAskOpen] = useState(false)
+  const pendingLeaveRef = useRef(false)
   const [showTop, setShowTop] = useState(false)
   // 每行价格选项（对齐线上 updatePriceOptions）
   const [priceLists, setPriceLists] = useState<Record<string, { price: string; available_stock: number }[]>>({})
@@ -234,10 +241,12 @@ export default function StockSot() {
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
-  const load = () =>
-    getSots()
-      .then((list) => setRows(list || []))
+  const load = () => {
+    const my = ++loadSeq.current
+    return getSots()
+      .then((list) => { if (my === loadSeq.current) setRows(list || []) })
       .catch(() => {})
+  }
   useEffect(() => { load() }, [])
   // 全站实时：货品异常增删改（本端或其他用户）后自动刷新（9/3 补齐）
   useRealtime('*', () => load(), 1000, 3000)
@@ -303,7 +312,7 @@ export default function StockSot() {
   const addRow = () => {
     const key = 'new-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6)
     setNewRows(prev => [...prev, {
-      id: undefined, date: todayStr(), productCode: '', productName: '',
+      id: undefined, _key: key, date: todayStr(), productCode: '', productName: '',
       quantity: 0, specification: '', price: 0, totalPrice: 0, category: '',
     }])
     setPriceLists(prev => ({ ...prev, [key]: [] }))
@@ -345,11 +354,13 @@ export default function StockSot() {
   }
 
   const saveNew = async (idx: number) => {
+    if (savingRef.current) return
     const r = newRows[idx]
     if (!r.productName || !r.quantity || !r.specification || !r.category) {
       showMsg('请填写完整：产品名、数量、规格、类型', 'error'); return
     }
     const savedName = r.productName
+    savingRef.current = true; setSaving(true); setSavingKey('new-' + idx)
     try {
       await createSot({
         date: r.date || undefined, productCode: r.productCode || undefined,
@@ -362,33 +373,51 @@ export default function StockSot() {
       flashAfterRow('.excel-container .table-scroll-container', 'td:nth-child(4)', savedName, flash)
       showMsg('已保存异常记录')
     } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
+    finally { savingRef.current = false; setSaving(false); setSavingKey(null) }
   }
 
   /** 保存所有数据（对齐线上 saveAllData：保存所有新行） */
   const saveAll = async () => {
-    if (saving) return
-    const valid = newRows.filter(r => r.productName && r.quantity && r.specification && r.category)
-    if (valid.length === 0) { showMsg('没有可保存的新记录', 'error'); return }
+    if (savingRef.current) return
+    const invalid = newRows.filter(r => !(r.productName && r.quantity && r.specification && r.category))
+    if (invalid.length > 0) {
+      showMsg(`有 ${invalid.length} 行未填写完整（产品名/数量/规格/类型），请补全后再保存`, 'error')
+      return
+    }
+    if (newRows.length === 0) { showMsg('没有可保存的新记录', 'error'); return }
+    savingRef.current = true
     setSaving(true)
+    // 逐行保存：成功一行就从表单里摘掉一行，失败的行留在原位（重试不会重复插入）
+    const done = new Set<string>()
+    const failed: { key: string; msg: string }[] = []
     try {
-      let count = 0
-      for (const r of valid) {
-        await createSot({
-          date: r.date || undefined, productCode: r.productCode || undefined,
-          productName: r.productName, quantity: Math.abs(Number(r.quantity)),
-          specification: r.specification, price: Number(r.price || 0),
-          totalPrice: calcTotal(r), category: r.category,
-        })
-        count++
+      for (const r of newRows) {
+        const key = String(r._key || r.productName)
+        setSavingKey(key)
+        try {
+          await createSot({
+            date: r.date || undefined, productCode: r.productCode || undefined,
+            productName: r.productName, quantity: Math.abs(Number(r.quantity)),
+            specification: r.specification, price: Number(r.price || 0),
+            totalPrice: calcTotal(r), category: r.category,
+          })
+          done.add(key)
+          setNewRows(prev => prev.filter(x => String(x._key || x.productName) !== key))
+        } catch (e: any) {
+          failed.push({ key, msg: e?.response?.data?.message || '保存失败' })
+        }
       }
-      setNewRows([])
       await load()
-      if (valid.length) {
-        flashAfterRow('.excel-container .table-scroll-container', 'td:nth-child(4)', String(valid[0].productName), flash)
+      if (done.size > 0) {
+        flashAfterRow('.excel-container .table-scroll-container', 'td:nth-child(4)', String(newRows[0]?.productName || ''), flash)
       }
-      showMsg(`已保存 ${count} 条记录`)
-    } catch (e: any) { showMsg(e?.response?.data?.message || '保存失败', 'error') }
-    finally { setSaving(false) }
+      if (failed.length === 0) showMsg(`已保存 ${done.size} 条记录`, 'success')
+      else showMsg(`已保存 ${done.size} 条，${failed.length} 条失败（${failed[0].msg}），失败的行仍留在表单里可重试`, 'error')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      setSavingKey(null)
+    }
   }
 
   const startEdit = (r: SotRow) => {
@@ -413,6 +442,48 @@ export default function StockSot() {
       load()
       showMsg('已更新')
     } catch (e: any) { showMsg(e?.response?.data?.message || '更新失败', 'error') }
+  }
+
+  // ---------- 未保存数据的离开拦截 ----------
+  // 有未保存的新行 / 正在编辑某行 → 任何站内跳转先问；刷新关页由浏览器原生确认
+  const unsavedCount = () => newRows.length + (editingId !== null ? 1 : 0)
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+  const newRowsRef = useRef<SotRow[]>([])
+  newRowsRef.current = newRows
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (saving) return                            // 正在保存：等保存结束再判断
+    if (unsavedCount() === 0) { blocker.proceed(); return }  // 已经存完 → 直接放行
+    setAskOpen(true)
+  }, [blocker.state, saving])
+
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+
+  const askKeep = () => {
+    setAskOpen(false)
+    if (blocker.state === 'blocked') blocker.reset()
+  }
+  const askSaveThenGo = async () => {
+    setAskOpen(false)
+    if (newRowsRef.current.length > 0) await saveAll()
+    if (editingId !== null) await saveEdit()
+    // 全部存成功才放行；还有失败的行/仍在编辑就留在本页
+    if (newRowsRef.current.length === 0 && editingId === null && blocker.state === 'blocked') blocker.proceed()
+    else if (blocker.state === 'blocked') blocker.reset()
   }
 
   const remove = async (r: SotRow) => {
@@ -464,6 +535,12 @@ export default function StockSot() {
 
   return (
     <div className="sos-root">
+      <SaveGuardDialog
+        days={askOpen ? unsavedCount() : 0}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeep}
+        onSaveGo={askSaveThenGo}
+      />
       <div className="container">
         <div className="header">
           <div><h1>货品异常</h1></div>
@@ -606,7 +683,10 @@ export default function StockSot() {
                         </select>
                       </td>
                       <td className="action-cell">
-                        <button className="action-btn save-btn" onClick={() => saveNew(idx)} title="保存记录"><i className="fas fa-save" /></button>
+                        <button className="action-btn save-btn" disabled={saving} onClick={() => saveNew(idx)}
+                          title={savingKey ? '保存中...' : '保存记录'}>
+                          <i className={savingKey === String(r._key || ('new-' + idx)) ? 'fas fa-spinner fa-spin' : 'fas fa-save'} />
+                        </button>
                         <button className="action-btn delete-btn" onClick={() => setNewRows(prev => prev.filter((_, i) => i !== idx))} title="删除此行"><i className="fas fa-trash" /></button>
                       </td>
                     </tr>
