@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useBlocker } from 'react-router-dom'
 import { getKpiReport, saveKpiDaily, deleteKpiDaily } from '../api'
 import '../styles/kpiedit.css'
+import '../styles/save-guard.css'
 import { showToast } from '../utils/toast'
 
 interface DayRow {

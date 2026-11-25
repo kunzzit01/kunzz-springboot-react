@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useBlocker } from 'react-router-dom'
 import { getKpiReport, saveKpiCost, getKpiMonthStock, saveKpiMonthStock } from '../api'
 import '../styles/kpiedit.css'
+import '../styles/save-guard.css'
 import { showToast } from '../utils/toast'
 
 interface DayRow {
@@ -34,6 +35,17 @@ export default function CostEdit() {
   const [saving, setSaving] = useState(false)
   const [stockInput, setStockInput] = useState('')
   const preservedRef = useRef<Record<number, DayRow>>({})
+  // 脏行：只保存用户真正改过的天（原来按 hasData 把整月重写一遍）
+  const dirtyRef = useRef<Set<number>>(new Set())
+  // 保存锁用 ref：state 异步，双击 / Ctrl+S 连按能穿过 state 判空
+  const savingRef = useRef(false)
+  // 正在保存的那一行（只让它转圈，不整列转）
+  const [savingDay, setSavingDay] = useState<number | null>(null)
+  // 请求序号：快速换店/换月时丢弃过期响应
+  const loadSeq = useRef(0)
+  // 离开本页前的确认弹窗
+  const pendingSwitchRef = useRef<(() => void) | null>(null)
+  const [askDays, setAskDays] = useState(0)
 
   const showMsg = (msg: string, type = 'success') => showToast(msg, type)
 
@@ -42,6 +54,7 @@ export default function CostEdit() {
 
   // 加载：成本数据 + KPI 净销售额（/api/kpi/report 一次返回两类行）
   const load = async () => {
+    const my = ++loadSeq.current
     setLoading(true)
     try {
       const res = await getKpiReport(restaurant, yearMonth)
@@ -77,7 +90,9 @@ export default function CostEdit() {
           byDay[day] = { sales: kpiNet[day].toFixed(2) }
         }
       })
+      if (my !== loadSeq.current) return // 过期响应（已换店/换月）丢弃
       setRows(byDay)
+      dirtyRef.current.clear() // 新快照 = 干净
       // 加载当月库存
       try {
         const stock = await getKpiMonthStock(restaurant, yearMonth)
@@ -85,7 +100,7 @@ export default function CostEdit() {
         setStockInput(v && Number(v) > 0 ? Number(v).toFixed(2) : '')
       } catch { setStockInput('') }
     } catch { /* ignore */ }
-    setLoading(false)
+    if (my === loadSeq.current) setLoading(false)
   }
   useEffect(() => {
     setEditingDay(null)
@@ -135,6 +150,7 @@ export default function CostEdit() {
         if (parts[1] && parts[1].length > 2) v = parts[0] + '.' + parts[1].substring(0, 2)
       }
     }
+    dirtyRef.current.add(day)
     setRows(prev => {
       const cur = { ...(prev[day] || {}) }
       cur[field] = v
@@ -189,49 +205,122 @@ export default function CostEdit() {
     return COST_FIELDS.some(f => r[f] !== undefined && r[f] !== '') || r._hasRecord === '1'
   }
 
+  // 未保存的天数（脏行 + 正在编辑且已有输入的那天）
+  const unsavedCount = () => {
+    const d = new Set(dirtyRef.current)
+    if (editingDay !== null && hasData(editingDay)) d.add(editingDay)
+    return d.size
+  }
+  // 给常驻监听器/守卫回调读最新值用（它们只注册一次）
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+
   // 保存单行
   const saveRow = async (day: number) => {
+    if (savingRef.current) return
     if (hasData(day)) {
+      savingRef.current = true
+      setSaving(true)
+      setSavingDay(day)
       try {
         await saveKpiCost(restaurant, buildPayload(day))
+        dirtyRef.current.delete(day)
         showMsg(day + '日数据保存成功', 'success')
       } catch { showMsg('保存' + day + '日数据失败', 'error') }
+      savingRef.current = false
+      setSaving(false)
+      setSavingDay(null)
     }
     setEditingDay(null)
   }
 
-  // 保存全部：先库存（若有值），再逐日成本
+  // 切换店/月：有未保存数据先问
+  const guardSwitch = (action: () => void): boolean => {
+    const n = unsavedCount()
+    if (n === 0) { action(); return true }
+    pendingSwitchRef.current = action
+    setAskDays(n)
+    return false
+  }
+
+  // 站内任何跳转（侧边栏/链接/后退）都会先被 data router 拦下
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state === 'blocked') setAskDays(unsavedRef.current)
+  }, [blocker.state])
+
+  const askSaveThenSwitch = async () => {
+    const action = pendingSwitchRef.current
+    const blocked = blocker.state === 'blocked'
+    setAskDays(0)
+    pendingSwitchRef.current = null
+    await saveAll()
+    if (dirtyRef.current.size > 0) { if (blocked) blocker.reset(); return }
+    if (action) action()
+    else if (blocked) blocker.proceed()
+  }
+
+  const askKeepEditing = () => {
+    setAskDays(0)
+    pendingSwitchRef.current = null
+    if (blocker.state === 'blocked') blocker.reset()
+  }
+
+  // 刷新 / 关标签页：浏览器自带确认框
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+
+  // 保存全部：只提交改过的天（dirtyRef）+ 正在编辑的那天；先库存（若有值）
   const saveAll = async () => {
-    if (saving || loading) return
+    if (savingRef.current || loading) return
+    const dirty = new Set(dirtyRef.current)
+    if (editingDay !== null && hasData(editingDay)) dirty.add(editingDay)
+    const days = [...dirty].sort((a, b) => a - b)
+    const stockNeeded = !!stockInput && stockInput.trim() !== ''
+    if (days.length === 0 && !stockNeeded) {
+      setEditingDay(null)
+      showMsg('没有需要保存的数据', 'info')
+      return
+    }
+    savingRef.current = true
     setSaving(true)
+    let stockSaved = false
+    const failed: number[] = []
     try {
-      let stockSaved = false
-      if (stockInput && stockInput.trim() !== '') {
+      if (stockNeeded) {
         try {
           await saveKpiMonthStock(restaurant, { yearMonth, currentStock: parseFloat(stockInput) || 0 })
           stockSaved = true
         } catch { showMsg('库存数据保存失败', 'warning') }
       }
-      let successCount = 0
-      for (let d = 1; d <= daysInMonth; d++) {
-        if (hasData(d)) {
+      for (const d of days) {
+        setSavingDay(d)
+        try {
           await saveKpiCost(restaurant, buildPayload(d))
-          successCount++
-        }
+          dirtyRef.current.delete(d)
+        } catch { failed.push(d) } // 单天失败不中断整批
       }
-      if (successCount > 0) {
-        showMsg('数据保存成功！共保存 ' + successCount + ' 条记录' + (stockSaved ? '，库存数据已保存' : ''), 'success')
-        await load()
-      } else if (stockSaved) {
-        showMsg('库存数据已保存', 'success')
-        await load()
-      } else {
-        showMsg('没有需要保存的数据', 'info')
-      }
-    } catch {
-      showMsg('保存过程中发生错误，请检查网络连接后重试', 'error')
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+      setSavingDay(null)
     }
-    setSaving(false)
+    if (failed.length === 0) {
+      setEditingDay(null) // 全部成功 → 退出编辑态（与进出货一致）
+      showMsg('数据保存成功！共保存 ' + days.length + ' 条记录' + (stockSaved ? '，库存数据已保存' : ''), 'success')
+      await load()
+    } else {
+      showMsg('已保存 ' + (days.length - failed.length) + ' 天，' + failed.length + ' 天失败（' + failed.join('、') + '日），请再点一次保存', 'error')
+    }
   }
 
   // 清空单日成本（保留销售额）
@@ -280,6 +369,7 @@ export default function CostEdit() {
     if (startIdx < 0) startIdx = 0
     const lines = text.trim().split('\n').filter(l => l.trim() !== '')
     const setValues = (d: number, vals: string[], start: number) => {
+      dirtyRef.current.add(d)
       setRows(prev => {
         const cur = { ...(prev[d] || {}) }
         vals.forEach((v, i) => {
@@ -420,8 +510,8 @@ export default function CostEdit() {
                   <div className="number-dropdown-menu" id="number-dropdown" style={{ display: 'block', position: 'absolute', zIndex: 1500 }}>
                     <div className="number-grid">
                       {['1', '2', '3'].map(n => (
-                        <button key={n} className={'number-item' + (restaurant === 'j' + n ? ' selected' : '')}
-                          onClick={() => { setRestaurant('j' + n); setNumOpen(false) }}>{n}</button>
+                        <button key={n} className={'number-item' + (restaurant === 'j' + n ? ' selected' : '')} disabled={saving}
+                          onClick={() => { setNumOpen(false); guardSwitch(() => setRestaurant('j' + n)) }}>{n}</button>
                       ))}
                     </div>
                   </div>
@@ -436,7 +526,8 @@ export default function CostEdit() {
         <div className="month-selector">
           <div>
             <label htmlFor="year-select">年份:</label>
-            <select id="year-select" value={year} onChange={(e) => setYear(Number(e.target.value))}>
+            <select id="year-select" value={year} disabled={saving}
+              onChange={(e) => { const v = Number(e.target.value); if (!guardSwitch(() => setYear(v))) e.target.value = String(year) }}>
               {Array.from({ length: new Date().getFullYear() + 2 - 2023 + 1 }, (_, i) => 2023 + i).map(y => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -444,7 +535,8 @@ export default function CostEdit() {
           </div>
           <div>
             <label htmlFor="month-select">月份:</label>
-            <select id="month-select" value={month} onChange={(e) => setMonth(Number(e.target.value))}>
+            <select id="month-select" value={month} disabled={saving}
+              onChange={(e) => { const v = Number(e.target.value); if (!guardSwitch(() => setMonth(v))) e.target.value = String(month) }}>
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
                 <option key={m} value={m}>{m}月</option>
               ))}
@@ -487,6 +579,7 @@ export default function CostEdit() {
                   当前库存 (RM):
                 </label>
                 <input type="number" id="current-stock-input" min="0" step="0.01" placeholder="0.00"
+                  disabled={saving}
                   value={stockInput}
                   onChange={(e) => {
                     let v = e.target.value
@@ -545,15 +638,15 @@ export default function CostEdit() {
                       <td className={'calculated-cell' + (c.grossTotal < 0 ? ' negative' : '')} id={'gross-total-' + day}>RM {c.grossTotal.toFixed(2)}</td>
                       <td className="calculated-cell" id={'cost-percent-' + day}>{c.costPercent.toFixed(2)}%</td>
                       <td className="action-cell">
-                        <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day}
-                          onClick={() => toggleEdit(day)} title={isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据'}>
-                          <i className={'fas ' + (isEditing ? 'fa-save' : 'fa-edit')}></i>
+                        <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day} disabled={saving}
+                          onClick={() => toggleEdit(day)} title={savingDay === day ? '保存中...' : (isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据')}>
+                          <i className={'fas ' + (savingDay === day ? 'fa-spinner fa-spin' : (isEditing ? 'fa-save' : 'fa-edit'))}></i>
                         </button>
                         <button className="cancel-edit-btn" id={'cancel-btn-' + day}
                           onClick={() => cancelEdit(day)} title="取消编辑" style={{ display: isEditing ? 'inline-block' : 'none' }}>
                           <i className="fas fa-times"></i>
                         </button>
-                        <button className="delete-day-btn" id={'delete-btn-' + day}
+                        <button className="delete-day-btn" id={'delete-btn-' + day} disabled={saving}
                           onClick={() => clearCost(day)} title={'清空' + day + '日成本（保留销售额）'} style={{ display: isEditing ? 'none' : 'inline-block' }}>
                           <i className="fas fa-trash-alt"></i>
                         </button>
@@ -566,6 +659,24 @@ export default function CostEdit() {
           </div>
         </div>
       </div>
+
+      {/* 离开本页 / 换店换月时：有未保存数据先问（与 KPI 上传页同一套弹窗） */}
+      {askDays > 0 && (
+        <div className="ke-ask-mask" onClick={askKeepEditing}>
+          <div className="ke-ask-card" onClick={(e) => e.stopPropagation()}>
+            <div className="ke-ask-title">还有 {askDays} 天数据没保存</div>
+            <div className="ke-ask-text">离开之前要先把这些数据保存吗？<br />选「继续编辑」就留在当前这个页面。</div>
+            <div className="ke-ask-actions">
+              <button className="btn btn-secondary" onClick={askKeepEditing}>
+                <i className="fas fa-pen"></i> 继续编辑
+              </button>
+              <button className="btn btn-primary" onClick={askSaveThenSwitch}>
+                <i className="fas fa-save"></i> {blocker.state === 'blocked' ? '保存并前往' : '保存并切换'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

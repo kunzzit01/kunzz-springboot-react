@@ -4,6 +4,8 @@
 - 白名单（只允许改这些）：
   - inventory-system/frontend/src/pages/KpiEdit.tsx
   - inventory-system/frontend/src/styles/kpiedit.css
+  - inventory-system/frontend/src/styles/save-guard.css
+  - inventory-system/frontend/src/pages/CostEdit.tsx
   - inventory-system/frontend/src/utils/navGuard.ts
   - inventory-system/frontend/src/components/AppLayout.tsx
   - inventory-system/frontend/src/App.tsx
@@ -67,3 +69,16 @@ KpiEdit 用 `useBlocker` 一处拦下所有站内跳转（侧边栏 / 链接 / n
 - 「继续编辑」→ 留在原页，输入值 123.00 保留
 - 「保存并前往」→ POST /kpi/daily 1 次后跳到 /cost/upload
 - 跨文档返回 → 浏览器原生 beforeunload 确认框
+
+### 追加 5：成本上传页（/cost/upload）同步同一套改法
+
+同一套问题在 CostEdit 全部存在（循环外 catch、按 hasData 重写整月、Ctrl+S 不退编辑态、保存时整列转圈、原生 confirm、无请求序号）。
+逐条对齐 KpiEdit：dirty set、单天 try/catch、savingRef/savingDay、loadSeq、
+`useBlocker` + `beforeunload`、换店换月弹窗、行内 spinner。
+弹窗样式从 kpiedit.css 抽到 `styles/save-guard.css`，两页共引。
+
+实测（vite preview + puppeteer，mock /api）：
+- 成本页改 26 日 → 点「KPI 报表」链接 → 弹窗，URL 不变
+- 继续编辑 → 值 1.00 保留
+- 保存并前往 → **POST /api/kpi/cost 只有 1 次**（不再整月 26 条）→ 跳 /kpi/upload
+- KPI 页回归：弹窗正常、按钮仍 140x42、无 JS 错误
