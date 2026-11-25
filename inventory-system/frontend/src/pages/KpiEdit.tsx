@@ -42,7 +42,7 @@ export default function KpiEdit() {
   // 正在保存的那一天：只给它那一行的按钮转圈，不要整列一起转
   const [savingDay, setSavingDay] = useState<number | null>(null)
   const preservedRef = useRef<Record<number, DayRow>>({})
-  // 脏行：只保存用户真正改过的天，避免「保存本月数据」用内存快照整月重写
+  // 脏行：只保存用户真正改过的天（按钮「保存修改」），不再用内存快照整月重写
   const dirtyRef = useRef<Set<number>>(new Set())
   // 保存锁用 ref：state 是异步的，双击 / Ctrl+S 连按能穿过 state 判空
   const savingRef = useRef(false)
@@ -582,7 +582,7 @@ export default function KpiEdit() {
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <button className="btn btn-primary" onClick={saveAll} disabled={saving || loading}>
-                {saving ? <><div className="loading"></div> 保存中...</> : <><i className="fas fa-save"></i> 保存本月数据</>}
+                {saving ? <><div className="loading"></div> 保存中...</> : <><i className="fas fa-save"></i> 保存修改</>}
               </button>
             </div>
           </div>

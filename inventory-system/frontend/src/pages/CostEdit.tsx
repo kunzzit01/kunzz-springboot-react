@@ -591,7 +591,7 @@ export default function CostEdit() {
                   }} />
               </div>
               <button className="btn btn-primary" onClick={saveAll} disabled={saving || loading}>
-                {saving ? <><div className="loading"></div> 保存中...</> : <><i className="fas fa-save"></i> 保存本月数据</>}
+                {saving ? <><div className="loading"></div> 保存中...</> : <><i className="fas fa-save"></i> 保存修改</>}
               </button>
             </div>
           </div>
