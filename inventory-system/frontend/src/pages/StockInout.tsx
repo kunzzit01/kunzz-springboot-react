@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { useBlocker, useNavigate } from 'react-router-dom'
 import { createStockInout, checkStockInout, deleteStockInout, exportBranchExcel, getCodeNumbers, getInvoiceData, getMe, getPriceBatches, getPriceStock, getProductDefaultPrice, getProducts,
   getRemarkCodes, getRemarkCodeOptions, getShippers, getStaff, getStockInout, getStockPerms, restoreStockInout, updateStockInout, type CheckInoutResult } from '../api'
 import { useRowHighlight } from '../utils/rowHighlight'
@@ -13,6 +13,7 @@ import DateField from '../components/DateField'
 import SelectField from '../components/SelectField'
 import AiAssistant from '../components/AiAssistant'
 import { showToast } from '../utils/toast'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 
 /** 进出货管理：完整对齐 stockeditall.php（unified-header-row + 日历 + 行内新增 + HIFO + 批量操作 + 导出弹窗） */
 const SYSTEMS = [
@@ -321,6 +322,8 @@ export default function StockInout() {
   const [exportForm, setExportForm] = useState({ start: '', end: '', system: '', invoiceDate: '', invoiceSuffix: '', includeIn: true, includeOut: true })
   // 保存中标志（防连点/防重复提交，对齐旧系统 batchSaveNewRows 的 disabled + spinner）
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)   // state 异步：双击 / Ctrl+S 连按能穿过去
+  const [askOpen, setAskOpen] = useState(false)
   // 进货备注拦截高亮：这些行未勾选「货品备注」，但货品在货品备注里还有编号在库（task 2026-11-03-inout-remark-required）
   const [remarkHintKeys, setRemarkHintKeys] = useState<string[]>([])
   // 删除撤销（对齐旧系统 undoDelete：删除后 10 秒内可撤销，Ctrl+Shift+Z）
@@ -1248,9 +1251,10 @@ export default function StockInout() {
 
   /** 批量保存新增行（对齐 batchSaveNewRows）。传 onlyKeys 则只保存这几行（Ctrl+S 保存当前行用） */
   const saveNewRows = async (onlyKeys?: string[]) => {
-    if (saving) return // 防连点/重复提交
+    if (savingRef.current) return // 防连点/重复提交（ref 才拦得住同一帧的第二次点击）
     const targets = onlyKeys ? newRows.filter(r => onlyKeys.includes(r.key)) : newRows
     if (targets.length === 0) { showMsg('没有需要保存的新记录', 'info'); return }
+    savingRef.current = true
     setSaving(true)
     try {
       // ====== 校验（对齐旧系统 batchSaveNewRows）======
@@ -1329,7 +1333,11 @@ export default function StockInout() {
       }
       setRemarkHintKeys([])
       const savedIds: number[] = []
+      const savedKeys: string[] = []
+      const failedRows: { key: string; msg: string }[] = []
+      // 逐行保存：成功一行摘一行，失败的行留在表单里（否则重试会把已成功的行再插一遍 → 库存翻倍）
       for (const row of valid) {
+        try {
         const inQ = parseFloat(row.inQty || '0') || 0
         const outQ = parseFloat(row.outQty || '0') || 0
         const isIncoming = inQ > 0
@@ -1337,7 +1345,7 @@ export default function StockInout() {
         // 验证单价：不能为空且不能小于0（对齐旧系统 saveNewRowRecord；0 合法，RM0 需要记录）
         const priceStr = (row.price ?? '').toString().trim()
         if (priceStr === '' || isNaN(parseFloat(priceStr)) || parseFloat(priceStr) < 0) {
-          showMsg(`货品 [${row.productName}] 单价不能为空且不能小于0`, 'error'); return
+          failedRows.push({ key: row.key, msg: `货品 [${row.productName}] 单价不能为空且不能小于0` }); continue
         }
         // 备注编号（对齐旧系统：前缀-编号 拼接）——前缀和编号都填写才算完整编号，否则视为未填写（触发自动生成）
         const remarkNumber = row.remarkChecked && row.remarkPrefix && row.remarkSuffix
@@ -1348,10 +1356,10 @@ export default function StockInout() {
           const codes = await codesOf(row.productName)
           if (codes.length > 0) {
             if (!remarkNumber) {
-              showMsg(`货品 [${row.productName}] 有备注编码在库，出货时请填写备注编号`, 'error'); return
+              failedRows.push({ key: row.key, msg: `货品 [${row.productName}] 有备注编码在库，出货时请填写备注编号` }); continue
             }
             if (!codes.includes(remarkNumber)) {
-              showMsg(`备注编号 [${remarkNumber}] 不在库中，有效编号：${codes.slice(0, 5).join(', ')}`, 'error'); return
+              failedRows.push({ key: row.key, msg: `备注编号 [${remarkNumber}] 不在库中` }); continue
             }
           }
         }
@@ -1373,9 +1381,14 @@ export default function StockInout() {
           createdBy: currentUser || undefined,
         }, system === 'central' ? 'central' : system)
         if (created?.id) savedIds.push(Number(created.id))
+        savedKeys.push(row.key)
+        } catch (e: any) {
+          // 单行失败（库存不足、网络…）不影响其余行
+          failedRows.push({ key: row.key, msg: e?.response?.data?.message || e?.message || '保存失败' })
+        }
       }
-      // 只存了部分行（Ctrl+S）时，只把这几个 key 从待存列表里移除，其余行保留
-      setNewRows(prev => (onlyKeys ? prev.filter(r => !onlyKeys.includes(r.key)) : []))
+      // 只摘掉成功保存的行；失败的行留在表单里，重试时不会重复写已成功的（库存翻倍）
+      setNewRows(prev => prev.filter(r => !savedKeys.includes(r.key)))
       const items = await load(page)
       setTimeout(() => {
         if (savedIds.length) {
@@ -1391,9 +1404,10 @@ export default function StockInout() {
           }
         }
       }, 100)
-      showMsg(`成功保存 ${valid.length} 条记录`)
+      if (failedRows.length === 0) showMsg(`成功保存 ${savedKeys.length} 条记录`)
+      else showMsg(`已保存 ${savedKeys.length} 条，${failedRows.length} 条失败（${failedRows[0].msg}），失败的行仍留在表单里可重试`, 'error', 8000)
     } catch (e: any) { showMsg(e?.response?.data?.message || e?.message || '保存失败', 'error') }
-    finally { setSaving(false) }
+    finally { savingRef.current = false; setSaving(false) }
   }
   const removeNew = (key: string) => setNewRows(prev => prev.filter(r => r.key !== key))
 
@@ -1522,16 +1536,50 @@ export default function StockInout() {
   }
   /** 保存单行（带防连点守卫，供行内保存按钮使用） */
   const saveEdit = async (id: number) => {
-    if (saving) return
+    if (savingRef.current) return
     if (!editDrafts[id]) return
+    savingRef.current = true
     setSaving(true)
-    try { await doSaveEdit(id) } finally { setSaving(false) }
+    try { await doSaveEdit(id) } finally { savingRef.current = false; setSaving(false) }
   }
   /** 保存全部编辑中行（Ctrl+S，逐行调用；任一行校验失败只拦截该行，不影响其他行） */
   const saveAllEdits = async () => {
-    if (saving || editingIds.size === 0) return
+    if (savingRef.current || editingIds.size === 0) return
+    savingRef.current = true
     setSaving(true)
-    try { for (const id of Array.from(editingIds)) await doSaveEdit(id) } finally { setSaving(false) }
+    try { for (const id of Array.from(editingIds)) await doSaveEdit(id) } finally { savingRef.current = false; setSaving(false) }
+  }
+
+  // ---------- 未保存数据的离开拦截（新增行 / 编辑中行） ----------
+  const unsavedCount = () => newRows.length + editingIds.size
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (saving) return                                   // 正在保存：等保存结束再判断
+    if (unsavedRef.current === 0) { blocker.proceed(); return }
+    setAskOpen(true)
+  }, [blocker.state, saving])
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+  const askKeep = () => { setAskOpen(false); if (blocker.state === 'blocked') blocker.reset() }
+  const askSaveThenGo = async () => {
+    setAskOpen(false)
+    if (editingIds.size > 0) await saveAllEdits()
+    if (newRows.length > 0) await saveNewRows()
+    // 存完才放行；还有失败的行留在表单里，就留在本页
+    if (unsavedRef.current === 0 && blocker.state === 'blocked') blocker.proceed()
+    else if (blocker.state === 'blocked') blocker.reset()
   }
   const remove = async (r: StockInout) => {
     if (!window.confirm(`确定删除记录：${r.productName}（${r.date}）？`)) return
@@ -2366,6 +2414,14 @@ export default function StockInout() {
 
       {/* 本地 AI 助手聊天球（查询问答 + 进出货草稿确认） */}
       <AiAssistant system={system} onSaved={() => { load(page) }} />
+
+      {/* 有未保存的新增行/编辑中行时，离开本页先确认 */}
+      <SaveGuardDialog
+        days={askOpen ? unsavedCount() : 0}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeep}
+        onSaveGo={askSaveThenGo}
+      />
 
     </div>
   )

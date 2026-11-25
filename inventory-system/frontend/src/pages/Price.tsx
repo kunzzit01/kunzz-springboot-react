@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useBlocker } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import {
   getPriceCompare, getRestaurants, saveRestaurant, deleteRestaurant,
@@ -9,6 +10,7 @@ import {
 import type { PriceCompareData, PriceCompareRow } from '../api'
 import '../styles/price.css'
 import { showToast } from '../utils/toast'
+import SaveGuardDialog from '../components/SaveGuardDialog'
 
 /** 批量新增的可编辑行 */
 interface NewRow { name: string; type: string; prices: Record<string, string> }
@@ -51,6 +53,8 @@ export default function Price() {
 
   // 保存中（防连点/重复提交）
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)   // state 异步：连点/回车连发能穿过去
+  const [askOpen, setAskOpen] = useState(false)
   const showMsg = (msg: string, type: 'success' | 'error' = 'success') => showToast(msg, type)
 
   // ---------- 数据加载 ----------
@@ -181,22 +185,32 @@ export default function Price() {
   const setNewRowPrice = (ri: number, colId: string, v: string) =>
     setNewRows((prev) => prev.map((r, i) => (i === ri ? { ...r, prices: { ...r.prices, [colId]: v } } : r)))
   const saveNewRows = async () => {
-    if (saving) return
+    if (savingRef.current) return
     const rows = newRows.filter((r) => r.name.trim())
     if (!rows.length) { showMsg('没有可保存的行', 'error'); return }
+    savingRef.current = true
     setSaving(true)
+    // 逐行保存：成功的行才摘掉，失败的行留在表单里（重试不会把已成功的行重复写一遍）
+    const doneRows: NewRow[] = []
+    const failed: { name: string; msg: string }[] = []
     try {
       const savedNames = rows.map((r) => r.name.trim().toUpperCase())
       for (const r of rows) {
         const name = r.name.trim()
-        for (const col of visibleCols) {
-          const v = r.prices[String(col.id)]
-          if (!v) continue
-          await saveCell(String(col.id), undefined, { [nameField]: name, [typeField]: r.type || null, price: Number(v) })
+        try {
+          for (const col of visibleCols) {
+            const v = r.prices[String(col.id)]
+            if (!v) continue
+            await saveCell(String(col.id), undefined, { [nameField]: name, [typeField]: r.type || null, price: Number(v) })
+          }
+          doneRows.push(r)
+          setNewRows(prev => prev.filter(x => x !== r))
+        } catch (e: any) {
+          failed.push({ name, msg: e?.response?.data?.message || e?.message || '保存失败' })
         }
       }
-      showMsg('已保存 ' + rows.length + ' 行')
-      setNewRows([])
+      if (failed.length === 0) showMsg('已保存 ' + doneRows.length + ' 行')
+      else showMsg('已保存 ' + doneRows.length + ' 行，' + failed.length + ' 行失败（' + failed[0].name + '：' + failed[0].msg + '），失败的行仍留在下方可重试', 'error')
       await load(mode)
       // 自动滚动到第一条新行并高亮
       setTimeout(() => {
@@ -216,7 +230,7 @@ export default function Price() {
         highlightTimer.current = setTimeout(() => setHighlightName(null), 3000)
       }, 200)
     } catch { showMsg('批量保存失败', 'error') }
-    finally { setSaving(false) }
+    finally { savingRef.current = false; setSaving(false) }
   }
 
   // ---------- 批量删除 ----------
@@ -241,6 +255,40 @@ export default function Price() {
       setBatchMode(false); setBatchSel(new Set())
       load(mode)
     } catch { showMsg('批量删除失败', 'error') }
+  }
+
+  // ---------- 未保存数据的离开拦截 ----------
+  // 待保存的新增行（填了名字的）+ 正在编辑的行
+  const unsavedCount = () => newRows.filter(r => r.name.trim()).length + (editRow !== null ? 1 : 0)
+  const unsavedRef = useRef(0)
+  unsavedRef.current = unsavedCount()
+  const newRowsRef = useRef<NewRow[]>([])
+  newRowsRef.current = newRows
+
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    unsavedRef.current > 0 &&
+    (nextLocation.pathname + nextLocation.search) !== (currentLocation.pathname + currentLocation.search))
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    if (saving) return
+    if (unsavedRef.current === 0) { blocker.proceed(); return }
+    setAskOpen(true)
+  }, [blocker.state, saving])
+  useEffect(() => {
+    const h = (e: BeforeUnloadEvent) => {
+      if (unsavedRef.current === 0) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', h)
+    return () => window.removeEventListener('beforeunload', h)
+  }, [])
+  const askKeep = () => { setAskOpen(false); if (blocker.state === 'blocked') blocker.reset() }
+  const askSaveThenGo = async () => {
+    setAskOpen(false)
+    if (newRowsRef.current.some(r => r.name.trim())) await saveNewRows()
+    if (unsavedRef.current === 0 && blocker.state === 'blocked') blocker.proceed()
+    else if (blocker.state === 'blocked') blocker.reset()
   }
 
   // ---------- 行内编辑 ----------
@@ -285,6 +333,12 @@ export default function Price() {
 
   return (
     <div className="price-root">
+      <SaveGuardDialog
+        days={askOpen ? unsavedCount() : 0}
+        blocked={blocker.state === 'blocked'}
+        onKeep={askKeep}
+        onSaveGo={askSaveThenGo}
+      />
       <div className="pr-header">
         <h1>餐厅价格对比</h1>
         <div className="pr-header-right">
