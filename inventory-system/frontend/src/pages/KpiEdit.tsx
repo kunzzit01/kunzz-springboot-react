@@ -232,11 +232,13 @@ export default function KpiEdit() {
     setEditingDay(null)
   }
 
-  // 保存全部：只提交改过的天（dirtyRef），某天失败不影响其余天
+  // 保存全部：只提交改过的天（dirtyRef）；正在编辑的那天也算（对齐进出货 Ctrl+S）
   const saveAll = async () => {
     if (savingRef.current || loading) return
-    const days = [...dirtyRef.current].sort((a, b) => a - b)
-    if (days.length === 0) { showMsg('没有需要保存的数据', 'info'); return }
+    const dirty = new Set(dirtyRef.current)
+    if (editingDay !== null && hasData(editingDay)) dirty.add(editingDay)
+    const days = [...dirty].sort((a, b) => a - b)
+    if (days.length === 0) { setEditingDay(null); showMsg('没有需要保存的数据', 'info'); return }
     savingRef.current = true
     setSaving(true)
     const failed: number[] = []
@@ -252,9 +254,11 @@ export default function KpiEdit() {
       setSaving(false)
     }
     if (failed.length === 0) {
+      setEditingDay(null) // 全部成功 → 退出编辑态（与进出货一致）
       showMsg('数据保存成功！共保存 ' + days.length + ' 条记录', 'success')
       await load()
     } else {
+      // 有失败的天：保留编辑态，方便直接重试
       showMsg('已保存 ' + (days.length - failed.length) + ' 天，' + failed.length + ' 天失败（' + failed.join('、') + '日），请再点一次保存', 'error')
     }
   }
@@ -596,8 +600,8 @@ export default function KpiEdit() {
                       <td className="calculated-cell" id={'returning-customer-rate-' + day}>{c.rate.toFixed(2)}%</td>
                       <td className="action-cell">
                         <button className={'edit-btn' + (isEditing ? ' save-mode' : '')} id={'edit-btn-' + day} disabled={saving}
-                          onClick={() => toggleEdit(day)} title={isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据'}>
-                          <i className={'fas ' + (isEditing ? 'fa-save' : 'fa-edit')}></i>
+                          onClick={() => toggleEdit(day)} title={saving ? '保存中...' : (isEditing ? '保存' + day + '日数据' : '编辑' + day + '日数据')}>
+                          <i className={'fas ' + (saving ? 'fa-spinner fa-spin' : (isEditing ? 'fa-save' : 'fa-edit'))}></i>
                         </button>
                         <button className="cancel-edit-btn" id={'cancel-btn-' + day}
                           onClick={() => cancelEdit(day)} title="取消编辑" style={{ display: isEditing ? 'inline-block' : 'none' }}>
